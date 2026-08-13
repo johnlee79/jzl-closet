@@ -63,7 +63,7 @@ export default function Header() {
               <li key={category.slug} className="group/item relative">
                 <Link
                   href={`/category/${category.slug}`}
-                  className="block py-6 text-[15px] tracking-[0.18em] text-ink transition-opacity duration-200 hover:opacity-60"
+                  className="block py-6 text-[17px] tracking-[0.18em] text-ink transition-opacity duration-200 hover:opacity-60"
                 >
                   {category.label}
                 </Link>
@@ -75,7 +75,7 @@ export default function Header() {
                         <li key={child.slug}>
                           <Link
                             href={`/category/${category.slug}/${child.slug}`}
-                            className="block whitespace-nowrap px-5 py-2 text-[14px] tracking-[0.12em] text-ink transition-opacity duration-200 hover:opacity-60"
+                            className="block whitespace-nowrap px-5 py-2 text-[16px] tracking-[0.12em] text-ink transition-opacity duration-200 hover:opacity-60"
                           >
                             {child.label}
                           </Link>
@@ -92,7 +92,7 @@ export default function Header() {
         <div className="flex shrink-0 items-center gap-5">
           <Link
             href="/products"
-            className="hidden text-[12px] tracking-[0.14em] text-muted transition-opacity duration-200 hover:opacity-60 lg:inline"
+            className="hidden text-[13px] tracking-[0.14em] text-muted transition-opacity duration-200 hover:opacity-60 lg:inline"
           >
             SHOP
           </Link>
@@ -124,7 +124,7 @@ export default function Header() {
                 <li key={category.slug} className="border-b border-stone py-4">
                   <Link
                     href={`/category/${category.slug}`}
-                    className="block text-[15px] tracking-[0.16em] text-ink"
+                    className="block text-[17px] tracking-[0.16em] text-ink"
                   >
                     {category.label}
                   </Link>
@@ -135,7 +135,7 @@ export default function Header() {
                         <li key={child.slug}>
                           <Link
                             href={`/category/${category.slug}/${child.slug}`}
-                            className="text-[12px] text-muted"
+                            className="text-[13px] text-muted"
                           >
                             {child.label}
                           </Link>
@@ -150,25 +150,25 @@ export default function Header() {
             <p className="label-xs mt-10">INFORMATION</p>
             <ul className="mt-4 border-t border-stone">
               <li className="border-b border-stone">
-                <Link href="/products" className="block py-4 text-[14px] text-ink">
+                <Link href="/products" className="block py-4 text-[16px] text-ink">
                   전체 상품
                 </Link>
               </li>
               <li className="border-b border-stone">
-                <Link href="/brand" className="block py-4 text-[14px] text-ink">
+                <Link href="/brand" className="block py-4 text-[16px] text-ink">
                   브랜드 목록
                 </Link>
               </li>
               {mainLinks.map((link) => (
                 <li key={link.href} className="border-b border-stone">
-                  <Link href={link.href} className="block py-4 text-[14px] text-ink">
+                  <Link href={link.href} className="block py-4 text-[16px] text-ink">
                     {link.label}
                   </Link>
                 </li>
               ))}
             </ul>
 
-            <p className="mt-10 text-[12px] leading-relaxed text-muted">
+            <p className="mt-10 text-[13px] leading-relaxed text-muted">
               고객센터 {store.phone}
               <br />
               평일 10:00 — 17:00 (점심 12:30 — 13:30, 주말·공휴일 휴무)

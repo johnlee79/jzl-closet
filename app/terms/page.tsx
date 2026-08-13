@@ -67,14 +67,14 @@ export default function TermsPage() {
   return (
     <div className="shell py-14 md:py-20">
       <header className="max-w-[720px]">
-        <p className="border border-stone px-4 py-3 text-[12px] leading-relaxed text-muted">
+        <p className="border border-stone px-4 py-3 text-[13px] leading-relaxed text-muted">
           본 문서는 초안이며 운영 전 검토가 필요합니다.
         </p>
         <p className="label-xs mt-8">TERMS</p>
         <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
           이용약관
         </h1>
-        <p className="mt-4 text-[13px] leading-[1.9] text-muted md:text-[14px]">
+        <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
           {store.business.company}가 운영하는 {store.name}의 서비스 이용에 관한 사항을
           정합니다.
         </p>
@@ -86,7 +86,7 @@ export default function TermsPage() {
             <h2 className="border-t border-stone pt-6 font-serif text-[18px] text-ink md:text-[20px]">
               {article.title}
             </h2>
-            <p className="mt-4 text-[13px] leading-[2] text-muted md:text-[14px]">
+            <p className="mt-4 text-[16px] leading-[2] text-ink md:text-[17px]">
               {article.body}
             </p>
           </section>
@@ -96,7 +96,7 @@ export default function TermsPage() {
           <h2 className="border-t border-stone pt-6 font-serif text-[18px] text-ink md:text-[20px]">
             부칙
           </h2>
-          <p className="mt-4 text-[13px] leading-[2] text-muted md:text-[14px]">
+          <p className="mt-4 text-[16px] leading-[2] text-ink md:text-[17px]">
             본 약관은 게시한 날부터 시행합니다. 사업자 정보는 아래와 같습니다.
             <br />
             상호 {store.business.company} · 대표자 {store.business.ceo} · 사업자등록번호{' '}

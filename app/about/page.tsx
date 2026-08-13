@@ -47,7 +47,7 @@ export default function AboutPage() {
         <p className="mt-5 font-serif text-[18px] leading-relaxed text-ink md:text-[22px]">
           {store.slogan}
         </p>
-        <p className="mt-4 text-[13px] leading-[1.9] text-muted md:text-[14px]">
+        <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
           {store.nameKo} · {store.category}
         </p>
       </header>
@@ -77,7 +77,7 @@ export default function AboutPage() {
           {store.story.map((paragraph) => (
             <p
               key={paragraph.slice(0, 12)}
-              className="text-[14px] leading-[2.1] text-muted md:text-[15px]"
+              className="text-[16px] leading-[2.1] text-ink md:text-[17px]"
             >
               {paragraph}
             </p>
@@ -103,7 +103,7 @@ export default function AboutPage() {
                 {String(index + 1).padStart(2, '0')}
               </p>
               <h3 className="mt-3 font-serif text-[18px] text-ink">{item.title}</h3>
-              <p className="mt-3 text-[13px] leading-[1.9] text-muted">{item.body}</p>
+              <p className="mt-3 text-[15px] leading-[1.9] text-ink">{item.body}</p>
             </li>
           ))}
         </ol>
@@ -127,7 +127,7 @@ export default function AboutPage() {
                 <span className="w-32 shrink-0 font-serif text-[18px] text-ink">
                   {category.nameKo}
                 </span>
-                <span className="text-[13px] leading-[1.9] text-muted">
+                <span className="text-[15px] leading-[1.9] text-ink">
                   {category.description}
                 </span>
               </Link>
@@ -149,7 +149,7 @@ export default function AboutPage() {
         >
           문의
         </h2>
-        <p className="mt-6 max-w-[560px] text-[13px] leading-[1.9] text-muted md:text-[14px]">
+        <p className="mt-6 max-w-[560px] text-[16px] leading-[1.9] text-ink md:text-[17px]">
           상품 문의와 재입고 요청, 주문 접수는 모두 고객센터에서 받고 있습니다. 통화가
           어려우실 때는 문자로 남겨 주시면 순서대로 답변드립니다.
         </p>

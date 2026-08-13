@@ -58,7 +58,7 @@ export default function BrandDetailPage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(brandJsonLd) }}
       />
 
-      <nav aria-label="현재 위치" className="text-[11px] tracking-[0.14em] text-muted">
+      <nav aria-label="현재 위치" className="text-[13px] tracking-[0.14em] text-muted">
         <ol className="flex flex-wrap items-center gap-2">
           <li>
             <Link href="/" className="hover:text-ink">
@@ -84,7 +84,7 @@ export default function BrandDetailPage({ params }: PageProps) {
         <p className="mt-3 font-display text-[22px] tracking-[0.16em] text-ink">
           {brand.label}
         </p>
-        <p className="mt-5 text-[14px] leading-relaxed text-ink">{brand.tagline}</p>
+        <p className="mt-5 text-[16px] leading-relaxed text-ink">{brand.tagline}</p>
       </header>
 
       <div className="mt-10 aspect-[4/5] w-full overflow-hidden bg-stone md:aspect-[21/9]">
@@ -106,7 +106,7 @@ export default function BrandDetailPage({ params }: PageProps) {
           {brand.story.map((paragraph) => (
             <p
               key={paragraph.slice(0, 12)}
-              className="text-[14px] leading-[2.1] text-muted md:text-[15px]"
+              className="text-[16px] leading-[2.1] text-ink md:text-[17px]"
             >
               {paragraph}
             </p>
@@ -124,7 +124,7 @@ export default function BrandDetailPage({ params }: PageProps) {
         <div className="mt-8">
           {items.length === 0 ? (
             <div className="border-t border-stone py-16">
-              <p className="text-[14px] leading-relaxed text-ink">
+              <p className="text-[16px] leading-relaxed text-ink">
                 준비 중인 브랜드입니다.
               </p>
               <Link href="/products" className="btn-primary mt-8">

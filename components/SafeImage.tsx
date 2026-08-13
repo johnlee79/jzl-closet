@@ -51,7 +51,7 @@ export default function SafeImage({
           <circle cx="12" cy="10" r="3.5" />
           <path d="M2 27l11.5-11 8 7.5 7-6.5L42 28" />
         </svg>
-        <span className="px-4 text-center font-serif text-[12px] leading-relaxed text-muted">
+        <span className="px-4 text-center font-serif text-[13px] leading-relaxed text-muted">
           {label}
         </span>
       </div>

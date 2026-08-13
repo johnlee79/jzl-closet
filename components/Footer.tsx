@@ -22,8 +22,8 @@ export default function Footer() {
           <p className="font-display text-[22px] font-light tracking-[0.34em] text-ink">
             JZL CLOSET
           </p>
-          <p className="mt-4 font-serif text-[15px] text-ink">{store.slogan}</p>
-          <p className="mt-3 max-w-[420px] text-[13px] leading-relaxed text-muted">
+          <p className="mt-4 font-serif text-[17px] text-ink">{store.slogan}</p>
+          <p className="mt-3 max-w-[420px] text-[15px] leading-relaxed text-ink">
             {store.intro}
           </p>
 
@@ -35,7 +35,7 @@ export default function Footer() {
             >
               {store.phone}
             </a>
-            <p className="mt-2 text-[12px] leading-relaxed text-muted">
+            <p className="mt-2 text-[13px] leading-relaxed text-muted">
               평일 10:00 — 17:00 / 점심 12:30 — 13:30
               <br />
               주말 및 공휴일은 휴무입니다.
@@ -53,7 +53,7 @@ export default function Footer() {
               <li key={category.slug}>
                 <Link
                   href={`/category/${category.slug}`}
-                  className="text-[13px] text-ink transition-opacity duration-200 hover:opacity-60"
+                  className="tap-target text-[15px] text-ink transition-opacity duration-200 hover:opacity-60"
                 >
                   {category.nameKo}
                 </Link>
@@ -62,7 +62,7 @@ export default function Footer() {
             <li>
               <Link
                 href="/products"
-                className="text-[13px] text-ink transition-opacity duration-200 hover:opacity-60"
+                className="tap-target text-[15px] text-ink transition-opacity duration-200 hover:opacity-60"
               >
                 전체 상품
               </Link>
@@ -77,7 +77,7 @@ export default function Footer() {
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className="text-[13px] text-ink transition-opacity duration-200 hover:opacity-60"
+                  className="tap-target text-[15px] text-ink transition-opacity duration-200 hover:opacity-60"
                 >
                   {link.label}
                 </Link>
@@ -90,7 +90,7 @@ export default function Footer() {
       <div className="border-t border-stone">
         <div className="shell py-10">
           <h2 className="label-xs">사업자 정보</h2>
-          <dl className="mt-4 flex flex-col gap-2 text-[12px] leading-relaxed text-muted md:flex-row md:flex-wrap md:gap-x-8">
+          <dl className="mt-4 flex flex-col gap-2 text-[13px] leading-relaxed text-muted md:flex-row md:flex-wrap md:gap-x-8">
             <div className="flex gap-2">
               <dt>상호</dt>
               <dd className="text-ink">{store.business.company}</dd>
@@ -116,7 +116,7 @@ export default function Footer() {
               <dd className="text-ink">{store.business.phone}</dd>
             </div>
           </dl>
-          <p className="mt-6 text-[11px] tracking-[0.1em] text-muted">
+          <p className="mt-6 text-[13px] tracking-[0.1em] text-muted">
             © {store.name} ALL RIGHTS RESERVED.
           </p>
         </div>

@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 export default function BrandListPage() {
   return (
     <div className="shell py-14 md:py-20">
-      <nav aria-label="현재 위치" className="text-[11px] tracking-[0.14em] text-muted">
+      <nav aria-label="현재 위치" className="text-[13px] tracking-[0.14em] text-muted">
         <ol className="flex flex-wrap items-center gap-2">
           <li>
             <Link href="/" className="hover:text-ink">
@@ -36,7 +36,7 @@ export default function BrandListPage() {
         <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
           브랜드
         </h1>
-        <p className="mt-4 text-[13px] leading-[1.9] text-muted md:text-[14px]">
+        <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
           {store.name}이 함께 일하는 브랜드입니다. 브랜드마다 만드는 방식과 기준이 달라,
           같은 품목이라도 결과가 다릅니다.
         </p>
@@ -61,11 +61,11 @@ export default function BrandListPage() {
                   <h2 className="mt-5 font-display text-[20px] tracking-[0.16em] text-ink">
                     {brand.label}
                   </h2>
-                  <p className="mt-1 font-serif text-[13px] text-muted">{brand.nameKo}</p>
-                  <p className="mt-3 text-[13px] leading-[1.9] text-muted">
+                  <p className="mt-1 font-serif text-[15px] text-muted">{brand.nameKo}</p>
+                  <p className="mt-3 text-[15px] leading-[1.9] text-ink">
                     {brand.tagline}
                   </p>
-                  <p className="mt-3 text-[11px] tracking-[0.14em] text-muted">
+                  <p className="mt-3 text-[13px] tracking-[0.14em] text-muted">
                     {count}개 상품 · {brand.origin} · SINCE {brand.since}
                   </p>
                 </Link>

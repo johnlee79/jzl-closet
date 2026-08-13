@@ -13,7 +13,7 @@ export default function NotFound() {
       <h1 className="mt-6 font-serif text-[22px] leading-snug text-ink md:text-[28px]">
         찾으시는 페이지가 없습니다
       </h1>
-      <p className="mt-4 max-w-[520px] text-[13px] leading-[1.9] text-muted md:text-[14px]">
+      <p className="mt-4 max-w-[520px] text-[16px] leading-[1.9] text-ink md:text-[17px]">
         주소가 바뀌었거나 판매가 종료된 상품일 수 있습니다. 아래 링크에서 다시
         찾아보시거나 고객센터 {store.phone}으로 문의해 주세요.
       </p>
@@ -33,7 +33,7 @@ export default function NotFound() {
             <li key={category.slug}>
               <Link
                 href={`/category/${category.slug}`}
-                className="text-[13px] text-muted transition-colors duration-200 hover:text-ink"
+                className="text-[15px] text-ink transition-colors duration-200 hover:text-ink"
               >
                 {category.nameKo}
               </Link>

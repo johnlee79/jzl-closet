@@ -20,14 +20,14 @@ export default function MeasurementTable({
           <caption className="sr-only">{productName} 사이즈별 실측 치수 (단위 cm)</caption>
           <thead>
             <tr className="border-y border-stone">
-              <th scope="col" className="py-3 pr-4 text-[12px] tracking-[0.14em] text-muted">
+              <th scope="col" className="py-3 pr-4 text-[13px] tracking-[0.14em] text-muted">
                 사이즈
               </th>
               {measurements.sizes.map((size) => (
                 <th
                   key={size}
                   scope="col"
-                  className="py-3 pr-4 text-[13px] font-normal text-ink"
+                  className="py-3 pr-4 text-[15px] font-normal text-ink"
                 >
                   {size}
                 </th>
@@ -39,14 +39,14 @@ export default function MeasurementTable({
               <tr key={row.label} className="border-b border-stone">
                 <th
                   scope="row"
-                  className="py-3 pr-4 text-[12px] font-normal tracking-[0.1em] text-muted"
+                  className="py-3 pr-4 text-[13px] font-normal tracking-[0.1em] text-muted"
                 >
                   {row.label}
                 </th>
                 {row.values.map((value, index) => (
                   <td
                     key={`${row.label}-${measurements.sizes[index] ?? index}`}
-                    className="py-3 pr-4 text-[13px] tabular-nums text-ink"
+                    className="py-3 pr-4 text-[15px] tabular-nums text-ink"
                   >
                     {value}
                   </td>
@@ -57,7 +57,7 @@ export default function MeasurementTable({
         </table>
       </div>
       {measurements.note ? (
-        <p className="mt-4 text-[12px] leading-relaxed text-muted">{measurements.note}</p>
+        <p className="mt-4 text-[13px] leading-relaxed text-muted">{measurements.note}</p>
       ) : null}
     </section>
   );

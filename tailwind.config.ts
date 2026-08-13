@@ -12,13 +12,13 @@ const config: Config = {
         ink: '#14141A',
         paper: '#F6F5F2',
         stone: '#DBD7D1',
-        muted: '#6E6A65',
+        muted: '#55524E', // 캡션·라벨 전용. 본문에는 ink 를 쓴다
         wine: '#6A2E3C',
       },
       fontFamily: {
         display: ['"Cormorant Garamond"', 'serif'],
         serif: ['"Gowun Batang"', 'serif'],
-        sans: ['Pretendard', 'system-ui', 'sans-serif'],
+        sans: ['"Pretendard Variable"', 'Pretendard', 'system-ui', 'sans-serif'],
       },
       maxWidth: {
         shell: '1400px',

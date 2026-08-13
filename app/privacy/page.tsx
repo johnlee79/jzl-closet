@@ -59,14 +59,14 @@ export default function PrivacyPage() {
   return (
     <div className="shell py-14 md:py-20">
       <header className="max-w-[720px]">
-        <p className="border border-stone px-4 py-3 text-[12px] leading-relaxed text-muted">
+        <p className="border border-stone px-4 py-3 text-[13px] leading-relaxed text-muted">
           본 문서는 초안이며 운영 전 검토가 필요합니다.
         </p>
         <p className="label-xs mt-8">PRIVACY</p>
         <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
           개인정보처리방침
         </h1>
-        <p className="mt-4 text-[13px] leading-[1.9] text-muted md:text-[14px]">
+        <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
           {store.name}은 이용자의 개인정보를 소중히 다루며, 관련 법령에 따라 아래와 같이
           처리합니다.
         </p>
@@ -78,7 +78,7 @@ export default function PrivacyPage() {
             <h2 className="border-t border-stone pt-6 font-serif text-[18px] text-ink md:text-[20px]">
               {section.title}
             </h2>
-            <p className="mt-4 whitespace-pre-line text-[13px] leading-[2] text-muted md:text-[14px]">
+            <p className="mt-4 whitespace-pre-line text-[16px] leading-[2] text-ink md:text-[17px]">
               {section.body}
             </p>
           </section>

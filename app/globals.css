@@ -1,3 +1,4 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css');
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
 @import url('https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Cormorant+Garamond:wght@300;400;500&display=swap');
 
@@ -9,7 +10,7 @@
   --ink: #14141a;
   --paper: #f6f5f2;
   --stone: #dbd7d1;
-  --muted: #6e6a65;
+  --muted: #55524e; /* 보조 텍스트 — 캡션·라벨 전용. 본문은 ink 를 쓴다 */
   --wine: #6a2e3c;
 }
 
@@ -21,9 +22,28 @@
   body {
     background-color: var(--paper);
     color: var(--ink);
-    font-family: Pretendard, system-ui, sans-serif;
+    /* 가변 폰트를 먼저 두어 450 굵기가 실제로 적용되게 한다 */
+    font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+    font-size: 16px;
+    font-weight: 450;
+    line-height: 1.75;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+  }
+
+  @media (min-width: 768px) {
+    body {
+      font-size: 17px;
+    }
+  }
+
+  /* 명조 제목은 400 유지 */
+  .font-serif,
+  h1,
+  h2,
+  h3 {
+    font-weight: 400;
   }
 
   ::selection {
@@ -41,12 +61,18 @@
     @apply py-20 md:py-32;
   }
 
+  /* 터치 영역 최소 44px 확보 */
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-sm bg-ink px-10 py-4 text-[13px] tracking-[0.14em] text-paper transition-opacity duration-200 hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30;
+    @apply inline-flex min-h-[52px] items-center justify-center rounded-sm bg-ink px-10 py-4 text-[15px] tracking-[0.14em] text-paper transition-opacity duration-200 hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-sm border border-ink bg-transparent px-10 py-4 text-[13px] tracking-[0.14em] text-ink transition-colors duration-200 hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:opacity-30;
+    @apply inline-flex min-h-[52px] items-center justify-center rounded-sm border border-ink bg-transparent px-10 py-4 text-[15px] tracking-[0.14em] text-ink transition-colors duration-200 hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:opacity-30;
+  }
+
+  /* 텍스트 링크·아이콘 버튼의 터치 영역 */
+  .tap-target {
+    @apply inline-flex min-h-[44px] items-center;
   }
 
   .hairline {
@@ -54,7 +80,7 @@
   }
 
   .label-xs {
-    @apply text-[11px] uppercase tracking-[0.22em] text-muted;
+    @apply text-[13px] uppercase tracking-[0.22em] text-muted;
   }
 
   .link-wine {

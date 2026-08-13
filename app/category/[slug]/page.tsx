@@ -49,7 +49,7 @@ export default function CategoryPage({ params }: PageProps) {
 
   return (
     <div className="shell py-14 md:py-20">
-      <nav aria-label="현재 위치" className="text-[11px] tracking-[0.14em] text-muted">
+      <nav aria-label="현재 위치" className="text-[13px] tracking-[0.14em] text-muted">
         <ol className="flex flex-wrap items-center gap-2">
           <li>
             <Link href="/" className="hover:text-ink">
@@ -66,7 +66,7 @@ export default function CategoryPage({ params }: PageProps) {
         <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
           {category.nameKo}
         </h1>
-        <p className="mt-4 text-[13px] leading-[1.9] text-muted md:text-[14px]">
+        <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
           {category.description}
         </p>
       </header>
@@ -78,7 +78,7 @@ export default function CategoryPage({ params }: PageProps) {
               <Link
                 href={`/category/${item.slug}`}
                 aria-current={item.slug === category.slug ? 'page' : undefined}
-                className={`text-[13px] tracking-[0.1em] transition-colors duration-200 ${
+                className={`text-[15px] tracking-[0.1em] transition-colors duration-200 ${
                   item.slug === category.slug
                     ? 'text-ink underline decoration-wine underline-offset-[6px]'
                     : 'text-muted hover:text-ink'

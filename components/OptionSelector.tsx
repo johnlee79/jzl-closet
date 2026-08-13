@@ -22,7 +22,7 @@ export default function OptionSelector({
         const id = `option-${optionIndex}`;
         return (
           <div key={option.name} className="flex flex-col gap-2">
-            <label htmlFor={id} className="text-[12px] tracking-[0.14em] text-muted">
+            <label htmlFor={id} className="text-[13px] tracking-[0.14em] text-muted">
               {option.name}
             </label>
             <div className="relative">
@@ -32,7 +32,7 @@ export default function OptionSelector({
                 value={selected[option.name] ?? ''}
                 disabled={disabled}
                 onChange={(event) => onChange(option.name, event.target.value)}
-                className="w-full appearance-none rounded-none border border-stone bg-transparent px-4 py-3.5 pr-10 text-[13px] text-ink outline-none transition-colors duration-200 focus:border-ink disabled:cursor-not-allowed disabled:text-muted"
+                className="w-full appearance-none rounded-none border border-stone bg-transparent px-4 py-3.5 pr-10 text-[15px] text-ink outline-none transition-colors duration-200 focus:border-ink disabled:cursor-not-allowed disabled:text-muted"
               >
                 <option value="">{option.name}을(를) 선택해 주세요</option>
                 {option.values.map((value) => {

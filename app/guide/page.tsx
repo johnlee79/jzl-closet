@@ -63,14 +63,14 @@ export default function GuidePage() {
   return (
     <div className="shell py-14 md:py-20">
       <header className="max-w-[720px]">
-        <p className="border border-stone px-4 py-3 text-[12px] leading-relaxed text-muted">
+        <p className="border border-stone px-4 py-3 text-[13px] leading-relaxed text-muted">
           본 문서는 초안이며 운영 전 검토가 필요합니다.
         </p>
         <p className="label-xs mt-8">GUIDE</p>
         <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
           배송·교환·반품 안내
         </h1>
-        <p className="mt-4 text-[13px] leading-[1.9] text-muted md:text-[14px]">
+        <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
           아래 내용은 국내 전자상거래 일반 기준을 따릅니다. 개별 상품에 다른 조건이 적용될
           때는 상품 상세 페이지에 별도로 표기합니다.
         </p>
@@ -87,7 +87,7 @@ export default function GuidePage() {
             </h2>
             <ul className="mt-6 flex max-w-[820px] flex-col gap-3">
               {section.items.map((item) => (
-                <li key={item} className="flex gap-3 text-[13px] leading-[1.9] text-muted">
+                <li key={item} className="flex gap-3 text-[15px] leading-[1.9] text-ink">
                   <span aria-hidden="true" className="text-stone">
                     —
                   </span>
@@ -106,7 +106,7 @@ export default function GuidePage() {
         >
           문의처
         </h2>
-        <p className="mt-4 text-[13px] leading-[1.9] text-muted">
+        <p className="mt-4 text-[15px] leading-[1.9] text-ink">
           {store.business.company} · 고객센터 {store.phone}
           <br />
           평일 10:00 — 17:00 (점심 12:30 — 13:30, 주말·공휴일 휴무)

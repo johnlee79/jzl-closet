@@ -51,7 +51,7 @@ export default function HomePage() {
             <p className="mt-5 font-serif text-[18px] leading-relaxed text-ink md:text-[22px]">
               {store.slogan}
             </p>
-            <p className="mt-4 text-[13px] leading-relaxed text-muted md:text-[14px]">
+            <p className="mt-4 text-[16px] leading-relaxed text-ink md:text-[17px]">
               {store.intro}
               <br />
               의류와 가방, 슈즈와 액세서리까지 매일의 옷차림을 정리해 주는 물건을 고릅니다.
@@ -77,7 +77,7 @@ export default function HomePage() {
             </div>
             <Link
               href="/products"
-              className="shrink-0 text-[12px] tracking-[0.14em] text-muted underline underline-offset-4"
+              className="shrink-0 text-[13px] tracking-[0.14em] text-muted underline underline-offset-4"
             >
               전체 보기
             </Link>
@@ -109,7 +109,7 @@ export default function HomePage() {
             {store.story.map((paragraph) => (
               <p
                 key={paragraph.slice(0, 12)}
-                className="text-[14px] leading-[2.1] text-muted md:text-[15px]"
+                className="text-[16px] leading-[2.1] text-ink md:text-[17px]"
               >
                 {paragraph}
               </p>
@@ -143,10 +143,10 @@ export default function HomePage() {
                         height={533}
                       />
                     </div>
-                    <h3 className="mt-4 font-serif text-[17px] text-ink">
+                    <h3 className="mt-4 font-serif text-[19px] text-ink">
                       {category.nameKo}
                     </h3>
-                    <p className="mt-1 text-[11px] tracking-[0.14em] text-muted">
+                    <p className="mt-1 text-[13px] tracking-[0.14em] text-muted">
                       {category.label} · {count}개 상품
                     </p>
                   </Link>
@@ -158,7 +158,7 @@ export default function HomePage() {
                         <li key={child.slug}>
                           <Link
                             href={`/category/${category.slug}/${child.slug}`}
-                            className="text-[11px] text-muted underline-offset-4 hover:text-ink hover:underline"
+                            className="text-[13px] text-muted underline-offset-4 hover:text-ink hover:underline"
                           >
                             {child.label}
                           </Link>
@@ -188,8 +188,8 @@ export default function HomePage() {
                 <p className="font-display text-[34px] font-light tracking-[0.1em] text-ink">
                   {step.step}
                 </p>
-                <h3 className="mt-3 font-serif text-[17px] text-ink">{step.title}</h3>
-                <p className="mt-3 text-[13px] leading-[1.9] text-muted">{step.body}</p>
+                <h3 className="mt-3 font-serif text-[19px] text-ink">{step.title}</h3>
+                <p className="mt-3 text-[15px] leading-[1.9] text-ink">{step.body}</p>
               </li>
             ))}
           </ol>

@@ -26,7 +26,7 @@ export default function ProductsPage() {
         <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
           전체 상품
         </h1>
-        <p className="mt-4 text-[13px] leading-[1.9] text-muted md:text-[14px]">
+        <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
           매일 손이 가는 물건만 남겼습니다. 총 {products.length}개의 상품을 카테고리와
           브랜드, 가격 순으로 정리해 두었습니다.
         </p>
@@ -39,7 +39,7 @@ export default function ProductsPage() {
             <li key={category.slug}>
               <Link
                 href={`/category/${category.slug}`}
-                className="text-[13px] tracking-[0.1em] text-muted transition-colors duration-200 hover:text-ink"
+                className="text-[15px] tracking-[0.1em] text-ink transition-colors duration-200 hover:text-ink"
               >
                 {category.label}
               </Link>

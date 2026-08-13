@@ -57,12 +57,12 @@ export default function CopyOrderButton({ text, disabled = false }: CopyOrderBut
         주문 내역 복사하기
       </button>
       {state === 'done' ? (
-        <p className="text-[12px] leading-relaxed text-ink">
+        <p className="text-[13px] leading-relaxed text-ink">
           주문 내역이 복사되었습니다. 고객센터로 붙여넣어 보내주세요.
         </p>
       ) : null}
       {state === 'failed' ? (
-        <p className="text-[12px] leading-relaxed text-muted">
+        <p className="text-[13px] leading-relaxed text-muted">
           자동 복사가 되지 않는 브라우저입니다. 아래 주문 내역을 길게 눌러 직접 복사해 주세요.
         </p>
       ) : null}

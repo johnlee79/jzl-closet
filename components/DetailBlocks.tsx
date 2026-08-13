@@ -24,7 +24,7 @@ export default function DetailBlocks({ blocks, productName }: DetailBlocksProps)
                   />
                 </div>
                 {block.caption ? (
-                  <figcaption className="mt-4 text-[12px] leading-relaxed text-muted">
+                  <figcaption className="mt-4 text-[13px] leading-relaxed text-muted">
                     {block.caption}
                   </figcaption>
                 ) : null}
@@ -39,7 +39,7 @@ export default function DetailBlocks({ blocks, productName }: DetailBlocksProps)
                     {block.heading}
                   </h3>
                 ) : null}
-                <p className="mt-4 whitespace-pre-line text-[14px] leading-[2] text-muted md:text-[15px]">
+                <p className="mt-4 whitespace-pre-line text-[16px] leading-[2] text-ink md:text-[17px]">
                   {block.body}
                 </p>
               </div>
@@ -57,10 +57,10 @@ export default function DetailBlocks({ blocks, productName }: DetailBlocksProps)
                       key={row.label}
                       className="flex flex-col gap-1 border-b border-stone py-4 md:flex-row md:gap-8"
                     >
-                      <dt className="w-full text-[12px] tracking-[0.14em] text-muted md:w-40 md:shrink-0">
+                      <dt className="w-full text-[13px] tracking-[0.14em] text-muted md:w-40 md:shrink-0">
                         {row.label}
                       </dt>
-                      <dd className="text-[14px] leading-relaxed text-ink">{row.value}</dd>
+                      <dd className="text-[16px] leading-relaxed text-ink">{row.value}</dd>
                     </div>
                   ))}
                 </dl>

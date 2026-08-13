@@ -142,7 +142,7 @@ export default function ProductDetailPage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
 
-      <nav aria-label="현재 위치" className="text-[11px] tracking-[0.14em] text-muted">
+      <nav aria-label="현재 위치" className="text-[13px] tracking-[0.14em] text-muted">
         <ol className="flex flex-wrap items-center gap-2">
           <li>
             <Link href="/" className="hover:text-ink">
@@ -193,40 +193,40 @@ export default function ProductDetailPage({ params }: PageProps) {
         <section aria-label="상품 정보" className="lg:pt-4">
           <Link
             href={`/brand/${product.brand}`}
-            className="text-[12px] tracking-[0.16em] text-muted underline-offset-4 hover:underline"
+            className="text-[13px] tracking-[0.16em] text-muted underline-offset-4 hover:underline"
           >
             {brandLabel}
           </Link>
           <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[32px]">
             {product.name}
           </h1>
-          <p className="mt-4 text-[13px] leading-[1.9] text-muted md:text-[14px]">
+          <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
             {product.summary}
           </p>
 
           <div className="mt-8 flex flex-wrap items-baseline gap-3">
-            <span className="font-display text-[32px] tracking-wide text-ink md:text-[38px]">
+            <span className="font-display text-[32px] font-medium tracking-wide text-ink md:text-[38px]">
               {formatPrice(product.price)}
-              <span className="ml-1 font-sans text-[14px]">원</span>
+              <span className="ml-1 font-sans text-[16px]">원</span>
             </span>
             {product.originalPrice ? (
-              <span className="text-[14px] text-muted line-through">
+              <span className="text-[16px] text-muted line-through">
                 {formatPrice(product.originalPrice)}원
               </span>
             ) : null}
             {discount > 0 ? (
-              <span className="border border-wine px-2 py-1 text-[11px] tracking-[0.14em] text-wine">
+              <span className="border border-wine px-2 py-1 text-[13px] tracking-[0.14em] text-wine">
                 {discount}% OFF
               </span>
             ) : null}
             {product.isOutlet ? (
-              <span className="border border-ink px-2 py-1 text-[11px] tracking-[0.14em] text-ink">
+              <span className="border border-ink px-2 py-1 text-[13px] tracking-[0.14em] text-ink">
                 OUTLET
               </span>
             ) : null}
           </div>
 
-          <dl className="mt-8 flex flex-col gap-2 border-t border-stone pt-6 text-[12px]">
+          <dl className="mt-8 flex flex-col gap-2 border-t border-stone pt-6 text-[13px]">
             <div className="flex gap-4">
               <dt className="w-20 shrink-0 text-muted">카테고리</dt>
               <dd className="text-ink">
@@ -272,7 +272,7 @@ export default function ProductDetailPage({ params }: PageProps) {
           >
             {brand.label}
           </h2>
-          <p className="mt-4 max-w-[720px] text-[13px] leading-[1.9] text-muted md:text-[14px]">
+          <p className="mt-4 max-w-[720px] text-[16px] leading-[1.9] text-ink md:text-[17px]">
             {brand.story[0]}
           </p>
           <Link href={`/brand/${brand.slug}`} className="btn-secondary mt-8">

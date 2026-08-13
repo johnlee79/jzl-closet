@@ -9,7 +9,7 @@ export default function CartBadge() {
   return (
     <Link
       href="/order"
-      className="relative inline-flex items-center gap-2 text-[12px] tracking-[0.14em] text-ink"
+      className="relative inline-flex items-center gap-2 text-[13px] tracking-[0.14em] text-ink"
       aria-label={`장바구니 (${ready ? count : 0}개 담김)`}
     >
       <svg
@@ -26,7 +26,7 @@ export default function CartBadge() {
       </svg>
       <span className="hidden sm:inline">CART</span>
       {ready && count > 0 ? (
-        <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-wine px-1 text-[10px] leading-none text-paper">
+        <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-wine px-1 text-[12px] leading-none text-paper">
           {count}
         </span>
       ) : null}

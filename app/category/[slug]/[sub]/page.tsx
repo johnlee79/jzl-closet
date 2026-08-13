@@ -83,7 +83,7 @@ export default function SubCategoryPage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
 
-      <nav aria-label="현재 위치" className="text-[11px] tracking-[0.14em] text-muted">
+      <nav aria-label="현재 위치" className="text-[13px] tracking-[0.14em] text-muted">
         <ol className="flex flex-wrap items-center gap-2">
           <li>
             <Link href="/" className="hover:text-ink">
@@ -108,7 +108,7 @@ export default function SubCategoryPage({ params }: PageProps) {
         <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
           {sub.nameKo}
         </h1>
-        <p className="mt-4 text-[13px] leading-[1.9] text-muted md:text-[14px]">
+        <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
           {category.nameKo} 가운데 {sub.nameKo} 상품입니다. {category.description}
         </p>
       </header>

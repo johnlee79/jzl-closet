@@ -32,8 +32,9 @@ type ProductListProps = {
   showBrandFilter?: boolean;
 };
 
+// 모바일 터치 영역 확보를 위해 최소 높이 44px
 const chipBase =
-  'inline-block whitespace-nowrap rounded-sm px-4 py-2 text-[12px] tracking-[0.1em] transition-colors duration-200';
+  'inline-flex min-h-[44px] items-center whitespace-nowrap rounded-sm px-5 py-3 text-[14px] tracking-[0.1em] transition-colors duration-200';
 
 function chipClass(active: boolean): string {
   return active
@@ -43,7 +44,7 @@ function chipClass(active: boolean): string {
 
 function RowLabel({ children }: { children: string }) {
   return (
-    <span className="mt-2.5 w-[58px] shrink-0 text-[10px] tracking-[0.2em] text-muted">
+    <span className="mt-3.5 w-[62px] shrink-0 text-[12px] tracking-[0.2em] text-muted">
       {children}
     </span>
   );
@@ -162,7 +163,7 @@ export default function ProductList({
                   type="button"
                   onClick={() => setGender(item.key)}
                   aria-pressed={gender === item.key}
-                  className={`text-[12px] tracking-[0.12em] transition-colors duration-200 ${
+                  className={`tap-target text-[15px] tracking-[0.12em] transition-colors duration-200 ${
                     gender === item.key
                       ? 'text-ink underline decoration-wine underline-offset-[6px]'
                       : 'text-muted hover:text-ink'
@@ -175,7 +176,7 @@ export default function ProductList({
           </ul>
 
           <div className="flex items-center gap-4">
-            <span className="text-[12px] tracking-[0.14em] text-muted">
+            <span className="text-[13px] tracking-[0.14em] text-muted">
               {visible.length}개 상품
             </span>
             {sortOptions.map((option) => (
@@ -184,7 +185,7 @@ export default function ProductList({
                 type="button"
                 onClick={() => setSort(option.key)}
                 aria-pressed={sort === option.key}
-                className={`text-[12px] tracking-[0.1em] transition-colors duration-200 ${
+                className={`tap-target text-[15px] tracking-[0.1em] transition-colors duration-200 ${
                   sort === option.key ? 'text-ink' : 'text-muted hover:text-ink'
                 }`}
               >
@@ -197,10 +198,10 @@ export default function ProductList({
 
       {visible.length === 0 ? (
         <div className="py-20">
-          <p className="text-[14px] leading-relaxed text-ink">
+          <p className="text-[16px] leading-relaxed text-ink">
             조건에 맞는 상품이 없습니다.
           </p>
-          <p className="mt-2 text-[13px] leading-relaxed text-muted">
+          <p className="mt-2 text-[15px] leading-relaxed text-ink">
             선택하신 조건을 지우면 다시 전체 상품을 보실 수 있습니다.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
