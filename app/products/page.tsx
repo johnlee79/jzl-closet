@@ -1,0 +1,56 @@
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import ProductList from '@/components/ProductList';
+import { getVisibleCategories } from '@/lib/categories';
+import { products } from '@/lib/products';
+import { store } from '@/lib/store';
+
+export const metadata: Metadata = {
+  title: '전체 상품',
+  description: `${store.name}의 전체 상품입니다. 의류, 가방·지갑, 슈즈, 액세서리를 카테고리와 브랜드, 가격순으로 살펴보세요.`,
+  alternates: { canonical: '/products' },
+  openGraph: {
+    title: `전체 상품 | ${store.name}`,
+    description: `${store.name}의 의류, 가방·지갑, 슈즈, 액세서리 전체 목록입니다.`,
+    url: '/products',
+  },
+};
+
+export default function ProductsPage() {
+  const menu = getVisibleCategories();
+
+  return (
+    <div className="shell py-14 md:py-20">
+      <header className="max-w-[640px]">
+        <p className="label-xs">ALL PRODUCTS</p>
+        <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
+          전체 상품
+        </h1>
+        <p className="mt-4 text-[13px] leading-[1.9] text-muted md:text-[14px]">
+          매일 손이 가는 물건만 남겼습니다. 총 {products.length}개의 상품을 카테고리와
+          브랜드, 가격 순으로 정리해 두었습니다.
+        </p>
+      </header>
+
+      {/* 대분류 이동 — 소분류 필터는 각 카테고리 페이지에서 제공합니다. */}
+      <nav aria-label="카테고리" className="mt-10">
+        <ul className="flex flex-wrap items-center gap-x-6 gap-y-3">
+          {menu.map((category) => (
+            <li key={category.slug}>
+              <Link
+                href={`/category/${category.slug}`}
+                className="text-[13px] tracking-[0.1em] text-muted transition-colors duration-200 hover:text-ink"
+              >
+                {category.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <section aria-label="상품 목록" className="mt-10">
+        <ProductList products={products} />
+      </section>
+    </div>
+  );
+}
