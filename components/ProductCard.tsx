@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import SafeImage from '@/components/SafeImage';
 import { getBrandLabel, getBrandName } from '@/lib/brands';
-import { formatPrice, isProductSoldOut, type Product } from '@/lib/products';
+import { formatPrice, getDiscountRate, isProductSoldOut } from '@/lib/product-utils';
+import type { Product } from '@/lib/types';
 
 type ProductCardProps = {
   product: Product;
@@ -9,19 +10,16 @@ type ProductCardProps = {
 };
 
 export default function ProductCard({ product, priority = false }: ProductCardProps) {
-  const first = product.thumbnails[0];
+  const first = product.thumbnails[0] ?? '';
   const second = product.thumbnails[1] ?? first;
-  const brandName = getBrandName(product.brand); // alt·검색용 정식 명칭
-  const brandLabel = getBrandLabel(product.brand); // 화면 출력용
+  const brandName = product.brandSlug ? getBrandName(product.brandSlug) : '';
+  const brandLabel = product.brandSlug ? getBrandLabel(product.brandSlug) : '';
   const soldOut = isProductSoldOut(product);
-  const discount =
-    product.originalPrice && product.originalPrice > product.price
-      ? Math.round((1 - product.price / product.originalPrice) * 100)
-      : 0;
+  const discount = getDiscountRate(product);
 
   return (
     <article className="group">
-      <Link href={`/products/${product.id}`} className="block">
+      <Link href={`/products/${product.slug}`} className="block">
         <div className="relative aspect-[3/4] w-full overflow-hidden bg-stone">
           <div className="absolute inset-0">
             <SafeImage
@@ -38,13 +36,7 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
             aria-hidden="true"
             className="absolute inset-0 opacity-0 transition-opacity duration-[600ms] ease-out motion-reduce:transition-none [@media(hover:hover)]:group-hover:opacity-100"
           >
-            <SafeImage
-              src={second}
-              alt=""
-              label={product.name}
-              width={600}
-              height={800}
-            />
+            <SafeImage src={second} alt="" label={product.name} width={600} height={800} />
           </div>
 
           <div className="absolute left-0 top-0 flex flex-col items-start">
@@ -63,16 +55,13 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
                 SALE
               </span>
             ) : null}
-            {!soldOut && product.isOutlet ? (
-              <span className="border border-ink px-3 py-1.5 text-[13px] tracking-[0.2em] text-ink">
-                OUTLET
-              </span>
-            ) : null}
           </div>
         </div>
 
         <div className="pt-4">
-          <p className="text-[13px] tracking-[0.16em] text-muted">{brandLabel}</p>
+          {brandLabel ? (
+            <p className="text-[13px] tracking-[0.16em] text-muted">{brandLabel}</p>
+          ) : null}
           <h3 className="mt-1.5 font-serif text-[17px] leading-snug text-ink">
             {product.name}
           </h3>
@@ -87,7 +76,7 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
                   {formatPrice(product.originalPrice)}원
                 </span>
                 {discount > 0 ? (
-                  <span className="text-[13px] text-wine">{discount}%</span>
+                  <span className="text-[14px] text-wine">{discount}%</span>
                 ) : null}
               </>
             ) : null}

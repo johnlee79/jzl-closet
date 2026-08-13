@@ -4,7 +4,7 @@ import Link from 'next/link';
 import CopyOrderButton from '@/components/CopyOrderButton';
 import SafeImage from '@/components/SafeImage';
 import { useCart } from '@/lib/cart';
-import { formatPrice } from '@/lib/products';
+import { formatPrice } from '@/lib/product-utils';
 import { store } from '@/lib/store';
 
 export default function CartPanel() {

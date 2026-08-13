@@ -6,13 +6,13 @@ import OptionSelector from '@/components/OptionSelector';
 import { getBrandLabel } from '@/lib/brands';
 import { useCart } from '@/lib/cart';
 import {
-  findStock,
   formatPrice,
   isProductSoldOut,
+  isSelectionAvailable,
   isValueSoldOut,
-  type Product,
-} from '@/lib/products';
+} from '@/lib/product-utils';
 import { store } from '@/lib/store';
+import type { Product } from '@/lib/types';
 
 export default function AddToCartButton({ product }: { product: Product }) {
   const { addItem } = useCart();
@@ -25,9 +25,10 @@ export default function AddToCartButton({ product }: { product: Product }) {
     [product.options, selected]
   );
 
-  const stock = useMemo(() => findStock(product, selected), [product, selected]);
-  const soldOutCombination = allSelected && stock !== null && stock <= 0;
-  const maxQuantity = stock !== null && stock > 0 ? Math.min(stock, 99) : 99;
+  /** 선택한 조합에 품절 옵션값이 섞여 있으면 담을 수 없습니다. */
+  const soldOutCombination =
+    allSelected && !isSelectionAvailable(product, selected);
+  const maxQuantity = 99;
   const canAdd = allSelected && !soldOutCombination;
 
   const handleChange = (name: string, value: string) => {
@@ -39,11 +40,12 @@ export default function AddToCartButton({ product }: { product: Product }) {
   const handleAdd = () => {
     if (!canAdd) return;
     addItem({
-      productId: product.id,
+      // 장바구니 링크(/products/{slug})에 그대로 쓰이므로 slug 를 넣습니다.
+      productId: product.slug,
       name: product.name,
-      brand: getBrandLabel(product.brand),
+      brand: product.brandSlug ? getBrandLabel(product.brandSlug) : '',
       price: product.price,
-      thumbnail: product.thumbnails[0],
+      thumbnail: product.thumbnails[0] ?? '',
       options: selected,
       quantity,
     });
@@ -69,7 +71,10 @@ export default function AddToCartButton({ product }: { product: Product }) {
         options={product.options}
         selected={selected}
         onChange={handleChange}
-        isSoldOut={(optionIndex, value) => isValueSoldOut(product, optionIndex, value)}
+        isSoldOut={(optionIndex, value) => {
+          const option = product.options[optionIndex];
+          return option ? isValueSoldOut(option, value) : false;
+        }}
       />
 
       <div className="mt-6 flex items-center justify-between border-t border-stone pt-6">
@@ -122,12 +127,6 @@ export default function AddToCartButton({ product }: { product: Product }) {
       {soldOutCombination ? (
         <p className="mt-4 text-[13px] leading-relaxed text-wine">
           선택하신 옵션은 품절되었습니다. 다른 옵션을 골라 주세요.
-        </p>
-      ) : null}
-
-      {allSelected && stock !== null && stock > 0 && stock <= 3 ? (
-        <p className="mt-4 text-[13px] leading-relaxed text-muted">
-          남은 수량 {stock}개입니다.
         </p>
       ) : null}
 

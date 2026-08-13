@@ -7,8 +7,11 @@ import {
   getVisibleSubCategories,
   hasChildren,
 } from '@/lib/categories';
-import { getNewProducts, getProductsByCategorySlug } from '@/lib/products';
+import { getProducts } from '@/lib/products';
 import { orderSteps, store } from '@/lib/store';
+
+/** ISR — 60초마다 다시 굽고, 관리자가 저장하면 revalidatePath 로 즉시 갱신됩니다. */
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: `${store.name} — ${store.slogan}`,
@@ -21,10 +24,20 @@ export const metadata: Metadata = {
   },
 };
 
-export default function HomePage() {
-  const newProducts = getNewProducts(4);
+export default async function HomePage() {
+  /** DB 를 한 번만 읽고 신상품·카테고리 개수를 함께 계산합니다. */
+  const allProducts = await getProducts();
+  const newProducts = [
+    ...allProducts.filter((product) => product.isNew),
+    ...allProducts.filter((product) => !product.isNew),
+  ].slice(0, 4);
+
   /** 하위 분류를 가진 대분류만 진입 블록으로 노출합니다. (전체/세일 같은 모음은 제외) */
   const entryCategories = getVisibleCategories().filter(hasChildren);
+  const countByCategory = allProducts.reduce<Record<string, number>>((acc, product) => {
+    acc[product.categorySlug] = (acc[product.categorySlug] ?? 0) + 1;
+    return acc;
+  }, {});
 
   return (
     <>
@@ -130,7 +143,7 @@ export default function HomePage() {
 
           <ul className="mt-12 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 lg:gap-x-6">
             {entryCategories.map((category) => {
-              const count = getProductsByCategorySlug(category.slug).length;
+              const count = countByCategory[category.slug] ?? 0;
               return (
                 <li key={category.slug}>
                   <Link href={`/category/${category.slug}`} className="group block">

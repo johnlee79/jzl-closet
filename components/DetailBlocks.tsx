@@ -1,5 +1,6 @@
 import SafeImage from '@/components/SafeImage';
-import type { DetailBlock } from '@/lib/products';
+import { isHtmlBody, sanitizeRichText } from '@/lib/product-utils';
+import type { DetailBlock } from '@/lib/types';
 
 type DetailBlocksProps = {
   blocks: DetailBlock[];
@@ -39,9 +40,18 @@ export default function DetailBlocks({ blocks, productName }: DetailBlocksProps)
                     {block.heading}
                   </h3>
                 ) : null}
-                <p className="mt-4 whitespace-pre-line text-[16px] leading-[2] text-ink md:text-[17px]">
-                  {block.body}
-                </p>
+                {/* 관리자 편집기에서 굵게·링크·정렬을 쓰면 HTML 로 저장됩니다.
+                    허용 태그만 남기고 정리한 뒤 출력하므로 서버 HTML 에 본문이 그대로 실립니다. */}
+                {isHtmlBody(block.body) ? (
+                  <div
+                    className="detail-body mt-4 text-[16px] leading-[2] text-ink md:text-[17px]"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(block.body) }}
+                  />
+                ) : (
+                  <p className="mt-4 whitespace-pre-line text-[16px] leading-[2] text-ink md:text-[17px]">
+                    {block.body}
+                  </p>
+                )}
               </div>
             );
 

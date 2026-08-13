@@ -8,10 +8,12 @@ import {
   getVisibleCategoryBySlug,
   getVisibleSubCategories,
 } from '@/lib/categories';
-import { getProductsForCategory } from '@/lib/products';
+import { getProductsByCategory } from '@/lib/products';
 import { SITE_URL, store } from '@/lib/store';
 
 type PageProps = { params: { slug: string; sub: string } };
+
+export const revalidate = 60;
 
 /** 노출 중인 대분류의 노출 중인 children 을 모두 정적 생성합니다. */
 export function generateStaticParams(): { slug: string; sub: string }[] {
@@ -44,16 +46,14 @@ export function generateMetadata({ params }: PageProps): Metadata {
   };
 }
 
-export default function SubCategoryPage({ params }: PageProps) {
+export default async function SubCategoryPage({ params }: PageProps) {
   const category = getVisibleCategoryBySlug(params.slug);
   const sub = category ? getSubCategory(category.slug, params.sub) : undefined;
   if (!category || !sub) {
     notFound();
   }
 
-  const items = getProductsForCategory(category).filter(
-    (product) => product.subCategory === sub.slug
-  );
+  const items = await getProductsByCategory(category.slug, sub.slug);
   const subs = getVisibleSubCategories(category.slug);
 
   const breadcrumbJsonLd = {

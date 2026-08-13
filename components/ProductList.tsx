@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import ProductCard from '@/components/ProductCard';
 import { getVisibleBrands } from '@/lib/brands';
-import { genderFilters, type Gender, type Product } from '@/lib/products';
+import { genderFilters } from '@/lib/product-utils';
+import type { Gender, Product } from '@/lib/types';
 
 type SortKey = 'new' | 'low' | 'high';
 
@@ -66,7 +67,7 @@ export default function ProductList({
   const visible = useMemo(() => {
     const filtered = products.filter((product) => {
       if (gender !== 'all' && product.gender !== gender) return false;
-      if (brand !== 'all' && product.brand !== brand) return false;
+      if (brand !== 'all' && product.brandSlug !== brand) return false;
       return true;
     });
 

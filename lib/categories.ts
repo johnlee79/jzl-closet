@@ -45,7 +45,7 @@
  * matchType — 이 카테고리가 어떤 상품을 보여줄지 정합니다.
  *   생략   : 상품의 category 값이 이 카테고리 slug 와 같은 상품 (기본값)
  *   'all'  : 전체 상품
- *   'flag' : matchFlag 로 지정한 상품 상태값이 true 인 상품 (isSale / isOutlet)
+ *   'flag' : matchFlag 로 지정한 상품 상태값이 true 인 상품 (현재는 isSale)
  * ------------------------------------------------------------
  */
 
@@ -66,7 +66,7 @@ export type Category = {
   description: string;
   children?: SubCategory[];
   matchType?: 'all' | 'flag';
-  matchFlag?: 'isSale' | 'isOutlet';
+  matchFlag?: 'isSale';
 };
 
 export const categories: Category[] = [

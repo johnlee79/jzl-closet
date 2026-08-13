@@ -1,15 +1,17 @@
 import type { MetadataRoute } from 'next';
 import { brands } from '@/lib/brands';
 import { getVisibleCategories } from '@/lib/categories';
-import { products } from '@/lib/products';
+import { getProductSitemapRows } from '@/lib/products';
 import { SITE_URL } from '@/lib/store';
 
 /**
  * 사이트맵은 데이터를 순회해서 만듭니다.
- * lib/categories.ts 에 대분류·소분류를 추가하면 자동으로 포함되고,
- * isVisible:false 인 카테고리는 자동으로 빠집니다.
+ * 카테고리·브랜드는 lib 데이터에서, 상품은 DB에서 읽습니다.
+ * isVisible:false 인 카테고리와 숨김 상품은 자동으로 빠집니다.
  */
-export default function sitemap(): MetadataRoute.Sitemap {
+export const revalidate = 60;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const lastModified = new Date();
 
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -46,9 +48,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
-  const productRoutes: MetadataRoute.Sitemap = products.map((product) => ({
-    url: `${SITE_URL}/products/${product.id}`,
-    lastModified,
+  const productRows = await getProductSitemapRows();
+  const productRoutes: MetadataRoute.Sitemap = productRows.map((row) => ({
+    url: `${SITE_URL}/products/${row.slug}`,
+    lastModified: row.updatedAt ? new Date(row.updatedAt) : lastModified,
     changeFrequency: 'weekly',
     priority: 0.8,
   }));

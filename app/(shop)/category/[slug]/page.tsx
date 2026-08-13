@@ -7,10 +7,12 @@ import {
   getVisibleCategoryBySlug,
   getVisibleSubCategories,
 } from '@/lib/categories';
-import { getProductsForCategory } from '@/lib/products';
+import { getProductsByCategory } from '@/lib/products';
 import { store } from '@/lib/store';
 
 type PageProps = { params: { slug: string } };
+
+export const revalidate = 60;
 
 /** 노출 중인 대분류만 정적 생성합니다. isVisible:false 는 라우트 자체가 만들어지지 않습니다. */
 export function generateStaticParams(): { slug: string }[] {
@@ -37,13 +39,13 @@ export function generateMetadata({ params }: PageProps): Metadata {
   };
 }
 
-export default function CategoryPage({ params }: PageProps) {
+export default async function CategoryPage({ params }: PageProps) {
   const category = getVisibleCategoryBySlug(params.slug);
   if (!category) {
     notFound();
   }
 
-  const items = getProductsForCategory(category);
+  const items = await getProductsByCategory(category.slug);
   const menu = getVisibleCategories();
   const subs = getVisibleSubCategories(category.slug);
 

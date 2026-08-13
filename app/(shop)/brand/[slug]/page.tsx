@@ -9,6 +9,8 @@ import { SITE_URL, store } from '@/lib/store';
 
 type PageProps = { params: { slug: string } };
 
+export const revalidate = 60;
+
 export function generateStaticParams(): { slug: string }[] {
   return brands.map((brand) => ({ slug: brand.slug }));
 }
@@ -33,13 +35,13 @@ export function generateMetadata({ params }: PageProps): Metadata {
   };
 }
 
-export default function BrandDetailPage({ params }: PageProps) {
+export default async function BrandDetailPage({ params }: PageProps) {
   const brand = getBrand(params.slug);
   if (!brand) {
     notFound();
   }
 
-  const items = getProductsByBrand(brand.slug);
+  const items = await getProductsByBrand(brand.slug);
 
   const brandJsonLd = {
     '@context': 'https://schema.org',

@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
-import Footer from '@/components/Footer';
-import Header from '@/components/Header';
-import { CartProvider } from '@/lib/cart';
 import { SITE_URL, store } from '@/lib/store';
 import './globals.css';
 
+/**
+ * 루트 레이아웃은 html/body 껍데기만 담당합니다.
+ * 프론트(헤더·푸터·장바구니)는 app/(shop)/layout.tsx,
+ * 관리자(사이드바)는 app/admin/layout.tsx 가 각각 따로 그립니다.
+ */
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
@@ -47,45 +49,10 @@ export const metadata: Metadata = {
   },
 };
 
-const organizationJsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'Organization',
-  name: store.name,
-  alternateName: store.nameKo,
-  url: SITE_URL,
-  description: store.intro,
-  slogan: store.slogan,
-  telephone: store.business.phone,
-  address: {
-    '@type': 'PostalAddress',
-    streetAddress: '부일로 38, 1102호 (부개동)',
-    addressLocality: '부평구',
-    addressRegion: '인천광역시',
-    addressCountry: 'KR',
-  },
-  contactPoint: {
-    '@type': 'ContactPoint',
-    telephone: `+82-32-209-1058`,
-    contactType: 'customer service',
-    areaServed: 'KR',
-    availableLanguage: ['Korean'],
-  },
-};
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
-      <body className="bg-paper text-ink antialiased">
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
-        />
-        <CartProvider>
-          <Header />
-          <main id="main">{children}</main>
-          <Footer />
-        </CartProvider>
-      </body>
+      <body className="bg-paper text-ink antialiased">{children}</body>
     </html>
   );
 }

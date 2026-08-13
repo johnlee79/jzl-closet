@@ -2,8 +2,10 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import SafeImage from '@/components/SafeImage';
 import { brands } from '@/lib/brands';
-import { getProductsByBrand } from '@/lib/products';
+import { getProducts } from '@/lib/products';
 import { store } from '@/lib/store';
+
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: '브랜드',
@@ -16,7 +18,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function BrandListPage() {
+export default async function BrandListPage() {
+  const allProducts = await getProducts();
+  const countByBrand = allProducts.reduce<Record<string, number>>((acc, product) => {
+    if (product.brandSlug) acc[product.brandSlug] = (acc[product.brandSlug] ?? 0) + 1;
+    return acc;
+  }, {});
+
   return (
     <div className="shell py-14 md:py-20">
       <nav aria-label="현재 위치" className="text-[13px] tracking-[0.14em] text-muted">
@@ -44,7 +52,7 @@ export default function BrandListPage() {
 
       <ul className="mt-14 grid grid-cols-1 gap-x-6 gap-y-14 md:grid-cols-2 lg:grid-cols-3">
         {brands.map((brand) => {
-          const count = getProductsByBrand(brand.slug).length;
+          const count = countByBrand[brand.slug] ?? 0;
           return (
             <li key={brand.slug}>
               <article>

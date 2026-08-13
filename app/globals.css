@@ -86,6 +86,62 @@
   .link-wine {
     @apply text-wine underline decoration-wine underline-offset-4;
   }
+
+  /* 상세 본문(관리자 편집기에서 저장한 HTML) — 굵게·링크·정렬만 씁니다. */
+  .detail-body a {
+    @apply text-wine underline decoration-wine underline-offset-4;
+  }
+
+  .detail-body p {
+    @apply mb-4 last:mb-0;
+  }
+
+  /* ============================================================
+     관리자 화면 — 프론트의 명조체·와인색을 쓰지 않습니다.
+     시스템 폰트 · 흰 배경 · 명확한 대비의 실용 위주 스타일입니다.
+     ============================================================ */
+  .admin-root {
+    font-family: ui-sans-serif, system-ui, 'Segoe UI', 'Malgun Gothic', sans-serif;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0;
+    @apply bg-slate-100 text-slate-900;
+  }
+
+  .admin-root h1,
+  .admin-root h2,
+  .admin-root h3 {
+    font-family: inherit;
+    @apply font-semibold;
+  }
+
+  .admin-card {
+    @apply rounded-lg border border-slate-200 bg-white shadow-sm;
+  }
+
+  .admin-label {
+    @apply mb-1 block text-[13px] font-medium text-slate-700;
+  }
+
+  .admin-input {
+    @apply w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[14px] text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-500;
+  }
+
+  .admin-btn {
+    @apply inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-2 text-[14px] font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .admin-btn-primary {
+    @apply inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md border border-blue-700 bg-blue-700 px-4 py-2 text-[14px] font-semibold text-white transition-colors hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .admin-btn-danger {
+    @apply inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md border border-red-300 bg-white px-3 py-2 text-[14px] font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .admin-badge {
+    @apply inline-flex items-center rounded px-2 py-0.5 text-[12px] font-medium;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

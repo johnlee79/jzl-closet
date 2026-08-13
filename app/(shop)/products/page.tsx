@@ -2,8 +2,10 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import ProductList from '@/components/ProductList';
 import { getVisibleCategories } from '@/lib/categories';
-import { products } from '@/lib/products';
+import { getProducts } from '@/lib/products';
 import { store } from '@/lib/store';
+
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: '전체 상품',
@@ -16,8 +18,9 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ProductsPage() {
+export default async function ProductsPage() {
   const menu = getVisibleCategories();
+  const products = await getProducts();
 
   return (
     <div className="shell py-14 md:py-20">

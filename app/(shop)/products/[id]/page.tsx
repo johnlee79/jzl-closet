@@ -8,41 +8,53 @@ import ProductCard from '@/components/ProductCard';
 import ProductGallery from '@/components/ProductGallery';
 import { getBrand, getBrandLabel, getBrandName } from '@/lib/brands';
 import { getCategoryBySlug, getSubCategory } from '@/lib/categories';
+import { formatPrice, getDiscountRate, isProductSoldOut } from '@/lib/product-utils';
 import {
-  formatPrice,
+  getAllProductSlugs,
   getBrandRelated,
-  getProduct,
+  getProductBySlug,
   getRelated,
-  isProductSoldOut,
-  products,
 } from '@/lib/products';
 import { SITE_URL, store } from '@/lib/store';
 
+/** 폴더명은 [id] 지만 실제로 들어오는 값은 상품 slug 입니다. (기존 주소 유지) */
 type PageProps = { params: { id: string } };
 
-export function generateStaticParams(): { id: string }[] {
-  return products.map((product) => ({ id: product.id }));
+/** ISR — 서버에서 HTML 을 완성해 내보내고 60초마다 갱신합니다. */
+export const revalidate = 60;
+/** 빌드 이후에 등록된 상품도 첫 요청 때 서버에서 구워 내보냅니다. */
+export const dynamicParams = true;
+
+export async function generateStaticParams(): Promise<{ id: string }[]> {
+  const slugs = await getAllProductSlugs();
+  return slugs.map((slug) => ({ id: slug }));
 }
 
-export function generateMetadata({ params }: PageProps): Metadata {
-  const product = getProduct(params.id);
+/** 상대 경로는 사이트 주소를 붙이고, R2 같은 절대 URL 은 그대로 둡니다. */
+function toAbsolute(src: string): string {
+  return /^https?:\/\//i.test(src) ? src : `${SITE_URL}${src}`;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const product = await getProductBySlug(params.id);
   if (!product) {
     return { title: '상품을 찾을 수 없습니다' };
   }
 
-  const brandName = getBrandName(product.brand);
+  const brandName = product.brandSlug ? getBrandName(product.brandSlug) : store.name;
   const description = `${brandName} ${product.name} — ${product.summary} 가격 ${formatPrice(product.price)}원. ${store.name}에서 만나보세요.`;
+  const cover = product.thumbnails[0];
 
   return {
     title: `${product.name} — ${brandName}`,
     description,
-    alternates: { canonical: `/products/${product.id}` },
+    alternates: { canonical: `/products/${product.slug}` },
     openGraph: {
       type: 'article',
       title: `${product.name} | ${store.name}`,
       description,
-      url: `/products/${product.id}`,
-      images: [{ url: product.thumbnails[0], alt: `${brandName} ${product.name}` }],
+      url: `/products/${product.slug}`,
+      images: cover ? [{ url: cover, alt: `${brandName} ${product.name}` }] : undefined,
     },
     twitter: {
       card: 'summary_large_image',
@@ -52,39 +64,41 @@ export function generateMetadata({ params }: PageProps): Metadata {
   };
 }
 
-export default function ProductDetailPage({ params }: PageProps) {
-  const product = getProduct(params.id);
-  if (!product) {
+export default async function ProductDetailPage({ params }: PageProps) {
+  const product = await getProductBySlug(params.id);
+  if (!product || !product.isVisible) {
     notFound();
   }
 
-  const brand = getBrand(product.brand);
-  const brandName = getBrandName(product.brand); // alt·JSON-LD 용 정식 명칭
-  const brandLabel = getBrandLabel(product.brand); // 화면 출력용
-  const category = getCategoryBySlug(product.category);
-  const subCategory = getSubCategory(product.category, product.subCategory);
-  const related = getRelated(product, 4);
-  const brandRelated = getBrandRelated(product, 4);
+  const brand = product.brandSlug ? getBrand(product.brandSlug) : undefined;
+  const brandName = product.brandSlug ? getBrandName(product.brandSlug) : store.name; // alt·JSON-LD 용 정식 명칭
+  const brandLabel = product.brandSlug ? getBrandLabel(product.brandSlug) : ''; // 화면 출력용
+  const category = getCategoryBySlug(product.categorySlug);
+  const subCategory = product.subCategorySlug
+    ? getSubCategory(product.categorySlug, product.subCategorySlug)
+    : undefined;
+  const [related, brandRelated] = await Promise.all([
+    getRelated(product, 4),
+    getBrandRelated(product, 4),
+  ]);
   const soldOut = isProductSoldOut(product);
-  const discount =
-    product.originalPrice && product.originalPrice > product.price
-      ? Math.round((1 - product.price / product.originalPrice) * 100)
-      : 0;
+  const discount = getDiscountRate(product);
 
   const productJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.name,
-    image: product.thumbnails.map((src) => `${SITE_URL}${src}`),
+    image: product.thumbnails.map(toAbsolute),
     description: `${product.summary} — ${product.detail
       .filter(
         (block): block is { type: 'text'; heading?: string; body: string } =>
           block.type === 'text'
       )
-      .map((block) => block.body)
+      .map((block) => block.body.replace(/<[^>]*>/g, ' '))
       .join(' ')
+      .replace(/\s+/g, ' ')
       .slice(0, 300)}`,
-    sku: product.id,
+    sku: product.slug,
     category: [category?.nameKo, subCategory?.nameKo].filter(Boolean).join(' > '),
     brand: {
       '@type': 'Brand',
@@ -92,7 +106,7 @@ export default function ProductDetailPage({ params }: PageProps) {
     },
     offers: {
       '@type': 'Offer',
-      url: `${SITE_URL}/products/${product.id}`,
+      url: `${SITE_URL}/products/${product.slug}`,
       price: product.price,
       priceCurrency: 'KRW',
       availability: soldOut
@@ -117,7 +131,7 @@ export default function ProductDetailPage({ params }: PageProps) {
           item: `${SITE_URL}/category/${category.slug}/${subCategory.slug}`,
         }
       : null,
-    { name: product.name, item: `${SITE_URL}/products/${product.id}` },
+    { name: product.name, item: `${SITE_URL}/products/${product.slug}` },
   ].filter((item): item is { name: string; item: string } => item !== null);
 
   const breadcrumbJsonLd = {
@@ -191,12 +205,14 @@ export default function ProductDetailPage({ params }: PageProps) {
         />
 
         <section aria-label="상품 정보" className="lg:pt-4">
-          <Link
-            href={`/brand/${product.brand}`}
-            className="text-[13px] tracking-[0.16em] text-muted underline-offset-4 hover:underline"
-          >
-            {brandLabel}
-          </Link>
+          {product.brandSlug ? (
+            <Link
+              href={`/brand/${product.brandSlug}`}
+              className="text-[13px] tracking-[0.16em] text-muted underline-offset-4 hover:underline"
+            >
+              {brandLabel}
+            </Link>
+          ) : null}
           <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[32px]">
             {product.name}
           </h1>
@@ -219,9 +235,9 @@ export default function ProductDetailPage({ params }: PageProps) {
                 {discount}% OFF
               </span>
             ) : null}
-            {product.isOutlet ? (
+            {product.isNew ? (
               <span className="border border-ink px-2 py-1 text-[13px] tracking-[0.14em] text-ink">
-                OUTLET
+                NEW
               </span>
             ) : null}
           </div>
@@ -233,9 +249,25 @@ export default function ProductDetailPage({ params }: PageProps) {
                 {[category?.nameKo, subCategory?.nameKo].filter(Boolean).join(' · ')}
               </dd>
             </div>
+            {product.origin ? (
+              <div className="flex gap-4">
+                <dt className="w-20 shrink-0 text-muted">원산지</dt>
+                <dd className="text-ink">{product.origin}</dd>
+              </div>
+            ) : null}
+            {product.manufacturer ? (
+              <div className="flex gap-4">
+                <dt className="w-20 shrink-0 text-muted">제조사</dt>
+                <dd className="text-ink">{product.manufacturer}</dd>
+              </div>
+            ) : null}
             <div className="flex gap-4">
               <dt className="w-20 shrink-0 text-muted">배송</dt>
-              <dd className="text-ink">주문 확인 후 1~3영업일 내 출고</dd>
+              <dd className="text-ink">
+                {product.freeShipping
+                  ? '무료배송 — 주문 확인 후 1~3영업일 내 출고'
+                  : '주문 확인 후 1~3영업일 내 출고'}
+              </dd>
             </div>
             <div className="flex gap-4">
               <dt className="w-20 shrink-0 text-muted">문의</dt>
@@ -253,7 +285,7 @@ export default function ProductDetailPage({ params }: PageProps) {
         </h2>
         <DetailBlocks blocks={product.detail} productName={product.name} />
 
-        {product.measurements ? (
+        {product.measurements.length > 0 ? (
           <div className="mx-auto mt-16 w-full max-w-[860px] md:mt-24">
             <MeasurementTable
               measurements={product.measurements}
@@ -294,20 +326,22 @@ export default function ProductDetailPage({ params }: PageProps) {
         </section>
       ) : null}
 
-      <section aria-labelledby="related-title" className="section border-t border-stone">
-        <p className="label-xs">RELATED</p>
-        <h2
-          id="related-title"
-          className="mt-3 font-serif text-[22px] leading-snug text-ink md:text-[28px]"
-        >
-          함께 보면 좋은 상품
-        </h2>
-        <div className="mt-12 grid grid-cols-2 gap-x-4 gap-y-12 md:grid-cols-3 md:gap-x-6 lg:grid-cols-4">
-          {related.map((item) => (
-            <ProductCard key={item.id} product={item} />
-          ))}
-        </div>
-      </section>
+      {related.length > 0 ? (
+        <section aria-labelledby="related-title" className="section border-t border-stone">
+          <p className="label-xs">RELATED</p>
+          <h2
+            id="related-title"
+            className="mt-3 font-serif text-[22px] leading-snug text-ink md:text-[28px]"
+          >
+            함께 보면 좋은 상품
+          </h2>
+          <div className="mt-12 grid grid-cols-2 gap-x-4 gap-y-12 md:grid-cols-3 md:gap-x-6 lg:grid-cols-4">
+            {related.map((item) => (
+              <ProductCard key={item.id} product={item} />
+            ))}
+          </div>
+        </section>
+      ) : null}
     </article>
   );
 }

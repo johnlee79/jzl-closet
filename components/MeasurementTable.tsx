@@ -1,15 +1,20 @@
-import type { Measurements } from '@/lib/products';
+import type { Measurement } from '@/lib/types';
 
 type MeasurementTableProps = {
-  measurements: Measurements;
+  measurements: Measurement[];
   productName: string;
 };
 
-/** 의류 실측 표. 서버에서 HTML로 출력되어 검색엔진이 수치를 읽을 수 있습니다. */
+/**
+ * 실측 표. 항목명과 값 한 쌍을 그대로 출력합니다.
+ * 서버에서 HTML 로 완성되어 나가므로 검색엔진이 수치를 읽을 수 있습니다.
+ */
 export default function MeasurementTable({
   measurements,
   productName,
 }: MeasurementTableProps) {
+  if (measurements.length === 0) return null;
+
   return (
     <section aria-labelledby="measurement-heading" className="w-full">
       <h3 id="measurement-heading" className="font-serif text-[20px] text-ink md:text-[24px]">
@@ -17,48 +22,25 @@ export default function MeasurementTable({
       </h3>
       <div className="mt-6 overflow-x-auto">
         <table className="w-full min-w-[420px] border-collapse text-left">
-          <caption className="sr-only">{productName} 사이즈별 실측 치수 (단위 cm)</caption>
-          <thead>
-            <tr className="border-y border-stone">
-              <th scope="col" className="py-3 pr-4 text-[13px] tracking-[0.14em] text-muted">
-                사이즈
-              </th>
-              {measurements.sizes.map((size) => (
-                <th
-                  key={size}
-                  scope="col"
-                  className="py-3 pr-4 text-[15px] font-normal text-ink"
-                >
-                  {size}
-                </th>
-              ))}
-            </tr>
-          </thead>
+          <caption className="sr-only">{productName} 실측 치수 (단위 cm)</caption>
           <tbody>
-            {measurements.rows.map((row) => (
-              <tr key={row.label} className="border-b border-stone">
+            {measurements.map((row) => (
+              <tr key={row.label} className="border-b border-stone first:border-t">
                 <th
                   scope="row"
-                  className="py-3 pr-4 text-[13px] font-normal tracking-[0.1em] text-muted"
+                  className="w-[45%] py-3 pr-4 text-[13px] font-normal tracking-[0.1em] text-muted md:w-40"
                 >
                   {row.label}
                 </th>
-                {row.values.map((value, index) => (
-                  <td
-                    key={`${row.label}-${measurements.sizes[index] ?? index}`}
-                    className="py-3 pr-4 text-[15px] tabular-nums text-ink"
-                  >
-                    {value}
-                  </td>
-                ))}
+                <td className="py-3 pr-4 text-[15px] tabular-nums text-ink">{row.value}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {measurements.note ? (
-        <p className="mt-4 text-[13px] leading-relaxed text-muted">{measurements.note}</p>
-      ) : null}
+      <p className="mt-4 text-[13px] leading-relaxed text-muted">
+        단위 cm. 재는 방법에 따라 1~2cm 오차가 있을 수 있습니다.
+      </p>
     </section>
   );
 }
