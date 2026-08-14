@@ -194,17 +194,28 @@ export default function PaymentForm({
 
       {/* ── 알림 ──────────────────────────────────────── */}
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[16px] font-semibold text-slate-900">주문 알림 (텔레그램)</h2>
+        <h2 className="text-[16px] font-semibold text-slate-900">알림 (텔레그램)</h2>
 
-        <label className="mt-3 flex items-center gap-2 text-[14px] text-slate-800">
-          <input
-            type="checkbox"
-            checked={form.telegramEnabled}
-            onChange={(event) => set('telegramEnabled', event.target.checked)}
-            className="h-4 w-4"
-          />
-          새 주문과 취소 요청을 텔레그램으로 받기
-        </label>
+        <div className="mt-3 flex flex-col gap-2">
+          <label className="flex items-center gap-2 text-[14px] text-slate-800">
+            <input
+              type="checkbox"
+              checked={form.telegramEnabled}
+              onChange={(event) => set('telegramEnabled', event.target.checked)}
+              className="h-4 w-4"
+            />
+            새 주문과 취소 요청을 텔레그램으로 받기
+          </label>
+          <label className="flex items-center gap-2 text-[14px] text-slate-800">
+            <input
+              type="checkbox"
+              checked={form.inquiryTelegramEnabled}
+              onChange={(event) => set('inquiryTelegramEnabled', event.target.checked)}
+              className="h-4 w-4"
+            />
+            새 1:1 문의를 텔레그램으로 받기
+          </label>
+        </div>
 
         <p
           className={`mt-3 rounded-md px-3 py-2 text-[13px] leading-relaxed ${

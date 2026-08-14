@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import CheckoutForm from '@/components/CheckoutForm';
+import { getCurrentProfile, getCurrentUser } from '@/lib/auth';
 import { getCachedShipping, getCachedStore, getPaymentSettings } from '@/lib/settings';
 import { hasBankAccount } from '@/lib/site-config';
 
@@ -18,14 +19,29 @@ export const metadata: Metadata = {
 };
 
 export default async function CheckoutPage() {
-  const [shipping, store, payment] = await Promise.all([
+  const [shipping, store, payment, user, profile] = await Promise.all([
     getCachedShipping(),
     getCachedStore(),
     // ★ 계좌 등록 여부만 확인합니다. 계좌번호는 이 화면에 내려보내지 않습니다.
     getPaymentSettings(),
+    getCurrentUser(),
+    getCurrentProfile(),
   ]);
 
   const ready = hasBankAccount(payment);
+
+  // 로그인 회원이면 저장된 정보로 주문서를 채웁니다. (탈퇴 계정은 제외)
+  const member =
+    profile && profile.status === 'active'
+      ? {
+          name: profile.name,
+          phone: profile.phone,
+          email: profile.email || user?.email || '',
+          postcode: profile.postcode,
+          address1: profile.address1,
+          address2: profile.address2,
+        }
+      : null;
 
   return (
     <div className="shell py-14 md:py-20">
@@ -50,7 +66,7 @@ export default async function CheckoutPage() {
         </div>
       ) : (
         <div className="mt-12">
-          <CheckoutForm shipping={shipping} storePhone={store.phone} />
+          <CheckoutForm shipping={shipping} storePhone={store.phone} member={member} />
         </div>
       )}
     </div>

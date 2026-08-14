@@ -61,6 +61,8 @@ type OrderRow = {
   id: string;
   order_no: string;
   status: string;
+  /** 회원 주문이면 auth.users.id. 비회원 주문은 null (2-B 에서 추가) */
+  user_id?: string | null;
   orderer_name: string;
   orderer_phone: string;
   orderer_email: string | null;
@@ -152,6 +154,7 @@ function rowToOrder(
     id: row.id,
     orderNo: row.order_no,
     status: row.status,
+    userId: row.user_id ?? null,
     ordererName: row.orderer_name,
     ordererPhone: row.orderer_phone,
     ordererEmail: row.orderer_email ?? '',
@@ -354,6 +357,101 @@ export async function getOrderForLookup(
   const matches =
     digits(order.ordererPhone) === input || digits(order.receiverPhone) === input;
   return matches ? order : null;
+}
+
+/* ------------------------------------------------------------------
+ * 회원 주문
+ * ------------------------------------------------------------------ */
+
+/** 마이페이지 주문 목록. 상태 필터를 걸 수 있습니다. */
+export async function getOrdersOfUser(
+  userId: string,
+  status?: string
+): Promise<Order[]> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return [];
+
+  let query = supabase.from(ORDERS).select('*').eq('user_id', userId);
+  if (status && status !== 'all') query = query.eq('status', status);
+  query = query.order('created_at', { ascending: false });
+
+  const { data, error } = await query;
+  if (error || !data) return [];
+
+  const rows = data as OrderRow[];
+  const itemMap = await loadItems(rows.map((row) => row.id));
+  return rows.map((row) => rowToOrder(row, itemMap.get(row.id) ?? []));
+}
+
+/**
+ * 마이페이지 주문 상세.
+ * ★ 본인 주문이 아니면 null 을 돌려줍니다. 남의 주문을 열 수 없습니다.
+ */
+export async function getOrderOfUser(
+  userId: string,
+  orderId: string
+): Promise<Order | null> {
+  const order = await getOrderById(orderId);
+  if (!order || order.userId !== userId) return null;
+  return order;
+}
+
+/** 마이페이지 요약 카드에 쓰는 상태별 건수 */
+export async function countOrdersOfUser(
+  userId: string
+): Promise<Record<string, number>> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return {};
+
+  const { data, error } = await supabase
+    .from(ORDERS)
+    .select('status')
+    .eq('user_id', userId);
+  if (error || !data) return {};
+
+  const result: Record<string, number> = {};
+  for (const row of data as { status: string }[]) {
+    result[row.status] = (result[row.status] ?? 0) + 1;
+  }
+  return result;
+}
+
+/**
+ * 비회원으로 했던 주문을 회원 계정에 연결합니다.
+ * 주문번호와 연락처가 모두 맞아야 하고,
+ * ★ 이미 다른 계정에 연결된 주문은 가져올 수 없습니다.
+ */
+export async function claimOrder(
+  userId: string,
+  orderNo: string,
+  phone: string
+): Promise<{ ok: true; order: Order } | { ok: false; error: string }> {
+  const order = await getOrderForLookup(orderNo, phone);
+  if (!order) {
+    return { ok: false, error: '주문번호와 연락처가 일치하는 주문을 찾지 못했습니다.' };
+  }
+  if (order.userId === userId) {
+    return { ok: false, error: '이미 내 주문 내역에 있는 주문입니다.' };
+  }
+  if (order.userId) {
+    return { ok: false, error: '이미 다른 계정에 연결된 주문입니다.' };
+  }
+
+  const supabase = requireSupabaseAdmin();
+  const { error } = await supabase
+    .from(ORDERS)
+    .update({ user_id: userId })
+    .eq('id', order.id)
+    // 그 사이 다른 계정이 가져가지 못하도록 null 일 때만 씁니다.
+    .is('user_id', null);
+
+  if (error) {
+    return { ok: false, error: `주문을 불러오지 못했습니다: ${error.message}` };
+  }
+
+  await addHistory(order.id, order.status, order.status, '비회원 주문을 회원 계정에 연결');
+  const updated = await getOrderById(order.id);
+  return updated ? { ok: true, order: updated } : { ok: false, error: '주문을 불러오지 못했습니다.' };
 }
 
 /* ------------------------------------------------------------------
@@ -574,6 +672,8 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
 
   const base = {
     status: 'pending_payment' as const,
+    // 로그인 상태면 회원 주문, 아니면 null(비회원 주문)입니다.
+    user_id: input.userId ?? null,
     orderer_name: input.ordererName.trim(),
     orderer_phone: input.ordererPhone.trim(),
     orderer_email: input.ordererEmail.trim() || null,

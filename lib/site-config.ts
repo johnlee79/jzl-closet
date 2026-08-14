@@ -157,6 +157,8 @@ export type PaymentSettings = {
   remoteAreaRules: string[];
   /** 새 주문이 들어오면 텔레그램으로 알릴지 */
   telegramEnabled: boolean;
+  /** 새 1:1 문의가 들어오면 텔레그램으로 알릴지 */
+  inquiryTelegramEnabled: boolean;
   /** 구매안전(에스크로) 서비스 안내 문구. 비어 있으면 표시하지 않습니다. */
   escrowNotice: string;
   /** 구매안전 서비스 인증 이미지 주소. 비어 있으면 표시하지 않습니다. */
@@ -187,6 +189,7 @@ export const DEFAULT_PAYMENT: PaymentSettings = {
   depositHours: 24,
   remoteAreaRules: DEFAULT_REMOTE_AREA_RULES,
   telegramEnabled: true,
+  inquiryTelegramEnabled: true,
   escrowNotice: '',
   escrowImageUrl: '',
   escrowLinkUrl: '',

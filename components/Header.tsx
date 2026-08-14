@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import AccountMenu from '@/components/AccountMenu';
 import CartBadge from '@/components/CartBadge';
 import {
   hasVisibleChildren,
@@ -27,6 +28,11 @@ type HeaderProps = {
   logoUrl: string;
 };
 
+/**
+ * ★ 로그인 상태는 AccountMenu 가 브라우저에서 따로 확인합니다.
+ *   여기서 쿠키를 읽으면 프론트 전 페이지가 동적 렌더링으로 바뀌어
+ *   상품·카테고리 페이지의 정적 생성(SEO)이 깨집니다.
+ */
 export default function Header({
   categories,
   storeName,
@@ -111,12 +117,7 @@ export default function Header({
         </nav>
 
         <div className="flex shrink-0 items-center gap-5">
-          <Link
-            href="/products"
-            className="hidden text-[13px] tracking-[0.14em] text-muted transition-opacity duration-200 hover:opacity-60 lg:inline"
-          >
-            SHOP
-          </Link>
+          <AccountMenu />
           <CartBadge />
         </div>
       </div>
@@ -166,6 +167,9 @@ export default function Header({
               ))}
             </ul>
 
+            <p className="label-xs mt-10">MY</p>
+            <AccountMenu variant="mobile" />
+
             <p className="label-xs mt-10">INFORMATION</p>
             <ul className="mt-4 border-t border-stone">
               <li className="border-b border-stone">
@@ -185,6 +189,16 @@ export default function Header({
                   </Link>
                 </li>
               ))}
+              <li className="border-b border-stone">
+                <Link href="/order-lookup" className="block py-4 text-[16px] text-ink">
+                  주문 조회
+                </Link>
+              </li>
+              <li className="border-b border-stone">
+                <Link href="/inquiry/new" className="block py-4 text-[16px] text-ink">
+                  1:1 문의
+                </Link>
+              </li>
             </ul>
 
             <p className="mt-10 text-[13px] leading-relaxed text-muted">

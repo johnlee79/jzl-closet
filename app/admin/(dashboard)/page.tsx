@@ -1,9 +1,11 @@
 import Link from 'next/link';
+import { countPendingInquiries } from '@/lib/inquiries';
 import { statusBadgeClass, statusLabel, ORDER_STATUSES } from '@/lib/order-status';
 import { getDashboardStats } from '@/lib/orders';
 import { formatPrice } from '@/lib/product-utils';
+import { countMembersByStatus } from '@/lib/profiles';
 import { isSupabaseConfigured } from '@/lib/supabase/server';
-import type { Order } from '@/lib/types';
+import type { DashboardStats, Order } from '@/lib/types';
 
 /** 관리자 첫 화면. 항상 최신 값을 봅니다. */
 export const dynamic = 'force-dynamic';
@@ -120,20 +122,28 @@ function RecentRow({ order }: { order: Order }) {
 
 export default async function AdminDashboardPage() {
   const configured = isSupabaseConfigured();
-  // ★ 주문이 하나도 없어도 전부 0 으로 내려옵니다. 화면이 깨지지 않습니다.
-  const stats = configured
-    ? await getDashboardStats()
-    : {
-        todayAmount: 0,
-        yesterdayAmount: 0,
-        monthAmount: 0,
-        lastMonthAmount: 0,
-        todayCount: 0,
-        pendingPaymentCount: 0,
-        unshippedCount: 0,
-        countByStatus: {},
-        recentOrders: [],
-      };
+  // ★ 주문·회원·문의가 하나도 없어도 전부 0 으로 내려옵니다. 화면이 깨지지 않습니다.
+  const empty: DashboardStats = {
+    todayAmount: 0,
+    yesterdayAmount: 0,
+    monthAmount: 0,
+    lastMonthAmount: 0,
+    todayCount: 0,
+    pendingPaymentCount: 0,
+    unshippedCount: 0,
+    countByStatus: {},
+    recentOrders: [],
+  };
+
+  const [stats, pendingInquiryCount, memberCounts] = configured
+    ? await Promise.all([
+        getDashboardStats(),
+        countPendingInquiries(),
+        countMembersByStatus(),
+      ])
+    : [empty, 0, {} as Record<string, number>];
+
+  const activeMembers = memberCounts.active ?? 0;
 
   return (
     <div className="mx-auto w-full max-w-[1280px]">
@@ -169,8 +179,28 @@ export default async function AdminDashboardPage() {
         </Link>
       ) : null}
 
+      {/* ★ 미답변 문의도 매일 확인해야 합니다. */}
+      {pendingInquiryCount > 0 ? (
+        <Link
+          href="/admin/inquiries?status=pending"
+          className="admin-card mt-4 flex flex-wrap items-center justify-between gap-3 border-amber-400 bg-amber-50 p-5 transition-colors hover:bg-amber-100"
+        >
+          <div>
+            <p className="text-[15px] font-semibold text-amber-900">
+              미답변 문의 {pendingInquiryCount}건
+            </p>
+            <p className="mt-1 text-[13px] text-amber-800">
+              영업일 기준 1~2일 안에 답변드린다고 안내하고 있습니다.
+            </p>
+          </div>
+          <span className="admin-btn-primary border-amber-600 bg-amber-600 hover:bg-amber-700">
+            문의 보러 가기
+          </span>
+        </Link>
+      ) : null}
+
       {/* 매출 */}
-      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard label="오늘 주문금액" value={stats.todayAmount} suffix="원">
           <Delta current={stats.todayAmount} previous={stats.yesterdayAmount} />
         </StatCard>
@@ -178,11 +208,27 @@ export default async function AdminDashboardPage() {
           <Delta current={stats.monthAmount} previous={stats.lastMonthAmount} />
         </StatCard>
         <StatCard label="오늘 주문건수" value={stats.todayCount} suffix="건" href="/admin/orders" />
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           label="미출고 (결제완료 + 상품준비중)"
           value={stats.unshippedCount}
           suffix="건"
           href="/admin/orders?status=paid"
+        />
+        <StatCard
+          label="미답변 문의"
+          value={pendingInquiryCount}
+          suffix="건"
+          tone="alert"
+          href="/admin/inquiries?status=pending"
+        />
+        <StatCard
+          label="활동 중인 회원"
+          value={activeMembers}
+          suffix="명"
+          href="/admin/members"
         />
       </div>
 

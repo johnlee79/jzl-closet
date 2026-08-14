@@ -11,6 +11,7 @@ const infoLinks = [
   { href: '/privacy', label: '개인정보처리방침' },
   { href: '/order', label: '장바구니' },
   { href: '/order-lookup', label: '주문 조회' },
+  { href: '/inquiry/new', label: '1:1 문의' },
 ];
 
 /** 구매안전(에스크로) 서비스 표시. 설정에 값이 있을 때만 넘어옵니다. */

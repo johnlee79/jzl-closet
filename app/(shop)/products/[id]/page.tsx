@@ -6,7 +6,9 @@ import DetailBlocks from '@/components/DetailBlocks';
 import MeasurementTable from '@/components/MeasurementTable';
 import ProductCard from '@/components/ProductCard';
 import ProductGallery from '@/components/ProductGallery';
+import ProductInquiries from '@/components/ProductInquiries';
 import ViewItemTracker from '@/components/ViewItemTracker';
+import { getProductInquiries } from '@/lib/inquiries';
 import { findBrand } from '@/lib/brands';
 import { findCategory, findSubCategory } from '@/lib/categories';
 import { formatPrice, getDiscountRate, isProductSoldOut } from '@/lib/product-utils';
@@ -78,14 +80,17 @@ export default async function ProductDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const [related, brandRelated, categories, brands, store, shipping] = await Promise.all([
-    getRelated(product, 4),
-    getBrandRelated(product, 4),
-    getCachedCategories(),
-    getCachedBrands(),
-    getCachedStore(),
-    getCachedShipping(),
-  ]);
+  const [related, brandRelated, categories, brands, store, shipping, inquiries] =
+    await Promise.all([
+      getRelated(product, 4),
+      getBrandRelated(product, 4),
+      getCachedCategories(),
+      getCachedBrands(),
+      getCachedStore(),
+      getCachedShipping(),
+      // 비밀글은 서버에서 제목을 가려 내려보냅니다.
+      getProductInquiries(product.id),
+    ]);
 
   const brand = findBrand(brands, product.brandSlug);
   const brandName = brand?.name ?? store.name; // alt·JSON-LD 용 정식 명칭
@@ -323,6 +328,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
           </div>
         ) : null}
       </section>
+
+      <ProductInquiries inquiries={inquiries} productSlug={product.slug} />
 
       {brand ? (
         <section aria-labelledby="brand-title" className="section border-t border-stone">

@@ -9,6 +9,7 @@ import {
   getOrderForLookup,
   requestCancel,
 } from '@/lib/orders';
+import { getCurrentUser } from '@/lib/auth';
 import { canRequestCancel } from '@/lib/order-status';
 import { createOrderToken } from '@/lib/order-token';
 import { getPaymentProvider } from '@/lib/payments';
@@ -138,10 +139,15 @@ export async function placeOrderAction(
     };
   }
 
+  // ★ 회원 여부는 클라이언트가 보낸 값이 아니라 세션에서 직접 읽습니다.
+  //   로그인하지 않았으면 지금까지처럼 비회원 주문으로 저장됩니다.
+  const user = await getCurrentUser();
+
   let order: Order;
   try {
     order = await createOrder({
       ...input,
+      userId: user?.id ?? null,
       cashReceiptType: toCashReceiptType(input.cashReceiptType),
       items: input.items.map((item) => ({
         productSlug: String(item.productSlug),

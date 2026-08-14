@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import SafeImage from '@/components/SafeImage';
 import { placeOrderAction, quoteShippingAction } from '@/app/(shop)/checkout/actions';
 import { useCart } from '@/lib/cart';
+import { formatPhone } from '@/lib/format';
 import { formatPrice } from '@/lib/product-utils';
 import { PAYMENT_METHODS, type ShippingSettings } from '@/lib/site-config';
 import type { CashReceiptType } from '@/lib/types';
@@ -34,25 +35,6 @@ declare global {
   }
 }
 
-/** 숫자만 남기고 010-1234-5678 형태로 만듭니다. */
-function formatPhone(value: string): string {
-  const digits = value.replace(/[^0-9]/g, '').slice(0, 11);
-  if (digits.length < 4) return digits;
-  if (digits.length < 8) {
-    // 02-1234 처럼 지역번호가 두 자리인 경우를 함께 처리합니다.
-    return digits.startsWith('02')
-      ? `${digits.slice(0, 2)}-${digits.slice(2)}`
-      : `${digits.slice(0, 3)}-${digits.slice(3)}`;
-  }
-  if (digits.startsWith('02')) {
-    return `${digits.slice(0, 2)}-${digits.slice(2, 6)}-${digits.slice(6, 10)}`;
-  }
-  if (digits.length === 10) {
-    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
-  }
-  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
-}
-
 type Form = {
   ordererName: string;
   ordererPhone: string;
@@ -78,30 +60,43 @@ const MEMO_PRESETS = [
   '파손 위험 상품입니다. 조심해 주세요.',
 ];
 
+/** 로그인 회원이면 저장된 정보로 주문서를 미리 채웁니다. */
+export type MemberPrefill = {
+  name: string;
+  phone: string;
+  email: string;
+  postcode: string;
+  address1: string;
+  address2: string;
+};
+
 export default function CheckoutForm({
   shipping,
   storePhone,
+  member,
 }: {
   shipping: ShippingSettings;
   storePhone: string;
+  /** 비로그인이면 null */
+  member: MemberPrefill | null;
 }) {
   const router = useRouter();
   const { items, total, ready, clear } = useCart();
   const [pending, startTransition] = useTransition();
 
   const [form, setForm] = useState<Form>({
-    ordererName: '',
-    ordererPhone: '',
-    ordererEmail: '',
+    ordererName: member?.name ?? '',
+    ordererPhone: member?.phone ?? '',
+    ordererEmail: member?.email ?? '',
     sameAsOrderer: true,
-    receiverName: '',
-    receiverPhone: '',
-    postcode: '',
-    address1: '',
-    address2: '',
+    receiverName: member?.name ?? '',
+    receiverPhone: member?.phone ?? '',
+    postcode: member?.postcode ?? '',
+    address1: member?.address1 ?? '',
+    address2: member?.address2 ?? '',
     deliveryMemo: '',
     paymentMethod: 'bank_transfer',
-    depositorName: '',
+    depositorName: member?.name ?? '',
     cashReceiptType: 'none',
     cashReceiptNo: '',
     agreed: false,
@@ -142,7 +137,7 @@ export default function CheckoutForm({
   }, [form.sameAsOrderer, form.ordererName, form.ordererPhone]);
 
   /** 입금자명은 기본으로 주문자 이름을 따라갑니다. (직접 고치면 그대로 둡니다) */
-  const depositorTouched = useRef(false);
+  const depositorTouched = useRef(Boolean(member?.name));
   useEffect(() => {
     if (depositorTouched.current) return;
     setForm((prev) => ({ ...prev, depositorName: prev.ordererName }));
@@ -314,6 +309,22 @@ export default function CheckoutForm({
       />
 
       <form onSubmit={handleSubmit} noValidate>
+        {/* 회원이면 정보가 채워졌음을 알리고, 아니면 로그인을 권하되 강요하지 않습니다. */}
+        {member ? (
+          <p className="mb-8 border border-stone px-5 py-4 text-[14px] leading-relaxed text-ink">
+            회원 정보로 미리 채웠습니다. 이번 주문에만 다르게 보내시려면 그대로 고치시면
+            됩니다.
+          </p>
+        ) : (
+          <p className="mb-8 border border-stone px-5 py-4 text-[14px] leading-relaxed text-muted">
+            <Link href="/login?next=/checkout" className="link-wine">
+              로그인하고 주문하기
+            </Link>
+            — 주문 내역을 마이페이지에서 모아 보실 수 있습니다. 로그인하지 않아도 주문은
+            그대로 진행됩니다.
+          </p>
+        )}
+
         {error ? (
           <div
             role="alert"

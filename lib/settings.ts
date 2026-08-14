@@ -410,6 +410,7 @@ export function normalizePayment(value: unknown): PaymentSettings {
     depositHours: Math.max(1, count(raw.depositHours, DEFAULT_PAYMENT.depositHours)),
     remoteAreaRules: rules,
     telegramEnabled: raw.telegramEnabled !== false,
+    inquiryTelegramEnabled: raw.inquiryTelegramEnabled !== false,
     escrowNotice: optionalText(raw.escrowNotice, '').trim(),
     escrowImageUrl: optionalText(raw.escrowImageUrl, '').trim(),
     escrowLinkUrl: optionalText(raw.escrowLinkUrl, '').trim(),

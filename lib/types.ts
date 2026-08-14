@@ -196,6 +196,8 @@ export type Order = {
   id: string;
   orderNo: string;
   status: string;
+  /** 회원 주문이면 auth.users.id. 비회원 주문은 null */
+  userId: string | null;
 
   ordererName: string;
   ordererPhone: string;
@@ -253,6 +255,11 @@ export type CheckoutInput = {
   /** 장바구니에서 넘어온 품목. 가격은 서버가 상품 테이블에서 다시 읽습니다. */
   items: { productSlug: string; optionKey: string; quantity: number }[];
   agreed: boolean;
+  /**
+   * 회원 주문이면 로그인한 계정 id.
+   * ★ 클라이언트가 보내는 값이 아니라 서버가 세션에서 채웁니다.
+   */
+  userId?: string | null;
 };
 
 /** 관리자 주문 목록 필터 */

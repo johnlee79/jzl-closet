@@ -16,6 +16,8 @@ type MenuItem = {
 const menu: MenuItem[] = [
   { href: '/admin', label: '대시보드', ready: true, exact: true },
   { href: '/admin/orders', label: '주문 관리', ready: true },
+  { href: '/admin/members', label: '회원 관리', ready: true },
+  { href: '/admin/inquiries', label: '문의 관리', ready: true },
   { href: '/admin/products', label: '상품 관리', ready: true },
   { href: '/admin/categories', label: '분류 관리', ready: true },
   { href: '/admin/brands', label: '브랜드 관리', ready: true },
@@ -25,18 +27,21 @@ const menu: MenuItem[] = [
 
 /** 다음 단계에서 만들 메뉴. 회색으로 표시만 합니다. */
 const upcoming: MenuItem[] = [
-  { href: '/admin/members', label: '회원 관리', ready: false },
-  { href: '/admin/inquiries', label: '문의 관리', ready: false },
   { href: '/admin/reviews', label: '리뷰 관리', ready: false },
+  { href: '/admin/points', label: '포인트', ready: false },
+  { href: '/admin/notices', label: '공지', ready: false },
 ];
 
 export default function AdminShell({
   children,
   pendingCount = 0,
+  pendingInquiryCount = 0,
 }: {
   children: React.ReactNode;
   /** 입금대기 건수 — 주문 관리 옆에 뱃지로 붙습니다. */
   pendingCount?: number;
+  /** 미답변 문의 건수 — 문의 관리 옆에 뱃지로 붙습니다. */
+  pendingInquiryCount?: number;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -62,8 +67,13 @@ export default function AdminShell({
         const active = item.exact
           ? pathname === item.href
           : pathname === item.href || pathname.startsWith(`${item.href}/`);
-        // 입금대기가 있으면 주문 관리 옆에 숫자를 붙여 눈에 띄게 합니다.
-        const badge = item.href === '/admin/orders' && pendingCount > 0 ? pendingCount : 0;
+        // 처리할 일이 있으면 메뉴 옆에 숫자를 붙여 눈에 띄게 합니다.
+        const badge =
+          item.href === '/admin/orders'
+            ? pendingCount
+            : item.href === '/admin/inquiries'
+              ? pendingInquiryCount
+              : 0;
 
         return (
           <Link
@@ -77,7 +87,11 @@ export default function AdminShell({
             {item.label}
             {badge > 0 ? (
               <span
-                title={`입금대기 ${badge}건`}
+                title={
+                  item.href === '/admin/orders'
+                    ? `입금대기 ${badge}건`
+                    : `미답변 ${badge}건`
+                }
                 className={`admin-badge ${
                   active ? 'bg-white text-blue-700' : 'bg-amber-100 text-amber-800'
                 }`}

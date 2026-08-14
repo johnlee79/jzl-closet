@@ -1,7 +1,9 @@
 import 'server-only';
 
+import { inquiryCategoryLabel } from '@/lib/inquiry-status';
 import { formatPrice } from '@/lib/product-utils';
 import { SITE_URL } from '@/lib/store';
+import type { Inquiry } from '@/lib/inquiries';
 import type { Order } from '@/lib/types';
 
 /**
@@ -117,22 +119,27 @@ export async function notifyCancelRequest(order: Order, reason: string): Promise
   await sendTelegramMessage(lines.join('\n'));
 }
 
-/* ------------------------------------------------------------------
- * 다음 단계에서 채울 자리
- * 문의·리뷰 기능을 만들 때 여기에 메시지 형식만 채우면 됩니다.
- * ------------------------------------------------------------------ */
+/** 💬 새 1:1 문의 */
+export async function notifyNewInquiry(inquiry: Inquiry): Promise<void> {
+  const lines = [
+    `💬 <b>새 문의</b> (${escapeHtml(inquiry.inquiryNo)})`,
+    '',
+    `${escapeHtml(inquiryCategoryLabel(inquiry.category))} · ${escapeHtml(inquiry.title)}`,
+    `작성자 ${escapeHtml(inquiry.writerName)}${
+      inquiry.userId ? ' (회원)' : ' (비회원)'
+    }`,
+    '',
+    `관리자에서 보기: ${SITE_URL}/admin/inquiries/${inquiry.id}`,
+  ];
 
-/** 💬 새 문의 — 2-B 에서 사용 예정 */
-export async function notifyNewInquiry(_payload: {
-  id: string;
-  name: string;
-  subject: string;
-}): Promise<void> {
-  void _payload;
-  // 문의 기능을 만들 때 sendTelegramMessage 로 채웁니다.
+  await sendTelegramMessage(lines.join('\n'));
 }
 
-/** ⭐ 새 리뷰 — 2-B 에서 사용 예정 */
+/* ------------------------------------------------------------------
+ * 다음 단계에서 채울 자리
+ * ------------------------------------------------------------------ */
+
+/** ⭐ 새 리뷰 — 다음 단계에서 사용 예정 */
 export async function notifyNewReview(_payload: {
   id: string;
   productName: string;

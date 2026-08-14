@@ -1,4 +1,5 @@
 import AdminShell from '@/components/admin/AdminShell';
+import { countPendingInquiries } from '@/lib/inquiries';
 import { countPendingPayment } from '@/lib/orders';
 import { isSupabaseConfigured } from '@/lib/supabase/server';
 
@@ -10,8 +11,14 @@ export default async function AdminDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // 입금대기 건수를 사이드바 뱃지로 보여 줍니다. 매일 확인할 숫자입니다.
-  const pendingCount = isSupabaseConfigured() ? await countPendingPayment() : 0;
+  // 매일 확인해야 하는 두 숫자를 사이드바 뱃지로 보여 줍니다.
+  const [pendingCount, pendingInquiryCount] = isSupabaseConfigured()
+    ? await Promise.all([countPendingPayment(), countPendingInquiries()])
+    : [0, 0];
 
-  return <AdminShell pendingCount={pendingCount}>{children}</AdminShell>;
+  return (
+    <AdminShell pendingCount={pendingCount} pendingInquiryCount={pendingInquiryCount}>
+      {children}
+    </AdminShell>
+  );
 }
