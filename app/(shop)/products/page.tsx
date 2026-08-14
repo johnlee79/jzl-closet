@@ -1,26 +1,33 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import ProductList from '@/components/ProductList';
-import { getVisibleCategories } from '@/lib/categories';
+import { visibleCategories } from '@/lib/categories';
 import { getProducts } from '@/lib/products';
-import { store } from '@/lib/store';
+import { getCachedStore } from '@/lib/settings';
+import { getCachedCategories } from '@/lib/taxonomy';
 
 export const revalidate = 60;
 
-export const metadata: Metadata = {
-  title: '전체 상품',
-  description: `${store.name}의 전체 상품입니다. 의류, 가방·지갑, 슈즈, 액세서리를 카테고리와 브랜드, 가격순으로 살펴보세요.`,
-  alternates: { canonical: '/products' },
-  openGraph: {
-    title: `전체 상품 | ${store.name}`,
-    description: `${store.name}의 의류, 가방·지갑, 슈즈, 액세서리 전체 목록입니다.`,
-    url: '/products',
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const store = await getCachedStore();
+  return {
+    title: '전체 상품',
+    description: `${store.name}의 전체 상품입니다. 의류, 가방·지갑, 슈즈, 액세서리를 카테고리와 브랜드, 가격순으로 살펴보세요.`,
+    alternates: { canonical: '/products' },
+    openGraph: {
+      title: `전체 상품 | ${store.name}`,
+      description: `${store.name}의 의류, 가방·지갑, 슈즈, 액세서리 전체 목록입니다.`,
+      url: '/products',
+    },
+  };
+}
 
 export default async function ProductsPage() {
-  const menu = getVisibleCategories();
-  const products = await getProducts();
+  const [categories, products] = await Promise.all([
+    getCachedCategories(),
+    getProducts(),
+  ]);
+  const menu = visibleCategories(categories);
 
   return (
     <div className="shell py-14 md:py-20">

@@ -3,8 +3,11 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import OptionSelector from '@/components/OptionSelector';
-import { getBrandLabel } from '@/lib/brands';
+import { useSite } from '@/components/SiteProvider';
+import { brandLabel as findBrandLabel, brandName as findBrandName } from '@/lib/brands';
+import { categoryNameKo } from '@/lib/categories';
 import { useCart } from '@/lib/cart';
+import { trackAddToCart } from '@/lib/gtag';
 import {
   findCombination,
   formatPrice,
@@ -12,13 +15,13 @@ import {
   isProductSoldOut,
   isValueSelectable,
 } from '@/lib/product-utils';
-import { store } from '@/lib/store';
 import type { Product } from '@/lib/types';
 
 const MAX_QUANTITY = 99;
 
 export default function AddToCartButton({ product }: { product: Product }) {
   const { addItem } = useCart();
+  const { brands, categories, store } = useSite();
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
@@ -57,18 +60,34 @@ export default function AddToCartButton({ product }: { product: Product }) {
 
   const handleAdd = () => {
     if (!canAdd) return;
+    const amount = Math.min(quantity, maxQuantity);
+
     addItem({
       // 장바구니 링크(/products/{slug})에 그대로 쓰이므로 slug 를 넣습니다.
       productId: product.slug,
       name: product.name,
-      brand: product.brandSlug ? getBrandLabel(product.brandSlug) : '',
+      brand: product.brandSlug ? findBrandLabel(brands, product.brandSlug) : '',
       price: unitPrice,
       thumbnail: product.thumbnails[0] ?? '',
       options: selected,
       optionKey: combination?.key ?? '',
       extraPrice,
-      quantity: Math.min(quantity, maxQuantity),
+      quantity: amount,
     });
+
+    // GA4 표준 이벤트. 측정 ID 를 넣지 않았으면 아무 일도 하지 않습니다.
+    trackAddToCart({
+      item_id: product.slug,
+      item_name: product.name,
+      item_brand: product.brandSlug
+        ? findBrandName(brands, product.brandSlug)
+        : store.name,
+      item_category: categoryNameKo(categories, product.categorySlug),
+      item_variant: combination?.key || undefined,
+      price: unitPrice,
+      quantity: amount,
+    });
+
     setAdded(true);
   };
 

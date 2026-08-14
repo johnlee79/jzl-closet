@@ -189,6 +189,8 @@ export async function POST(request: Request) {
         type: 'image/png',
         sizes: `${APPLE_SIZE}x${APPLE_SIZE}`,
       },
+      // 로고는 파비콘과 별개 항목입니다. 덮어쓰지 않고 그대로 둡니다.
+      logo: previous.logo,
       source: { url: toPublicUrl(sourceKey), type: sourceType, name: file.name },
       keys: uploads.map((item) => item.key),
       updatedAt: new Date(stamp).toISOString(),
@@ -198,6 +200,7 @@ export async function POST(request: Request) {
     next = {
       favicon: { url: toPublicUrl(sourceKey), type: sourceType, sizes: 'any' },
       appleTouchIcon: DEFAULT_BRANDING.appleTouchIcon,
+      logo: previous.logo,
       source: { url: toPublicUrl(sourceKey), type: sourceType, name: file.name },
       keys: [sourceKey],
       updatedAt: new Date(stamp).toISOString(),
@@ -252,9 +255,15 @@ export async function DELETE() {
   if (!(await requireAdmin())) return unauthorized();
 
   const previous = await getBranding();
+  // 파비콘만 기본값으로 되돌립니다. 로고는 따로 관리하므로 남겨 둡니다.
+  const next: Branding = { ...DEFAULT_BRANDING, logo: previous.logo };
 
   try {
-    await deleteSetting(BRANDING_KEY);
+    if (previous.logo) {
+      await writeSetting(BRANDING_KEY, next);
+    } else {
+      await deleteSetting(BRANDING_KEY);
+    }
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : '설정을 지우지 못했습니다.' },
@@ -265,5 +274,5 @@ export async function DELETE() {
   await removeObjects(previous.keys);
   refreshSite();
 
-  return NextResponse.json({ branding: DEFAULT_BRANDING });
+  return NextResponse.json({ branding: next });
 }

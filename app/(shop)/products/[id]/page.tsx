@@ -6,8 +6,9 @@ import DetailBlocks from '@/components/DetailBlocks';
 import MeasurementTable from '@/components/MeasurementTable';
 import ProductCard from '@/components/ProductCard';
 import ProductGallery from '@/components/ProductGallery';
-import { getBrand, getBrandLabel, getBrandName } from '@/lib/brands';
-import { getCategoryBySlug, getSubCategory } from '@/lib/categories';
+import ViewItemTracker from '@/components/ViewItemTracker';
+import { findBrand } from '@/lib/brands';
+import { findCategory, findSubCategory } from '@/lib/categories';
 import { formatPrice, getDiscountRate, isProductSoldOut } from '@/lib/product-utils';
 import {
   getAllProductSlugs,
@@ -15,7 +16,9 @@ import {
   getProductBySlug,
   getRelated,
 } from '@/lib/products';
-import { SITE_URL, store } from '@/lib/store';
+import { getCachedShipping, getCachedStore } from '@/lib/settings';
+import { SITE_URL } from '@/lib/store';
+import { getCachedBrands, getCachedCategories } from '@/lib/taxonomy';
 
 /** 폴더명은 [id] 지만 실제로 들어오는 값은 상품 slug 입니다. (기존 주소 유지) */
 type PageProps = { params: { id: string } };
@@ -36,12 +39,17 @@ function toAbsolute(src: string): string {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const product = await getProductBySlug(params.id);
+  const [product, brands, store] = await Promise.all([
+    getProductBySlug(params.id),
+    getCachedBrands(),
+    getCachedStore(),
+  ]);
   if (!product) {
     return { title: '상품을 찾을 수 없습니다' };
   }
 
-  const brandName = product.brandSlug ? getBrandName(product.brandSlug) : store.name;
+  const brand = findBrand(brands, product.brandSlug);
+  const brandName = brand?.name ?? store.name;
   const description = `${brandName} ${product.name} — ${product.summary} 가격 ${formatPrice(product.price)}원. ${store.name}에서 만나보세요.`;
   const cover = product.thumbnails[0];
 
@@ -70,17 +78,29 @@ export default async function ProductDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const brand = product.brandSlug ? getBrand(product.brandSlug) : undefined;
-  const brandName = product.brandSlug ? getBrandName(product.brandSlug) : store.name; // alt·JSON-LD 용 정식 명칭
-  const brandLabel = product.brandSlug ? getBrandLabel(product.brandSlug) : ''; // 화면 출력용
-  const category = getCategoryBySlug(product.categorySlug);
-  const subCategory = product.subCategorySlug
-    ? getSubCategory(product.categorySlug, product.subCategorySlug)
-    : undefined;
-  const [related, brandRelated] = await Promise.all([
+  const [related, brandRelated, categories, brands, store, shipping] = await Promise.all([
     getRelated(product, 4),
     getBrandRelated(product, 4),
+    getCachedCategories(),
+    getCachedBrands(),
+    getCachedStore(),
+    getCachedShipping(),
   ]);
+
+  const brand = findBrand(brands, product.brandSlug);
+  const brandName = brand?.name ?? store.name; // alt·JSON-LD 용 정식 명칭
+  const brandLabel = brand?.label ?? ''; // 화면 출력용
+  const category = findCategory(categories, product.categorySlug);
+  const subCategory = product.subCategorySlug
+    ? findSubCategory(categories, product.categorySlug, product.subCategorySlug)
+    : undefined;
+
+  /** 배송 안내 — 관리자 > 설정 > 배송·반품 값을 그대로 씁니다. */
+  const shippingNote = product.freeShipping
+    ? `무료배송 — ${shipping.leadTime}`
+    : shipping.freeThreshold > 0
+      ? `배송비 ${formatPrice(shipping.baseFee)}원 · ${formatPrice(shipping.freeThreshold)}원 이상 무료 — ${shipping.leadTime}`
+      : `배송비 ${formatPrice(shipping.baseFee)}원 — ${shipping.leadTime}`;
   const soldOut = isProductSoldOut(product);
   const discount = getDiscountRate(product);
 
@@ -154,6 +174,19 @@ export default async function ProductDetailPage({ params }: PageProps) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+
+      {/* GA4 view_item — 측정 ID 를 넣지 않았으면 아무 일도 하지 않습니다. */}
+      <ViewItemTracker
+        item={{
+          item_id: product.slug,
+          item_name: product.name,
+          item_brand: brandName,
+          item_category: [category?.nameKo, subCategory?.nameKo]
+            .filter(Boolean)
+            .join(' > '),
+          price: product.price,
+        }}
       />
 
       <nav aria-label="현재 위치" className="text-[13px] tracking-[0.14em] text-muted">
@@ -263,11 +296,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
             ) : null}
             <div className="flex gap-4">
               <dt className="w-20 shrink-0 text-muted">배송</dt>
-              <dd className="text-ink">
-                {product.freeShipping
-                  ? '무료배송 — 주문 확인 후 1~3영업일 내 출고'
-                  : '주문 확인 후 1~3영업일 내 출고'}
-              </dd>
+              <dd className="text-ink">{shippingNote}</dd>
             </div>
             <div className="flex gap-4">
               <dt className="w-20 shrink-0 text-muted">문의</dt>
@@ -304,9 +333,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
           >
             {brand.label}
           </h2>
-          <p className="mt-4 max-w-[720px] text-[16px] leading-[1.9] text-ink md:text-[17px]">
-            {brand.story[0]}
-          </p>
+          {brand.story[0] ? (
+            <p className="mt-4 max-w-[720px] text-[16px] leading-[1.9] text-ink md:text-[17px]">
+              {brand.story[0]}
+            </p>
+          ) : null}
           <Link href={`/brand/${brand.slug}`} className="btn-secondary mt-8">
             브랜드 소개 보기
           </Link>

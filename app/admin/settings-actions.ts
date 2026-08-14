@@ -1,0 +1,221 @@
+'use server';
+
+import { cookies } from 'next/headers';
+import { revalidatePath, revalidateTag } from 'next/cache';
+import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import { defaultCopyFor } from '@/lib/default-copy';
+import {
+  ANALYTICS_KEY,
+  BRANDING_KEY,
+  COPY_KEY,
+  DESIGN_KEY,
+  SETTINGS_TAG,
+  SHIPPING_KEY,
+  STORE_KEY,
+  getBranding,
+  getCopySettings,
+  normalizeAnalytics,
+  normalizeDesign,
+  normalizeShipping,
+  normalizeStore,
+  writeSetting,
+} from '@/lib/settings';
+import {
+  COPY_META,
+  GA4_ID_PATTERN,
+  type AnalyticsSettings,
+  type CopyKey,
+  type CopySection,
+  type DesignSettings,
+  type ShippingSettings,
+  type StoreSettings,
+} from '@/lib/site-config';
+
+/**
+ * 설정 · 디자인 서버 액션.
+ *
+ * 저장하면 revalidateTag(SETTINGS_TAG) 로 캐시를 비우고,
+ * revalidatePath 로 해당 페이지를 즉시 다시 굽습니다.
+ */
+
+export type ActionResult<T = undefined> =
+  | { ok: true; data: T }
+  | { ok: false; error: string };
+
+async function assertAdmin(): Promise<boolean> {
+  return verifySessionToken(cookies().get(ADMIN_COOKIE)?.value);
+}
+
+function fail(error: unknown, fallback: string): { ok: false; error: string } {
+  const message = error instanceof Error ? error.message : fallback;
+  console.error('[admin/settings]', message);
+  return { ok: false, error: message };
+}
+
+/** 스토어 정보·브랜딩은 푸터를 통해 모든 페이지에 실립니다. */
+function revalidateEverything(): void {
+  revalidateTag(SETTINGS_TAG);
+  revalidatePath('/', 'layout');
+}
+
+/* ── 4-1. 스토어 정보 ─────────────────────────────────────── */
+
+export async function saveStoreAction(input: StoreSettings): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  if (!input.name.trim()) return { ok: false, error: '브랜드명을 입력해 주세요.' };
+  if (!input.phone.trim()) return { ok: false, error: '고객센터 번호를 입력해 주세요.' };
+
+  try {
+    // 빈 문장은 버리고, 형태가 깨진 값은 기본값으로 메웁니다.
+    const value = normalizeStore({
+      ...input,
+      story: input.story.map((line) => line.trim()).filter(Boolean),
+    });
+    await writeSetting(STORE_KEY, value);
+    revalidateEverything();
+    revalidatePath('/admin/settings');
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '스토어 정보를 저장하지 못했습니다.');
+  }
+}
+
+/* ── 4-2. 브랜딩 · 로고 ───────────────────────────────────── */
+
+export async function saveLogoAction(url: string): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  try {
+    const branding = await getBranding();
+    await writeSetting(BRANDING_KEY, {
+      ...branding,
+      logo: url.trim() ? { url: url.trim() } : null,
+      updatedAt: new Date().toISOString(),
+    });
+    revalidateEverything();
+    revalidatePath('/admin/settings');
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '로고를 저장하지 못했습니다.');
+  }
+}
+
+/* ── 4-3. 배송·반품 ───────────────────────────────────────── */
+
+export async function saveShippingAction(input: ShippingSettings): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  if (input.baseFee < 0 || input.freeThreshold < 0 || input.islandFee < 0) {
+    return { ok: false, error: '금액은 0 이상으로 넣어 주세요.' };
+  }
+
+  try {
+    await writeSetting(SHIPPING_KEY, normalizeShipping(input));
+    revalidateTag(SETTINGS_TAG);
+    revalidatePath('/guide');
+    revalidatePath('/order');
+    revalidatePath('/admin/settings');
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '배송 설정을 저장하지 못했습니다.');
+  }
+}
+
+/* ── 6. GA4 ───────────────────────────────────────────────── */
+
+export async function saveAnalyticsAction(
+  input: AnalyticsSettings
+): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  const id = input.ga4Id.trim();
+  if (id && !GA4_ID_PATTERN.test(id)) {
+    return {
+      ok: false,
+      error: '측정 ID 형식이 올바르지 않습니다. G- 로 시작하는 값을 넣어 주세요. (예: G-AB12CD34EF)',
+    };
+  }
+
+  try {
+    await writeSetting(ANALYTICS_KEY, normalizeAnalytics({ ga4Id: id }));
+    revalidateEverything();
+    revalidatePath('/admin/settings');
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '측정 ID 를 저장하지 못했습니다.');
+  }
+}
+
+/* ── 5-1. 메인 배너 ───────────────────────────────────────── */
+
+export async function saveDesignAction(input: DesignSettings): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  try {
+    const value = normalizeDesign(input);
+    await writeSetting(DESIGN_KEY, value);
+    revalidateTag(SETTINGS_TAG);
+    revalidatePath('/');
+    revalidatePath('/admin/design');
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '배너를 저장하지 못했습니다.');
+  }
+}
+
+/* ── 5-2. 사이트 문구 ─────────────────────────────────────── */
+
+export async function saveCopyAction(
+  key: CopyKey,
+  section: CopySection
+): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  const cleaned = section
+    .map((block) => ({ heading: block.heading.trim(), body: block.body }))
+    .filter((block) => block.heading || block.body.trim());
+
+  if (cleaned.length === 0) {
+    return {
+      ok: false,
+      error: '내용이 비어 있습니다. 지우려면 [기본값으로 되돌리기] 를 눌러 주세요.',
+    };
+  }
+
+  try {
+    const current = await getCopySettings();
+    await writeSetting(COPY_KEY, { ...current, [key]: cleaned });
+
+    revalidateTag(SETTINGS_TAG);
+    revalidatePath(COPY_META[key].path);
+    // 주문 3스텝은 메인에도 실립니다.
+    if (key === 'orderSteps') revalidatePath('/');
+    // 404 문구는 어느 주소에서도 나올 수 있어 전체를 갱신합니다.
+    if (key === 'notFound') revalidatePath('/', 'layout');
+    revalidatePath('/admin/design');
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '문구를 저장하지 못했습니다.');
+  }
+}
+
+/** 잘못 지웠을 때 원래 문구로 돌아갑니다. (lib/default-copy.ts 값) */
+export async function resetCopyAction(key: CopyKey): Promise<ActionResult<CopySection>> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  try {
+    const fallback = defaultCopyFor(key);
+    const current = await getCopySettings();
+    await writeSetting(COPY_KEY, { ...current, [key]: fallback });
+
+    revalidateTag(SETTINGS_TAG);
+    revalidatePath(COPY_META[key].path);
+    if (key === 'orderSteps') revalidatePath('/');
+    if (key === 'notFound') revalidatePath('/', 'layout');
+    revalidatePath('/admin/design');
+    return { ok: true, data: fallback };
+  } catch (error) {
+    return fail(error, '기본값으로 되돌리지 못했습니다.');
+  }
+}

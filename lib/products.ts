@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { getCategoryBySlug } from '@/lib/categories';
+import { findCategory } from '@/lib/categories';
 import {
   buildCombinationKeys,
   cleanOptionValue,
@@ -8,6 +8,7 @@ import {
   rebuildCombinations,
 } from '@/lib/product-utils';
 import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
+import { getCachedCategories } from '@/lib/taxonomy';
 import type {
   DetailBlock,
   Measurement,
@@ -295,12 +296,15 @@ export async function getProductById(id: string): Promise<Product | null> {
   return rowToProduct(data as ProductRow);
 }
 
-/** 카테고리 데이터의 matchType 규칙에 따라 상품을 고릅니다. */
+/**
+ * 카테고리의 matchType 규칙에 따라 상품을 고릅니다.
+ * 분류는 DB(또는 폴백)에서 읽으므로 함수 안에서 직접 가져옵니다.
+ */
 export async function getProductsByCategory(
   categorySlug: string,
   subCategorySlug?: string
 ): Promise<Product[]> {
-  const category = getCategoryBySlug(categorySlug);
+  const category = findCategory(await getCachedCategories(), categorySlug);
   if (!category) return [];
 
   if (category.matchType === 'all') {

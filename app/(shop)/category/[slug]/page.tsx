@@ -3,24 +3,29 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ProductList from '@/components/ProductList';
 import {
-  getVisibleCategories,
-  getVisibleCategoryBySlug,
-  getVisibleSubCategories,
+  findVisibleCategory,
+  visibleCategories,
+  visibleSubCategories,
 } from '@/lib/categories';
 import { getProductsByCategory } from '@/lib/products';
-import { store } from '@/lib/store';
+import { getCachedStore } from '@/lib/settings';
+import { getCachedCategories } from '@/lib/taxonomy';
 
 type PageProps = { params: { slug: string } };
 
 export const revalidate = 60;
+/** 관리자에서 분류를 새로 만들면 첫 요청 때 서버에서 구워 내보냅니다. */
+export const dynamicParams = true;
 
 /** 노출 중인 대분류만 정적 생성합니다. isVisible:false 는 라우트 자체가 만들어지지 않습니다. */
-export function generateStaticParams(): { slug: string }[] {
-  return getVisibleCategories().map((category) => ({ slug: category.slug }));
+export async function generateStaticParams(): Promise<{ slug: string }[]> {
+  const categories = await getCachedCategories();
+  return visibleCategories(categories).map((category) => ({ slug: category.slug }));
 }
 
-export function generateMetadata({ params }: PageProps): Metadata {
-  const category = getVisibleCategoryBySlug(params.slug);
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const [categories, store] = await Promise.all([getCachedCategories(), getCachedStore()]);
+  const category = findVisibleCategory(categories, params.slug);
   if (!category) {
     return { title: '카테고리를 찾을 수 없습니다' };
   }
@@ -40,14 +45,15 @@ export function generateMetadata({ params }: PageProps): Metadata {
 }
 
 export default async function CategoryPage({ params }: PageProps) {
-  const category = getVisibleCategoryBySlug(params.slug);
+  const categories = await getCachedCategories();
+  const category = findVisibleCategory(categories, params.slug);
   if (!category) {
     notFound();
   }
 
   const items = await getProductsByCategory(category.slug);
-  const menu = getVisibleCategories();
-  const subs = getVisibleSubCategories(category.slug);
+  const menu = visibleCategories(categories);
+  const subs = visibleSubCategories(categories, category.slug);
 
   return (
     <div className="shell py-14 md:py-20">

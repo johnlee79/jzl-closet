@@ -1,29 +1,45 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import SafeImage from '@/components/SafeImage';
-import { brands } from '@/lib/brands';
+import { brandImage, visibleBrands } from '@/lib/brands';
 import { getProducts } from '@/lib/products';
-import { store } from '@/lib/store';
+import { getCachedStore } from '@/lib/settings';
+import { getCachedBrands } from '@/lib/taxonomy';
 
 export const revalidate = 60;
 
-export const metadata: Metadata = {
-  title: '브랜드',
-  description: `${store.name}이 소개하는 브랜드입니다. 브랜드별 소개와 취급 상품을 확인하세요.`,
-  alternates: { canonical: '/brand' },
-  openGraph: {
-    title: `브랜드 | ${store.name}`,
-    description: `${store.name}이 소개하는 브랜드 목록입니다.`,
-    url: '/brand',
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const store = await getCachedStore();
+  return {
+    title: '브랜드',
+    description: `${store.name}이 소개하는 브랜드입니다. 브랜드별 소개와 취급 상품을 확인하세요.`,
+    alternates: { canonical: '/brand' },
+    openGraph: {
+      title: `브랜드 | ${store.name}`,
+      description: `${store.name}이 소개하는 브랜드 목록입니다.`,
+      url: '/brand',
+    },
+  };
+}
 
 export default async function BrandListPage() {
-  const allProducts = await getProducts();
+  const [allProducts, allBrands, store] = await Promise.all([
+    getProducts(),
+    getCachedBrands(),
+    getCachedStore(),
+  ]);
+
   const countByBrand = allProducts.reduce<Record<string, number>>((acc, product) => {
     if (product.brandSlug) acc[product.brandSlug] = (acc[product.brandSlug] ?? 0) + 1;
     return acc;
   }, {});
+
+  // 강조 브랜드를 앞으로 올립니다. 그 안에서는 등록 순서를 지킵니다.
+  const list = visibleBrands(allBrands);
+  const brands = [
+    ...list.filter((brand) => brand.isFeatured),
+    ...list.filter((brand) => !brand.isFeatured),
+  ];
 
   return (
     <div className="shell py-14 md:py-20">
@@ -54,27 +70,35 @@ export default async function BrandListPage() {
         {brands.map((brand) => {
           const count = countByBrand[brand.slug] ?? 0;
           return (
-            <li key={brand.slug}>
+            <li key={brand.slug} className={brand.isFeatured ? 'md:col-span-2' : undefined}>
               <article>
                 <Link href={`/brand/${brand.slug}`} className="block">
-                  <div className="aspect-[4/3] w-full overflow-hidden bg-stone">
+                  <div
+                    className={`w-full overflow-hidden bg-stone ${
+                      brand.isFeatured ? 'aspect-[16/9]' : 'aspect-[4/3]'
+                    }`}
+                  >
                     <SafeImage
-                      src={`/images/brands/${brand.slug}.jpg`}
+                      src={brandImage(brand)}
                       alt={`${brand.name} 브랜드 대표 이미지`}
                       label={brand.name}
-                      width={640}
-                      height={480}
+                      width={brand.isFeatured ? 1200 : 640}
+                      height={brand.isFeatured ? 675 : 480}
                     />
                   </div>
                   <h2 className="mt-5 font-display text-[20px] tracking-[0.16em] text-ink">
                     {brand.label}
                   </h2>
-                  <p className="mt-1 font-serif text-[15px] text-muted">{brand.nameKo}</p>
-                  <p className="mt-3 text-[15px] leading-[1.9] text-ink">
-                    {brand.tagline}
-                  </p>
+                  {brand.nameKo ? (
+                    <p className="mt-1 font-serif text-[15px] text-muted">{brand.nameKo}</p>
+                  ) : null}
+                  {brand.tagline ? (
+                    <p className="mt-3 text-[15px] leading-[1.9] text-ink">{brand.tagline}</p>
+                  ) : null}
                   <p className="mt-3 text-[13px] tracking-[0.14em] text-muted">
-                    {count}개 상품 · {brand.origin} · SINCE {brand.since}
+                    {count}개 상품
+                    {brand.origin ? ` · ${brand.origin}` : ''}
+                    {brand.since ? ` · SINCE ${brand.since}` : ''}
                   </p>
                 </Link>
               </article>

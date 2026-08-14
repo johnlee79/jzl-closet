@@ -1,9 +1,19 @@
 import Link from 'next/link';
-import { getVisibleCategories } from '@/lib/categories';
-import { store } from '@/lib/store';
+import { visibleCategories } from '@/lib/categories';
+import { resolveCopy } from '@/lib/copy';
+import { getCachedCopy, getCachedStore } from '@/lib/settings';
+import { getCachedCategories } from '@/lib/taxonomy';
 
-export default function NotFound() {
-  const menu = getVisibleCategories();
+export default async function NotFound() {
+  const [categories, store, copy] = await Promise.all([
+    getCachedCategories(),
+    getCachedStore(),
+    getCachedCopy(),
+  ]);
+
+  const menu = visibleCategories(categories);
+  const blocks = resolveCopy(copy.notFound, store);
+  const first = blocks[0];
 
   return (
     <div className="shell flex min-h-[60vh] flex-col justify-center py-20">
@@ -11,12 +21,15 @@ export default function NotFound() {
         404
       </p>
       <h1 className="mt-6 font-serif text-[22px] leading-snug text-ink md:text-[28px]">
-        찾으시는 페이지가 없습니다
+        {first?.heading || '찾으시는 페이지가 없습니다'}
       </h1>
-      <p className="mt-4 max-w-[520px] text-[16px] leading-[1.9] text-ink md:text-[17px]">
-        주소가 바뀌었거나 판매가 종료된 상품일 수 있습니다. 아래 링크에서 다시
-        찾아보시거나 고객센터 {store.phone}으로 문의해 주세요.
-      </p>
+      {blocks.map((block, index) => (
+        <div
+          key={index}
+          className="detail-body mt-4 max-w-[520px] text-[16px] leading-[1.9] text-ink md:text-[17px]"
+          dangerouslySetInnerHTML={{ __html: block.html }}
+        />
+      ))}
 
       <div className="mt-10 flex flex-wrap gap-4">
         <Link href="/" className="btn-primary">

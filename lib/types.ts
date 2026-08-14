@@ -151,6 +151,8 @@ export type BrandingIcon = {
 export type Branding = {
   favicon: BrandingIcon | null;
   appleTouchIcon: BrandingIcon | null;
+  /** 헤더 로고 이미지. 없으면 텍스트 로고를 씁니다. */
+  logo: { url: string } | null;
   /** 관리자가 올린 원본. 미리보기와 재생성에 씁니다. */
   source: { url: string; type: string; name: string } | null;
   /** R2 에 올라간 키들 — 교체·삭제할 때 지웁니다. */

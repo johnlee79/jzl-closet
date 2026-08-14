@@ -1,41 +1,57 @@
 /**
  * ============================================================
- * 취급 브랜드 데이터.
+ * 브랜드 — 타입 · 폴백 데이터 · 순수 헬퍼
  * ============================================================
  *
- * ★ label 은 화면에 보이는 글자입니다. 한글·영문 자유롭게 바꿔도 됩니다.
- *   slug 는 주소에 쓰이므로 절대 바꾸지 마세요. 바꾸면 검색 순위가 초기화됩니다.
+ * ★ 1-B 부터 브랜드는 DB(brands 테이블)에서 읽습니다.
+ *   관리자 > 브랜드 관리 에서 고치세요.
  *
- * 필드 역할
- *   slug      URL 전용. /brand/nord-blanc 의 nord-blanc 부분입니다. 고정값으로 두세요.
- *   label     화면에 출력되는 글자. 상품 카드·상세·브랜드 필터 칩에 이 값이 나옵니다.
- *   name      메타데이터·구조화 데이터(JSON-LD)·이미지 alt 전용 정식 명칭입니다.
- *   nameKo    브랜드 페이지 h1 과 메타데이터 전용입니다.
- *   isVisible false 면 브랜드 필터 칩에서 빠집니다. 데이터와 페이지는 남습니다.
- *
- * 브랜드 추가하는 법
- *   아래 배열에 항목을 추가하고 lib/products.ts 의 상품에서 brand: '<slug>' 로
- *   연결하면 됩니다. /brand 목록과 /brand/{slug} 페이지, 사이트맵이 자동으로 따라옵니다.
- *   이미지는 public/images/brands/{slug}.jpg 에 넣으세요.
- *
- * 브랜드 메뉴는 헤더에 노출하지 않지만(lib/categories.ts 의 brand 항목이 isVisible:false),
- * 페이지는 그대로 남겨 검색 유입 경로로 사용합니다.
+ * 이 파일은 타입과 폴백 데이터만 담습니다.
+ * DB 를 실제로 읽는 코드는 lib/taxonomy.ts (서버 전용) 에 있습니다.
+ * 클라이언트 컴포넌트도 가져다 쓰므로 'server-only' 를 넣지 않습니다.
  */
 
 export type Brand = {
-  slug: string; // URL 전용 — 바꾸지 마세요
-  label: string; // 화면 출력용 — 자유롭게 바꿔도 됩니다
+  slug: string; // URL 전용 — 등록 후 바꾸지 않습니다
+  label: string; // 화면 출력용
   name: string; // 메타데이터·JSON-LD 전용 정식 명칭
   nameKo: string;
   tagline: string;
+  /** 문단 배열. DB 에는 빈 줄로 나뉜 하나의 text 로 저장됩니다. */
   story: string[];
   origin: string;
   since: string;
+  /** 대표 이미지. 비어 있으면 /images/brands/{slug}.jpg 를 씁니다. */
+  imageUrl: string;
   order: number;
   isVisible: boolean;
+  isFeatured: boolean;
 };
 
-export const brands: Brand[] = [
+/** DB 의 story(text) → 문단 배열. 빈 줄이 문단 구분입니다. */
+export function storyToParagraphs(story: string | null | undefined): string[] {
+  if (!story) return [];
+  return story
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+}
+
+/** 문단 배열 → DB 에 저장할 text */
+export function paragraphsToStory(paragraphs: string[]): string {
+  return paragraphs.map((paragraph) => paragraph.trim()).filter(Boolean).join('\n\n');
+}
+
+/** 대표 이미지 경로. 등록된 값이 없으면 규칙 경로를 씁니다. */
+export function brandImage(brand: Pick<Brand, 'slug' | 'imageUrl'>): string {
+  return brand.imageUrl || `/images/brands/${brand.slug}.jpg`;
+}
+
+/* ------------------------------------------------------------------
+ * 폴백 데이터 — DB 가 비어 있을 때만 쓰입니다.
+ * ------------------------------------------------------------------ */
+
+export const FALLBACK_BRANDS: Brand[] = [
   {
     slug: 'jzl-closet',
     label: 'JZL CLOSET',
@@ -48,8 +64,10 @@ export const brands: Brand[] = [
     ],
     origin: '대한민국',
     since: '2025',
+    imageUrl: '/images/brands/jzl-closet.jpg',
     order: 10,
     isVisible: true,
+    isFeatured: true,
   },
   {
     slug: 'jzl-atelier',
@@ -63,8 +81,10 @@ export const brands: Brand[] = [
     ],
     origin: '대한민국',
     since: '2024',
+    imageUrl: '/images/brands/jzl-atelier.jpg',
     order: 20,
     isVisible: true,
+    isFeatured: false,
   },
   {
     slug: 'nord-blanc',
@@ -78,8 +98,10 @@ export const brands: Brand[] = [
     ],
     origin: '대한민국',
     since: '2019',
+    imageUrl: '/images/brands/nord-blanc.jpg',
     order: 30,
     isVisible: true,
+    isFeatured: false,
   },
   {
     slug: 'maison-oat',
@@ -93,8 +115,10 @@ export const brands: Brand[] = [
     ],
     origin: '대한민국',
     since: '2021',
+    imageUrl: '/images/brands/maison-oat.jpg',
     order: 40,
     isVisible: true,
+    isFeatured: false,
   },
   {
     slug: 'stitch-lab',
@@ -108,34 +132,43 @@ export const brands: Brand[] = [
     ],
     origin: '대한민국',
     since: '2018',
+    imageUrl: '/images/brands/stitch-lab.jpg',
     order: 50,
     isVisible: true,
+    isFeatured: false,
   },
 ];
+
+/* ------------------------------------------------------------------
+ * 순수 헬퍼 — 목록을 넘겨 받아 계산만 합니다.
+ * ------------------------------------------------------------------ */
 
 function byOrder(list: Brand[]): Brand[] {
   return [...list].sort((a, b) => a.order - b.order);
 }
 
-/** 브랜드 필터 칩에 노출되는 브랜드 (order 오름차순). */
-export function getVisibleBrands(): Brand[] {
-  return byOrder(brands.filter((brand) => brand.isVisible));
+/** 브랜드 필터 칩·목록에 노출되는 브랜드 (order 오름차순). */
+export function visibleBrands(list: Brand[]): Brand[] {
+  return byOrder(list.filter((brand) => brand.isVisible));
 }
 
-export function getAllBrands(): Brand[] {
-  return byOrder(brands);
+export function sortedBrands(list: Brand[]): Brand[] {
+  return byOrder(list);
 }
 
-export function getBrand(slug: string): Brand | undefined {
-  return brands.find((brand) => brand.slug === slug);
+export function findBrand(list: Brand[], slug: string | null): Brand | undefined {
+  if (!slug) return undefined;
+  return list.find((brand) => brand.slug === slug);
 }
 
 /** 화면에 표시할 브랜드 글자. */
-export function getBrandLabel(slug: string): string {
-  return getBrand(slug)?.label ?? slug;
+export function brandLabel(list: Brand[], slug: string | null): string {
+  if (!slug) return '';
+  return findBrand(list, slug)?.label ?? slug;
 }
 
 /** 메타데이터·JSON-LD·이미지 alt 에 쓰는 정식 명칭. */
-export function getBrandName(slug: string): string {
-  return getBrand(slug)?.name ?? slug;
+export function brandName(list: Brand[], slug: string | null): string {
+  if (!slug) return '';
+  return findBrand(list, slug)?.name ?? slug;
 }

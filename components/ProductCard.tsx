@@ -1,6 +1,9 @@
+'use client';
+
 import Link from 'next/link';
 import SafeImage from '@/components/SafeImage';
-import { getBrandLabel, getBrandName } from '@/lib/brands';
+import { useSite } from '@/components/SiteProvider';
+import { brandLabel as findBrandLabel, brandName as findBrandName } from '@/lib/brands';
 import { formatPrice, getDiscountRate, isProductSoldOut } from '@/lib/product-utils';
 import type { Product } from '@/lib/types';
 
@@ -9,11 +12,16 @@ type ProductCardProps = {
   priority?: boolean;
 };
 
+/**
+ * 브랜드 이름은 DB 에서 오므로 SiteProvider(컨텍스트)에서 읽습니다.
+ * 클라이언트 컴포넌트지만 서버에서 한 번 렌더되어 나가므로 SEO 에 영향이 없습니다.
+ */
 export default function ProductCard({ product, priority = false }: ProductCardProps) {
+  const { brands } = useSite();
   const first = product.thumbnails[0] ?? '';
   const second = product.thumbnails[1] ?? first;
-  const brandName = product.brandSlug ? getBrandName(product.brandSlug) : '';
-  const brandLabel = product.brandSlug ? getBrandLabel(product.brandSlug) : '';
+  const brandName = product.brandSlug ? findBrandName(brands, product.brandSlug) : '';
+  const brandLabel = product.brandSlug ? findBrandLabel(brands, product.brandSlug) : '';
   const soldOut = isProductSoldOut(product);
   const discount = getDiscountRate(product);
 

@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import ProductTable from '@/components/admin/ProductTable';
 import ProductFilters from '@/components/admin/ProductFilters';
-import { getFilterableCategories } from '@/lib/categories';
+import { filterableCategories } from '@/lib/categories';
 import { getProductsWithCount } from '@/lib/products';
 import { isSupabaseConfigured } from '@/lib/supabase/server';
+import { getBrands, getCategories } from '@/lib/taxonomy';
 import type { ProductFilter } from '@/lib/types';
 
 /** 관리자 목록은 항상 최신 데이터를 보여 줍니다. */
@@ -40,12 +41,14 @@ export default async function AdminProductsPage({
   if (searchParams.soldOut === 'false') filter.soldOut = false;
 
   const configured = isSupabaseConfigured();
-  const { products, total } = configured
-    ? await getProductsWithCount(filter)
-    : { products: [], total: 0 };
+  const [{ products, total }, allCategories, allBrands] = await Promise.all([
+    configured ? getProductsWithCount(filter) : { products: [], total: 0 },
+    getCategories(),
+    getBrands(),
+  ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const categories = getFilterableCategories();
+  const categories = filterableCategories(allCategories);
 
   return (
     <div className="mx-auto w-full max-w-[1200px]">
@@ -79,7 +82,7 @@ export default async function AdminProductsPage({
       </div>
 
       <div className="mt-5">
-        <ProductTable products={products} />
+        <ProductTable products={products} categories={allCategories} brands={allBrands} />
       </div>
 
       {totalPages > 1 ? (

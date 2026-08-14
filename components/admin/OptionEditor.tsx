@@ -6,6 +6,7 @@ import {
   MAX_COMBINATIONS,
   buildCombinationKeys,
   cleanOptionValue,
+  isCombinationAvailable,
   rebuildCombinations,
 } from '@/lib/product-utils';
 import type { OptionCombination, OptionGroup } from '@/lib/types';
@@ -100,7 +101,8 @@ export default function OptionEditor({
     onChange({ groups, combinations: rebuildCombinations(groups, combinations) });
   };
 
-  const activeCount = combinations.filter((item) => item.isActive).length;
+  /** 재고 0 도 품절로 셉니다. (판매상태만 켜져 있어도 살 수 없습니다) */
+  const activeCount = combinations.filter(isCombinationAvailable).length;
 
   return (
     <div className="flex flex-col gap-4">
@@ -229,6 +231,11 @@ export default function OptionEditor({
             </span>
           </div>
 
+          {/* 빈칸과 0 이 헷갈리지 않도록 표 바로 위에 한 줄로 알려 줍니다. */}
+          <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[13px] leading-relaxed text-slate-700">
+            재고수량을 비워 두면 재고를 세지 않습니다. 0을 넣으면 품절 처리됩니다.
+          </p>
+
           <div className="mt-2 overflow-x-auto rounded-md border border-slate-200">
             <table className="w-full min-w-[560px] border-collapse text-[14px]">
               <thead>
@@ -248,10 +255,24 @@ export default function OptionEditor({
                 </tr>
               </thead>
               <tbody>
-                {combinations.map((combination) => (
-                  <tr key={combination.key} className="border-t border-slate-200">
+                {combinations.map((combination) => {
+                  /** 재고 0 = 품절. 빈칸(null)은 재고 미관리이므로 품절이 아닙니다. */
+                  const outOfStock = combination.stock === 0;
+
+                  return (
+                  <tr
+                    key={combination.key}
+                    className={`border-t border-slate-200 ${
+                      outOfStock ? 'bg-red-50' : ''
+                    }`}
+                  >
                     <td className="whitespace-nowrap px-3 py-2 text-slate-900">
-                      {combination.key}
+                      <span className="inline-flex items-center gap-2">
+                        {combination.key}
+                        {outOfStock ? (
+                          <span className="admin-badge bg-red-100 text-red-700">품절</span>
+                        ) : null}
+                      </span>
                     </td>
 
                     <td className="px-3 py-2">
@@ -301,8 +322,8 @@ export default function OptionEditor({
                           })
                         }
                         aria-label={`${combination.key} 재고수량`}
-                        placeholder="관리 안 함"
-                        className="admin-input tabular-nums"
+                        placeholder="미관리"
+                        className="admin-input tabular-nums placeholder:text-slate-400"
                       />
                     </td>
 
@@ -321,14 +342,15 @@ export default function OptionEditor({
                       />
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           <p className="mt-2 text-[12px] leading-relaxed text-slate-500">
-            판매상태를 끄면 그 조합만 품절로 표시됩니다. 재고수량을 비워 두면 재고를 세지
-            않습니다. 추가금액은 판매가에 더해집니다.
+            판매상태를 끄면 그 조합만 품절로 표시됩니다. 빈칸은 재고 미관리(항상 판매),
+            0은 품절입니다. 추가금액은 판매가에 더해집니다.
           </p>
         </div>
       ) : null}

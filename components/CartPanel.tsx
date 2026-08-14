@@ -3,12 +3,14 @@
 import Link from 'next/link';
 import CopyOrderButton from '@/components/CopyOrderButton';
 import SafeImage from '@/components/SafeImage';
+import { useSite } from '@/components/SiteProvider';
 import { useCart } from '@/lib/cart';
 import { formatPrice } from '@/lib/product-utils';
-import { store } from '@/lib/store';
 
 export default function CartPanel() {
   const { items, total, count, ready, removeItem, updateQuantity, clear } = useCart();
+  // 브랜드명·고객센터 번호는 관리자 설정 값을 씁니다.
+  const { store } = useSite();
 
   const orderText = [
     `[${store.name} 주문 문의]`,

@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import ProductCard from '@/components/ProductCard';
-import { getVisibleBrands } from '@/lib/brands';
+import { useSite } from '@/components/SiteProvider';
+import { visibleBrands } from '@/lib/brands';
 import { genderFilters } from '@/lib/product-utils';
 import type { Gender, Product } from '@/lib/types';
 
@@ -60,7 +61,8 @@ export default function ProductList({
   const [brand, setBrand] = useState<string>('all');
   const [sort, setSort] = useState<SortKey>('new');
 
-  const brandChips = getVisibleBrands();
+  const { brands } = useSite();
+  const brandChips = visibleBrands(brands);
   /** 브랜드가 8개를 넘으면 가로 스크롤로 처리합니다. (모바일 대응) */
   const brandScroll = brandChips.length > 8;
 

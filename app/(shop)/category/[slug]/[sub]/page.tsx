@@ -3,31 +3,36 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ProductList from '@/components/ProductList';
 import {
-  getSubCategory,
-  getVisibleCategories,
-  getVisibleCategoryBySlug,
-  getVisibleSubCategories,
+  findSubCategory,
+  findVisibleCategory,
+  visibleCategories,
+  visibleSubCategories,
 } from '@/lib/categories';
 import { getProductsByCategory } from '@/lib/products';
-import { SITE_URL, store } from '@/lib/store';
+import { getCachedStore } from '@/lib/settings';
+import { SITE_URL } from '@/lib/store';
+import { getCachedCategories } from '@/lib/taxonomy';
 
 type PageProps = { params: { slug: string; sub: string } };
 
 export const revalidate = 60;
+export const dynamicParams = true;
 
 /** 노출 중인 대분류의 노출 중인 children 을 모두 정적 생성합니다. */
-export function generateStaticParams(): { slug: string; sub: string }[] {
-  return getVisibleCategories().flatMap((category) =>
-    getVisibleSubCategories(category.slug).map((child) => ({
+export async function generateStaticParams(): Promise<{ slug: string; sub: string }[]> {
+  const categories = await getCachedCategories();
+  return visibleCategories(categories).flatMap((category) =>
+    visibleSubCategories(categories, category.slug).map((child) => ({
       slug: category.slug,
       sub: child.slug,
     }))
   );
 }
 
-export function generateMetadata({ params }: PageProps): Metadata {
-  const category = getVisibleCategoryBySlug(params.slug);
-  const sub = category ? getSubCategory(category.slug, params.sub) : undefined;
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const [categories, store] = await Promise.all([getCachedCategories(), getCachedStore()]);
+  const category = findVisibleCategory(categories, params.slug);
+  const sub = category ? findSubCategory(categories, category.slug, params.sub) : undefined;
   if (!category || !sub) {
     return { title: '카테고리를 찾을 수 없습니다' };
   }
@@ -47,14 +52,15 @@ export function generateMetadata({ params }: PageProps): Metadata {
 }
 
 export default async function SubCategoryPage({ params }: PageProps) {
-  const category = getVisibleCategoryBySlug(params.slug);
-  const sub = category ? getSubCategory(category.slug, params.sub) : undefined;
+  const categories = await getCachedCategories();
+  const category = findVisibleCategory(categories, params.slug);
+  const sub = category ? findSubCategory(categories, category.slug, params.sub) : undefined;
   if (!category || !sub) {
     notFound();
   }
 
   const items = await getProductsByCategory(category.slug, sub.slug);
-  const subs = getVisibleSubCategories(category.slug);
+  const subs = visibleSubCategories(categories, category.slug);
 
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
@@ -109,7 +115,7 @@ export default async function SubCategoryPage({ params }: PageProps) {
           {sub.nameKo}
         </h1>
         <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
-          {category.nameKo} 가운데 {sub.nameKo} 상품입니다. {category.description}
+          {sub.description || `${category.nameKo} 가운데 ${sub.nameKo} 상품입니다. ${category.description}`}
         </p>
       </header>
 

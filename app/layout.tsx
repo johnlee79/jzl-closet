@@ -1,6 +1,12 @@
 import type { Metadata } from 'next';
-import { getCachedBranding, hasCustomFavicon } from '@/lib/settings';
-import { SITE_URL, store } from '@/lib/store';
+import GoogleAnalytics from '@/components/GoogleAnalytics';
+import {
+  getCachedAnalytics,
+  getCachedBranding,
+  getCachedStore,
+  hasCustomFavicon,
+} from '@/lib/settings';
+import { SITE_URL } from '@/lib/store';
 import './globals.css';
 
 /**
@@ -8,11 +14,11 @@ import './globals.css';
  * 프론트(헤더·푸터·장바구니)는 app/(shop)/layout.tsx,
  * 관리자(사이드바)는 app/admin/layout.tsx 가 각각 따로 그립니다.
  *
- * 파비콘은 관리자 > 설정 > 브랜딩 에서 올린 값을 씁니다.
- * 등록된 값이 없으면 public/favicon.svg 를 그대로 씁니다.
+ * 파비콘과 브랜드명·소개 문구는 관리자 > 설정 에서 저장한 값을 씁니다.
+ * 저장한 값이 없으면 lib/site-config.ts 의 기본값으로 갑니다.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const branding = await getCachedBranding();
+  const [branding, store] = await Promise.all([getCachedBranding(), getCachedStore()]);
 
   const icon = branding.favicon
     ? [{ url: branding.favicon.url, type: branding.favicon.type, sizes: branding.favicon.sizes }]
@@ -22,8 +28,48 @@ export async function generateMetadata(): Promise<Metadata> {
     icon.push({ url: '/favicon-32.png', type: 'image/png', sizes: '32x32' });
   }
 
+  const title = `${store.name} — ${store.slogan}`;
+
   return {
-    ...baseMetadata,
+    metadataBase: new URL(SITE_URL),
+    title: {
+      default: title,
+      template: `%s | ${store.name}`,
+    },
+    description: `${store.intro} ${store.category}인 ${store.nameKo}입니다.`,
+    keywords: [
+      store.name,
+      store.nameKo,
+      '브랜드 편집숍',
+      '의류',
+      '아우터',
+      '니트',
+      '가방',
+      '지갑',
+      '슈즈',
+      '액세서리',
+      '데일리룩',
+    ],
+    authors: [{ name: store.name }],
+    applicationName: store.name,
+    alternates: { canonical: '/' },
+    openGraph: {
+      type: 'website',
+      locale: 'ko_KR',
+      url: SITE_URL,
+      siteName: store.name,
+      title,
+      description: store.intro,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description: store.intro,
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
     icons: {
       icon,
       apple: branding.appleTouchIcon
@@ -39,52 +85,16 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-const baseMetadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: {
-    default: `${store.name} — ${store.slogan}`,
-    template: `%s | ${store.name}`,
-  },
-  description: `${store.intro} 의류, 가방·지갑, 슈즈, 액세서리를 취급하는 브랜드 편집숍 ${store.nameKo}입니다.`,
-  keywords: [
-    'JZL CLOSET',
-    '제이진엘 클로젯',
-    '브랜드 편집숍',
-    '의류',
-    '아우터',
-    '니트',
-    '가방',
-    '지갑',
-    '슈즈',
-    '액세서리',
-    '데일리룩',
-  ],
-  authors: [{ name: store.name }],
-  applicationName: store.name,
-  alternates: { canonical: '/' },
-  openGraph: {
-    type: 'website',
-    locale: 'ko_KR',
-    url: SITE_URL,
-    siteName: store.name,
-    title: `${store.name} — ${store.slogan}`,
-    description: store.intro,
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: `${store.name} — ${store.slogan}`,
-    description: store.intro,
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
-};
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // 측정 ID 가 비어 있으면 GoogleAnalytics 가 아무것도 그리지 않습니다.
+  const analytics = await getCachedAnalytics();
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
-      <body className="bg-paper text-ink antialiased">{children}</body>
+      <body className="bg-paper text-ink antialiased">
+        {children}
+        <GoogleAnalytics id={analytics.ga4Id} />
+      </body>
     </html>
   );
 }

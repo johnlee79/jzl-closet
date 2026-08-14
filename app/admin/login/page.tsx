@@ -3,6 +3,11 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 
+/**
+ * 관리자 로그인.
+ * 관리자 레이아웃과 같은 톤(시스템 폰트·흰 카드·파란 버튼)으로 맞춥니다.
+ * 화면 가운데 카드 하나만 두고, 꾸밈은 넣지 않습니다.
+ */
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -43,52 +48,63 @@ function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="admin-card w-full max-w-[380px] p-8">
-      <h1 className="text-[20px] font-semibold text-slate-900">JZL CLOSET 관리자</h1>
-      <p className="mt-2 text-[14px] text-slate-600">
-        비밀번호를 입력하시면 7일 동안 로그인 상태가 유지됩니다.
-      </p>
+    <div className="w-full max-w-[400px]">
+      <div className="admin-card p-7 md:p-8">
+        {/* 로고 — 프론트와 같은 글자, 관리자 화면에 맞게 크기만 줄였습니다. */}
+        <div className="text-center">
+          <p className="font-display text-[22px] font-light tracking-[0.3em] text-slate-900">
+            JZL CLOSET
+          </p>
+          <p className="mt-1.5 text-[13px] text-slate-500">관리자 로그인</p>
+        </div>
 
-      <div className="mt-6">
-        <label htmlFor="admin-password" className="admin-label">
-          비밀번호
-        </label>
-        <input
-          id="admin-password"
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          autoComplete="current-password"
-          autoFocus
-          required
-          className="admin-input"
-          placeholder="비밀번호"
-        />
+        <form onSubmit={handleSubmit} className="mt-7">
+          <label htmlFor="admin-password" className="admin-label">
+            비밀번호
+          </label>
+          <input
+            id="admin-password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
+            autoFocus
+            required
+            className="admin-input"
+            placeholder="비밀번호를 입력하세요"
+          />
+
+          {error ? (
+            <p
+              role="alert"
+              className="mt-3 rounded-md bg-red-50 px-3 py-2 text-[13px] leading-relaxed text-red-700"
+            >
+              {error}
+            </p>
+          ) : null}
+
+          <button type="submit" disabled={pending} className="admin-btn-primary mt-5 w-full">
+            {pending ? '확인 중…' : '로그인'}
+          </button>
+        </form>
+
+        <p className="mt-5 border-t border-slate-200 pt-4 text-center text-[12px] leading-relaxed text-slate-500">
+          한 번 로그인하면 7일 동안 유지됩니다.
+        </p>
       </div>
 
-      {error ? (
-        <p role="alert" className="mt-3 text-[13px] text-red-700">
-          {error}
-        </p>
-      ) : null}
-
-      <button type="submit" disabled={pending} className="admin-btn-primary mt-6 w-full">
-        {pending ? '확인 중…' : '로그인'}
-      </button>
-
-      <a
-        href="/"
-        className="mt-4 block text-center text-[13px] text-slate-500 underline underline-offset-4"
-      >
-        쇼핑몰 화면으로 돌아가기
-      </a>
-    </form>
+      <p className="mt-5 text-center">
+        <a href="/" className="text-[13px] text-slate-500 underline underline-offset-4">
+          쇼핑몰 화면으로 돌아가기
+        </a>
+      </p>
+    </div>
   );
 }
 
 export default function AdminLoginPage() {
   return (
-    <div className="admin-root flex min-h-screen items-center justify-center p-5">
+    <div className="admin-root flex min-h-screen items-center justify-center bg-slate-100 p-5">
       <Suspense fallback={null}>
         <LoginForm />
       </Suspense>

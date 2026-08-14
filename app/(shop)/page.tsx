@@ -1,74 +1,96 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import MainBanner from '@/components/MainBanner';
 import ProductCard from '@/components/ProductCard';
 import SafeImage from '@/components/SafeImage';
-import {
-  getVisibleCategories,
-  getVisibleSubCategories,
-  hasChildren,
-} from '@/lib/categories';
+import { hasVisibleChildren, visibleCategories, visibleSubCategories } from '@/lib/categories';
+import { resolveCopy } from '@/lib/copy';
 import { getProducts } from '@/lib/products';
-import { orderSteps, store } from '@/lib/store';
+import { getCachedCopy, getCachedDesign, getCachedStore } from '@/lib/settings';
+import { getCachedCategories } from '@/lib/taxonomy';
 
 /** ISR — 60초마다 다시 굽고, 관리자가 저장하면 revalidatePath 로 즉시 갱신됩니다. */
 export const revalidate = 60;
 
-export const metadata: Metadata = {
-  title: `${store.name} — ${store.slogan}`,
-  description: `${store.intro} 의류와 가방, 슈즈, 액세서리를 소개하는 브랜드 편집숍입니다.`,
-  alternates: { canonical: '/' },
-  openGraph: {
+export async function generateMetadata(): Promise<Metadata> {
+  const store = await getCachedStore();
+  return {
     title: `${store.name} — ${store.slogan}`,
-    description: store.intro,
-    url: '/',
-  },
-};
+    description: `${store.intro} 의류와 가방, 슈즈, 액세서리를 소개하는 브랜드 편집숍입니다.`,
+    alternates: { canonical: '/' },
+    openGraph: {
+      title: `${store.name} — ${store.slogan}`,
+      description: store.intro,
+      url: '/',
+    },
+  };
+}
 
 export default async function HomePage() {
-  /** DB 를 한 번만 읽고 신상품·카테고리 개수를 함께 계산합니다. */
-  const allProducts = await getProducts();
+  const [allProducts, categories, store, copy, design] = await Promise.all([
+    getProducts(),
+    getCachedCategories(),
+    getCachedStore(),
+    getCachedCopy(),
+    getCachedDesign(),
+  ]);
+
   const newProducts = [
     ...allProducts.filter((product) => product.isNew),
     ...allProducts.filter((product) => !product.isNew),
   ].slice(0, 4);
 
   /** 하위 분류를 가진 대분류만 진입 블록으로 노출합니다. (전체/세일 같은 모음은 제외) */
-  const entryCategories = getVisibleCategories().filter(hasChildren);
+  const entryCategories = visibleCategories(categories).filter(hasVisibleChildren);
   const countByCategory = allProducts.reduce<Record<string, number>>((acc, product) => {
     acc[product.categorySlug] = (acc[product.categorySlug] ?? 0) + 1;
     return acc;
   }, {});
 
+  const hero = resolveCopy(copy.homeHero, store)[0];
+  const story = resolveCopy(copy.homeStory, store);
+  const steps = resolveCopy(copy.orderSteps, store);
+
+  /** 등록한 배너 중 이미지가 있고 노출 중인 것만 씁니다. */
+  const banners = design.banners.filter((banner) => banner.isVisible && banner.imageUrl);
+
   return (
     <>
       <section aria-labelledby="hero-title" className="pb-16 pt-8 md:pb-24 md:pt-10">
         <div className="shell">
-          <div className="aspect-[4/5] w-full overflow-hidden bg-stone md:aspect-[21/9]">
-            <SafeImage
-              src="/images/main/hero.jpg"
-              alt="JZL CLOSET 시즌 캠페인 컷 — 코트와 토트백을 함께 연출한 이미지"
-              label="JZL CLOSET — 메인 이미지"
-              width={1400}
-              height={600}
-              priority
-            />
-          </div>
+          {banners.length > 0 ? (
+            <MainBanner banners={banners} interval={design.interval} />
+          ) : (
+            <div className="aspect-[4/5] w-full overflow-hidden bg-stone md:aspect-[21/9]">
+              <SafeImage
+                src="/images/main/hero.jpg"
+                alt={`${store.name} 시즌 캠페인 컷 — 코트와 토트백을 함께 연출한 이미지`}
+                label={`${store.name} — 메인 이미지`}
+                width={1400}
+                height={600}
+                priority
+              />
+            </div>
+          )}
 
           <div className="mt-10 max-w-[640px] md:mt-14">
             <h1
               id="hero-title"
               className="font-display text-[38px] font-light leading-none tracking-[0.24em] text-ink md:text-[56px]"
             >
-              JZL CLOSET
+              {store.name}
             </h1>
-            <p className="mt-5 font-serif text-[18px] leading-relaxed text-ink md:text-[22px]">
-              {store.slogan}
-            </p>
-            <p className="mt-4 text-[16px] leading-relaxed text-ink md:text-[17px]">
-              {store.intro}
-              <br />
-              의류와 가방, 슈즈와 액세서리까지 매일의 옷차림을 정리해 주는 물건을 고릅니다.
-            </p>
+            {hero?.heading ? (
+              <p className="mt-5 font-serif text-[18px] leading-relaxed text-ink md:text-[22px]">
+                {hero.heading}
+              </p>
+            ) : null}
+            {hero?.html ? (
+              <div
+                className="detail-body mt-4 text-[16px] leading-relaxed text-ink md:text-[17px]"
+                dangerouslySetInnerHTML={{ __html: hero.html }}
+              />
+            ) : null}
             <Link href="/products" className="btn-primary mt-9">
               컬렉션 보기
             </Link>
@@ -112,20 +134,19 @@ export default async function HomePage() {
               id="story-title"
               className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[30px]"
             >
-              오래 쓰는 쪽을 택합니다
+              {story[0]?.heading || '오래 쓰는 쪽을 택합니다'}
             </h2>
             <Link href="/about" className="btn-secondary mt-8">
               브랜드 소개
             </Link>
           </div>
           <div className="flex flex-col gap-7">
-            {store.story.map((paragraph) => (
-              <p
-                key={paragraph.slice(0, 12)}
-                className="text-[16px] leading-[2.1] text-ink md:text-[17px]"
-              >
-                {paragraph}
-              </p>
+            {story.map((block, index) => (
+              <div
+                key={index}
+                className="detail-body text-[16px] leading-[2.1] text-ink md:text-[17px]"
+                dangerouslySetInnerHTML={{ __html: block.html }}
+              />
             ))}
           </div>
         </div>
@@ -150,7 +171,7 @@ export default async function HomePage() {
                     <div className="aspect-[3/4] w-full overflow-hidden bg-stone">
                       <SafeImage
                         src={`/images/category/${category.slug}.jpg`}
-                        alt={`${category.nameKo} 카테고리 대표 이미지 — JZL CLOSET`}
+                        alt={`${category.nameKo} 카테고리 대표 이미지 — ${store.name}`}
                         label={category.nameKo}
                         width={400}
                         height={533}
@@ -165,7 +186,7 @@ export default async function HomePage() {
                   </Link>
 
                   <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-1">
-                    {getVisibleSubCategories(category.slug)
+                    {visibleSubCategories(categories, category.slug)
                       .slice(0, 4)
                       .map((child) => (
                         <li key={child.slug}>
@@ -196,13 +217,16 @@ export default async function HomePage() {
           </h2>
 
           <ol className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-6">
-            {orderSteps.map((step) => (
-              <li key={step.step} className="border-t border-stone pt-6">
+            {steps.map((step, index) => (
+              <li key={index} className="border-t border-stone pt-6">
                 <p className="font-display text-[34px] font-light tracking-[0.1em] text-ink">
-                  {step.step}
+                  {String(index + 1).padStart(2, '0')}
                 </p>
-                <h3 className="mt-3 font-serif text-[19px] text-ink">{step.title}</h3>
-                <p className="mt-3 text-[15px] leading-[1.9] text-ink">{step.body}</p>
+                <h3 className="mt-3 font-serif text-[19px] text-ink">{step.heading}</h3>
+                <div
+                  className="detail-body mt-3 text-[15px] leading-[1.9] text-ink"
+                  dangerouslySetInnerHTML={{ __html: step.html }}
+                />
               </li>
             ))}
           </ol>

@@ -5,11 +5,11 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import CartBadge from '@/components/CartBadge';
 import {
-  getVisibleCategories,
-  getVisibleSubCategories,
-  hasChildren,
+  hasVisibleChildren,
+  visibleCategories,
+  visibleSubCategories,
+  type Category,
 } from '@/lib/categories';
-import { store } from '@/lib/store';
 
 const mainLinks = [
   { href: '/about', label: '브랜드 소개' },
@@ -17,10 +17,26 @@ const mainLinks = [
   { href: '/order', label: '장바구니 · 주문' },
 ];
 
-export default function Header() {
+type HeaderProps = {
+  /** DB 에서 읽은 분류 전체. 노출 여부는 여기서 거릅니다. */
+  categories: Category[];
+  storeName: string;
+  storePhone: string;
+  storeHours: string;
+  /** 관리자 > 설정 > 브랜딩 에서 올린 로고. 없으면 텍스트 로고를 씁니다. */
+  logoUrl: string;
+};
+
+export default function Header({
+  categories,
+  storeName,
+  storePhone,
+  storeHours,
+  logoUrl,
+}: HeaderProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const menu = getVisibleCategories();
+  const menu = visibleCategories(categories);
 
   useEffect(() => {
     setOpen(false);
@@ -33,6 +49,15 @@ export default function Header() {
       document.body.style.overflow = '';
     };
   }, [open]);
+
+  const logo = logoUrl ? (
+    /* eslint-disable-next-line @next/next/no-img-element */
+    <img src={logoUrl} alt={storeName} className="h-8 w-auto object-contain md:h-9" />
+  ) : (
+    <span className="font-display text-[20px] font-light tracking-[0.34em] text-ink md:text-[24px]">
+      {storeName}
+    </span>
+  );
 
   return (
     <header className="sticky top-0 z-40 border-b border-stone bg-paper">
@@ -49,12 +74,8 @@ export default function Header() {
           </svg>
         </button>
 
-        <Link
-          href="/"
-          className="shrink-0 font-display text-[20px] font-light tracking-[0.34em] text-ink md:text-[24px]"
-          aria-label={`${store.name} 홈으로`}
-        >
-          JZL CLOSET
+        <Link href="/" className="shrink-0" aria-label={`${storeName} 홈으로`}>
+          {logo}
         </Link>
 
         <nav aria-label="주요 메뉴" className="hidden md:block">
@@ -68,10 +89,10 @@ export default function Header() {
                   {category.label}
                 </Link>
 
-                {hasChildren(category) ? (
+                {hasVisibleChildren(category) ? (
                   <div className="pointer-events-none absolute left-1/2 top-full z-50 -translate-x-1/2 opacity-0 transition-opacity duration-200 group-hover/item:pointer-events-auto group-hover/item:opacity-100 group-focus-within/item:pointer-events-auto group-focus-within/item:opacity-100">
                     <ul className="min-w-[132px] border border-stone bg-paper py-3">
-                      {getVisibleSubCategories(category.slug).map((child) => (
+                      {visibleSubCategories(categories, category.slug).map((child) => (
                         <li key={child.slug}>
                           <Link
                             href={`/category/${category.slug}/${child.slug}`}
@@ -103,9 +124,7 @@ export default function Header() {
       {open ? (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-paper md:hidden">
           <div className="shell flex h-16 items-center justify-between">
-            <span className="font-display text-[20px] font-light tracking-[0.34em] text-ink">
-              JZL CLOSET
-            </span>
+            {logo}
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -129,9 +148,9 @@ export default function Header() {
                     {category.label}
                   </Link>
 
-                  {hasChildren(category) ? (
+                  {hasVisibleChildren(category) ? (
                     <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
-                      {getVisibleSubCategories(category.slug).map((child) => (
+                      {visibleSubCategories(categories, category.slug).map((child) => (
                         <li key={child.slug}>
                           <Link
                             href={`/category/${category.slug}/${child.slug}`}
@@ -169,9 +188,9 @@ export default function Header() {
             </ul>
 
             <p className="mt-10 text-[13px] leading-relaxed text-muted">
-              고객센터 {store.phone}
+              고객센터 {storePhone}
               <br />
-              평일 10:00 — 17:00 (점심 12:30 — 13:30, 주말·공휴일 휴무)
+              {storeHours}
             </p>
           </nav>
         </div>

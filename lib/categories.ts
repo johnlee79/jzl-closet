@@ -1,75 +1,67 @@
 /**
  * ============================================================
- * 카테고리 데이터 — 이 파일 하나만 고치면 메뉴·라우트·사이트맵이 전부 바뀝니다.
+ * 카테고리 — 타입 · 폴백 데이터 · 순수 헬퍼
  * ============================================================
  *
- * ★ label 은 화면에 보이는 글자입니다. 한글·영문 자유롭게 바꿔도 됩니다.
- *   slug 는 주소에 쓰이므로 절대 바꾸지 마세요. 바꾸면 검색 순위가 초기화됩니다.
+ * ★ 1-B 부터 분류는 DB(categories 테이블)에서 읽습니다.
+ *   관리자 > 분류 관리 에서 고치세요. 이 파일을 직접 고칠 필요가 없습니다.
  *
- * 필드 역할
- *   slug      URL 전용. /category/clothing 의 clothing 부분입니다. 고정값으로 두세요.
- *   label     화면에 실제로 출력되는 글자. 메뉴·필터 칩·목록에 이 값이 나옵니다.
- *   nameKo    h1 제목과 메타데이터(검색 결과 제목·설명) 전용입니다.
- *   order     정렬 순서. 오름차순이며 배열에 적힌 순서는 무시됩니다.
- *   isVisible false 면 메뉴·사이트맵·라우트 생성에서 제외됩니다. 데이터는 남습니다.
+ * 이 파일이 남아 있는 이유는 두 가지입니다.
+ *   1) 타입 정의 — 서버·클라이언트 어디서나 쓰는 Category / SubCategory
+ *   2) 폴백 데이터 — supabase/schema-1b.sql · seed-1b.sql 을 아직 실행하지
+ *      않았거나 테이블이 비어 있을 때 사이트가 죽지 않도록 이 값을 씁니다.
  *
- * [1] 대분류 추가하는 법
- *   아래 categories 배열에 객체를 하나 추가하면 끝입니다.
- *     { slug: 'home', label: 'HOME', nameKo: '홈웨어', order: 45, isVisible: true,
- *       description: '...', children: [] }
- *   - 헤더 메뉴, 모바일 메뉴, 푸터, 카테고리 페이지(정적 생성), 사이트맵,
- *     상품 목록의 필터가 자동으로 따라옵니다. 다른 파일은 손대지 않습니다.
- *   - 상품을 넣으려면 lib/products.ts 에서 category: 'home' 으로 지정합니다.
- *
- * [2] 소분류 추가하는 법
- *   해당 대분류의 children 배열에 추가하세요.
- *     { slug: 'pajama', label: 'PAJAMA', nameKo: '파자마', order: 10, isVisible: true }
- *   - 헤더 드롭다운과 목록 상단의 소분류 필터 칩이 자동 생성됩니다.
- *   - children 이 없거나 비어 있으면 드롭다운과 소분류 필터 줄을 아예 그리지 않습니다.
- *   - 상품과 연결하려면 lib/products.ts 에서 subCategory: 'pajama' 로 지정합니다.
- *
- * [3] 숨기는 법
- *   isVisible: false 로 바꾸세요. 데이터는 그대로 남고 메뉴·사이트맵·카테고리
- *   페이지 생성에서만 제외됩니다. 나중에 true 로 되돌리면 그대로 되살아납니다.
- *   (삭제하지 마세요. 삭제하면 되살릴 수 없습니다.)
- *
- * [4] 순서 바꾸는 법
- *   order 값을 고치세요. 오름차순으로 정렬됩니다.
- *   중간에 끼워 넣기 쉽도록 10 단위로 띄워 두었습니다. (10, 20, 30 ...)
- *
- * [5] 화면 글자만 바꾸는 법
- *   label 만 고치세요. 예: label: 'OUTER' → label: '아우터'
- *   주소(/category/clothing/outer)와 검색 색인은 그대로 유지됩니다.
+ * DB 를 실제로 읽는 코드는 lib/taxonomy.ts (서버 전용) 에 있습니다.
+ * 이 파일에는 'server-only' 를 넣지 않습니다. 클라이언트 컴포넌트도 타입과
+ * 헬퍼를 가져다 쓰기 때문입니다.
  *
  * ------------------------------------------------------------
  * matchType — 이 카테고리가 어떤 상품을 보여줄지 정합니다.
- *   생략   : 상품의 category 값이 이 카테고리 slug 와 같은 상품 (기본값)
- *   'all'  : 전체 상품
- *   'flag' : matchFlag 로 지정한 상품 상태값이 true 인 상품 (현재는 isSale)
+ *   DB 에는 컬럼을 따로 두지 않고 slug 약속으로 처리합니다.
+ *     slug 'all'  → 전체 상품
+ *     slug 'sale' → isSale 이 true 인 상품
+ *     그 밖       → categorySlug 가 같은 상품 (기본값)
  * ------------------------------------------------------------
  */
 
 export type SubCategory = {
-  slug: string; // URL 전용 — 바꾸지 마세요
-  label: string; // 화면 출력용 — 자유롭게 바꿔도 됩니다
+  slug: string; // URL 전용 — 등록 후 바꾸지 않습니다
+  label: string; // 화면 출력용
   nameKo: string; // h1·메타데이터 전용
   order: number;
   isVisible: boolean;
+  description?: string;
 };
 
 export type Category = {
-  slug: string; // URL 전용 — 바꾸지 마세요
-  label: string; // 화면 출력용 — 자유롭게 바꿔도 됩니다
+  slug: string; // URL 전용 — 등록 후 바꾸지 않습니다
+  label: string; // 화면 출력용
   nameKo: string; // h1·메타데이터 전용
   order: number;
   isVisible: boolean;
   description: string;
-  children?: SubCategory[];
+  children: SubCategory[];
   matchType?: 'all' | 'flag';
   matchFlag?: 'isSale';
 };
 
-export const categories: Category[] = [
+/** 모음 카테고리 slug 약속. DB 컬럼 대신 이 규칙으로 판별합니다. */
+export const ALL_CATEGORY_SLUG = 'all';
+export const SALE_CATEGORY_SLUG = 'sale';
+
+/** slug 로 matchType 을 정합니다. (categories 테이블에는 이 컬럼이 없습니다) */
+export function matchTypeOf(slug: string): Pick<Category, 'matchType' | 'matchFlag'> {
+  if (slug === ALL_CATEGORY_SLUG) return { matchType: 'all' };
+  if (slug === SALE_CATEGORY_SLUG) return { matchType: 'flag', matchFlag: 'isSale' };
+  return {};
+}
+
+/* ------------------------------------------------------------------
+ * 폴백 데이터 — DB 가 비어 있을 때만 쓰입니다.
+ * supabase/seed-1b.sql 이 이 값을 그대로 옮겨 담습니다.
+ * ------------------------------------------------------------------ */
+
+export const FALLBACK_CATEGORIES: Category[] = [
   {
     slug: 'all',
     label: 'ALL',
@@ -77,6 +69,7 @@ export const categories: Category[] = [
     order: 10,
     isVisible: true,
     matchType: 'all',
+    children: [],
     description:
       '지금 소개하고 있는 모든 상품입니다. 카테고리와 브랜드, 가격 순으로 좁혀 보실 수 있습니다.',
   },
@@ -157,17 +150,17 @@ export const categories: Category[] = [
     isVisible: true,
     matchType: 'flag',
     matchFlag: 'isSale',
+    children: [],
     description:
       '가격을 조정한 상품입니다. 수량이 한정되어 있어 사이즈와 색상이 먼저 마감될 수 있습니다.',
   },
-
-  // ─── 아래는 숨김 상태입니다. 삭제하지 말고 isVisible 만 true 로 바꾸면 되살아납니다. ───
   {
     slug: 'brand',
     label: 'BRAND',
     nameKo: '브랜드',
     order: 70,
     isVisible: false,
+    children: [],
     description:
       'JZL CLOSET이 소개하는 브랜드입니다. 브랜드별 소개와 상품은 /brand 에서 계속 보실 수 있습니다.',
   },
@@ -187,52 +180,63 @@ export const categories: Category[] = [
   },
 ];
 
+/* ------------------------------------------------------------------
+ * 순수 헬퍼 — 목록을 넘겨 받아 계산만 합니다. (서버·클라이언트 공용)
+ * ------------------------------------------------------------------ */
+
 function byOrder<T extends { order: number }>(list: T[]): T[] {
   return [...list].sort((a, b) => a.order - b.order);
 }
 
 /** 메뉴·사이트맵·라우트에 노출되는 대분류 (order 오름차순). */
-export function getVisibleCategories(): Category[] {
-  return byOrder(categories.filter((category) => category.isVisible));
+export function visibleCategories(list: Category[]): Category[] {
+  return byOrder(list.filter((category) => category.isVisible));
 }
 
 /** 숨김 항목을 포함한 전체 대분류 (order 오름차순). */
-export function getAllCategories(): Category[] {
-  return byOrder(categories);
+export function sortedCategories(list: Category[]): Category[] {
+  return byOrder(list);
 }
 
 /** 상품이 실제로 속할 수 있는 대분류만 (전체/세일 같은 모음 카테고리 제외). */
-export function getFilterableCategories(): Category[] {
-  return getVisibleCategories().filter((category) => !category.matchType);
+export function filterableCategories(list: Category[]): Category[] {
+  return visibleCategories(list).filter((category) => !category.matchType);
 }
 
 /** 숨김 여부와 관계없이 slug 로 찾습니다. */
-export function getCategoryBySlug(slug: string): Category | undefined {
-  return categories.find((category) => category.slug === slug);
+export function findCategory(list: Category[], slug: string): Category | undefined {
+  return list.find((category) => category.slug === slug);
 }
 
 /** 노출 중인 카테고리만 slug 로 찾습니다. (라우트 생성에 사용) */
-export function getVisibleCategoryBySlug(slug: string): Category | undefined {
-  return categories.find((category) => category.slug === slug && category.isVisible);
+export function findVisibleCategory(list: Category[], slug: string): Category | undefined {
+  return list.find((category) => category.slug === slug && category.isVisible);
 }
 
 /** 노출 중인 소분류 (order 오름차순). 메뉴·필터·라우트는 이 함수를 씁니다. */
-export function getVisibleSubCategories(categorySlug: string): SubCategory[] {
-  const children = getCategoryBySlug(categorySlug)?.children ?? [];
+export function visibleSubCategories(list: Category[], slug: string): SubCategory[] {
+  const children = findCategory(list, slug)?.children ?? [];
   return byOrder(children.filter((child) => child.isVisible));
 }
 
 /** 숨김 여부와 관계없이 소분류를 찾습니다. */
-export function getSubCategory(
+export function findSubCategory(
+  list: Category[],
   categorySlug: string,
   subSlug: string
 ): SubCategory | undefined {
-  return (getCategoryBySlug(categorySlug)?.children ?? []).find(
+  return (findCategory(list, categorySlug)?.children ?? []).find(
     (child) => child.slug === subSlug
   );
 }
 
-/** 노출 중인 소분류가 하나라도 있는지. 없으면 소분류 필터 줄을 그리지 않습니다. */
-export function hasChildren(category: Category): boolean {
-  return getVisibleSubCategories(category.slug).length > 0;
+/** 노출 중인 소분류가 하나라도 있는지. 없으면 소분류 줄을 그리지 않습니다. */
+export function hasVisibleChildren(category: Category): boolean {
+  return category.children.some((child) => child.isVisible);
+}
+
+/** 카테고리 이름을 찾습니다. 없으면 slug 를 그대로 돌려줍니다. */
+export function categoryNameKo(list: Category[], slug: string | null): string {
+  if (!slug) return '';
+  return findCategory(list, slug)?.nameKo ?? slug;
 }

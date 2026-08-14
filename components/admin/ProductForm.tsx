@@ -11,8 +11,12 @@ import {
   deleteTemplateAction,
   saveProductAction,
 } from '@/app/admin/actions';
-import { brands } from '@/lib/brands';
-import { getFilterableCategories, getVisibleSubCategories } from '@/lib/categories';
+import { sortedBrands, type Brand } from '@/lib/brands';
+import {
+  filterableCategories,
+  visibleSubCategories,
+  type Category,
+} from '@/lib/categories';
 import { rebuildCombinations, slugify } from '@/lib/product-utils';
 import type { Gender, Product, ProductInput, Template } from '@/lib/types';
 
@@ -22,6 +26,9 @@ type ProductFormProps = {
   /** 수정 화면이면 기존 상품, 새 상품이면 undefined */
   product?: Product;
   templates: Template[];
+  /** 분류·브랜드는 DB 에서 오므로 서버 페이지가 읽어 넘겨 줍니다. */
+  allCategories: Category[];
+  allBrands: Brand[];
 };
 
 function emptyInput(): ProductInput {
@@ -66,7 +73,12 @@ const genders: { value: Gender; label: string }[] = [
   { value: 'unisex', label: '공용' },
 ];
 
-export default function ProductForm({ product, templates }: ProductFormProps) {
+export default function ProductForm({
+  product,
+  templates,
+  allCategories,
+  allBrands,
+}: ProductFormProps) {
   const router = useRouter();
 
   const [form, setForm] = useState<ProductInput>(() =>
@@ -83,10 +95,11 @@ export default function ProductForm({ product, templates }: ProductFormProps) {
     null
   );
 
-  const categories = getFilterableCategories();
+  const categories = useMemo(() => filterableCategories(allCategories), [allCategories]);
+  const brands = useMemo(() => sortedBrands(allBrands), [allBrands]);
   const subCategories = useMemo(
-    () => (form.categorySlug ? getVisibleSubCategories(form.categorySlug) : []),
-    [form.categorySlug]
+    () => (form.categorySlug ? visibleSubCategories(allCategories, form.categorySlug) : []),
+    [allCategories, form.categorySlug]
   );
 
   const set = useCallback(<K extends keyof ProductInput>(key: K, value: ProductInput[K]) => {

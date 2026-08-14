@@ -8,24 +8,27 @@ import {
   duplicateProductAction,
   patchProductAction,
 } from '@/app/admin/actions';
-import { getBrandLabel } from '@/lib/brands';
-import { getCategoryBySlug, getSubCategory } from '@/lib/categories';
+import { brandLabel, type Brand } from '@/lib/brands';
+import { findCategory, findSubCategory, type Category } from '@/lib/categories';
 import { formatPrice } from '@/lib/product-utils';
 import type { Product } from '@/lib/types';
 
 type ProductTableProps = {
   products: Product[];
+  /** 분류·브랜드는 DB 에서 오므로 서버 페이지가 읽어 넘겨 줍니다. */
+  categories: Category[];
+  brands: Brand[];
 };
 
-function categoryLabel(product: Product): string {
-  const category = getCategoryBySlug(product.categorySlug);
+function categoryLabel(categories: Category[], product: Product): string {
+  const category = findCategory(categories, product.categorySlug);
   const sub = product.subCategorySlug
-    ? getSubCategory(product.categorySlug, product.subCategorySlug)
+    ? findSubCategory(categories, product.categorySlug, product.subCategorySlug)
     : undefined;
   return [category?.nameKo ?? product.categorySlug, sub?.nameKo].filter(Boolean).join(' · ');
 }
 
-export default function ProductTable({ products }: ProductTableProps) {
+export default function ProductTable({ products, categories, brands }: ProductTableProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -179,10 +182,10 @@ export default function ProductTable({ products }: ProductTableProps) {
                   </td>
 
                   <td className="px-3 py-2.5 text-slate-700">
-                    {product.brandSlug ? getBrandLabel(product.brandSlug) : '—'}
+                    {product.brandSlug ? brandLabel(brands, product.brandSlug) : '—'}
                   </td>
 
-                  <td className="px-3 py-2.5 text-slate-700">{categoryLabel(product)}</td>
+                  <td className="px-3 py-2.5 text-slate-700">{categoryLabel(categories, product)}</td>
 
                   <td className="px-3 py-2.5">
                     {/* 가격 — 즉시 저장 */}

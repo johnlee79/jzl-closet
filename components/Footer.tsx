@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import KakaoButton from '@/components/KakaoButton';
-import { getVisibleCategories } from '@/lib/categories';
-import { store } from '@/lib/store';
+import { visibleCategories, type Category } from '@/lib/categories';
+import type { StoreSettings } from '@/lib/site-config';
 
 const infoLinks = [
   { href: '/about', label: '브랜드 소개' },
@@ -12,15 +12,22 @@ const infoLinks = [
   { href: '/order', label: '장바구니 · 주문' },
 ];
 
-export default function Footer() {
-  const menu = getVisibleCategories();
+/** 분류와 스토어 정보는 DB 에서 읽어 레이아웃이 넘겨 줍니다. */
+export default function Footer({
+  categories,
+  store,
+}: {
+  categories: Category[];
+  store: StoreSettings;
+}) {
+  const menu = visibleCategories(categories);
 
   return (
     <footer className="mt-20 border-t border-stone md:mt-32">
       <div className="shell grid grid-cols-1 gap-12 py-16 md:grid-cols-4 md:gap-8 md:py-20">
         <div className="md:col-span-2">
           <p className="font-display text-[22px] font-light tracking-[0.34em] text-ink">
-            JZL CLOSET
+            {store.name}
           </p>
           <p className="mt-4 font-serif text-[17px] text-ink">{store.slogan}</p>
           <p className="mt-3 max-w-[420px] text-[15px] leading-relaxed text-ink">
@@ -35,13 +42,16 @@ export default function Footer() {
             >
               {store.phone}
             </a>
-            <p className="mt-2 text-[13px] leading-relaxed text-muted">
-              평일 10:00 — 17:00 / 점심 12:30 — 13:30
-              <br />
-              주말 및 공휴일은 휴무입니다.
-            </p>
+            <p className="mt-2 text-[13px] leading-relaxed text-muted">{store.hours}</p>
+            {store.email ? (
+              <p className="mt-1 text-[13px] leading-relaxed text-muted">
+                <a href={`mailto:${store.email}`} className="underline underline-offset-4">
+                  {store.email}
+                </a>
+              </p>
+            ) : null}
             <div className="mt-5">
-              <KakaoButton />
+              <KakaoButton channelUrl={store.kakao} phone={store.phone} />
             </div>
           </div>
         </div>
@@ -113,7 +123,7 @@ export default function Footer() {
             </div>
             <div className="flex gap-2">
               <dt>고객센터</dt>
-              <dd className="text-ink">{store.business.phone}</dd>
+              <dd className="text-ink">{store.phone}</dd>
             </div>
           </dl>
           <p className="mt-6 text-[13px] tracking-[0.1em] text-muted">
