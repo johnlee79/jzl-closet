@@ -249,6 +249,7 @@ function BrandForm({
             slug={`brands/${draft.slug || 'new'}`}
             multiple={false}
             label="브랜드 대표 이미지를 끌어다 놓거나 클릭해서 선택하세요"
+            frame="full"
           />
         </div>
 

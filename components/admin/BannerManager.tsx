@@ -183,6 +183,7 @@ export default function BannerManager({ initial }: { initial: DesignSettings }) 
                       slug={`banners/${banner.id}`}
                       multiple={false}
                       label="가로형 이미지를 올리세요"
+                      frame="full"
                     />
                   </div>
                   <div>
@@ -195,6 +196,7 @@ export default function BannerManager({ initial }: { initial: DesignSettings }) 
                       slug={`banners/${banner.id}-m`}
                       multiple={false}
                       label="세로형 이미지를 올리세요 (없으면 PC 이미지를 씁니다)"
+                      frame="full"
                     />
                   </div>
                 </div>

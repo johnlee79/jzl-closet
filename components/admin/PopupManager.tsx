@@ -94,6 +94,7 @@ function PopupForm({
             slug="popups"
             multiple={false}
             label="팝업 이미지를 끌어다 놓거나 클릭해서 선택하세요"
+            frame="full"
           />
         </div>
 

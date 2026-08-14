@@ -68,6 +68,7 @@ export default function LogoUploader({
           slug="branding/logo"
           multiple={false}
           label="로고 이미지를 끌어다 놓거나 클릭해서 선택하세요"
+          frame="full"
         />
         <p className="mt-2 text-[12px] leading-relaxed text-slate-500">
           가로로 긴 이미지(예: 400×80)를 권장합니다. 배경이 없는 png 가 가장 깔끔합니다.

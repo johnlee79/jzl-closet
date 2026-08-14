@@ -136,6 +136,12 @@ export type ProductFilter = {
   visible?: boolean;
   limit?: number;
   offset?: number;
+  /**
+   * 목록 화면용 — 상세설명(detail_blocks)과 실측(measurements)을 빼고 읽습니다.
+   * ★ 상품 카드·관리자 목록은 이 두 컬럼을 쓰지 않는데,
+   *   상품 하나에 이미지·문단이 수십 개씩 들어 있어 전송량이 크게 늘어납니다.
+   */
+  light?: boolean;
 };
 
 /* ── 사이트 설정 (site_settings 테이블) ────────────────────── */

@@ -206,6 +206,7 @@ export default function DetailEditor({
                       slug={slug}
                       multiple={false}
                       label="상세 이미지를 끌어다 놓거나 클릭해서 선택하세요"
+                      frame="full"
                     />
                     <div>
                       <label className="admin-label" htmlFor={`alt-${index}`}>

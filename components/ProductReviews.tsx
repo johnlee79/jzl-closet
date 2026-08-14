@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import StarRating from '@/components/StarRating';
 import { formatDate } from '@/lib/format';
 import { SPONSORED_NOTICE } from '@/lib/site-config';
@@ -54,6 +54,32 @@ function DistributionBar({
       </span>
       <span className="w-10 shrink-0 text-right tabular-nums text-muted">{count}</span>
     </li>
+  );
+}
+
+/**
+ * 썸네일 위에 겹치는 작은 별점.
+ * ★ 어두운 그라데이션 위라 paper 색으로 그립니다. 이모지가 아니라 SVG 입니다.
+ */
+function TinyStars({ value }: { value: number }) {
+  return (
+    <span className="flex gap-[1px]" aria-label={`별점 ${value}점`}>
+      {[1, 2, 3, 4, 5].map((index) => (
+        <svg
+          key={index}
+          width="9"
+          height="9"
+          viewBox="0 0 10 10"
+          aria-hidden="true"
+          className="shrink-0"
+        >
+          <path
+            d="M5 0.6l1.35 2.9 3.15.4-2.33 2.16.62 3.1L5 7.62 2.21 9.16l.62-3.1L.5 3.9l3.15-.4z"
+            fill={index <= Math.round(value) ? '#F6F5F2' : 'rgba(246,245,242,0.35)'}
+          />
+        </svg>
+      ))}
+    </span>
   );
 }
 
@@ -117,24 +143,89 @@ export default function ProductReviews({
    *   확대 보기는 후기 카드 안의 사진을 눌렀을 때만 뜹니다. */
   const cardRefs = useRef<Record<string, HTMLLIElement | null>>({});
   const [highlighted, setHighlighted] = useState('');
+  /** 필터를 푼 뒤 다시 그려지길 기다리는 대상 */
+  const [pendingScroll, setPendingScroll] = useState('');
+  const timers = useRef<number[]>([]);
+
+  const clearTimers = useCallback(() => {
+    timers.current.forEach((id) => window.clearTimeout(id));
+    timers.current = [];
+  }, []);
+
+  useEffect(() => clearTimers, [clearTimers]);
+
+  /**
+   * 실제 스크롤과 강조.
+   *
+   * ★ 강조를 누른 순간부터 1.5초로 재면, 부드러운 스크롤이 끝나기도 전에 꺼집니다.
+   *   화면에 도착했을 때는 이미 아무 표시도 남아 있지 않습니다.
+   *   그래서 스크롤이 멈춘 뒤부터 1.5초를 셉니다.
+   */
+  const scrollAndHighlight = useCallback(
+    (reviewId: string) => {
+      const card = cardRefs.current[reviewId];
+      if (!card) return;
+
+      clearTimers();
+      setHighlighted(reviewId);
+
+      // 움직임을 줄이도록 설정한 분에게는 곧바로 이동합니다.
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      card.scrollIntoView({
+        behavior: reduceMotion ? 'auto' : 'smooth',
+        block: 'center',
+      });
+
+      /** 스크롤이 멈추면 그때부터 1.5초를 셉니다. */
+      const hold = () => {
+        clearTimers();
+        timers.current.push(window.setTimeout(() => setHighlighted(''), 1500));
+      };
+
+      if (reduceMotion) {
+        hold();
+        return;
+      }
+
+      // scrollend 를 지원하면 그걸 쓰고, 아니면 넉넉히 기다렸다가 셉니다.
+      const hasScrollEnd = Object.prototype.hasOwnProperty.call(window, 'onscrollend');
+
+      if (hasScrollEnd) {
+        window.addEventListener('scrollend', hold, { once: true });
+        // 이미 그 자리에 있어 스크롤이 일어나지 않는 경우를 위한 안전장치
+        timers.current.push(
+          window.setTimeout(() => {
+            window.removeEventListener('scrollend', hold);
+            hold();
+          }, 1200)
+        );
+      } else {
+        timers.current.push(window.setTimeout(hold, 700));
+      }
+    },
+    [clearTimers]
+  );
 
   const goToReview = useCallback(
     (reviewId: string) => {
       // 사진 없는 후기가 걸러져 있으면 먼저 필터를 풀어 줍니다.
-      if (photoOnly) setPhotoOnly(false);
-
-      // 목록이 다시 그려진 뒤에 스크롤해야 위치가 맞습니다.
-      window.requestAnimationFrame(() => {
-        const card = cardRefs.current[reviewId];
-        if (!card) return;
-        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setHighlighted(reviewId);
-        // 1.5초 뒤 강조를 풉니다.
-        window.setTimeout(() => setHighlighted(''), 1500);
-      });
+      // ★ 목록이 다시 그려진 뒤에 스크롤해야 위치가 맞아, 다음 렌더로 넘깁니다.
+      if (photoOnly) {
+        setPhotoOnly(false);
+        setPendingScroll(reviewId);
+        return;
+      }
+      scrollAndHighlight(reviewId);
     },
-    [photoOnly]
+    [photoOnly, scrollAndHighlight]
   );
+
+  // 필터가 풀려 목록이 다시 그려진 뒤에 이동합니다.
+  useEffect(() => {
+    if (!pendingScroll || photoOnly) return;
+    scrollAndHighlight(pendingScroll);
+    setPendingScroll('');
+  }, [pendingScroll, photoOnly, scrollAndHighlight]);
 
   const visible = useMemo(() => {
     const filtered = photoOnly
@@ -192,13 +283,14 @@ export default function ProductReviews({
                       type="button"
                       onClick={() => goToReview(media.reviewId)}
                       aria-label={`후기 보기 — 별점 ${media.rating}점`}
-                      className="group relative block h-[132px] w-[132px] overflow-hidden border border-stone md:h-[156px] md:w-[156px]"
+                      className="group relative block h-[150px] w-[150px] overflow-hidden border border-stone md:h-[176px] md:w-[176px]"
                     >
                       {media.video ? (
                         <>
                           {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                           <video
-                            src={media.url}
+                            // #t=0.1 을 붙이면 검은 화면 대신 첫 장면이 잡힙니다.
+                            src={`${media.url}#t=0.1`}
                             muted
                             playsInline
                             preload="metadata"
@@ -218,11 +310,9 @@ export default function ProductReviews({
 
                       {/* ★ 무슨 후기인지 알 수 있게 본문 앞부분을 겹쳐 둡니다.
                           그림자가 아니라 그라데이션이라 규칙에 어긋나지 않습니다. */}
-                      <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/80 via-ink/45 to-transparent px-2 pb-2 pt-6 text-left">
-                        <span className="block text-[11px] tracking-[0.1em] text-paper/90">
-                          {'★'.repeat(media.rating)}
-                        </span>
-                        <span className="mt-0.5 line-clamp-2 block text-[12px] leading-snug text-paper">
+                      <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/90 via-ink/55 to-transparent px-2.5 pb-2.5 pt-9 text-left">
+                        <TinyStars value={media.rating} />
+                        <span className="mt-1 line-clamp-2 block text-[12px] leading-[1.4] text-paper">
                           {media.excerpt}
                         </span>
                       </span>
@@ -320,8 +410,10 @@ export default function ProductReviews({
                   ref={(node) => {
                     cardRefs.current[review.id] = node;
                   }}
-                  className={`scroll-mt-24 border-b border-stone px-3 py-8 transition-colors duration-500 ${
-                    highlighted === review.id ? 'bg-stone/40' : 'bg-transparent'
+                  // ★ 갤러리에서 넘어온 후기를 1.5초간 은은하게 표시합니다.
+                  //   -mx-3 로 배경을 좌우로 조금 넓혀 카드처럼 보이게 합니다.
+                  className={`-mx-3 scroll-mt-24 border-b border-stone px-3 py-8 transition-colors duration-500 ${
+                    highlighted === review.id ? 'bg-stone/60' : 'bg-transparent'
                   }`}
                 >
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2">

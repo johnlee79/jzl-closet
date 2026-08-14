@@ -220,11 +220,45 @@ export function productToRow(input: ProductInput): Omit<ProductRow, 'id' | 'crea
  * ------------------------------------------------------------------ */
 
 /** 상품 목록. filter 를 생략하면 전시 중인 상품만 진열 순서대로 돌려줍니다. */
+/**
+ * 목록 화면에 필요한 컬럼만.
+ *
+ * ★ detail_blocks(상세설명 전체)와 measurements 는 목록에서 쓰지 않습니다.
+ *   상품 하나에 이미지·문단이 수십 개씩 들어 있어, 20개만 불러도 전송량이 크게 늘어납니다.
+ *   목록 화면에서는 이 두 컬럼을 빼고 읽습니다.
+ */
+const LIST_COLUMNS = [
+  'id',
+  'slug',
+  'name',
+  'summary',
+  'price',
+  'original_price',
+  'brand_slug',
+  'category_slug',
+  'sub_category_slug',
+  'gender',
+  'season',
+  'origin',
+  'manufacturer',
+  'images',
+  'options',
+  'is_visible',
+  'is_sold_out',
+  'is_new',
+  'is_sale',
+  'free_shipping',
+  'display_order',
+  'created_at',
+  'updated_at',
+].join(', ');
+
 export async function getProducts(filter: ProductFilter = {}): Promise<Product[]> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return [];
 
-  let query = supabase.from(TABLE).select('*');
+  // ★ 목록에서는 상세설명을 빼고 읽습니다. (filter.light)
+  let query = supabase.from(TABLE).select(filter.light ? LIST_COLUMNS : '*');
 
   if (!filter.includeHidden) query = query.eq('is_visible', true);
   if (filter.visible !== undefined) query = query.eq('is_visible', filter.visible);
@@ -253,7 +287,7 @@ export async function getProducts(filter: ProductFilter = {}): Promise<Product[]
     console.error('[products] 목록 조회 실패:', error.message);
     return [];
   }
-  return (data as ProductRow[]).map(rowToProduct);
+  return (data as unknown as ProductRow[]).map(rowToProduct);
 }
 
 /** 관리자 목록용 — 전체 개수까지 함께 돌려줍니다. */

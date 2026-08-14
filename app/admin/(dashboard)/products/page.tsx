@@ -30,6 +30,8 @@ export default async function AdminProductsPage({
 
   const filter: ProductFilter = {
     includeHidden: true, // 관리자는 숨김 상품도 봐야 합니다
+    // ★ 목록에는 상세설명이 필요 없습니다. 빼고 읽어 전송량을 줄입니다.
+    light: true,
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
   };
