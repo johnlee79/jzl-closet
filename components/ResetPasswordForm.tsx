@@ -3,13 +3,13 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
+import { authButtonClass, authInputClass } from '@/components/AuthCard';
 import {
   requestPasswordResetAction,
   updatePasswordAction,
 } from '@/app/(shop)/auth-actions';
 
-const inputClass =
-  'mt-2 w-full min-h-[48px] border border-stone bg-transparent px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-muted focus:border-ink';
+const inputClass = authInputClass;
 
 /** 1단계 — 메일 보내기 */
 export function RequestResetForm() {
@@ -34,16 +34,18 @@ export function RequestResetForm() {
 
   if (sent) {
     return (
-      <div className="mt-12 max-w-[480px] border border-stone p-6 md:p-8">
-        <h2 className="font-serif text-[20px] text-ink">메일을 보냈습니다</h2>
-        <p className="mt-4 text-[15px] leading-relaxed text-ink">
-          가입된 이메일이라면 <strong>{email}</strong> 으로 재설정 링크를 보내드렸습니다.
-          메일이 보이지 않으면 스팸함도 확인해 주세요.
-        </p>
-        <p className="mt-3 text-[13px] leading-relaxed text-muted">
+      <div className="text-left">
+        <div className="border border-amber-300 bg-amber-50 px-5 py-4 text-[14px] leading-relaxed text-amber-900">
+          <p className="font-medium">메일을 보냈습니다</p>
+          <p className="mt-1.5">
+            가입된 이메일이라면 <strong className="break-all">{email}</strong> 으로 재설정
+            링크를 보내드렸습니다. 메일이 보이지 않으면 스팸함(정크메일)도 확인해 주세요.
+          </p>
+        </div>
+        <p className="mt-4 text-[13px] leading-relaxed text-muted">
           보안을 위해 가입 여부는 알려드리지 않습니다.
         </p>
-        <Link href="/login" className="btn-secondary mt-6">
+        <Link href="/login" className={`${authButtonClass} mt-6`}>
           로그인 화면으로
         </Link>
       </div>
@@ -51,7 +53,7 @@ export function RequestResetForm() {
   }
 
   return (
-    <form onSubmit={submit} noValidate className="mt-12 max-w-[440px]">
+    <form onSubmit={submit} noValidate className="text-left">
       {error ? (
         <p
           role="alert"
@@ -75,15 +77,9 @@ export function RequestResetForm() {
         className={inputClass}
       />
 
-      <button type="submit" disabled={pending} className="btn-primary mt-8 w-full">
+      <button type="submit" disabled={pending} className={`${authButtonClass} mt-7`}>
         {pending ? '보내는 중…' : '재설정 메일 받기'}
       </button>
-
-      <p className="mt-6 text-center text-[14px]">
-        <Link href="/login" className="link-wine">
-          로그인 화면으로 돌아가기
-        </Link>
-      </p>
     </form>
   );
 }
@@ -120,12 +116,11 @@ export function UpdatePasswordForm() {
 
   if (done) {
     return (
-      <div className="mt-12 max-w-[480px] border border-stone p-6 md:p-8">
-        <h2 className="font-serif text-[20px] text-ink">비밀번호를 바꿨습니다</h2>
-        <p className="mt-4 text-[15px] leading-relaxed text-ink">
-          새 비밀번호로 로그인되어 있습니다.
+      <div>
+        <p className="text-[15px] leading-relaxed text-ink">
+          비밀번호를 바꿨습니다. 새 비밀번호로 로그인되어 있습니다.
         </p>
-        <Link href="/mypage" className="btn-primary mt-6">
+        <Link href="/mypage" className={`${authButtonClass} mt-6`}>
           마이페이지로
         </Link>
       </div>
@@ -133,7 +128,7 @@ export function UpdatePasswordForm() {
   }
 
   return (
-    <form onSubmit={submit} noValidate className="mt-12 max-w-[440px]">
+    <form onSubmit={submit} noValidate className="text-left">
       {error ? (
         <p
           role="alert"
@@ -182,7 +177,7 @@ export function UpdatePasswordForm() {
         />
       </div>
 
-      <button type="submit" disabled={pending} className="btn-primary mt-8 w-full">
+      <button type="submit" disabled={pending} className={`${authButtonClass} mt-7`}>
         {pending ? '저장 중…' : '비밀번호 바꾸기'}
       </button>
     </form>

@@ -23,7 +23,8 @@ import { createAuthClient } from '@/lib/supabase/auth-server';
 
 export type ActionResult<T = undefined> =
   | { ok: true; data: T }
-  | { ok: false; error: string };
+  /** needsVerification 이 true 면 인증 메일을 아직 누르지 않은 계정입니다. */
+  | { ok: false; error: string; needsVerification?: boolean };
 
 /**
  * 비밀번호 규칙 — 8자 이상, 영문과 숫자를 모두 포함.
@@ -194,6 +195,54 @@ export async function signupAction(
  * 로그인
  * ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------
+ * 구글 간편로그인
+ *
+ * 클라이언트 ID / Secret 은 Supabase 대시보드에만 있습니다. 코드에 넣지 않습니다.
+ * 여기서는 구글 동의 화면 주소만 받아 돌려주고, 실제 이동은 브라우저가 합니다.
+ * (이 액션이 응답하면서 PKCE 검증용 쿠키가 함께 심어집니다)
+ * ------------------------------------------------------------------ */
+
+/** 사이트 안쪽 주소만 허용합니다. 열린 리다이렉트를 막습니다. */
+function safeNext(value: string): string {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return '/mypage';
+  return value;
+}
+
+export async function signInWithGoogleAction(
+  next: string
+): Promise<ActionResult<{ url: string }>> {
+  const supabase = createAuthClient();
+  if (!supabase) return noAuth();
+
+  const target = safeNext(next);
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${SITE_URL}/auth/callback?next=${encodeURIComponent(target)}`,
+      queryParams: {
+        // 계정을 고를 수 있게 합니다. (기기를 함께 쓰는 경우를 위해)
+        prompt: 'select_account',
+      },
+    },
+  });
+
+  if (error || !data?.url) {
+    console.error('[auth] 구글 로그인 시작 실패:', error?.message);
+    return {
+      ok: false,
+      error:
+        '구글 로그인을 시작하지 못했습니다. 잠시 후 다시 시도해 주시거나 이메일로 로그인해 주세요.',
+    };
+  }
+
+  return { ok: true, data: { url: data.url } };
+}
+
+/* ------------------------------------------------------------------
+ * 로그인
+ * ------------------------------------------------------------------ */
+
 export async function loginAction(
   email: string,
   password: string
@@ -218,7 +267,16 @@ export async function loginAction(
   });
 
   if (error || !data.user) {
-    // ★ 어느 쪽이 틀렸는지 알려 주지 않습니다. 가입 여부가 노출됩니다.
+    // 인증 메일을 아직 누르지 않은 경우만 따로 안내합니다.
+    // (Supabase 가 "Email not confirmed" 로 알려 줍니다)
+    if (error && /email not confirmed|not confirmed/i.test(error.message)) {
+      return {
+        ok: false,
+        error: '이메일 인증이 완료되지 않았습니다.',
+        needsVerification: true,
+      };
+    }
+    // ★ 그 밖에는 어느 쪽이 틀렸는지 알려 주지 않습니다. 가입 여부가 노출됩니다.
     return { ok: false, error: '이메일 또는 비밀번호가 올바르지 않습니다.' };
   }
 
@@ -238,6 +296,36 @@ export async function loginAction(
   await touchLastLogin(data.user.id);
   revalidatePath('/', 'layout');
   return { ok: true, data: { withdrawn: false } };
+}
+
+/**
+ * 인증 메일 다시 보내기.
+ * ★ 가입 여부를 알려 주지 않기 위해 결과와 상관없이 같은 답을 합니다.
+ *   (이미 인증을 마친 계정이면 Supabase 가 메일을 보내지 않습니다)
+ */
+export async function resendVerificationAction(email: string): Promise<ActionResult> {
+  // 메일 폭탄을 막습니다. 화면에서도 60초 동안 버튼을 잠급니다.
+  const limited = rateLimit(`resend:${clientIp(headers())}`, 5, 5 * 60_000);
+  if (!limited.ok) {
+    return {
+      ok: false,
+      error: `재전송 요청이 너무 많습니다. ${limited.retryAfter}초 뒤에 다시 시도해 주세요.`,
+    };
+  }
+
+  const problem = checkEmail(email);
+  if (problem) return { ok: false, error: problem };
+
+  const supabase = createAuthClient();
+  if (!supabase) return noAuth();
+
+  await supabase.auth.resend({
+    type: 'signup',
+    email: email.trim().toLowerCase(),
+    options: { emailRedirectTo: `${SITE_URL}/auth/callback?next=/mypage` },
+  });
+
+  return { ok: true, data: undefined };
 }
 
 export async function logoutAction(): Promise<ActionResult> {

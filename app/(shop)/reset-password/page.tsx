@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
+import AuthCard from '@/components/AuthCard';
 import { RequestResetForm } from '@/components/ResetPasswordForm';
 
 export const metadata: Metadata = {
@@ -8,18 +10,17 @@ export const metadata: Metadata = {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="shell py-14 md:py-20">
-      <header className="max-w-[680px]">
-        <p className="label-xs">RESET PASSWORD</p>
-        <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
-          비밀번호 찾기
-        </h1>
-        <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
-          가입하신 이메일로 비밀번호 재설정 링크를 보내드립니다.
-        </p>
-      </header>
-
+    <AuthCard
+      eyebrow="RESET PASSWORD"
+      title="비밀번호 찾기"
+      description="가입하신 이메일로 비밀번호 재설정 링크를 보내드립니다."
+      footer={
+        <Link href="/login" className="link-wine">
+          로그인 화면으로 돌아가기
+        </Link>
+      }
+    >
       <RequestResetForm />
-    </div>
+    </AuthCard>
   );
 }

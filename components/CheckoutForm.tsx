@@ -316,12 +316,12 @@ export default function CheckoutForm({
             됩니다.
           </p>
         ) : (
-          <p className="mb-8 border border-stone px-5 py-4 text-[14px] leading-relaxed text-muted">
+          // ★ 로그인을 강요하지 않습니다. 한 줄 안내만 두고 그대로 넘어갈 수 있게 합니다.
+          <p className="mb-8 text-[14px] leading-relaxed text-muted">
             <Link href="/login?next=/checkout" className="link-wine">
-              로그인하고 주문하기
+              로그인
             </Link>
-            — 주문 내역을 마이페이지에서 모아 보실 수 있습니다. 로그인하지 않아도 주문은
-            그대로 진행됩니다.
+            하면 배송지가 자동 입력됩니다. 로그인 없이 그대로 주문하셔도 됩니다.
           </p>
         )}
 

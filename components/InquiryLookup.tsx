@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
+import AuthCard, { authButtonClass, authInputClass } from '@/components/AuthCard';
 import InquiryDetailView from '@/components/InquiryDetailView';
 import { lookupInquiryAction } from '@/app/(shop)/inquiry/actions';
 import type { Inquiry } from '@/lib/inquiries';
@@ -34,18 +35,48 @@ export default function InquiryLookup() {
     });
   };
 
-  const inputClass =
-    'mt-2 w-full min-h-[48px] border border-stone bg-transparent px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-muted focus:border-ink';
+  const inputClass = authInputClass;
+
+  /* 조회 결과가 나오면 카드를 벗고 넓게 보여 줍니다. */
+  if (inquiry) {
+    return (
+      <div className="shell py-14 md:py-20">
+        <div className="mx-auto w-full max-w-[760px]">
+          <InquiryDetailView inquiry={inquiry} />
+          <div className="mt-12 border-t border-stone pt-6 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setInquiry(null);
+                setPassword('');
+              }}
+              className="text-[14px] text-muted underline underline-offset-4"
+            >
+              다른 문의 조회하기
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="mt-12">
-      <form onSubmit={submit} noValidate className="max-w-[480px] border border-stone p-6 md:p-8">
-        <h2 className="font-serif text-[18px] text-ink">문의 조회</h2>
-        <p className="mt-2 text-[13px] leading-relaxed text-muted">
-          문의를 등록하실 때 받으신 문의번호와 직접 정하신 비밀번호를 넣어 주세요.
+    <AuthCard
+      eyebrow="INQUIRY LOOKUP"
+      title="문의 조회"
+      description="문의를 등록하실 때 받으신 문의번호와 직접 정하신 비밀번호를 넣어 주세요."
+      footer={
+        <p className="text-[13px] leading-relaxed text-muted">
+          회원으로 문의하셨다면{' '}
+          <Link href="/mypage/inquiries" className="link-wine">
+            마이페이지 &gt; 문의 내역
+          </Link>
+          에서 확인해 주세요.
         </p>
-
-        <div className="mt-6">
+      }
+    >
+      <form onSubmit={submit} noValidate className="text-left">
+        <div>
           <label htmlFor="lookup-inquiry-no" className="label-xs block">
             문의번호
           </label>
@@ -79,24 +110,10 @@ export default function InquiryLookup() {
           </p>
         ) : null}
 
-        <button type="submit" disabled={pending} className="btn-primary mt-6 w-full">
+        <button type="submit" disabled={pending} className={`${authButtonClass} mt-7`}>
           {pending ? '조회 중…' : '문의 조회'}
         </button>
-
-        <p className="mt-5 text-[13px] leading-relaxed text-muted">
-          회원으로 문의하셨다면{' '}
-          <Link href="/mypage/inquiries" className="link-wine">
-            마이페이지 &gt; 문의 내역
-          </Link>
-          에서 확인해 주세요.
-        </p>
       </form>
-
-      {inquiry ? (
-        <div className="mt-14 max-w-[760px]">
-          <InquiryDetailView inquiry={inquiry} />
-        </div>
-      ) : null}
-    </div>
+    </AuthCard>
   );
 }

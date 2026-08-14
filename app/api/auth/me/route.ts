@@ -18,11 +18,14 @@ export async function GET() {
   const [user, profile] = await Promise.all([getCurrentUser(), getCurrentProfile()]);
 
   // 탈퇴한 계정은 로그인하지 않은 것으로 봅니다.
-  const name =
-    user && profile && profile.status !== 'withdrawn' ? displayName(profile, user) : '';
+  const active = Boolean(user && profile && profile.status !== 'withdrawn');
+  const name = active ? displayName(profile, user) : '';
+
+  // ★ 구글 로그인은 연락처를 주지 않습니다. 주문에 필요하므로 안내 배너를 띄웁니다.
+  const needsPhone = active && !profile?.phone;
 
   return NextResponse.json(
-    { name },
+    { name, needsPhone },
     { headers: { 'Cache-Control': 'no-store, private' } }
   );
 }

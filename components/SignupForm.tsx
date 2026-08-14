@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
+import { authButtonClass, authInputClass } from '@/components/AuthCard';
+import GoogleButton, { OrDivider } from '@/components/GoogleButton';
 import PostcodeSearch from '@/components/PostcodeSearch';
 import { checkEmailAction, signupAction } from '@/app/(shop)/auth-actions';
 import { formatPhone } from '@/lib/format';
@@ -48,7 +50,6 @@ export default function SignupForm() {
   });
   const [error, setError] = useState('');
   const [emailState, setEmailState] = useState<'idle' | 'ok' | 'taken'>('idle');
-  const [done, setDone] = useState<'none' | 'confirm'>('none');
 
   const set = <K extends keyof Form>(key: K, value: Form[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -108,31 +109,22 @@ export default function SignupForm() {
         router.replace('/mypage');
         router.refresh();
       } else {
-        setDone('confirm');
+        // 인증이 켜져 있으면 안내 화면으로 보냅니다. (스팸함·재전송 안내가 있는 곳)
+        router.replace(`/signup/complete?email=${encodeURIComponent(form.email.trim())}`);
       }
     });
   };
 
-  const inputClass =
-    'mt-2 w-full min-h-[48px] border border-stone bg-transparent px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-muted focus:border-ink';
-
-  if (done === 'confirm') {
-    return (
-      <div className="mt-12 max-w-[520px] border border-stone p-6 md:p-8">
-        <h2 className="font-serif text-[20px] text-ink">가입 확인 메일을 보냈습니다</h2>
-        <p className="mt-4 text-[15px] leading-relaxed text-ink">
-          <strong>{form.email}</strong> 으로 보낸 메일의 링크를 눌러 주시면 가입이
-          완료됩니다. 메일이 보이지 않으면 스팸함도 확인해 주세요.
-        </p>
-        <Link href="/login" className="btn-primary mt-6">
-          로그인 화면으로
-        </Link>
-      </div>
-    );
-  }
+  const inputClass = authInputClass;
 
   return (
-    <form onSubmit={submit} noValidate className="mt-12 max-w-[560px]">
+    <div>
+      {/* ── 0. 구글 간편로그인 — 폼 맨 위 ───────────────── */}
+      <GoogleButton next="/mypage" />
+
+      <OrDivider label="또는 이메일로 가입" />
+
+      <form onSubmit={submit} noValidate className="text-left">
       {error ? (
         <p
           role="alert"
@@ -336,7 +328,9 @@ export default function SignupForm() {
           약관 동의
         </h2>
 
-        <label className="mt-6 flex cursor-pointer items-center gap-3 border border-stone px-5 py-4 text-[16px] text-ink">
+        {/* 항목이 많아 옅은 회색 박스로 묶어 다른 입력과 구분합니다. */}
+        <div className="mt-6 bg-stone/25 px-5 py-5">
+        <label className="flex cursor-pointer items-center gap-3 border-b border-stone pb-4 text-[16px] text-ink">
           <input
             type="checkbox"
             checked={allAgreed}
@@ -380,25 +374,17 @@ export default function SignupForm() {
           동의하신 시각을 함께 저장합니다. 마케팅 수신 동의는 마이페이지에서 언제든지
           바꾸실 수 있습니다.
         </p>
+        </div>
       </section>
 
-      <button
-        type="submit"
-        disabled={pending || !requiredAgreed}
-        className="btn-primary mt-10 w-full"
-      >
-        {pending ? '가입 중…' : '회원가입'}
-      </button>
-
-      <p className="mt-6 text-center text-[14px] text-ink">
-        이미 계정이 있으신가요?{' '}
-        <Link href="/login" className="link-wine">
-          로그인
-        </Link>
-      </p>
-      <p className="mt-2 text-center text-[13px] text-muted">
-        회원가입 없이도 주문하실 수 있습니다.
-      </p>
-    </form>
+        <button
+          type="submit"
+          disabled={pending || !requiredAgreed}
+          className={`${authButtonClass} mt-10`}
+        >
+          {pending ? '가입 중…' : '회원가입'}
+        </button>
+      </form>
+    </div>
   );
 }

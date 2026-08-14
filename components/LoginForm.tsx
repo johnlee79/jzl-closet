@@ -1,45 +1,65 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
+import { authButtonClass, authInputClass } from '@/components/AuthCard';
+import GoogleButton, { OrDivider } from '@/components/GoogleButton';
+import ResendVerification from '@/components/ResendVerification';
 import { loginAction } from '@/app/(shop)/auth-actions';
 
-/** 링크가 만료됐을 때 콜백이 붙여 보내는 안내 */
+/** 콜백이 붙여 보내는 안내 (링크 만료·구글 취소 등) */
 const LINK_MESSAGES: Record<string, string> = {
   expired: '링크가 만료되었습니다. 다시 시도해 주세요.',
   link: '잘못된 링크입니다. 메일의 주소를 다시 확인해 주세요.',
   auth: '로그인 기능이 아직 설정되지 않았습니다.',
+  cancelled: '구글 로그인을 취소하셨습니다.',
+  oauth: '구글 로그인 중 문제가 생겼습니다. 잠시 후 다시 시도해 주세요.',
+  profile: '회원 정보를 준비하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  withdrawn: '탈퇴한 계정입니다. 새로 가입해 주시거나 고객센터로 문의해 주세요.',
+  inactive: '이용이 제한된 계정입니다. 고객센터로 문의해 주세요.',
 };
 
-export default function LoginForm() {
+/**
+ * ★ next·error 는 서버 페이지가 searchParams 로 읽어 넘겨 줍니다.
+ *   여기서 useSearchParams 를 쓰면 폼 전체가 Suspense 로 감싸여
+ *   서버 HTML 이 비고 화면이 한 번 깜빡입니다.
+ */
+export default function LoginForm({
+  next = '/mypage',
+  linkError = '',
+}: {
+  next?: string;
+  linkError?: string;
+}) {
   const router = useRouter();
-  const params = useSearchParams();
   const [pending, startTransition] = useTransition();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   // ★ Supabase 세션은 기본으로 유지됩니다. 체크를 끄면 브라우저를 닫을 때 지웁니다.
   const [keepLoggedIn, setKeepLoggedIn] = useState(true);
-  const [error, setError] = useState(LINK_MESSAGES[params.get('error') ?? ''] ?? '');
+  const [error, setError] = useState(LINK_MESSAGES[linkError] ?? '');
+  /** 인증 메일을 아직 누르지 않은 계정이면 재전송 버튼을 함께 보여 줍니다. */
+  const [needsVerification, setNeedsVerification] = useState(false);
 
-  const next = params.get('next');
-  const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/mypage';
+  const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/mypage';
 
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (pending) return;
 
     setError('');
+    setNeedsVerification(false);
     startTransition(async () => {
       const result = await loginAction(email, password);
       if (!result.ok) {
         setError(result.error);
+        setNeedsVerification(Boolean(result.needsVerification));
         return;
       }
       if (!keepLoggedIn) {
         // 브라우저를 닫으면 로그아웃되도록 표시만 남깁니다.
-        // (세션 쿠키 자체는 서버가 관리하므로 여기서는 안내용 플래그만 둡니다)
         try {
           window.sessionStorage.setItem('jzl-session-only', '1');
         } catch {
@@ -51,87 +71,85 @@ export default function LoginForm() {
     });
   };
 
-  const inputClass =
-    'mt-2 w-full min-h-[48px] border border-stone bg-transparent px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-muted focus:border-ink';
-
   return (
-    <form onSubmit={submit} noValidate className="mt-12 max-w-[440px]">
+    <div>
+      {/* ── 1. 구글 간편로그인 ─────────────────────────── */}
+      <GoogleButton next={safeNext} />
+
+      <OrDivider />
+
+      {/* ── 2. 이메일 로그인 ───────────────────────────── */}
       {error ? (
-        <p
+        <div
           role="alert"
-          className="mb-6 border border-wine bg-wine/5 px-5 py-4 text-[15px] leading-relaxed text-wine"
+          className="mb-6 border border-wine bg-wine/5 px-4 py-3 text-[14px] leading-relaxed text-wine"
         >
           {error}
-        </p>
+          {needsVerification ? (
+            <div className="mt-3">
+              <p className="text-[13px] leading-relaxed text-ink">
+                가입하실 때 보내드린 메일의 인증 링크를 눌러 주세요. 메일이 보이지 않으면
+                스팸함도 확인해 주세요.
+              </p>
+              <div className="mt-3">
+                <ResendVerification email={email} compact />
+              </div>
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
-      <div>
-        <label htmlFor="login-email" className="label-xs block">
-          이메일
-        </label>
-        <input
-          id="login-email"
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          autoComplete="email"
-          autoFocus
-          className={inputClass}
-        />
-      </div>
-
-      <div className="mt-5">
-        <label htmlFor="login-password" className="label-xs block">
-          비밀번호
-        </label>
-        <input
-          id="login-password"
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          autoComplete="current-password"
-          className={inputClass}
-        />
-      </div>
-
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <label className="flex cursor-pointer items-center gap-2 text-[14px] text-ink">
+      <form onSubmit={submit} noValidate>
+        <div className="text-left">
+          <label htmlFor="login-email" className="label-xs block">
+            이메일
+          </label>
           <input
-            type="checkbox"
-            checked={keepLoggedIn}
-            onChange={(event) => setKeepLoggedIn(event.target.checked)}
-            className="h-4 w-4"
+            id="login-email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            autoComplete="email"
+            className={authInputClass}
           />
-          로그인 상태 유지
-        </label>
-        <Link
-          href="/reset-password"
-          className="text-[14px] text-muted underline underline-offset-4"
-        >
-          비밀번호를 잊으셨나요?
-        </Link>
-      </div>
+        </div>
 
-      <button type="submit" disabled={pending} className="btn-primary mt-8 w-full">
-        {pending ? '확인 중…' : '로그인'}
-      </button>
+        <div className="mt-5 text-left">
+          <label htmlFor="login-password" className="label-xs block">
+            비밀번호
+          </label>
+          <input
+            id="login-password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
+            className={authInputClass}
+          />
+        </div>
 
-      <p className="mt-6 text-center text-[14px] text-ink">
-        아직 회원이 아니신가요?{' '}
-        <Link href="/signup" className="link-wine">
-          회원가입
-        </Link>
-      </p>
-
-      <div className="mt-8 border-t border-stone pt-6">
-        <p className="text-[13px] leading-relaxed text-muted">
-          회원가입 없이도 주문하실 수 있습니다. 이미 비회원으로 주문하셨다면{' '}
-          <Link href="/order-lookup" className="link-wine">
-            주문 조회
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <label className="flex cursor-pointer items-center gap-2 text-[14px] text-ink">
+            <input
+              type="checkbox"
+              checked={keepLoggedIn}
+              onChange={(event) => setKeepLoggedIn(event.target.checked)}
+              className="h-4 w-4"
+            />
+            로그인 상태 유지
+          </label>
+          <Link
+            href="/reset-password"
+            className="text-[14px] text-muted underline underline-offset-4"
+          >
+            비밀번호를 잊으셨나요?
           </Link>
-          에서 주문번호와 연락처로 확인해 주세요.
-        </p>
-      </div>
-    </form>
+        </div>
+
+        <button type="submit" disabled={pending} className={`${authButtonClass} mt-7`}>
+          {pending ? '확인 중…' : '로그인'}
+        </button>
+      </form>
+    </div>
   );
 }

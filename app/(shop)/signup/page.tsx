@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
+import AuthCard from '@/components/AuthCard';
 import SignupForm from '@/components/SignupForm';
 import { isAuthConfigured } from '@/lib/supabase/auth-server';
 
@@ -10,25 +12,33 @@ export const metadata: Metadata = {
 
 export default function SignupPage() {
   return (
-    <div className="shell py-14 md:py-20">
-      <header className="max-w-[680px]">
-        <p className="label-xs">SIGN UP</p>
-        <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
-          회원가입
-        </h1>
-        <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
-          가입하시면 주문 내역과 배송 상황을 한곳에서 확인하실 수 있습니다.
-          주소를 저장해 두면 다음 주문부터 자동으로 채워집니다.
-        </p>
-      </header>
-
+    <AuthCard
+      eyebrow="SIGN UP"
+      title="회원가입"
+      // 항목이 많아 카드를 조금 넓게 씁니다.
+      width="wide"
+      description="가입하시면 주문 내역과 배송 상황을 한곳에서 확인하실 수 있습니다."
+      footer={
+        <>
+          <p>
+            이미 계정이 있으신가요?{' '}
+            <Link href="/login" className="link-wine">
+              로그인
+            </Link>
+          </p>
+          <p className="mt-4 text-[13px] leading-relaxed text-muted">
+            회원가입 없이도 주문하실 수 있습니다.
+          </p>
+        </>
+      }
+    >
       {isAuthConfigured() ? (
         <SignupForm />
       ) : (
-        <p className="mt-10 border border-wine px-5 py-4 text-[15px] leading-relaxed text-wine">
+        <p className="border border-wine px-5 py-4 text-[15px] leading-relaxed text-wine">
           로그인 기능이 아직 설정되지 않았습니다. 회원가입 없이도 주문하실 수 있습니다.
         </p>
       )}
-    </div>
+    </AuthCard>
   );
 }

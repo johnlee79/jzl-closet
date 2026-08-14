@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
+import AuthCard, { authButtonClass, authInputClass } from '@/components/AuthCard';
 import CopyOrderButton from '@/components/CopyOrderButton';
 import OrderReceipt, { orderToText } from '@/components/OrderReceipt';
 import { lookupOrderAction, requestCancelAction } from '@/app/(shop)/checkout/actions';
@@ -65,56 +66,77 @@ export default function OrderLookup({
     });
   };
 
-  const inputClass =
-    'mt-2 w-full min-h-[48px] border border-stone bg-transparent px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-muted focus:border-ink';
+  const inputClass = authInputClass;
 
-  return (
-    <div className="mt-12">
-      <form onSubmit={submit} className="max-w-[520px] border border-stone p-6 md:p-8">
-        <h2 className="font-serif text-[18px] text-ink">주문 조회</h2>
-        <p className="mt-2 text-[13px] leading-relaxed text-muted">
-          주문 완료 화면에서 안내드린 주문번호와 주문 시 입력하신 연락처를 넣어 주세요.
-        </p>
-
-        <div className="mt-6">
-          <label htmlFor="lookup-no" className="label-xs block">
-            주문번호
-          </label>
-          <input
-            id="lookup-no"
-            type="text"
-            value={orderNo}
-            onChange={(event) => setOrderNo(event.target.value.toUpperCase())}
-            placeholder="ORD-20260814-0001"
-            className={inputClass}
-          />
-        </div>
-
-        <div className="mt-5">
-          <label htmlFor="lookup-phone" className="label-xs block">
-            연락처
-          </label>
-          <input
-            id="lookup-phone"
-            type="tel"
-            inputMode="numeric"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            placeholder="010-1234-5678"
-            className={inputClass}
-          />
-        </div>
-
-        {error ? (
-          <p role="alert" className="mt-4 text-[14px] leading-relaxed text-wine">
-            {error}
+  /* 조회 전에는 가운데 카드만 보여 줍니다. 결과가 나오면 아래에서 넓게 그립니다. */
+  if (!order) {
+    return (
+      <AuthCard
+        eyebrow="ORDER LOOKUP"
+        title="주문 조회"
+        description="회원가입 없이 주문번호와 연락처만으로 주문 상태와 배송 정보를 확인하실 수 있습니다."
+        footer={
+          <p className="text-[13px] leading-relaxed text-muted">
+            회원으로 주문하셨다면{' '}
+            <Link href="/mypage/orders" className="link-wine">
+              마이페이지 &gt; 주문 내역
+            </Link>
+            에서 확인해 주세요.
           </p>
-        ) : null}
+        }
+      >
+        <form onSubmit={submit} className="text-left">
+          <div>
+            <label htmlFor="lookup-no" className="label-xs block">
+              주문번호
+            </label>
+            <input
+              id="lookup-no"
+              type="text"
+              value={orderNo}
+              onChange={(event) => setOrderNo(event.target.value.toUpperCase())}
+              placeholder="ORD-20260814-0001"
+              className={inputClass}
+            />
+          </div>
 
-        <button type="submit" disabled={pending} className="btn-primary mt-6 w-full">
-          {pending ? '조회 중…' : '주문 조회'}
-        </button>
-      </form>
+          <div className="mt-5">
+            <label htmlFor="lookup-phone" className="label-xs block">
+              연락처
+            </label>
+            <input
+              id="lookup-phone"
+              type="tel"
+              inputMode="numeric"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              placeholder="010-1234-5678"
+              className={inputClass}
+            />
+          </div>
+
+          {error ? (
+            <p role="alert" className="mt-4 text-[14px] leading-relaxed text-wine">
+              {error}
+            </p>
+          ) : null}
+
+          <button type="submit" disabled={pending} className={`${authButtonClass} mt-7`}>
+            {pending ? '조회 중…' : '주문 조회'}
+          </button>
+        </form>
+      </AuthCard>
+    );
+  }
+
+  /* 조회 결과 — 주문 내역은 넓게 보여 줍니다. */
+  return (
+    <div className="shell py-14 md:py-20">
+      {error ? (
+        <p role="alert" className="mb-6 text-[14px] leading-relaxed text-wine">
+          {error}
+        </p>
+      ) : null}
 
       {cancelDone ? (
         <p
@@ -126,7 +148,7 @@ export default function OrderLookup({
       ) : null}
 
       {order ? (
-        <div className="mt-14">
+        <div>
           <div className="flex flex-wrap items-baseline justify-between gap-4 border-b border-stone pb-4">
             <div>
               <p className="label-xs">주문번호</p>
@@ -220,6 +242,20 @@ export default function OrderLookup({
                 </p>
               </div>
             </aside>
+          </div>
+
+          <div className="mt-12 border-t border-stone pt-6 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setOrder(null);
+                setError('');
+                setCancelDone(false);
+              }}
+              className="text-[14px] text-muted underline underline-offset-4"
+            >
+              다른 주문 조회하기
+            </button>
           </div>
         </div>
       ) : null}

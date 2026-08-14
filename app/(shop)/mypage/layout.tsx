@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import MypageNav from '@/components/MypageNav';
+import PhonePrompt from '@/components/PhonePrompt';
 import { getActiveMember } from '@/lib/auth';
 
 /**
@@ -25,14 +26,22 @@ export default async function MypageLayout({
   if (!member) redirect('/login?next=/mypage');
 
   return (
-    <div className="shell py-14 md:py-20">
-      <header className="max-w-[680px]">
+    // 좌측 메뉴 + 우측 내용 구조는 그대로 두고 전체를 가운데 정렬합니다.
+    <div className="mx-auto w-full max-w-[1100px] px-5 py-14 md:px-10 md:py-20">
+      <header>
         <p className="label-xs">MY PAGE</p>
         <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
           {member.profile.name}님
         </h1>
         <p className="mt-3 text-[15px] text-muted">{member.user.email}</p>
       </header>
+
+      {/* ★ 구글 로그인은 연락처를 주지 않습니다. 비어 있으면 안내합니다. */}
+      {!member.profile.phone ? (
+        <div className="mt-8">
+          <PhonePrompt variant="inline" />
+        </div>
+      ) : null}
 
       <div className="mt-12 grid grid-cols-1 gap-10 lg:grid-cols-[200px_1fr] lg:gap-16">
         <MypageNav />

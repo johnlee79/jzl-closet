@@ -1,5 +1,6 @@
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
+import SiteNotices from '@/components/SiteNotices';
 import SiteProvider from '@/components/SiteProvider';
 import { CartProvider } from '@/lib/cart';
 import {
@@ -71,6 +72,8 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
             storeHours={store.hours}
             logoUrl={branding.logo?.url ?? ''}
           />
+          {/* 연락처 미입력 같은 안내 줄. 로그인 상태는 브라우저에서 확인합니다. */}
+          <SiteNotices />
           <main id="main">{children}</main>
           <Footer categories={categories} store={store} escrow={escrow} />
         </CartProvider>

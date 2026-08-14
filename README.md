@@ -47,12 +47,26 @@ Supabase 대시보드 > SQL Editor 에 아래 순서로 한 번씩 실행합니�
 
 | 항목 | 위치 | 권장 |
 |---|---|---|
-| 이메일 인증 요구 | Authentication → Sign In / Providers → Email → **Confirm email** | 끄면 가입 직후 자동 로그인 |
+| 이메일 인증 요구 | Authentication → Sign In / Providers → Email → **Confirm email** | 켜 두면 `/signup/complete` 안내 화면을 거칩니다 |
+| 구글 로그인 | Authentication → Sign In / Providers → **Google** | 활성화 + 클라이언트 ID/Secret 등록 |
 | 사이트 주소 | Authentication → URL Configuration → **Site URL** | 배포 주소 |
 | 허용 리다이렉트 | 같은 화면 → **Redirect URLs** | `{주소}/auth/callback` 추가 |
 | 메일 템플릿 | Authentication → Emails → Templates | 한국어로 다듬기 (선택) |
 
-메일 링크는 전부 `/auth/callback` 으로 들어와 세션으로 바뀐 뒤 목적지로 이동합니다.
+구글 로그인과 메일 링크 모두 `/auth/callback` 으로 들어와 세션으로 바뀐 뒤 목적지로 이동합니다.
+클라이언트 ID / Secret 은 Supabase 대시보드에만 두고 코드에는 넣지 않습니다.
+
+### 구글 로그인이 안 될 때
+
+| 증상 | 확인할 곳 |
+|---|---|
+| `redirect_uri_mismatch` | Google Cloud → 사용자 인증 정보 → OAuth 클라이언트 → **승인된 리디렉션 URI** 에 `https://<프로젝트>.supabase.co/auth/v1/callback` 이 있는지 |
+| `액세스 차단됨` · 앱이 확인되지 않음 | Google Cloud → **OAuth 동의 화면** 이 테스트 중이면 **테스트 사용자**에 로그인할 계정을 추가 |
+| 돌아온 뒤 로그인 안 됨 | Supabase → URL Configuration → **Redirect URLs** 에 `{배포주소}/auth/callback` 이 있는지 |
+| `?error=profile` 로 돌아옴 | `supabase/schema-2b.sql` 을 실행했는지 (profiles 테이블) |
+
+구글 계정은 연락처를 주지 않습니다. `profiles.phone` 이 비어 있으면 헤더 아래와
+마이페이지 상단에 연락처 입력 안내가 뜹니다. (닫아도 연락처를 넣을 때까지 다시 나타납니다)
 
 ## 무엇을 어디서 고치나
 

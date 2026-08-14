@@ -305,6 +305,65 @@ export async function createProfile(input: ProfileInput): Promise<void> {
   }
 }
 
+/**
+ * 소셜 로그인(구글)으로 처음 들어온 계정의 프로필을 만들어 줍니다.
+ *
+ * ★ 구글은 약관 동의 화면을 따로 거치지 않습니다.
+ *   그래서 로그인 버튼 아래에 "가입 시 이용약관과 개인정보처리방침에 동의하는
+ *   것으로 간주됩니다" 를 표시하고, 여기서 필수 동의 세 가지를 true 로 남깁니다.
+ *   동의 시각도 함께 기록해 두어야 나중에 근거가 됩니다.
+ *
+ * ★ 이미 프로필이 있으면 건드리지 않습니다.
+ *   (이메일로 가입했던 계정에 구글을 연결한 경우 — 기존 이름·연락처를 지우면 안 됩니다)
+ *   다만 비어 있는 이름·이메일만 조용히 채웁니다.
+ *
+ * @returns 새로 만들었으면 true
+ */
+export async function ensureProfile(input: {
+  id: string;
+  email: string;
+  /** 구글이 준 이름. 없으면 이메일 앞부분을 씁니다. */
+  name?: string;
+}): Promise<boolean> {
+  const supabase = requireSupabaseAdmin();
+  const email = input.email.trim().toLowerCase();
+  const name = (input.name ?? '').trim() || email.split('@')[0] || '회원';
+
+  const existing = await getProfile(input.id);
+
+  if (existing) {
+    // 비어 있는 칸만 채웁니다. 이미 적혀 있는 값은 그대로 둡니다.
+    const patch: Record<string, unknown> = {};
+    if (!existing.name) patch.name = name;
+    if (!existing.email && email) patch.email = email;
+
+    if (Object.keys(patch).length > 0) {
+      await supabase.from(TABLE).update(patch).eq('id', input.id);
+    }
+    return false;
+  }
+
+  const { error } = await supabase.from(TABLE).insert({
+    id: input.id,
+    name,
+    email,
+    status: 'active',
+    agree_terms: true,
+    agree_privacy: true,
+    agree_age14: true,
+    agree_marketing: false,
+    agreed_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    if (isMissingTable(error.code)) throw missingProfilesTableError();
+    // 같은 순간에 두 번 들어와 이미 만들어졌을 수 있습니다. 그건 오류가 아닙니다.
+    if (error.code === '23505') return false;
+    throw new Error(`회원 정보를 만들지 못했습니다: ${error.message}`);
+  }
+  return true;
+}
+
 /** 회원이 직접 고치는 항목만 받습니다. status·admin_memo 는 여기서 못 바꿉니다. */
 export async function updateProfile(
   userId: string,
