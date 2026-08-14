@@ -293,7 +293,15 @@ export default function ReviewManager({
                         {review.productSlug}
                       </Link>
                       {' · '}
-                      {formatDate(review.createdAt)}
+                      {formatDate(review.writtenAt ?? review.createdAt)}
+                      {/* 관리자가 작성일을 따로 지정한 후기는 실제 등록일도 함께 보여 줍니다. */}
+                      {review.writtenAt &&
+                      review.createdAt &&
+                      formatDate(review.writtenAt) !== formatDate(review.createdAt) ? (
+                        <span className="ml-1 text-slate-400">
+                          (등록 {formatDate(review.createdAt)})
+                        </span>
+                      ) : null}
                     </p>
                   </div>
 

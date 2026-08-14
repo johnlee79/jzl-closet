@@ -1,4 +1,5 @@
 import 'server-only';
+import { assertWritten } from '@/lib/db-write';
 
 import { findCategory } from '@/lib/categories';
 import {
@@ -438,8 +439,10 @@ export async function patchProduct(
 
 export async function deleteProduct(id: string): Promise<void> {
   const supabase = requireSupabaseAdmin();
-  const { error } = await supabase.from(TABLE).delete().eq('id', id);
-  if (error) throw new Error(`삭제에 실패했습니다: ${error.message}`);
+  assertWritten(
+    await supabase.from(TABLE).delete().eq('id', id).select('id'),
+    '삭제에 실패했습니다'
+  );
 }
 
 /** 상품 복제 — 이름 뒤 " (사본)", slug 뒤 "-copy". 이미지는 그대로 참조합니다. */
@@ -517,6 +520,8 @@ export async function createTemplate(title: string, body: string): Promise<Templ
 
 export async function deleteTemplate(id: string): Promise<void> {
   const supabase = requireSupabaseAdmin();
-  const { error } = await supabase.from('templates').delete().eq('id', id);
-  if (error) throw new Error(`템플릿 삭제에 실패했습니다: ${error.message}`);
+  assertWritten(
+    await supabase.from('templates').delete().eq('id', id).select('id'),
+    '템플릿 삭제에 실패했습니다'
+  );
 }

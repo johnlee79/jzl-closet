@@ -29,12 +29,21 @@ export default async function MypagePointsPage() {
           {formatPrice(member.profile.pointBalance)}
           <span className="ml-2 font-sans text-[16px]">원</span>
         </p>
+        {member.profile.pointExpiringSoon > 0 ? (
+          <p className="mt-4 text-[15px] leading-relaxed text-wine">
+            30일 내 소멸 예정 {formatPrice(member.profile.pointExpiringSoon)}P
+          </p>
+        ) : null}
+
         <p className="mt-4 text-[13px] leading-relaxed text-muted">
           {settings.minUse > 0
             ? `${formatPrice(settings.minUse)}원 이상부터 주문할 때 사용하실 수 있습니다.`
             : '주문할 때 바로 사용하실 수 있습니다.'}
           {settings.maxUseRate < 100
             ? ` 상품금액의 ${settings.maxUseRate}%까지 쓸 수 있습니다.`
+            : ''}
+          {settings.expireMonths > 0
+            ? ` 적립일로부터 ${settings.expireMonths}개월이 지나면 소멸되며, 사용하실 때는 먼저 소멸되는 포인트부터 빠져나갑니다.`
             : ''}
         </p>
       </div>

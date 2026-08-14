@@ -1,6 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { earnSignupPoints } from '@/lib/points';
-import { ensureProfile, getProfile, touchLastLogin } from '@/lib/profiles';
+import {
+  ensureProfile,
+  getProfile,
+  isSocialProvider,
+  touchLastLogin,
+  type AuthProvider,
+} from '@/lib/profiles';
 import { createAuthClient } from '@/lib/supabase/auth-server';
 
 /**
@@ -74,7 +80,22 @@ export async function GET(request: NextRequest) {
             ? metadata.name
             : '';
 
-      const created = await ensureProfile({ id: user.id, email: user.email ?? '', name });
+      // 어느 소셜로 들어왔는지 기록해 둡니다.
+      // ★ 이 값으로 회원정보 수정 화면에서 비밀번호 칸을 감추고,
+      //   비밀번호 찾기에서 "구글로 로그인하세요" 안내를 띄웁니다.
+      const appMetadata = (user.app_metadata ?? {}) as Record<string, unknown>;
+      const rawProvider =
+        typeof appMetadata.provider === 'string' ? appMetadata.provider : '';
+      const provider: AuthProvider = isSocialProvider(rawProvider)
+        ? (rawProvider as AuthProvider)
+        : 'email';
+
+      const created = await ensureProfile({
+        id: user.id,
+        email: user.email ?? '',
+        name,
+        provider,
+      });
       // 구글로 처음 들어온 회원에게도 가입 축하 포인트를 드립니다.
       if (created) await earnSignupPoints(user.id);
 

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { announceNoticePopups } from '@/lib/popup-order';
 import { sanitizeRichText } from '@/lib/product-utils';
 import type { Popup } from '@/lib/popups';
 
@@ -47,14 +48,22 @@ export default function PopupLayer({ popups }: { popups: Popup[] }) {
     setMounted(true);
   }, [popups]);
 
-  if (!mounted) return null;
-
   const isHome = pathname === '/';
-  const shown = popups.filter(
-    (popup) =>
-      open.includes(popup.id) && (popup.showOn === 'all' || (isHome && popup.showOn === 'home'))
-  );
-  if (shown.length === 0) return null;
+  const shown = mounted
+    ? popups.filter(
+        (popup) =>
+          open.includes(popup.id) &&
+          (popup.showOn === 'all' || (isHome && popup.showOn === 'home'))
+      )
+    : [];
+
+  // ★ 보유 포인트 팝업이 공지 팝업과 겹쳐 뜨지 않도록 몇 개를 띄웠는지 알려 줍니다.
+  //   (공지 팝업 우선, 포인트 팝업은 그다음)
+  useEffect(() => {
+    if (mounted) announceNoticePopups(shown.length);
+  }, [mounted, shown.length]);
+
+  if (!mounted || shown.length === 0) return null;
 
   const close = (id: string) => setOpen((prev) => prev.filter((item) => item !== id));
 

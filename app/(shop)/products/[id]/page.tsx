@@ -6,8 +6,10 @@ import DetailBlocks from '@/components/DetailBlocks';
 import MeasurementTable from '@/components/MeasurementTable';
 import ProductCard from '@/components/ProductCard';
 import ProductGallery from '@/components/ProductGallery';
-import ProductInquiries from '@/components/ProductInquiries';
+import ProductQna from '@/components/ProductQna';
 import ProductReviews from '@/components/ProductReviews';
+import ProductTabs from '@/components/ProductTabs';
+import SalesInfo from '@/components/SalesInfo';
 import StarRating from '@/components/StarRating';
 import ViewItemTracker from '@/components/ViewItemTracker';
 import { getProductInquiries } from '@/lib/inquiries';
@@ -21,7 +23,14 @@ import {
   getProductBySlug,
   getRelated,
 } from '@/lib/products';
-import { getCachedShipping, getCachedStore } from '@/lib/settings';
+import {
+  getCachedEvent,
+  getCachedPoints,
+  getCachedSales,
+  getCachedShipping,
+  getCachedStore,
+} from '@/lib/settings';
+import { expectedPurchasePoints, fillTokens } from '@/lib/site-config';
 import { SITE_URL } from '@/lib/store';
 import { getCachedBrands, getCachedCategories } from '@/lib/taxonomy';
 
@@ -83,19 +92,33 @@ export default async function ProductDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const [related, brandRelated, categories, brands, store, shipping, inquiries, reviews] =
-    await Promise.all([
-      getRelated(product, 4),
-      getBrandRelated(product, 4),
-      getCachedCategories(),
-      getCachedBrands(),
-      getCachedStore(),
-      getCachedShipping(),
-      // 비밀글은 서버에서 제목을 가려 내려보냅니다.
-      getProductInquiries(product.id),
-      // 노출 중인 리뷰만 내려옵니다.
-      getProductReviews(product.id),
-    ]);
+  const [
+    related,
+    brandRelated,
+    categories,
+    brands,
+    store,
+    shipping,
+    sales,
+    points,
+    event,
+    inquiries,
+    reviews,
+  ] = await Promise.all([
+    getRelated(product, 4),
+    getBrandRelated(product, 4),
+    getCachedCategories(),
+    getCachedBrands(),
+    getCachedStore(),
+    getCachedShipping(),
+    getCachedSales(),
+    getCachedPoints(),
+    getCachedEvent(),
+    // 비밀글은 서버에서 제목·내용·답변을 잘라 내려보냅니다.
+    getProductInquiries(product.id),
+    // 노출 중인 리뷰만 내려옵니다. 작성자명은 서버에서 가립니다.
+    getProductReviews(product.id),
+  ]);
 
   const reviewSummary = summarize(reviews);
 
@@ -115,6 +138,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
       : `배송비 ${formatPrice(shipping.baseFee)}원 — ${shipping.leadTime}`;
   const soldOut = isProductSoldOut(product);
   const discount = getDiscountRate(product);
+
+  // ★ 적립 안내는 화면에서 계산합니다. DB 조회가 늘지 않습니다.
+  const earnPoints = expectedPurchasePoints(product.price, points);
+  const earnNotice =
+    earnPoints > 0
+      ? fillTokens(event.earnNotice, { points: formatPrice(earnPoints) })
+      : '';
 
   const productJsonLd = {
     '@context': 'https://schema.org',
@@ -291,6 +321,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
             {product.summary}
           </p>
 
+          {earnNotice ? (
+            <p className="mt-4 inline-block border border-stone px-3 py-1.5 text-[13px] tracking-[0.06em] text-wine">
+              {earnNotice}
+            </p>
+          ) : null}
+
           <div className="mt-8 flex flex-wrap items-baseline gap-3">
             <span className="font-display text-[32px] font-medium tracking-wide text-ink md:text-[38px]">
               {formatPrice(product.price)}
@@ -346,25 +382,40 @@ export default async function ProductDetailPage({ params }: PageProps) {
         </section>
       </div>
 
-      <section aria-labelledby="detail-title" className="section border-t border-stone">
-        <h2 id="detail-title" className="sr-only">
-          {product.name} 상세 설명
-        </h2>
-        <DetailBlocks blocks={product.detail} productName={product.name} />
+      {/* ── 상세 4탭 ────────────────────────────────────
+       * 네 판을 모두 HTML 에 심어 두고 보이는 쪽만 바꿉니다.
+       * 검색엔진이 리뷰·판매정보까지 그대로 읽어 갑니다. */}
+      <ProductTabs
+        reviewCount={reviewSummary.count}
+        qnaCount={inquiries.length}
+        info={
+          <section aria-labelledby="detail-title" className="section">
+            <h2 id="detail-title" className="sr-only">
+              {product.name} 상세 설명
+            </h2>
+            <DetailBlocks blocks={product.detail} productName={product.name} />
 
-        {product.measurements.length > 0 ? (
-          <div className="mx-auto mt-16 w-full max-w-[860px] md:mt-24">
-            <MeasurementTable
-              measurements={product.measurements}
-              productName={product.name}
-            />
-          </div>
-        ) : null}
-      </section>
-
-      <ProductReviews reviews={reviews} summary={reviewSummary} />
-
-      <ProductInquiries inquiries={inquiries} productSlug={product.slug} />
+            {product.measurements.length > 0 ? (
+              <div className="mx-auto mt-16 w-full max-w-[860px] md:mt-24">
+                <MeasurementTable
+                  measurements={product.measurements}
+                  productName={product.name}
+                />
+              </div>
+            ) : null}
+          </section>
+        }
+        review={<ProductReviews reviews={reviews} summary={reviewSummary} />}
+        qna={
+          <ProductQna
+            inquiries={inquiries}
+            productId={product.id}
+            productSlug={product.slug}
+            productName={product.name}
+          />
+        }
+        sales={<SalesInfo sales={sales} shipping={shipping} store={store} />}
+      />
 
       {brand ? (
         <section aria-labelledby="brand-title" className="section border-t border-stone">

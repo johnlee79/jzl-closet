@@ -1,15 +1,20 @@
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
+import PointPopup from '@/components/PointPopup';
 import PopupLayer from '@/components/PopupLayer';
 import SiteNotices from '@/components/SiteNotices';
 import SiteProvider from '@/components/SiteProvider';
+import TopRibbon from '@/components/TopRibbon';
 import { CartProvider } from '@/lib/cart';
 import {
   getCachedBranding,
+  getCachedEvent,
+  getCachedPoints,
   getCachedShipping,
   getCachedStore,
   getEscrowNotice,
 } from '@/lib/settings';
+import { isRibbonActive } from '@/lib/site-config';
 import { SITE_URL } from '@/lib/store';
 import { getActivePopups } from '@/lib/popups';
 import { getTaxonomy } from '@/lib/taxonomy';
@@ -26,7 +31,7 @@ import { getTaxonomy } from '@/lib/taxonomy';
  * Organization JSON-LD 는 프론트 전 페이지에만 실립니다.
  */
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
-  const [{ categories, brands }, store, shipping, branding, escrow, popups] =
+  const [{ categories, brands }, store, shipping, branding, escrow, popups, event, points] =
     await Promise.all([
       getTaxonomy(),
       getCachedStore(),
@@ -36,7 +41,13 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       getEscrowNotice(),
       // 노출 기간에 든 팝업만 내려옵니다.
       getActivePopups(),
+      getCachedEvent(),
+      getCachedPoints(),
     ]);
+
+  // 띠배너 노출 기간은 한국시간 날짜로 판단합니다.
+  const todayKst = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const ribbon = isRibbonActive(event.ribbon, todayKst) ? event.ribbon : null;
 
   const organizationJsonLd = {
     '@context': 'https://schema.org',
@@ -68,8 +79,15 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
-      <SiteProvider value={{ categories, brands, store, shipping }}>
+      <SiteProvider value={{ categories, brands, store, shipping, points, event }}>
         <CartProvider>
+          {ribbon ? (
+            <TopRibbon
+              text={ribbon.text}
+              linkUrl={ribbon.linkUrl}
+              tone={ribbon.tone}
+            />
+          ) : null}
           <Header
             categories={categories}
             storeName={store.name}
@@ -83,6 +101,8 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
           <Footer categories={categories} store={store} escrow={escrow} />
           {/* 팝업 — 노출 화면(메인만/전체) 판단은 컴포넌트가 주소를 보고 합니다. */}
           <PopupLayer popups={popups} />
+          {/* 보유 포인트 안내. 공지 팝업이 떠 있으면 이번에는 뜨지 않습니다. */}
+          <PointPopup />
         </CartProvider>
       </SiteProvider>
     </>

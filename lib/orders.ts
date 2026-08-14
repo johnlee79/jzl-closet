@@ -1,4 +1,5 @@
 import 'server-only';
+import { assertWritten } from '@/lib/db-write';
 
 import {
   UNSHIPPED_STATUSES,
@@ -6,7 +7,12 @@ import {
   isStockReleasing,
   type OrderStatus,
 } from '@/lib/order-status';
-import { changePoints, getPointBalance, revokeOrderPoints } from '@/lib/points';
+import {
+  changePoints,
+  earnPurchasePoints,
+  getPointBalance,
+  revokeOrderPoints,
+} from '@/lib/points';
 import { isCombinationAvailable } from '@/lib/product-utils';
 import { normalizeOptions } from '@/lib/products';
 import {
@@ -923,8 +929,10 @@ export async function updateOrderStatus(
   const patch: Record<string, unknown> = { status };
   if (status === 'paid' && !before.paidAt) patch.paid_at = new Date().toISOString();
 
-  const { error } = await supabase.from(ORDERS).update(patch).eq('id', id);
-  if (error) throw new Error(`상태를 바꾸지 못했습니다: ${error.message}`);
+  assertWritten(
+    await supabase.from(ORDERS).update(patch).eq('id', id).select('id'),
+    '상태를 바꾸지 못했습니다'
+  );
 
   await addHistory(id, before.status, status, memo);
 
@@ -941,9 +949,25 @@ export async function updateOrderStatus(
       1
     );
 
-    // ★ 쓴 포인트는 돌려주고, 이 주문의 리뷰로 적립된 포인트는 회수합니다.
+    // ★ 쓴 포인트는 돌려주고, 이 주문으로 적립된 포인트(구매·리뷰)는 회수합니다.
     if (before.userId) {
       await revokeOrderPoints(before.userId, before.id, before.discount);
+    }
+  }
+
+  // ★ 구매 적립은 배송완료·구매확정 시점에만 지급합니다.
+  //   주문 즉시 주면 취소·반품 때 회수가 복잡해집니다.
+  //   기준 금액은 배송비를 뺀 상품금액에서 쓴 포인트를 뺀 값입니다.
+  if (before.userId && (status === 'delivered' || status === 'confirmed')) {
+    const live = before.items.filter((item) => item.itemStatus !== 'cancelled');
+    const base = Math.max(
+      0,
+      live.reduce((sum, item) => sum + item.lineTotal, 0) - before.discount
+    );
+    try {
+      await earnPurchasePoints(before.userId, before.id, base);
+    } catch (error) {
+      console.warn('[orders] 구매 적립 실패:', id, error);
     }
   }
 
@@ -985,11 +1009,14 @@ export async function setTracking(
   const before = await getOrderById(id);
   if (!before) throw new Error('주문을 찾을 수 없습니다.');
 
-  const { error } = await supabase
-    .from(ORDERS)
-    .update({ courier: courier || null, tracking_no: trackingNo.trim() || null })
-    .eq('id', id);
-  if (error) throw new Error(`송장을 저장하지 못했습니다: ${error.message}`);
+  assertWritten(
+    await supabase
+      .from(ORDERS)
+      .update({ courier: courier || null, tracking_no: trackingNo.trim() || null })
+      .eq('id', id)
+      .select('id'),
+    '송장을 저장하지 못했습니다'
+  );
 
   const shouldShip =
     Boolean(trackingNo.trim()) &&
@@ -1018,27 +1045,33 @@ export async function updateShippingAddress(
   }
 ): Promise<void> {
   const supabase = requireSupabaseAdmin();
-  const { error } = await supabase
-    .from(ORDERS)
-    .update({
-      receiver_name: patch.receiverName.trim(),
-      receiver_phone: patch.receiverPhone.trim(),
-      postcode: patch.postcode.trim(),
-      address1: patch.address1.trim(),
-      address2: patch.address2.trim() || null,
-      delivery_memo: patch.deliveryMemo.trim() || null,
-    })
-    .eq('id', id);
-  if (error) throw new Error(`배송지를 수정하지 못했습니다: ${error.message}`);
+  assertWritten(
+    await supabase
+      .from(ORDERS)
+      .update({
+        receiver_name: patch.receiverName.trim(),
+        receiver_phone: patch.receiverPhone.trim(),
+        postcode: patch.postcode.trim(),
+        address1: patch.address1.trim(),
+        address2: patch.address2.trim() || null,
+        delivery_memo: patch.deliveryMemo.trim() || null,
+      })
+      .eq('id', id)
+      .select('id'),
+    '배송지를 수정하지 못했습니다'
+  );
 }
 
 export async function setAdminMemo(id: string, memo: string): Promise<void> {
   const supabase = requireSupabaseAdmin();
-  const { error } = await supabase
-    .from(ORDERS)
-    .update({ admin_memo: memo.trim() || null })
-    .eq('id', id);
-  if (error) throw new Error(`메모를 저장하지 못했습니다: ${error.message}`);
+  assertWritten(
+    await supabase
+      .from(ORDERS)
+      .update({ admin_memo: memo.trim() || null })
+      .eq('id', id)
+      .select('id'),
+    '메모를 저장하지 못했습니다'
+  );
 }
 
 /**
@@ -1054,11 +1087,14 @@ export async function cancelOrderItem(orderId: string, itemId: string): Promise<
   if (!target) throw new Error('취소할 상품을 찾을 수 없습니다.');
   if (target.itemStatus === 'cancelled') return order;
 
-  const { error } = await supabase
-    .from(ITEMS)
-    .update({ item_status: 'cancelled' })
-    .eq('id', itemId);
-  if (error) throw new Error(`부분 취소에 실패했습니다: ${error.message}`);
+  assertWritten(
+    await supabase
+      .from(ITEMS)
+      .update({ item_status: 'cancelled' })
+      .eq('id', itemId)
+      .select('id'),
+    '부분 취소에 실패했습니다'
+  );
 
   // 남은 품목으로 금액을 다시 계산합니다.
   const remaining = order.items.filter(
@@ -1070,16 +1106,19 @@ export async function cancelOrderItem(orderId: string, itemId: string): Promise<
   const extraShippingFee = remaining.length === 0 ? 0 : order.extraShippingFee;
   const totalAmount = itemsTotal + shippingFee + extraShippingFee - order.discount;
 
-  const { error: totalError } = await supabase
-    .from(ORDERS)
-    .update({
-      items_total: itemsTotal,
-      shipping_fee: shippingFee,
-      extra_shipping_fee: extraShippingFee,
-      total_amount: totalAmount,
-    })
-    .eq('id', orderId);
-  if (totalError) throw new Error(`금액을 다시 계산하지 못했습니다: ${totalError.message}`);
+  assertWritten(
+    await supabase
+      .from(ORDERS)
+      .update({
+        items_total: itemsTotal,
+        shipping_fee: shippingFee,
+        extra_shipping_fee: extraShippingFee,
+        total_amount: totalAmount,
+      })
+      .eq('id', orderId)
+      .select('id'),
+    '금액을 다시 계산하지 못했습니다'
+  );
 
   // 취소한 품목의 재고를 되돌립니다.
   await adjustStock(

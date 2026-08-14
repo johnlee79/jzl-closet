@@ -10,6 +10,7 @@ import {
 } from '@/lib/inquiries';
 import { isInquiryCategory, MAX_ATTACHMENTS } from '@/lib/inquiry-status';
 import { getOrderByNo, getOrderForLookup, getOrderOfUser } from '@/lib/orders';
+import { getProductById } from '@/lib/products';
 import { clientIp, rateLimit } from '@/lib/rate-limit';
 import { getPaymentSettings } from '@/lib/settings';
 import { notifyNewInquiry } from '@/lib/telegram';
@@ -42,6 +43,8 @@ export type InquiryFormInput = {
   orderNo: string;
   /** 상품 문의면 상품 uuid */
   productId: string;
+  /** 상품 상세를 다시 굽기 위한 slug. 없으면 비워 둡니다. */
+  productSlug?: string;
 };
 
 export async function submitInquiryAction(
@@ -134,16 +137,19 @@ export async function submitInquiryAction(
   const payment = await getPaymentSettings();
   if (payment.inquiryTelegramEnabled) {
     try {
-      await notifyNewInquiry(inquiry);
+      // 상품 문의면 어느 상품인지 알림에 넣어 줍니다.
+      const product = inquiry.productId ? await getProductById(inquiry.productId) : null;
+      await notifyNewInquiry(inquiry, product?.name ?? '');
     } catch (error) {
       console.warn('[inquiry] 텔레그램 알림 실패:', error);
     }
   }
 
-  revalidatePath('/admin');
+  revalidatePath('/admin', 'layout');
   revalidatePath('/admin/inquiries');
   if (isMember) revalidatePath('/mypage/inquiries');
-  if (input.productId) revalidatePath('/products', 'page');
+  // 상품 상세의 Q&A 탭에 바로 나타나게 합니다.
+  if (input.productSlug) revalidatePath(`/products/${input.productSlug}`);
 
   return { ok: true, data: { inquiryNo: inquiry.inquiryNo, isMember } };
 }

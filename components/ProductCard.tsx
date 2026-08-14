@@ -5,6 +5,7 @@ import SafeImage from '@/components/SafeImage';
 import { useSite } from '@/components/SiteProvider';
 import { brandLabel as findBrandLabel, brandName as findBrandName } from '@/lib/brands';
 import { formatPrice, getDiscountRate, isProductSoldOut } from '@/lib/product-utils';
+import { expectedPurchasePoints, fillTokens } from '@/lib/site-config';
 import type { Product } from '@/lib/types';
 
 type ProductCardProps = {
@@ -17,13 +18,16 @@ type ProductCardProps = {
  * 클라이언트 컴포넌트지만 서버에서 한 번 렌더되어 나가므로 SEO 에 영향이 없습니다.
  */
 export default function ProductCard({ product, priority = false }: ProductCardProps) {
-  const { brands } = useSite();
+  const { brands, points, event } = useSite();
   const first = product.thumbnails[0] ?? '';
   const second = product.thumbnails[1] ?? first;
   const brandName = product.brandSlug ? findBrandName(brands, product.brandSlug) : '';
   const brandLabel = product.brandSlug ? findBrandLabel(brands, product.brandSlug) : '';
   const soldOut = isProductSoldOut(product);
   const discount = getDiscountRate(product);
+
+  // ★ 적립 안내는 여기서 계산합니다. DB 조회가 늘지 않습니다.
+  const earn = expectedPurchasePoints(product.price, points);
 
   return (
     <article className="group">
@@ -89,6 +93,11 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
               </>
             ) : null}
           </p>
+          {earn > 0 ? (
+            <p className="mt-1.5 text-[13px] text-wine">
+              {fillTokens(event.earnNotice, { points: formatPrice(earn) })}
+            </p>
+          ) : null}
         </div>
       </Link>
     </article>

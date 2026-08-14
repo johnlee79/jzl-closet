@@ -6,11 +6,14 @@ import SafeImage from '@/components/SafeImage';
 import { useSite } from '@/components/SiteProvider';
 import { useCart } from '@/lib/cart';
 import { formatPrice } from '@/lib/product-utils';
+import { expectedPurchasePoints } from '@/lib/site-config';
 
 export default function CartPanel() {
   const { items, total, count, ready, removeItem, updateQuantity, clear } = useCart();
   // 브랜드명·고객센터 번호·배송비는 관리자 설정 값을 씁니다.
-  const { store, shipping } = useSite();
+  const { store, shipping, points } = useSite();
+  // 배송비를 뺀 상품금액 기준으로 계산합니다. (서버 지급 기준과 같습니다)
+  const expectedEarn = expectedPurchasePoints(total, points);
 
   /**
    * 장바구니에서 보여 주는 배송비는 어림값입니다.
@@ -183,6 +186,14 @@ export default function CartPanel() {
               </dd>
             </div>
           </dl>
+
+          {/* ★ 예상 적립 — 적립률 × 상품금액을 화면에서 계산합니다. */}
+          {expectedEarn > 0 ? (
+            <p className="mt-4 text-[13px] leading-relaxed text-wine">
+              이번 주문으로 {formatPrice(expectedEarn)}P 적립 예정
+              <span className="ml-1 text-muted">(배송완료 시점에 지급)</span>
+            </p>
+          ) : null}
 
           {freeShippingLeft > 0 ? (
             <p className="mt-4 text-[13px] leading-relaxed text-muted">

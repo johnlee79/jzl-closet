@@ -9,12 +9,17 @@ import { formatPhone } from '@/lib/format';
 
 type Message = { tone: 'ok' | 'error'; text: string } | null;
 
+/** 생년월일에 미래 날짜를 고르지 못하게 막습니다. */
+const TODAY = new Date().toISOString().slice(0, 10);
+
 const inputClass =
   'mt-2 w-full min-h-[48px] border border-stone bg-transparent px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-muted focus:border-ink';
 
 export default function ProfileForm({
   initial,
   email,
+  provider,
+  providerName,
 }: {
   initial: {
     name: string;
@@ -23,9 +28,17 @@ export default function ProfileForm({
     address1: string;
     address2: string;
     agreeMarketing: boolean;
+    birthday: string;
   };
   email: string;
+  /** email | google | kakao | naver */
+  provider: string;
+  /** 화면에 그대로 쓰는 이름 (Google · 카카오 · 네이버) */
+  providerName: string;
 }) {
+  // ★ 간편가입 회원은 JZL CLOSET 에 비밀번호가 없습니다.
+  //   입력할 값이 없는 폼을 띄우면 아무리 눌러도 성공하지 않으므로 아예 감춥니다.
+  const isSocial = provider !== 'email';
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [form, setForm] = useState(initial);
@@ -165,6 +178,23 @@ export default function ProfileForm({
             />
           </div>
 
+          <div>
+            <label htmlFor="profile-birthday" className="label-xs block">
+              생년월일 (선택)
+            </label>
+            <input
+              id="profile-birthday"
+              type="date"
+              value={form.birthday}
+              max={TODAY}
+              onChange={(event) => set('birthday', event.target.value)}
+              className={inputClass}
+            />
+            <p className="mt-2 text-[13px] text-muted">
+              생일에 축하 포인트를 드립니다. 적어 두지 않으시면 지급되지 않습니다.
+            </p>
+          </div>
+
           <label className="flex cursor-pointer items-center gap-3 text-[15px] text-ink">
             <input
               type="checkbox"
@@ -192,7 +222,23 @@ export default function ProfileForm({
         </button>
       </form>
 
-      {/* ── 비밀번호 변경 ─────────────────────────────── */}
+      {/* ── 로그인 방식 (간편가입) ────────────────────── */}
+      {isSocial ? (
+        <section>
+          <h2 className="border-b border-stone pb-4 font-serif text-[20px] text-ink">
+            로그인 방식
+          </h2>
+          <p className="mt-6 text-[15px] leading-relaxed text-ink">
+            {providerName} 계정으로 로그인 중입니다{email ? ` (${email})` : ''}
+          </p>
+          <p className="mt-3 max-w-[520px] text-[14px] leading-relaxed text-muted">
+            비밀번호 없이 소셜 계정으로 로그인하고 있어 따로 관리할 비밀번호가 없습니다.
+          </p>
+        </section>
+      ) : null}
+
+      {/* ── 비밀번호 변경 (이메일 가입 회원만) ─────────── */}
+      {isSocial ? null : (
       <form onSubmit={changePassword} noValidate>
         <h2 className="border-b border-stone pb-4 font-serif text-[20px] text-ink">
           비밀번호 변경
@@ -262,6 +308,7 @@ export default function ProfileForm({
           {pending ? '변경 중…' : '비밀번호 변경'}
         </button>
       </form>
+      )}
     </div>
   );
 }

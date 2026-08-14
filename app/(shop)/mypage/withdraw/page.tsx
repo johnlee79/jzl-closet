@@ -1,5 +1,6 @@
 import WithdrawForm from '@/components/WithdrawForm';
 import { getActiveMember } from '@/lib/auth';
+import { isSocialProvider, providerLabel } from '@/lib/profiles';
 
 export const metadata = { title: '회원 탈퇴' };
 
@@ -13,7 +14,11 @@ export default async function MypageWithdrawPage() {
         회원 탈퇴
       </h2>
       <div className="mt-8">
-        <WithdrawForm />
+        <WithdrawForm
+          isSocial={isSocialProvider(member.profile.provider)}
+          providerName={providerLabel(member.profile.provider)}
+          pointBalance={member.profile.pointBalance}
+        />
       </div>
     </section>
   );

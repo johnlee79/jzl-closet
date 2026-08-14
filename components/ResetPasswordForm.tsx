@@ -11,12 +11,21 @@ import {
 
 const inputClass = authInputClass;
 
+/** 화면에 그대로 쓰는 소셜 이름 */
+const SOCIAL_LABEL: Record<string, string> = {
+  google: 'Google',
+  kakao: '카카오',
+  naver: '네이버',
+};
+
 /** 1단계 — 메일 보내기 */
 export function RequestResetForm() {
   const [pending, startTransition] = useTransition();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
+  /** 간편가입 계정이면 어느 소셜인지. 비어 있으면 일반 이메일 계정입니다. */
+  const [social, setSocial] = useState('');
 
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -28,9 +37,32 @@ export function RequestResetForm() {
         setError(result.error);
         return;
       }
+      setSocial(result.data.socialProvider);
       setSent(true);
     });
   };
+
+  // ★ 간편가입 계정에는 비밀번호가 없습니다. 메일을 보내도 할 수 있는 일이 없으므로
+  //   어느 소셜로 가입했는지만 알려 줍니다.
+  if (sent && social) {
+    return (
+      <div className="text-left">
+        <div className="border border-stone bg-paper px-5 py-4 text-[15px] leading-relaxed text-ink">
+          <p className="font-medium">이 계정은 {SOCIAL_LABEL[social] ?? social} 계정으로 가입하셨습니다.</p>
+          <p className="mt-1.5">
+            로그인 화면에서 &lsquo;{SOCIAL_LABEL[social] ?? social}로 계속하기&rsquo;를 눌러 주세요.
+          </p>
+        </div>
+        <p className="mt-4 text-[13px] leading-relaxed text-muted">
+          소셜 계정의 비밀번호는 {SOCIAL_LABEL[social] ?? social}에서 관리합니다. JZL CLOSET 에는
+          따로 저장된 비밀번호가 없습니다.
+        </p>
+        <Link href="/login" className={`${authButtonClass} mt-6`}>
+          로그인 화면으로
+        </Link>
+      </div>
+    );
+  }
 
   if (sent) {
     return (

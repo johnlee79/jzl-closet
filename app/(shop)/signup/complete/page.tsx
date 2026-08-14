@@ -3,6 +3,9 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import AuthCard from '@/components/AuthCard';
 import SignupComplete from '@/components/SignupComplete';
+import { getCachedEvent, getCachedPoints } from '@/lib/settings';
+import { fillTokens } from '@/lib/site-config';
+import { formatPrice } from '@/lib/product-utils';
 
 /**
  * 이메일로 가입을 마친 뒤 오는 화면.
@@ -16,7 +19,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false, nocache: true },
 };
 
-export default function SignupCompletePage({
+export default async function SignupCompletePage({
   searchParams,
 }: {
   searchParams: { email?: string };
@@ -24,6 +27,13 @@ export default function SignupCompletePage({
   const email = (searchParams.email ?? '').trim();
   // 주소로 직접 들어온 경우에는 보여 줄 것이 없습니다.
   if (!email) redirect('/signup');
+
+  // 환영 문구와 지급 포인트는 관리자 설정에서 가져옵니다.
+  const [event, points] = await Promise.all([getCachedEvent(), getCachedPoints()]);
+  const signupPoints = points.signup.enabled ? points.signup.amount : 0;
+  const welcome = signupPoints > 0
+    ? fillTokens(event.signupComplete, { points: formatPrice(signupPoints) })
+    : '';
 
   return (
     <AuthCard
@@ -35,6 +45,7 @@ export default function SignupCompletePage({
           <span className="mt-2 block">
             메일함에서 인증 링크를 눌러야 로그인할 수 있습니다.
           </span>
+          {welcome ? <span className="mt-3 block text-ink">{welcome}</span> : null}
         </>
       }
       footer={

@@ -1,4 +1,5 @@
 import 'server-only';
+import { assertWritten } from '@/lib/db-write';
 
 import { unstable_cache } from 'next/cache';
 import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
@@ -141,7 +142,7 @@ export async function createNotice(input: NoticeInput): Promise<void> {
 
 export async function updateNotice(id: string, input: NoticeInput): Promise<void> {
   const supabase = requireSupabaseAdmin();
-  const { error } = await supabase
+  const result = await supabase
     .from(TABLE)
     .update({
       title: input.title.trim(),
@@ -149,12 +150,13 @@ export async function updateNotice(id: string, input: NoticeInput): Promise<void
       is_pinned: input.isPinned,
       is_visible: input.isVisible,
     })
-    .eq('id', id);
-  if (error) throw new Error(`공지를 수정하지 못했습니다: ${error.message}`);
+    .eq('id', id)
+    .select('id');
+  assertWritten(result, '공지를 수정하지 못했습니다');
 }
 
 export async function deleteNotice(id: string): Promise<void> {
   const supabase = requireSupabaseAdmin();
-  const { error } = await supabase.from(TABLE).delete().eq('id', id);
-  if (error) throw new Error(`공지를 삭제하지 못했습니다: ${error.message}`);
+  const result = await supabase.from(TABLE).delete().eq('id', id).select('id');
+  assertWritten(result, '공지를 삭제하지 못했습니다');
 }

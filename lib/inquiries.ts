@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { assertWritten } from '@/lib/db-write';
+import { maskName } from '@/lib/mask-name';
 import { hashPassword, verifyPassword } from '@/lib/password';
 import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
 import type { InquiryStatus } from '@/lib/inquiry-status';
@@ -281,31 +283,37 @@ export type PublicInquiry = {
   inquiryNo: string;
   category: string;
   title: string;
+  /** 비밀글이면 빈 문자열입니다. */
+  content: string;
+  /** 비밀글이면 빈 문자열입니다. */
+  answer: string;
   status: string;
   writerName: string;
   createdAt: string | null;
+  answeredAt: string | null;
   isSecret: boolean;
   hasAnswer: boolean;
 };
 
-/** 이름 가운데를 가립니다. 홍길동 → 홍*동 */
-function maskName(name: string): string {
-  const trimmed = name.trim();
-  if (trimmed.length <= 1) return trimmed;
-  if (trimmed.length === 2) return `${trimmed[0]}*`;
-  return `${trimmed[0]}${'*'.repeat(trimmed.length - 2)}${trimmed[trimmed.length - 1]}`;
-}
-
+/**
+ * 상품 상세 Q&A 탭의 문의 목록.
+ *
+ * ★ 비밀글은 제목·내용·답변을 아예 내려보내지 않습니다.
+ *   화면에서 감추는 방식은 개발자 도구로 그대로 보입니다.
+ * ★ 작성자명은 여기서 가려 보냅니다. (DB 원본은 그대로)
+ */
 export async function getProductInquiries(
   productId: string,
-  limit = 10
+  limit = 100
 ): Promise<PublicInquiry[]> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return [];
 
   const { data, error } = await supabase
     .from(TABLE)
-    .select('id, inquiry_no, category, title, status, writer_name, created_at, is_secret, answer')
+    .select(
+      'id, inquiry_no, category, title, content, status, writer_name, created_at, answered_at, is_secret, answer'
+    )
     .eq('product_id', productId)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -318,9 +326,11 @@ export async function getProductInquiries(
       inquiry_no: string;
       category: string;
       title: string;
+      content: string;
       status: string;
       writer_name: string;
       created_at: string | null;
+      answered_at: string | null;
       is_secret: boolean | null;
       answer: string | null;
     }[]
@@ -330,11 +340,13 @@ export async function getProductInquiries(
       id: row.id,
       inquiryNo: row.inquiry_no,
       category: row.category,
-      // ★ 비밀글은 제목을 내려보내지 않습니다.
       title: secret ? '비밀글입니다.' : row.title,
+      content: secret ? '' : row.content,
+      answer: secret ? '' : (row.answer ?? ''),
       status: row.status,
       writerName: maskName(row.writer_name),
       createdAt: row.created_at,
+      answeredAt: row.answered_at,
       isSecret: secret,
       hasAnswer: Boolean(row.answer),
     };
@@ -428,7 +440,14 @@ export async function countPendingInquiries(): Promise<number> {
   return count ?? 0;
 }
 
-/** 답변 저장. 답변을 넣으면 상태가 자동으로 '답변완료'가 됩니다. */
+/**
+ * 답변 저장.
+ *
+ * ★ 답변을 넣으면 상태는 항상 '답변완료'가 됩니다.
+ *   예전에는 화면이 들고 있던 현재 상태('미답변')를 그대로 같이 보내는 바람에
+ *   답변만 저장되고 상태·뱃지 숫자는 그대로 남는 버그가 있었습니다.
+ *   '종료(closed)'로 내려 두고 싶을 때만 예외로 그 값을 그대로 씁니다.
+ */
 export async function answerInquiry(
   id: string,
   answer: string,
@@ -437,16 +456,23 @@ export async function answerInquiry(
   const supabase = requireSupabaseAdmin();
   const trimmed = answer.trim();
 
-  const { error } = await supabase
+  const nextStatus: InquiryStatus = trimmed
+    ? status === 'closed'
+      ? 'closed'
+      : 'answered'
+    : 'pending';
+
+  const result = await supabase
     .from(TABLE)
     .update({
       answer: trimmed || null,
       answered_at: trimmed ? new Date().toISOString() : null,
-      status: status ?? (trimmed ? 'answered' : 'pending'),
+      status: nextStatus,
     })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
 
-  if (error) throw new Error(`답변을 저장하지 못했습니다: ${error.message}`);
+  assertWritten(result, '답변을 저장하지 못했습니다');
 }
 
 export async function updateInquiryStatus(
@@ -454,6 +480,10 @@ export async function updateInquiryStatus(
   status: InquiryStatus
 ): Promise<void> {
   const supabase = requireSupabaseAdmin();
-  const { error } = await supabase.from(TABLE).update({ status }).eq('id', id);
-  if (error) throw new Error(`상태를 바꾸지 못했습니다: ${error.message}`);
+  const result = await supabase
+    .from(TABLE)
+    .update({ status })
+    .eq('id', id)
+    .select('id');
+  assertWritten(result, '상태를 바꾸지 못했습니다');
 }

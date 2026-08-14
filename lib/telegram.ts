@@ -116,14 +116,22 @@ export async function notifyCancelRequest(order: Order, reason: string): Promise
 }
 
 /** 💬 새 1:1 문의 */
-export async function notifyNewInquiry(inquiry: Inquiry): Promise<void> {
+export async function notifyNewInquiry(
+  inquiry: Inquiry,
+  /** 상품 문의면 상품명. 없으면 그 줄을 넣지 않습니다. */
+  productName = ''
+): Promise<void> {
   const lines = [
     `💬 <b>새 문의</b> (${escapeHtml(inquiry.inquiryNo)})`,
     '',
+    ...(productName ? [`상품 ${escapeHtml(productName)}`] : []),
     `${escapeHtml(inquiryCategoryLabel(inquiry.category))} · ${escapeHtml(inquiry.title)}`,
     `작성자 ${escapeHtml(inquiry.writerName)}${
       inquiry.userId ? ' (회원)' : ' (비회원)'
-    }`,
+    }${inquiry.isSecret ? ' · 비밀글' : ''}`,
+    '',
+    // 앞부분만 보여 주고 나머지는 관리자에서 봅니다.
+    escapeHtml(inquiry.content.slice(0, 150)) + (inquiry.content.length > 150 ? '…' : ''),
     '',
     `관리자에서 보기: ${SITE_URL}/admin/inquiries/${inquiry.id}`,
   ];

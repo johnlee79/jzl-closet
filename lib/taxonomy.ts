@@ -1,4 +1,5 @@
 import 'server-only';
+import { assertWritten } from '@/lib/db-write';
 
 import { unstable_cache } from 'next/cache';
 import {
@@ -340,17 +341,23 @@ export async function updateCategory(
   if (patch.isVisible !== undefined) row.is_visible = patch.isVisible;
   if (patch.displayOrder !== undefined) row.display_order = patch.displayOrder;
 
-  const { error } = await supabase.from(CATEGORY_TABLE).update(row).eq('slug', slug);
-  if (error) {
-    if (isMissingTable(error.code)) throw missingTableError('categories');
-    throw new Error(`분류를 수정하지 못했습니다: ${error.message}`);
-  }
+  const result = await supabase
+    .from(CATEGORY_TABLE)
+    .update(row)
+    .eq('slug', slug)
+    .select('slug');
+  if (result.error && isMissingTable(result.error.code)) throw missingTableError('categories');
+  assertWritten(result, '분류를 수정하지 못했습니다');
 }
 
 export async function deleteCategory(slug: string): Promise<void> {
   const supabase = requireSupabaseAdmin();
-  const { error } = await supabase.from(CATEGORY_TABLE).delete().eq('slug', slug);
-  if (error) throw new Error(`분류를 삭제하지 못했습니다: ${error.message}`);
+  const result = await supabase
+    .from(CATEGORY_TABLE)
+    .delete()
+    .eq('slug', slug)
+    .select('slug');
+  assertWritten(result, '분류를 삭제하지 못했습니다');
 }
 
 /** 소분류가 몇 개 달려 있는지 (대분류 삭제를 막을 때 씁니다) */
@@ -421,17 +428,23 @@ export async function updateBrand(
   if (patch.isFeatured !== undefined) row.is_featured = patch.isFeatured;
   if (patch.displayOrder !== undefined) row.display_order = patch.displayOrder;
 
-  const { error } = await supabase.from(BRAND_TABLE).update(row).eq('slug', slug);
-  if (error) {
-    if (isMissingTable(error.code)) throw missingTableError('brands');
-    throw new Error(`브랜드를 수정하지 못했습니다: ${error.message}`);
-  }
+  const result = await supabase
+    .from(BRAND_TABLE)
+    .update(row)
+    .eq('slug', slug)
+    .select('slug');
+  if (result.error && isMissingTable(result.error.code)) throw missingTableError('brands');
+  assertWritten(result, '브랜드를 수정하지 못했습니다');
 }
 
 export async function deleteBrand(slug: string): Promise<void> {
   const supabase = requireSupabaseAdmin();
-  const { error } = await supabase.from(BRAND_TABLE).delete().eq('slug', slug);
-  if (error) throw new Error(`브랜드를 삭제하지 못했습니다: ${error.message}`);
+  const result = await supabase
+    .from(BRAND_TABLE)
+    .delete()
+    .eq('slug', slug)
+    .select('slug');
+  assertWritten(result, '브랜드를 삭제하지 못했습니다');
 }
 
 /** 드래그로 바꾼 순서를 한 번에 저장합니다. 10 단위로 다시 매깁니다. */

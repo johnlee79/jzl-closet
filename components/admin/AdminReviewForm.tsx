@@ -13,6 +13,9 @@ import { ACCEPT_IMAGE, deleteImages, uploadImages } from '@/lib/upload-client';
  *   체크를 풀려고 하면 확인 창을 띄웁니다.
  *   이 표시가 있어야 표시광고법상 문제가 없습니다. 기능을 빼거나 숨기지 마세요.
  */
+/** 작성일에 미래 날짜를 고르지 못하게 막습니다. */
+const TODAY = new Date().toISOString().slice(0, 10);
+
 export default function AdminReviewForm({
   tags,
   products,
@@ -34,6 +37,13 @@ export default function AdminReviewForm({
   const [attachments, setAttachments] = useState<string[]>([]);
   // ★ 기본값은 체크된 상태입니다.
   const [isSponsored, setIsSponsored] = useState(true);
+  /**
+   * 화면에 보여 줄 작성일.
+   * ★ 상품을 먼저 보내고 체험단 사진이 며칠 뒤에 오는 경우가 있어 실제 날짜와 맞춥니다.
+   *   비워 두면 지금 시각으로 들어갑니다. 실제 등록 시각(created_at)은 따로 남습니다.
+   */
+  const [writtenDate, setWrittenDate] = useState('');
+  const [writtenTime, setWrittenTime] = useState('');
   const [uploading, setUploading] = useState<number | null>(null);
   const [error, setError] = useState('');
 
@@ -105,6 +115,11 @@ export default function AdminReviewForm({
         content,
         attachments,
         isSponsored,
+        writtenAt: writtenDate
+          ? writtenTime
+            ? `${writtenDate}T${writtenTime}`
+            : writtenDate
+          : '',
       });
       if (!result.ok) {
         setError(result.error);
@@ -116,6 +131,8 @@ export default function AdminReviewForm({
       setSelected([]);
       setAttachments([]);
       setIsSponsored(true);
+      setWrittenDate('');
+      setWrittenTime('');
       onDone();
     });
   };
@@ -174,6 +191,32 @@ export default function AdminReviewForm({
             className="admin-input"
           />
         </div>
+        <div>
+          <span className="admin-label">작성일 (선택)</span>
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={writtenDate}
+              max={TODAY}
+              onChange={(event) => setWrittenDate(event.target.value)}
+              aria-label="후기 작성일"
+              className="admin-input"
+            />
+            <input
+              type="time"
+              value={writtenTime}
+              onChange={(event) => setWrittenTime(event.target.value)}
+              aria-label="후기 작성 시각"
+              disabled={!writtenDate}
+              className="admin-input max-w-[130px]"
+            />
+          </div>
+          <p className="mt-1 text-[12px] leading-relaxed text-slate-500">
+            비워 두면 지금 시각으로 들어갑니다. 미래 날짜는 고를 수 없습니다. 시간을 비우면
+            그날 낮 12시로 저장됩니다.
+          </p>
+        </div>
+
         <div>
           <label className="admin-label" htmlFor="ar-rating">
             별점 *

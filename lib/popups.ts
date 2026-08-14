@@ -1,4 +1,5 @@
 import 'server-only';
+import { assertWritten } from '@/lib/db-write';
 
 import { unstable_cache } from 'next/cache';
 import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
@@ -191,12 +192,16 @@ export async function createPopup(input: PopupInput): Promise<void> {
 
 export async function updatePopup(id: string, input: PopupInput): Promise<void> {
   const supabase = requireSupabaseAdmin();
-  const { error } = await supabase.from(TABLE).update(toRow(input)).eq('id', id);
-  if (error) throw new Error(`팝업을 수정하지 못했습니다: ${error.message}`);
+  const result = await supabase
+    .from(TABLE)
+    .update(toRow(input))
+    .eq('id', id)
+    .select('id');
+  assertWritten(result, '팝업을 수정하지 못했습니다');
 }
 
 export async function deletePopup(id: string): Promise<void> {
   const supabase = requireSupabaseAdmin();
-  const { error } = await supabase.from(TABLE).delete().eq('id', id);
-  if (error) throw new Error(`팝업을 삭제하지 못했습니다: ${error.message}`);
+  const result = await supabase.from(TABLE).delete().eq('id', id).select('id');
+  assertWritten(result, '팝업을 삭제하지 못했습니다');
 }

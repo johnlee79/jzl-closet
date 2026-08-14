@@ -1,5 +1,7 @@
 import 'server-only';
+import { assertWritten } from '@/lib/db-write';
 
+import { maskName } from '@/lib/mask-name';
 import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
 
 /**
@@ -44,6 +46,9 @@ export type Review = {
   adminReply: string;
   repliedAt: string | null;
   helpfulCount: number;
+  /** 화면 표시·정렬에 쓰는 작성일. 관리자가 체험단 후기 날짜를 지정할 수 있습니다. */
+  writtenAt: string | null;
+  /** 실제 등록 시각. 감사 기록이라 바뀌지 않습니다. */
   createdAt: string | null;
 };
 
@@ -63,6 +68,8 @@ type ReviewRow = {
   admin_reply: string | null;
   replied_at: string | null;
   helpful_count: number | null;
+  /** 3-B 에서 추가한 컬럼. 아직 없을 수 있어 선택 항목으로 둡니다. */
+  written_at?: string | null;
   created_at: string | null;
 };
 
@@ -100,17 +107,13 @@ function rowToReview(row: ReviewRow): Review {
     adminReply: row.admin_reply ?? '',
     repliedAt: row.replied_at,
     helpfulCount: row.helpful_count ?? 0,
+    writtenAt: row.written_at ?? row.created_at,
     createdAt: row.created_at,
   };
 }
 
-/** 이름 가운데를 가립니다. 홍길동 → 홍*동 */
-export function maskName(name: string): string {
-  const trimmed = name.trim();
-  if (trimmed.length <= 1) return trimmed;
-  if (trimmed.length === 2) return `${trimmed[0]}*`;
-  return `${trimmed[0]}${'*'.repeat(trimmed.length - 2)}${trimmed[trimmed.length - 1]}`;
-}
+// 이름 가리기는 클라이언트에서도 필요해 lib/mask-name.ts 로 뺐습니다.
+export { maskName } from '@/lib/mask-name';
 
 /* ------------------------------------------------------------------
  * 요약 — 상품 상세의 평균 별점·분포·태그 통계
@@ -174,7 +177,15 @@ export function summarize(reviews: Review[]): ReviewSummary {
  * 조회
  * ------------------------------------------------------------------ */
 
-/** 상품 상세용 — 노출 중인 리뷰만 */
+/**
+ * 상품 상세용 — 노출 중인 리뷰만.
+ *
+ * ★ 여기서 작성자명을 가려 내려보냅니다.
+ *   원본 이름은 DB 에 그대로 두고(관리자가 확인해야 합니다),
+ *   손님 화면으로 나가는 데이터에는 아예 담지 않습니다.
+ * ★ 정렬은 written_at 기준입니다. 관리자가 체험단 후기의 실제 작성일을
+ *   지정하면 그 날짜 자리에 끼워 넣어야 하기 때문입니다.
+ */
 export async function getProductReviews(productId: string): Promise<Review[]> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return [];
@@ -184,10 +195,27 @@ export async function getProductReviews(productId: string): Promise<Review[]> {
     .select('*')
     .eq('product_id', productId)
     .eq('is_visible', true)
+    .order('written_at', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false });
 
-  if (error || !data) return [];
-  return (data as ReviewRow[]).map(rowToReview);
+  if (error || !data) {
+    // written_at 컬럼이 아직 없으면(schema-3b.sql 미실행) 예전 방식으로 한 번 더 시도합니다.
+    const retry = await supabase
+      .from(TABLE)
+      .select('*')
+      .eq('product_id', productId)
+      .eq('is_visible', true)
+      .order('created_at', { ascending: false });
+    if (retry.error || !retry.data) return [];
+    return (retry.data as ReviewRow[]).map(rowToReview).map(withMaskedName);
+  }
+
+  return (data as ReviewRow[]).map(rowToReview).map(withMaskedName);
+}
+
+/** 손님 화면으로 내려보내기 전에 작성자명을 가립니다. */
+function withMaskedName(review: Review): Review {
+  return { ...review, writerName: maskName(review.writerName) };
 }
 
 /** 여러 상품의 평균 별점을 한 번에 (상품 목록·통계용) */
@@ -404,6 +432,8 @@ export type ReviewInput = {
   content: string;
   attachments: string[];
   isSponsored: boolean;
+  /** ISO 문자열. 비워 두면 지금 시각. 관리자 등록 화면에서만 지정합니다. */
+  writtenAt?: string;
 };
 
 export class DuplicateReviewError extends Error {
@@ -430,6 +460,8 @@ export async function createReview(input: ReviewInput): Promise<Review> {
       attachments: input.attachments,
       is_sponsored: input.isSponsored,
       is_visible: true,
+      // 지정하지 않으면 지금 시각으로 둡니다.
+      written_at: input.writtenAt || new Date().toISOString(),
     })
     .select('*')
     .single();
@@ -446,27 +478,32 @@ export async function createReview(input: ReviewInput): Promise<Review> {
 
 export async function setReviewVisible(id: string, visible: boolean): Promise<void> {
   const supabase = requireSupabaseAdmin();
-  const { error } = await supabase.from(TABLE).update({ is_visible: visible }).eq('id', id);
-  if (error) throw new Error(`노출 설정을 바꾸지 못했습니다: ${error.message}`);
+  const result = await supabase
+    .from(TABLE)
+    .update({ is_visible: visible })
+    .eq('id', id)
+    .select('id');
+  assertWritten(result, '노출 설정을 바꾸지 못했습니다');
 }
 
 export async function replyToReview(id: string, reply: string): Promise<void> {
   const supabase = requireSupabaseAdmin();
   const trimmed = reply.trim();
-  const { error } = await supabase
+  const result = await supabase
     .from(TABLE)
     .update({
       admin_reply: trimmed || null,
       replied_at: trimmed ? new Date().toISOString() : null,
     })
-    .eq('id', id);
-  if (error) throw new Error(`답변을 저장하지 못했습니다: ${error.message}`);
+    .eq('id', id)
+    .select('id');
+  assertWritten(result, '답변을 저장하지 못했습니다');
 }
 
 export async function deleteReview(id: string): Promise<void> {
   const supabase = requireSupabaseAdmin();
-  const { error } = await supabase.from(TABLE).delete().eq('id', id);
-  if (error) throw new Error(`리뷰를 삭제하지 못했습니다: ${error.message}`);
+  const result = await supabase.from(TABLE).delete().eq('id', id).select('id');
+  assertWritten(result, '리뷰를 삭제하지 못했습니다');
 }
 
 /* ------------------------------------------------------------------

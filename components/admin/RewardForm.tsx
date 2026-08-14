@@ -18,12 +18,19 @@ function RuleRow({
   label,
   hint,
   rule,
+  unit = '원',
+  step = 100,
+  max,
   onChange,
 }: {
   id: string;
   label: string;
   hint: string;
   rule: { enabled: boolean; amount: number };
+  /** 금액이 아니라 비율일 때 '%' 를 넘깁니다. */
+  unit?: string;
+  step?: number;
+  max?: number;
   onChange: (next: { enabled: boolean; amount: number }) => void;
 }) {
   return (
@@ -38,26 +45,29 @@ function RuleRow({
         {label}
       </label>
 
-      <div className="w-[160px]">
+      <div className="flex w-[160px] items-center gap-2">
         <input
           id={id}
           type="number"
           min={0}
-          step={100}
+          max={max}
+          step={step}
           value={rule.amount}
-          onChange={(event) =>
-            onChange({ ...rule, amount: Math.max(0, Number(event.target.value) || 0) })
-          }
-          aria-label={`${label} 적립 금액`}
+          onChange={(event) => {
+            const raw = Math.max(0, Number(event.target.value) || 0);
+            onChange({ ...rule, amount: max === undefined ? raw : Math.min(max, raw) });
+          }}
+          aria-label={`${label} 적립 ${unit === '%' ? '비율' : '금액'}`}
           className="admin-input tabular-nums"
         />
+        <span className="shrink-0 text-[14px] text-slate-600">{unit}</span>
       </div>
 
       <p className="flex-1 pt-2 text-[12px] leading-relaxed text-slate-500">
         {hint}
         {rule.amount === 0 ? (
           <span className="mt-0.5 block text-amber-700">
-            금액이 0이라 적립하지 않습니다.
+            {unit === '%' ? '적립률' : '금액'}이 0이라 적립하지 않습니다.
           </span>
         ) : null}
       </p>
@@ -135,7 +145,29 @@ export default function RewardForm({
             rule={points.reviewPhoto}
             onChange={(next) => setPoints((prev) => ({ ...prev, reviewPhoto: next }))}
           />
+          <RuleRow
+            id="rule-purchase"
+            label="구매 적립"
+            unit="%"
+            step={0.5}
+            max={100}
+            hint="★ 주문 즉시가 아니라 배송완료·구매확정 시점에 지급합니다. 주문 직후에 주면 취소·반품 때 회수가 복잡해집니다. 기준 금액은 배송비를 뺀 상품금액에서 쓴 포인트를 뺀 값이고, 원 단위 아래는 버립니다."
+            rule={points.purchase}
+            onChange={(next) => setPoints((prev) => ({ ...prev, purchase: next }))}
+          />
+          <RuleRow
+            id="rule-birthday"
+            label="생일 축하"
+            hint="연 1회만 지급합니다. 회원이 마이페이지에 생년월일을 적어 두어야 나갑니다."
+            rule={points.birthday}
+            onChange={(next) => setPoints((prev) => ({ ...prev, birthday: next }))}
+          />
         </div>
+
+        <p className="mt-4 rounded-md bg-slate-50 px-3 py-2 text-[13px] leading-relaxed text-slate-700">
+          예) 59,000원짜리 상품을 사면 {formatPrice(Math.floor((59000 * points.purchase.amount) / 100))}
+          P 가 배송완료 시점에 적립됩니다.
+        </p>
       </section>
 
       {/* ── 사용 ──────────────────────────────────────── */}
@@ -190,10 +222,83 @@ export default function RewardForm({
           </div>
         </div>
 
+        <div className="mt-4">
+          <label className="admin-label" htmlFor="expire-months">
+            포인트 유효기간 (개월)
+          </label>
+          <input
+            id="expire-months"
+            type="number"
+            min={0}
+            max={120}
+            step={1}
+            value={points.expireMonths}
+            onChange={(event) =>
+              setPoints((prev) => ({
+                ...prev,
+                expireMonths: Math.min(120, Math.max(0, Number(event.target.value) || 0)),
+              }))
+            }
+            className="admin-input tabular-nums md:max-w-[220px]"
+          />
+          <p className="mt-1 text-[12px] leading-relaxed text-slate-500">
+            적립일 기준입니다. 0으로 두면 소멸하지 않습니다. 사용할 때는 먼저 만료되는
+            포인트부터 빠져나갑니다.
+          </p>
+        </div>
+
         <p className="mt-4 rounded-md bg-slate-50 px-3 py-2 text-[13px] leading-relaxed text-slate-700">
           예) 상품금액 50,000원 주문에서 {points.maxUseRate}% 까지 쓸 수 있으므로 최대{' '}
           {formatPrice(Math.floor((50000 * points.maxUseRate) / 100))}원까지 사용 가능합니다.
         </p>
+      </section>
+
+      {/* ── 보유 포인트 알림 팝업 ─────────────────────── */}
+      <section className="admin-card p-4 md:p-5">
+        <h2 className="text-[16px] font-semibold text-slate-900">보유 포인트 알림 팝업</h2>
+        <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+          로그인한 회원이 들어오면 보유 포인트를 알려 줍니다. 포인트를 주는 것이 아니라
+          안내만 합니다. 잔액이 0이면 뜨지 않고, 공지·이벤트 팝업이 있으면 그쪽이 먼저입니다.
+        </p>
+
+        <label className="mt-4 flex items-center gap-2 text-[14px] text-slate-800">
+          <input
+            type="checkbox"
+            checked={points.popupEnabled}
+            onChange={(event) =>
+              setPoints((prev) => ({ ...prev, popupEnabled: event.target.checked }))
+            }
+            className="h-4 w-4"
+          />
+          보유 포인트 팝업 사용
+        </label>
+
+        <div className="mt-4 md:max-w-[220px]">
+          <label className="admin-label" htmlFor="popup-interval">
+            재표시 간격 (시간)
+          </label>
+          <input
+            id="popup-interval"
+            type="number"
+            min={1}
+            max={720}
+            step={1}
+            value={points.popupIntervalHours}
+            onChange={(event) =>
+              setPoints((prev) => ({
+                ...prev,
+                popupIntervalHours: Math.min(
+                  720,
+                  Math.max(1, Number(event.target.value) || 1)
+                ),
+              }))
+            }
+            className="admin-input tabular-nums"
+          />
+          <p className="mt-1 text-[12px] leading-relaxed text-slate-500">
+            마지막으로 본 뒤 이 시간이 지나야 다시 뜹니다.
+          </p>
+        </div>
       </section>
 
       {/* ── 리뷰 태그 ─────────────────────────────────── */}

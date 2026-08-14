@@ -43,12 +43,16 @@ export default function InquiryDetail({
   const save = () => {
     setMessage(null);
     startTransition(async () => {
-      const result = await answerInquiryAction(inquiry.id, answer, status);
+      // ★ 현재 상태를 그대로 같이 보내면 '미답변'으로 덮어써집니다.
+      //   '종료'로 내려 둔 문의만 그 상태를 유지하고, 나머지는 서버가 '답변완료'로 올립니다.
+      const keep = status === 'closed' ? 'closed' : '';
+      const result = await answerInquiryAction(inquiry.id, answer, keep);
       if (!result.ok) {
         setMessage({ tone: 'error', text: result.error });
         return;
       }
-      setMessage({ tone: 'ok', text: '답변을 저장했습니다.' });
+      if (keep !== 'closed') setStatus('answered');
+      setMessage({ tone: 'ok', text: '답변을 저장했습니다. 상태가 답변완료로 바뀌었습니다.' });
       router.refresh();
     });
   };

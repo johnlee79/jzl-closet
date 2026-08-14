@@ -32,7 +32,8 @@ function refresh(id: string): void {
 export async function answerInquiryAction(
   id: string,
   answer: string,
-  status: string
+  /** 'closed' 일 때만 그 상태를 유지합니다. 비워 두면 '답변완료'가 됩니다. */
+  status = ''
 ): Promise<ActionResult> {
   if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   if (!answer.trim()) return { ok: false, error: '답변 내용을 입력해 주세요.' };

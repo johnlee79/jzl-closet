@@ -10,6 +10,7 @@ import { statusBadgeClass, statusLabel } from '@/lib/order-status';
 import { formatPrice } from '@/lib/product-utils';
 import { pointReasonLabel } from '@/lib/site-config';
 import type { PointTransaction } from '@/lib/points';
+import { isSocialProvider, providerLabel } from '@/lib/auth-provider';
 import type { Profile } from '@/lib/profiles';
 import type { Order } from '@/lib/types';
 
@@ -50,6 +51,9 @@ export default function MemberDetail({
   /** 포인트 수동 조정 */
   const [pointAmount, setPointAmount] = useState('');
   const [pointMemo, setPointMemo] = useState('');
+
+  /** 간편가입 회원에게는 비밀번호 재설정 메일을 보낼 수 없습니다. */
+  const isSocial = isSocialProvider(profile.provider);
 
   const [form, setForm] = useState({
     name: profile.name,
@@ -414,9 +418,21 @@ export default function MemberDetail({
                 </dd>
               </div>
               <div className="flex justify-between gap-3">
+                <dt className="text-slate-500">가입 경로</dt>
+                <dd className="text-slate-900">
+                  {isSocial ? `${providerLabel(profile.provider)} 간편가입` : '이메일 가입'}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
                 <dt className="text-slate-500">가입일</dt>
                 <dd className="text-slate-900">{formatDate(profile.createdAt)}</dd>
               </div>
+              {profile.birthday ? (
+                <div className="flex justify-between gap-3">
+                  <dt className="text-slate-500">생일</dt>
+                  <dd className="text-slate-900">{profile.birthday}</dd>
+                </div>
+              ) : null}
               {profile.withdrawnAt ? (
                 <div className="flex justify-between gap-3">
                   <dt className="text-slate-500">탈퇴일</dt>
@@ -425,18 +441,28 @@ export default function MemberDetail({
               ) : null}
             </dl>
 
-            <button
-              type="button"
-              onClick={sendReset}
-              disabled={pending || !profile.email}
-              className="admin-btn mt-4 w-full"
-            >
-              비밀번호 재설정 메일 보내기
-            </button>
-            <p className="mt-2 text-[12px] leading-relaxed text-slate-500">
-              ★ 관리자는 회원 비밀번호를 볼 수도, 직접 바꿀 수도 없습니다. 회원이 메일
-              링크로 직접 정합니다.
-            </p>
+            {isSocial ? (
+              <p className="mt-4 rounded-md bg-slate-50 px-3 py-2 text-[12px] leading-relaxed text-slate-600">
+                {providerLabel(profile.provider)} 간편가입 회원입니다. JZL CLOSET 에
+                저장된 비밀번호가 없어 재설정 메일을 보낼 수 없습니다. 로그인이 안 된다면
+                {' '}{providerLabel(profile.provider)} 계정 쪽을 확인해 달라고 안내해 주세요.
+              </p>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={sendReset}
+                  disabled={pending || !profile.email}
+                  className="admin-btn mt-4 w-full"
+                >
+                  비밀번호 재설정 메일 보내기
+                </button>
+                <p className="mt-2 text-[12px] leading-relaxed text-slate-500">
+                  ★ 관리자는 회원 비밀번호를 볼 수도, 직접 바꿀 수도 없습니다. 회원이 메일
+                  링크로 직접 정합니다.
+                </p>
+              </>
+            )}
           </section>
         </aside>
       </div>

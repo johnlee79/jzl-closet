@@ -289,28 +289,72 @@ export type PointSettings = {
   reviewText: PointRule;
   /** 사진·동영상이 하나라도 있는 리뷰 */
   reviewPhoto: PointRule;
+  /**
+   * 구매 적립. amount 는 금액이 아니라 결제금액 대비 % 입니다.
+   * ★ 주문 즉시가 아니라 배송완료·구매확정 시점에 지급합니다.
+   *   주문 직후에 주면 취소·반품 때 회수가 복잡해집니다.
+   */
+  purchase: PointRule;
+  /** 생일 축하. 연 1회만 지급합니다. */
+  birthday: PointRule;
   /** 이 금액 이상부터 쓸 수 있습니다. */
   minUse: number;
   /** 상품금액 대비 최대 사용 비율 (%) */
   maxUseRate: number;
+  /** 포인트 유효기간 (개월). 0 이면 소멸하지 않습니다. */
+  expireMonths: number;
+  /** 보유 포인트 알림 팝업을 띄울지 */
+  popupEnabled: boolean;
+  /** 팝업 재표시 간격 (시간) */
+  popupIntervalHours: number;
 };
 
 export const DEFAULT_POINTS: PointSettings = {
-  signup: { enabled: true, amount: 1000 },
+  signup: { enabled: true, amount: 3000 },
   reviewText: { enabled: true, amount: 500 },
-  reviewPhoto: { enabled: true, amount: 1000 },
+  reviewPhoto: { enabled: true, amount: 2000 },
+  purchase: { enabled: true, amount: 2 },
+  birthday: { enabled: true, amount: 5000 },
   minUse: 1000,
   maxUseRate: 100,
+  expireMonths: 12,
+  popupEnabled: true,
+  popupIntervalHours: 1,
 };
+
+/**
+ * 구매 적립 예상 금액. 원 단위 아래는 버립니다.
+ * ★ DB 조회 없이 화면에서 그대로 계산합니다.
+ */
+export function expectedPurchasePoints(
+  amount: number,
+  settings: Pick<PointSettings, 'purchase'>
+): number {
+  if (!settings.purchase.enabled || settings.purchase.amount <= 0) return 0;
+  return Math.floor((Math.max(0, amount) * settings.purchase.amount) / 100);
+}
+
+/** 리뷰 한 건에 지급될 포인트 (사진이 있으면 포토 리뷰 금액) */
+export function expectedReviewPoints(
+  hasAttachment: boolean,
+  settings: Pick<PointSettings, 'reviewText' | 'reviewPhoto'>
+): number {
+  const rule = hasAttachment ? settings.reviewPhoto : settings.reviewText;
+  return rule.enabled ? rule.amount : 0;
+}
 
 /** 포인트 적립·사용 사유 — 내역 화면에 한글로 보여 줍니다. */
 export const POINT_REASON_LABEL: Record<string, string> = {
   signup: '회원가입 축하',
   review_text: '리뷰 작성',
   review_photo: '포토 리뷰 작성',
+  purchase: '구매 적립',
+  birthday: '생일 축하',
   order_use: '주문 사용',
   admin: '관리자 조정',
   cancel: '주문 취소 반환',
+  expire: '유효기간 만료',
+  withdraw: '탈퇴 소멸',
 };
 
 export function pointReasonLabel(reason: string): string {
@@ -330,6 +374,117 @@ export function maxUsablePoints(
   if (balance <= 0) return 0;
   const byRate = Math.floor((itemsTotal * settings.maxUseRate) / 100);
   return Math.max(0, Math.min(balance, byRate, itemsTotal));
+}
+
+/* ── 판매정보 (3-B) ───────────────────────────────────────── */
+
+/**
+ * 상품 상세 [판매정보] 탭에 그대로 실리는 안내입니다.
+ * 전 상품 공통이라 상품마다 따로 적을 필요가 없습니다.
+ *
+ * ★ 판매자 정보(상호·사업자등록번호·대표자·연락처)는 여기에 두지 않습니다.
+ *   설정 > 스토어 정보에 이미 있는 값을 그대로 가져다 씁니다. (중복 입력 금지)
+ * ★ 배송비와 반품 주소도 비워 두면 설정 > 배송·반품 값을 그대로 씁니다.
+ */
+export type SalesSettings = {
+  /** 비워 두면 배송 설정의 기본배송비·무료배송 기준으로 문장을 만들어 씁니다. */
+  shippingNote: string;
+  deliveryPeriod: string;
+  exchangePolicy: string;
+  exchangeCost: string;
+  notAllowed: string;
+  /** 비워 두면 배송 설정의 반품 주소를 씁니다. */
+  returnAddress: string;
+  asInfo: string;
+};
+
+export const DEFAULT_SALES: SalesSettings = {
+  shippingNote: '',
+  deliveryPeriod: [
+    '결제(입금) 확인 후 2~5일 이내에 발송됩니다.',
+    '주말·공휴일은 발송이 되지 않으며, 연휴나 기상 상황에 따라 하루이틀 늦어질 수 있습니다.',
+  ].join('\n'),
+  exchangePolicy: [
+    '상품을 받으신 날부터 7일 이내에 교환·반품을 신청하실 수 있습니다.',
+    '상품에 하자가 있거나 표시와 다른 경우에는 받으신 날부터 3개월 이내, 그 사실을 안 날부터 30일 이내에 신청하실 수 있습니다.',
+    '신청은 고객센터 또는 1:1 문의로 접수해 주세요.',
+  ].join('\n'),
+  exchangeCost: [
+    '단순 변심으로 교환·반품하실 때는 왕복 배송비를 부담해 주셔야 합니다.',
+    '상품 불량이나 오배송일 때는 저희가 부담합니다.',
+  ].join('\n'),
+  notAllowed: [
+    '· 사용하셨거나 세탁하신 경우',
+    '· 택(TAG)을 떼거나 상품 포장을 훼손하신 경우',
+    '· 향수·화장품 냄새, 오염, 애완동물 털 등이 묻은 경우',
+    '· 시간이 지나 재판매가 어려워진 경우',
+  ].join('\n'),
+  returnAddress: '',
+  asInfo: [
+    '착용 중 발생한 하자는 구입일로부터 1년 이내에 무상으로 확인해 드립니다.',
+    '수선이 필요한 경우 고객센터로 먼저 연락 주세요.',
+  ].join('\n'),
+};
+
+/* ── 문구 · 이벤트 (3-B) ──────────────────────────────────── */
+
+/** 화면 맨 위에 한 줄로 걸리는 띠배너 */
+export type RibbonSettings = {
+  enabled: boolean;
+  text: string;
+  linkUrl: string;
+  /** 디자인 토큰만 씁니다. */
+  tone: 'ink' | 'wine' | 'stone';
+  /** YYYY-MM-DD. 비워 두면 제한 없음 */
+  startsAt: string;
+  endsAt: string;
+};
+
+export type EventSettings = {
+  /** 가입 완료 화면 문구. {points} 자리에 지급 포인트가 들어갑니다. */
+  signupComplete: string;
+  /** 마이페이지 첫 방문 시 보여 줄 가입 축하 안내 */
+  mypageWelcome: string;
+  /** 상품 목록·상세의 적립 안내. {points} 자리에 계산된 적립 포인트가 들어갑니다. */
+  earnNotice: string;
+  ribbon: RibbonSettings;
+};
+
+export const DEFAULT_EVENT: EventSettings = {
+  signupComplete:
+    '가입해 주셔서 고맙습니다. 축하 포인트 {points}P 를 드렸습니다. 주문하실 때 바로 쓰실 수 있습니다.',
+  mypageWelcome:
+    '첫 방문을 환영합니다. 가입 축하 포인트가 들어와 있으니 마음에 드는 상품을 찾아보세요.',
+  earnNotice: '구매 시 {points}P 적립',
+  ribbon: {
+    enabled: false,
+    text: '',
+    linkUrl: '',
+    tone: 'ink',
+    startsAt: '',
+    endsAt: '',
+  },
+};
+
+export const RIBBON_TONES = [
+  { key: 'ink', label: '먹색 (기본)' },
+  { key: 'wine', label: '와인' },
+  { key: 'stone', label: '연회색' },
+] as const;
+
+/** 문구 안의 {points} 같은 치환자를 채웁니다. */
+export function fillTokens(text: string, values: Record<string, string>): string {
+  return text.replace(/\{(\w+)\}/g, (match, key: string) =>
+    key in values ? values[key] : match
+  );
+}
+
+/** 띠배너를 지금 보여 줘야 하는지 (YYYY-MM-DD 기준, 한국시간) */
+export function isRibbonActive(ribbon: RibbonSettings, today: string): boolean {
+  if (!ribbon.enabled || !ribbon.text.trim()) return false;
+  if (ribbon.startsAt && today < ribbon.startsAt) return false;
+  if (ribbon.endsAt && today > ribbon.endsAt) return false;
+  return true;
 }
 
 /* ── 팝업 (3-A) ───────────────────────────────────────────── */

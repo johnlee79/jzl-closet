@@ -307,10 +307,10 @@ export default function ReviewForm({
 
       {expected > 0 ? (
         <p className="mt-6 border border-stone px-5 py-4 text-[14px] leading-relaxed text-ink">
-          지금 등록하시면 <strong>{formatPrice(expected)}원</strong> 포인트가 적립됩니다.
+          지금 등록하시면 <strong>{formatPrice(expected)}P</strong> 가 적립됩니다.
           {attachments.length === 0 && pointText.photo > pointText.text ? (
             <span className="mt-1 block text-[13px] text-muted">
-              사진을 함께 올리시면 {formatPrice(pointText.photo)}원을 드립니다.
+              사진 첨부 시 {formatPrice(pointText.photo)}P 적립
             </span>
           ) : null}
         </p>

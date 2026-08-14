@@ -4,8 +4,12 @@ import { createContext, useContext } from 'react';
 import { FALLBACK_BRANDS, type Brand } from '@/lib/brands';
 import { FALLBACK_CATEGORIES, type Category } from '@/lib/categories';
 import {
+  DEFAULT_EVENT,
+  DEFAULT_POINTS,
   DEFAULT_SHIPPING,
   DEFAULT_STORE,
+  type EventSettings,
+  type PointSettings,
   type ShippingSettings,
   type StoreSettings,
 } from '@/lib/site-config';
@@ -25,6 +29,10 @@ export type SiteData = {
   brands: Brand[];
   store: StoreSettings;
   shipping: ShippingSettings;
+  /** 적립률 — 상품 카드의 "구매 시 N P 적립" 을 화면에서 계산합니다. */
+  points: PointSettings;
+  /** 적립 안내 문구 형식 */
+  event: EventSettings;
 };
 
 const FALLBACK: SiteData = {
@@ -32,6 +40,8 @@ const FALLBACK: SiteData = {
   brands: FALLBACK_BRANDS,
   store: DEFAULT_STORE,
   shipping: DEFAULT_SHIPPING,
+  points: DEFAULT_POINTS,
+  event: DEFAULT_EVENT,
 };
 
 const SiteContext = createContext<SiteData>(FALLBACK);

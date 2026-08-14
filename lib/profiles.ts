@@ -1,5 +1,7 @@
 import 'server-only';
+import { assertWritten } from '@/lib/db-write';
 
+import { toProvider, type AuthProvider } from '@/lib/auth-provider';
 import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
 
 /**
@@ -23,6 +25,10 @@ export function missingProfilesTableError(): Error {
 
 export type MemberStatus = 'active' | 'inactive' | 'withdrawn';
 
+// 가입 경로 판단은 클라이언트 컴포넌트에서도 필요해 lib/auth-provider.ts 로 뺐습니다.
+export { SOCIAL_PROVIDERS, isSocialProvider, providerLabel } from '@/lib/auth-provider';
+export type { AuthProvider } from '@/lib/auth-provider';
+
 export type Profile = {
   id: string;
   name: string;
@@ -42,6 +48,14 @@ export type Profile = {
   adminMemo: string;
   /** 보유 포인트. 바꿀 때는 lib/points.ts 의 changePoints 만 씁니다. */
   pointBalance: number;
+  /** 30일 안에 소멸될 포인트. DB 가 미리 채워 둔 값을 그대로 읽습니다. */
+  pointExpiringSoon: number;
+  /** 가입 경로. google·kakao·naver 면 비밀번호 화면을 보여 주지 않습니다. */
+  provider: AuthProvider;
+  /** 생일 (YYYY-MM-DD). 생일 축하 포인트에 씁니다. */
+  birthday: string;
+  /** 생일 포인트를 마지막으로 받은 연도 */
+  birthdayPointYear: number | null;
   createdAt: string | null;
   updatedAt: string | null;
 };
@@ -65,6 +79,11 @@ type ProfileRow = {
   admin_memo: string | null;
   /** 3-A 에서 추가한 컬럼. 아직 없을 수 있어 선택 항목으로 둡니다. */
   point_balance?: number | null;
+  /** 3-B 에서 추가한 컬럼들. 마찬가지로 선택 항목입니다. */
+  point_expiring_soon?: number | null;
+  provider?: string | null;
+  birthday?: string | null;
+  birthday_point_year?: number | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -92,6 +111,10 @@ function rowToProfile(row: ProfileRow): Profile {
     withdrawnAt: row.withdrawn_at,
     adminMemo: row.admin_memo ?? '',
     pointBalance: row.point_balance ?? 0,
+    pointExpiringSoon: row.point_expiring_soon ?? 0,
+    provider: toProvider(row.provider),
+    birthday: row.birthday ?? '',
+    birthdayPointYear: row.birthday_point_year ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -263,6 +286,30 @@ export async function countMembersByStatus(): Promise<Record<string, number>> {
   return result;
 }
 
+/**
+ * 이메일로 가입 경로만 확인합니다.
+ *
+ * ★ 비밀번호 찾기 화면에서 씁니다.
+ *   회원이 아니면 null 을 돌려주지만, 화면에서는 그 사실을 절대 알려 주지 않습니다.
+ *   (가입 여부가 새어 나가면 계정 목록을 긁어 갈 수 있습니다)
+ *   간편가입일 때만 "소셜로 로그인하세요" 안내를 예외적으로 보여 줍니다.
+ */
+export async function getProviderByEmail(email: string): Promise<AuthProvider | null> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('provider, status')
+    .eq('email', email.trim().toLowerCase())
+    .maybeSingle();
+
+  if (error || !data) return null;
+  const row = data as { provider: string | null; status: string | null };
+  if (toStatus(row.status) === 'withdrawn') return null;
+  return toProvider(row.provider);
+}
+
 /* ------------------------------------------------------------------
  * 쓰기
  * ------------------------------------------------------------------ */
@@ -279,6 +326,9 @@ export type ProfileInput = {
   agreePrivacy: boolean;
   agreeAge14: boolean;
   agreeMarketing: boolean;
+  /** 비워 두면 이메일 가입으로 봅니다. */
+  provider?: AuthProvider;
+  birthday?: string;
 };
 
 /** 가입 직후 프로필을 만듭니다. 동의 시각을 함께 남깁니다. */
@@ -298,6 +348,8 @@ export async function createProfile(input: ProfileInput): Promise<void> {
       agree_privacy: input.agreePrivacy,
       agree_age14: input.agreeAge14,
       agree_marketing: input.agreeMarketing,
+      provider: input.provider ?? 'email',
+      birthday: input.birthday?.trim() || null,
       // ★ 분쟁이 생기면 이 시각이 증거가 됩니다.
       agreed_at: new Date().toISOString(),
     },
@@ -329,6 +381,8 @@ export async function ensureProfile(input: {
   email: string;
   /** 구글이 준 이름. 없으면 이메일 앞부분을 씁니다. */
   name?: string;
+  /** 어느 소셜로 들어왔는지. 비워 두면 google 로 봅니다. */
+  provider?: AuthProvider;
 }): Promise<boolean> {
   const supabase = requireSupabaseAdmin();
   const email = input.email.trim().toLowerCase();
@@ -341,6 +395,8 @@ export async function ensureProfile(input: {
     const patch: Record<string, unknown> = {};
     if (!existing.name) patch.name = name;
     if (!existing.email && email) patch.email = email;
+    // 이메일로 가입했다가 소셜을 붙인 계정은 provider 를 바꾸지 않습니다.
+    // (비밀번호가 이미 있으므로 비밀번호 변경 화면이 계속 필요합니다)
 
     if (Object.keys(patch).length > 0) {
       await supabase.from(TABLE).update(patch).eq('id', input.id);
@@ -353,6 +409,7 @@ export async function ensureProfile(input: {
     name,
     email,
     status: 'active',
+    provider: input.provider ?? 'google',
     agree_terms: true,
     agree_privacy: true,
     agree_age14: true,
@@ -379,6 +436,7 @@ export async function updateProfile(
     address1?: string;
     address2?: string;
     agreeMarketing?: boolean;
+    birthday?: string;
   }
 ): Promise<void> {
   const supabase = requireSupabaseAdmin();
@@ -389,9 +447,12 @@ export async function updateProfile(
   if (patch.address1 !== undefined) row.address1 = patch.address1.trim() || null;
   if (patch.address2 !== undefined) row.address2 = patch.address2.trim() || null;
   if (patch.agreeMarketing !== undefined) row.agree_marketing = patch.agreeMarketing;
+  if (patch.birthday !== undefined) row.birthday = patch.birthday.trim() || null;
 
-  const { error } = await supabase.from(TABLE).update(row).eq('id', userId);
-  if (error) throw new Error(`회원 정보를 수정하지 못했습니다: ${error.message}`);
+  assertWritten(
+    await supabase.from(TABLE).update(row).eq('id', userId).select('id'),
+    '회원 정보를 수정하지 못했습니다'
+  );
 }
 
 /** 관리자용 — 상태와 메모까지 고칠 수 있습니다. */
@@ -406,6 +467,7 @@ export async function adminUpdateProfile(
     address2?: string;
     status?: MemberStatus;
     adminMemo?: string;
+    birthday?: string;
   }
 ): Promise<void> {
   const supabase = requireSupabaseAdmin();
@@ -418,9 +480,12 @@ export async function adminUpdateProfile(
   if (patch.address2 !== undefined) row.address2 = patch.address2.trim() || null;
   if (patch.status !== undefined) row.status = patch.status;
   if (patch.adminMemo !== undefined) row.admin_memo = patch.adminMemo.trim() || null;
+  if (patch.birthday !== undefined) row.birthday = patch.birthday.trim() || null;
 
-  const { error } = await supabase.from(TABLE).update(row).eq('id', userId);
-  if (error) throw new Error(`회원 정보를 수정하지 못했습니다: ${error.message}`);
+  assertWritten(
+    await supabase.from(TABLE).update(row).eq('id', userId).select('id'),
+    '회원 정보를 수정하지 못했습니다'
+  );
 }
 
 export async function touchLastLogin(userId: string): Promise<void> {
@@ -434,29 +499,82 @@ export async function touchLastLogin(userId: string): Promise<void> {
 }
 
 /**
- * 탈퇴.
- * ★ 주문 내역은 지우지 않습니다. 전자상거래법상 거래기록은 5년 보관 의무가 있습니다.
- *   개인정보 필드만 마스킹하고 status 를 withdrawn 으로 바꿉니다.
+ * 탈퇴 — 개인정보는 지우고 거래 기록은 남깁니다.
+ *
+ * ★ 주문 내역은 삭제하지 않습니다. 전자상거래법상 거래기록은 5년 보관 의무가 있습니다.
+ *   또 JZL CLOSET 은 위탁배송 구조라, 이미 발송 요청이 나간 주문의 정보가 사라지면
+ *   배송 사고에 대응할 수 없습니다.
+ *
+ * 처리 내용
+ *   · 회원 계정: 이름·연락처·주소·이메일을 지우고 status 를 withdrawn 으로 (로그인 차단)
+ *   · 주문 기록: 주문번호·금액·상품·일자는 그대로 두고 이름·연락처·주소만 마스킹
+ *   · 리뷰: 글은 남기고 작성자명만 '탈퇴회원' 으로
+ *   · 포인트: 잔액을 0 으로 소멸 (복구 불가)
  */
 export async function withdrawProfile(userId: string, reason: string): Promise<void> {
   const supabase = requireSupabaseAdmin();
   const now = new Date().toISOString();
 
-  const { error } = await supabase
-    .from(TABLE)
-    .update({
-      name: '탈퇴회원',
-      phone: null,
-      email: null,
-      postcode: null,
-      address1: null,
-      address2: null,
-      status: 'withdrawn',
-      withdrawn_at: now,
-      agree_marketing: false,
-      admin_memo: reason.trim() ? `[탈퇴 사유] ${reason.trim()}` : '[탈퇴]',
-    })
-    .eq('id', userId);
+  // 1) 보유 포인트 소멸 — 잔액과 내역을 함께 남기기 위해 DB 함수를 씁니다.
+  const before = await getProfile(userId);
+  if (before && before.pointBalance > 0) {
+    try {
+      await supabase.rpc('apply_point_change', {
+        p_user_id: userId,
+        p_amount: -before.pointBalance,
+        p_reason: 'withdraw',
+        p_memo: '탈퇴로 소멸',
+      });
+    } catch {
+      // 포인트 소멸이 실패해도 탈퇴 자체는 막지 않습니다. (로그인은 아래에서 차단됩니다)
+    }
+  }
 
-  if (error) throw new Error(`탈퇴 처리에 실패했습니다: ${error.message}`);
+  // 2) 주문 기록 익명화 — 금액·상품·일자는 그대로 둡니다.
+  await supabase
+    .from('orders')
+    .update({
+      // ★ orderer_phone · receiver_phone 은 not null 컬럼이라 빈 문자열로 지웁니다.
+      orderer_name: '탈퇴회원',
+      orderer_phone: '',
+      orderer_email: null,
+      receiver_name: '탈퇴회원',
+      receiver_phone: '',
+      address2: null,
+      delivery_memo: null,
+    })
+    .eq('user_id', userId);
+
+  // 3) 리뷰는 남기고 작성자명만 가립니다.
+  await supabase.from('reviews').update({ writer_name: '탈퇴회원' }).eq('user_id', userId);
+
+  // 4) 문의도 같은 방식으로 가립니다.
+  await supabase
+    .from('inquiries')
+    .update({ writer_name: '탈퇴회원', writer_phone: null, writer_email: null })
+    .eq('user_id', userId);
+
+  // 5) 회원 계정
+  assertWritten(
+    await supabase
+      .from(TABLE)
+      .update({
+        name: '탈퇴회원',
+        phone: null,
+        email: null,
+        postcode: null,
+        address1: null,
+        address2: null,
+        birthday: null,
+        status: 'withdrawn',
+        withdrawn_at: now,
+        agree_marketing: false,
+        point_balance: 0,
+        point_expiring_soon: 0,
+        admin_memo: reason.trim() ? `[탈퇴 사유] ${reason.trim()}` : '[탈퇴]',
+      })
+      .eq('id', userId)
+      .select('id'),
+    '탈퇴 처리에 실패했습니다'
+  );
 }

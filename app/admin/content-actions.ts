@@ -115,6 +115,11 @@ export async function createAdminReviewAction(input: {
   content: string;
   attachments: string[];
   isSponsored: boolean;
+  /**
+   * 화면에 보여 줄 작성일. 'YYYY-MM-DD' 또는 'YYYY-MM-DDTHH:mm'.
+   * 비워 두면 지금 시각을 씁니다.
+   */
+  writtenAt?: string;
 }): Promise<ActionResult> {
   if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
@@ -130,6 +135,21 @@ export async function createAdminReviewAction(input: {
 
   const product = await getProductBySlug(input.productSlug);
   if (!product) return { ok: false, error: '상품을 찾을 수 없습니다.' };
+
+  // ★ 작성일 — 미래 날짜는 받지 않습니다. 최신순에서 영원히 맨 위에 붙습니다.
+  let writtenAt = '';
+  if (input.writtenAt?.trim()) {
+    const raw = input.writtenAt.trim();
+    // 시간을 비우면 그날 정오로 둡니다. (00:00 이면 같은 날 후기 사이에서 항상 뒤로 밀립니다)
+    const parsed = new Date(raw.includes('T') ? raw : `${raw}T12:00`);
+    if (Number.isNaN(parsed.getTime())) {
+      return { ok: false, error: '작성일 형식을 확인해 주세요.' };
+    }
+    if (parsed.getTime() > Date.now()) {
+      return { ok: false, error: '작성일을 미래로 지정할 수 없습니다.' };
+    }
+    writtenAt = parsed.toISOString();
+  }
 
   // 태그는 설정에 있는 것만 받습니다.
   const settings = await getReviewSettings();
@@ -149,6 +169,7 @@ export async function createAdminReviewAction(input: {
       content,
       attachments: input.attachments.slice(0, MAX_REVIEW_ATTACHMENTS),
       isSponsored: input.isSponsored,
+      writtenAt,
     });
   } catch (error) {
     return fail(error, '리뷰를 저장하지 못했습니다.');

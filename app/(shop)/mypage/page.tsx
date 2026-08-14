@@ -1,10 +1,12 @@
 import Link from 'next/link';
+import WelcomeNotice from '@/components/WelcomeNotice';
 import { getActiveMember } from '@/lib/auth';
 import { countInquiriesOfUser } from '@/lib/inquiries';
 import { statusLabel } from '@/lib/order-status';
 import { countOrdersOfUser, getOrdersOfUser } from '@/lib/orders';
 import { formatDate } from '@/lib/format';
 import { formatPrice } from '@/lib/product-utils';
+import { getCachedEvent } from '@/lib/settings';
 
 export const metadata = { title: '요약' };
 
@@ -19,17 +21,26 @@ export default async function MypageHomePage() {
   const member = await getActiveMember();
   if (!member) return null;
 
-  const [counts, recent, inquiryCounts] = await Promise.all([
+  const [counts, recent, inquiryCounts, event] = await Promise.all([
     countOrdersOfUser(member.user.id),
     getOrdersOfUser(member.user.id),
     countInquiriesOfUser(member.user.id),
+    getCachedEvent(),
   ]);
+
+  // 가입 축하 안내 — 최근 7일 안에 가입한 회원에게만, 브라우저에서 한 번만 보여 줍니다.
+  const joined = member.profile.createdAt
+    ? Date.now() - new Date(member.profile.createdAt).getTime()
+    : Number.MAX_SAFE_INTEGER;
+  const showWelcome = joined < 7 * 24 * 60 * 60 * 1000;
 
   const totalOrders = Object.values(counts).reduce((sum, value) => sum + value, 0);
   const pendingInquiries = inquiryCounts.pending ?? 0;
 
   return (
     <div className="flex flex-col gap-12">
+      {showWelcome ? <WelcomeNotice message={event.mypageWelcome} /> : null}
+
       <section aria-labelledby="summary-heading">
         <h2 id="summary-heading" className="font-serif text-[20px] text-ink">
           주문 요약

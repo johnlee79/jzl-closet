@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { getActiveMember } from '@/lib/auth';
 import { claimOrder, getOrderOfUser, requestCancel } from '@/lib/orders';
 import { canRequestCancel } from '@/lib/order-status';
-import { updateProfile, withdrawProfile } from '@/lib/profiles';
+import { isSocialProvider, updateProfile, withdrawProfile } from '@/lib/profiles';
 import { getPaymentSettings } from '@/lib/settings';
 import { createAuthClient } from '@/lib/supabase/auth-server';
 import { notifyCancelRequest } from '@/lib/telegram';
@@ -23,6 +23,9 @@ function needLogin(): { ok: false; error: string } {
   return { ok: false, error: '로그인이 필요합니다. 다시 로그인해 주세요.' };
 }
 
+/** 간편가입 회원이 탈퇴할 때 직접 입력해야 하는 문구 */
+const WITHDRAW_PHRASE = '탈퇴합니다';
+
 /* ── 회원정보 수정 ────────────────────────────────────────── */
 
 export async function updateProfileAction(patch: {
@@ -32,11 +35,17 @@ export async function updateProfileAction(patch: {
   address1: string;
   address2: string;
   agreeMarketing: boolean;
+  birthday: string;
 }): Promise<ActionResult> {
   const member = await getActiveMember();
   if (!member) return needLogin();
 
   if (!patch.name.trim()) return { ok: false, error: '이름을 입력해 주세요.' };
+
+  // 생년월일에 미래 날짜가 들어오면 생일 포인트가 영원히 지급되지 않습니다.
+  if (patch.birthday && patch.birthday > new Date().toISOString().slice(0, 10)) {
+    return { ok: false, error: '생년월일을 다시 확인해 주세요.' };
+  }
 
   try {
     await updateProfile(member.user.id, patch);
@@ -120,14 +129,33 @@ export async function memberCancelRequestAction(
  */
 export async function withdrawAction(
   reason: string,
-  confirmText: string
+  confirmText: string,
+  /** 이메일 가입 회원만 씁니다. 간편가입 회원은 비워 둡니다. */
+  password = ''
 ): Promise<ActionResult> {
   const member = await getActiveMember();
   if (!member) return needLogin();
 
-  // 실수로 누르는 것을 막기 위해 한 번 더 확인합니다.
-  if (confirmText.trim() !== '탈퇴') {
-    return { ok: false, error: '확인란에 "탈퇴" 를 정확히 입력해 주세요.' };
+  const social = isSocialProvider(member.profile.provider);
+
+  // ★ 본인 확인
+  //   이메일 가입 회원은 비밀번호로, 간편가입 회원은 문구 입력으로 확인합니다.
+  //   (간편가입 계정에는 JZL CLOSET 에 비밀번호가 없습니다)
+  if (social) {
+    if (confirmText.trim() !== WITHDRAW_PHRASE) {
+      return { ok: false, error: `확인란에 "${WITHDRAW_PHRASE}" 를 정확히 입력해 주세요.` };
+    }
+  } else {
+    if (!password) return { ok: false, error: '비밀번호를 입력해 주세요.' };
+
+    const auth = createAuthClient();
+    if (!auth) return { ok: false, error: '로그인 정보를 확인하지 못했습니다.' };
+
+    const { error } = await auth.auth.signInWithPassword({
+      email: member.user.email,
+      password,
+    });
+    if (error) return { ok: false, error: '비밀번호가 맞지 않습니다.' };
   }
 
   try {

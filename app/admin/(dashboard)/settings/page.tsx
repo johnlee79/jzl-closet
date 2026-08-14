@@ -1,17 +1,21 @@
 import Link from 'next/link';
 import AnalyticsForm from '@/components/admin/AnalyticsForm';
+import EventForm from '@/components/admin/EventForm';
 import FaviconUploader from '@/components/admin/FaviconUploader';
 import LogoUploader from '@/components/admin/LogoUploader';
 import PaymentForm from '@/components/admin/PaymentForm';
 import RewardForm from '@/components/admin/RewardForm';
+import SalesInfoForm from '@/components/admin/SalesInfoForm';
 import ShippingForm from '@/components/admin/ShippingForm';
 import StoreSettingsForm from '@/components/admin/StoreSettingsForm';
 import {
   getAnalyticsSettings,
   getBranding,
+  getEventSettings,
   getPaymentSettings,
   getPointSettings,
   getReviewSettings,
+  getSalesSettings,
   getShippingSettings,
   getStoreSettings,
 } from '@/lib/settings';
@@ -28,6 +32,8 @@ const TABS = [
   { key: 'shipping', label: '배송·반품' },
   { key: 'payment', label: '결제·주문' },
   { key: 'reward', label: '리뷰·포인트' },
+  { key: 'sales', label: '판매정보' },
+  { key: 'event', label: '문구·이벤트' },
   { key: 'export', label: '데이터 내보내기' },
   { key: 'analytics', label: '분석 (GA4)' },
 ] as const;
@@ -45,15 +51,18 @@ export default async function AdminSettingsPage({
 }) {
   const tab: TabKey = isTab(searchParams.tab) ? searchParams.tab : 'store';
 
-  const [store, branding, shipping, analytics, payment, points, review] = await Promise.all([
-    getStoreSettings(),
-    getBranding(),
-    getShippingSettings(),
-    getAnalyticsSettings(),
-    getPaymentSettings(),
-    getPointSettings(),
-    getReviewSettings(),
-  ]);
+  const [store, branding, shipping, analytics, payment, points, review, sales, event] =
+    await Promise.all([
+      getStoreSettings(),
+      getBranding(),
+      getShippingSettings(),
+      getAnalyticsSettings(),
+      getPaymentSettings(),
+      getPointSettings(),
+      getReviewSettings(),
+      getSalesSettings(),
+      getEventSettings(),
+    ]);
 
   return (
     <div className="mx-auto w-full max-w-[900px]">
@@ -109,6 +118,12 @@ export default async function AdminSettingsPage({
             telegramConfigured={isTelegramConfigured()}
           />
         ) : null}
+
+        {tab === 'sales' ? (
+          <SalesInfoForm initial={sales} shipping={shipping} store={store} />
+        ) : null}
+
+        {tab === 'event' ? <EventForm initial={event} points={points} /> : null}
 
         {tab === 'payment' ? (
           <PaymentForm initial={payment} telegramConfigured={isTelegramConfigured()} />

@@ -5,12 +5,14 @@ import Script from 'next/script';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import SafeImage from '@/components/SafeImage';
+import { useSite } from '@/components/SiteProvider';
 import { placeOrderAction, quoteShippingAction } from '@/app/(shop)/checkout/actions';
 import { useCart } from '@/lib/cart';
 import { formatPhone } from '@/lib/format';
 import { formatPrice } from '@/lib/product-utils';
 import {
   PAYMENT_METHODS,
+  expectedPurchasePoints,
   maxUsablePoints,
   type ShippingSettings,
 } from '@/lib/site-config';
@@ -178,12 +180,21 @@ export default function CheckoutForm({
   /* ── 포인트 사용 ─────────────────────────────────────
    * ★ 화면에서 미리 깎아 보여 주지만, 실제 금액은 서버가 다시 계산합니다. */
   const [usePoints, setUsePoints] = useState(0);
+  /** 적립률은 사이트 설정에서 읽습니다. (조회를 추가하지 않습니다) */
+  const { points: sitePoints } = useSite();
 
   const pointLimit = points ? maxUsablePoints(total, points.balance, points) : 0;
   const canUsePoints = Boolean(
     points && points.balance > 0 && pointLimit >= (points.minUse || 0)
   );
   const appliedPoints = canUsePoints ? Math.min(usePoints, pointLimit) : 0;
+
+  // ★ 이번 주문으로 쌓일 예상 적립.
+  //   기준은 배송비를 뺀 상품금액에서 쓴 포인트를 뺀 값입니다. (서버 계산과 같습니다)
+  const expectedEarn = expectedPurchasePoints(
+    Math.max(0, total - appliedPoints),
+    sitePoints
+  );
 
   const totalAmount = Math.max(
     0,
@@ -822,6 +833,14 @@ export default function CheckoutForm({
                     </p>
                   )}
                 </div>
+              ) : null}
+
+              {/* ★ 이번 주문으로 쌓일 예상 적립. 화면에서 계산합니다. */}
+              {expectedEarn > 0 ? (
+                <p className="mt-4 border-t border-stone pt-4 text-[13px] leading-relaxed text-wine">
+                  이번 주문으로 {formatPrice(expectedEarn)}P 가 적립될 예정입니다.
+                  <span className="ml-1 text-muted">(배송완료 시점에 지급)</span>
+                </p>
               ) : null}
 
               {freeShippingLeft > 0 ? (

@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { getPointSettings } from '@/lib/settings';
+import { expectedPurchasePoints, type PointSettings } from '@/lib/site-config';
 import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
 
 /**
@@ -24,9 +25,13 @@ export type PointReason =
   | 'signup'
   | 'review_text'
   | 'review_photo'
+  | 'purchase'
+  | 'birthday'
   | 'order_use'
   | 'admin'
-  | 'cancel';
+  | 'cancel'
+  | 'expire'
+  | 'withdraw';
 
 export type PointTransaction = {
   id: string;
@@ -110,9 +115,14 @@ export async function changePoints(
   amount: number,
   reason: PointReason,
   memo = '',
-  refId: string | null = null
+  refId: string | null = null,
+  /** 적립 건의 만료 시각. 비워 두면 설정의 유효기간으로 계산합니다. */
+  expiresAt?: string | null
 ): Promise<number | null> {
   if (amount === 0) return getPointBalance(userId);
+
+  const expiry =
+    amount > 0 ? (expiresAt === undefined ? await defaultExpiry() : expiresAt) : null;
 
   const supabase = requireSupabaseAdmin();
   const { data, error } = await supabase.rpc('apply_point_change', {
@@ -121,6 +131,7 @@ export async function changePoints(
     p_reason: reason,
     p_memo: memo || null,
     p_ref_id: refId,
+    p_expires_at: expiry,
   });
 
   if (error) {
@@ -158,6 +169,18 @@ export async function tryEarnPoints(
   }
 }
 
+/**
+ * 적립 포인트의 만료 시각.
+ * 설정의 유효기간(개월)을 더합니다. 0 이면 만료하지 않습니다(null).
+ */
+async function defaultExpiry(): Promise<string | null> {
+  const settings = await getPointSettings();
+  if (settings.expireMonths <= 0) return null;
+  const date = new Date();
+  date.setMonth(date.getMonth() + settings.expireMonths);
+  return date.toISOString();
+}
+
 /* ------------------------------------------------------------------
  * 규칙에 따른 적립
  * ------------------------------------------------------------------ */
@@ -193,6 +216,86 @@ export async function earnReviewPoints(
   return rule.amount;
 }
 
+/**
+ * 구매 적립 — 배송완료·구매확정 시점에 지급합니다.
+ *
+ * ★ 주문 즉시 주지 않습니다. 취소·반품 때 회수가 복잡해집니다.
+ * ★ orders.points_earned 로 중복 지급을 막습니다.
+ *   (관리자가 배송완료 → 결제완료 → 배송완료로 왔다 갔다 해도 한 번만 나갑니다)
+ *
+ * @param baseAmount 적립 기준 금액. 배송비를 뺀 상품금액에서 사용 포인트를 뺀 값입니다.
+ * @returns 실제로 적립한 금액
+ */
+export async function earnPurchasePoints(
+  userId: string,
+  orderId: string,
+  baseAmount: number
+): Promise<number> {
+  const settings = await getPointSettings();
+  const amount = expectedPurchasePoints(baseAmount, settings);
+  if (amount <= 0) return 0;
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return 0;
+
+  // 이미 지급한 주문인지 확인합니다.
+  const { data, error } = await supabase
+    .from('orders')
+    .select('points_earned')
+    .eq('id', orderId)
+    .maybeSingle();
+
+  // points_earned 컬럼이 아직 없으면(schema-3b.sql 미실행) 지급하지 않습니다.
+  // 중복 지급을 막을 방법이 없는 상태에서 주는 것보다 안 주는 쪽이 안전합니다.
+  if (error || !data) return 0;
+  if (((data as { points_earned: number | null }).points_earned ?? 0) > 0) return 0;
+
+  await tryEarnPoints(userId, amount, 'purchase', '구매 적립', orderId);
+
+  await supabase.from('orders').update({ points_earned: amount }).eq('id', orderId);
+  return amount;
+}
+
+/**
+ * 생일 축하 포인트 — 연 1회.
+ *
+ * ★ 이미 읽어 둔 회원 정보를 그대로 받습니다. 조회를 추가하지 않습니다.
+ *   생일이 아니거나 올해 이미 받았으면 아무 일도 하지 않고 바로 돌아갑니다.
+ * @returns 실제로 지급한 금액
+ */
+export async function earnBirthdayPoints(
+  profile: { id: string; birthday: string; birthdayPointYear: number | null },
+  settings: PointSettings
+): Promise<number> {
+  if (!settings.birthday.enabled || settings.birthday.amount <= 0) return 0;
+  if (!profile.birthday) return 0;
+
+  // 한국 시간 기준 오늘 날짜
+  const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const year = Number(today.slice(0, 4));
+
+  if (profile.birthday.slice(5) !== today.slice(5)) return 0;
+  if (profile.birthdayPointYear === year) return 0;
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return 0;
+
+  // ★ 먼저 "올해 받았음" 표시를 남깁니다.
+  //   새로고침을 여러 번 해도 한 번만 지급되게 하기 위해서입니다.
+  const claim = await supabase
+    .from('profiles')
+    .update({ birthday_point_year: year })
+    .eq('id', profile.id)
+    .neq('birthday_point_year', year)
+    .select('id');
+
+  // 컬럼이 없거나(schema-3b.sql 미실행) 이미 다른 요청이 가져갔으면 지급하지 않습니다.
+  if (claim.error || (claim.data ?? []).length === 0) return 0;
+
+  await tryEarnPoints(profile.id, settings.birthday.amount, 'birthday', '생일 축하');
+  return settings.birthday.amount;
+}
+
 /** 이 주문에서 적립했던 리뷰 포인트를 회수합니다. (주문 취소 시) */
 export async function revokeOrderPoints(
   userId: string,
@@ -204,9 +307,27 @@ export async function revokeOrderPoints(
     await tryEarnPoints(userId, usedPoints, 'cancel', '주문 취소 반환', orderId);
   }
 
-  // 2) 이 주문의 상품에 쓴 리뷰로 적립된 포인트를 회수합니다.
   const supabase = getSupabaseAdmin();
   if (!supabase) return;
+
+  // 2) 구매 적립분을 회수합니다.
+  const { data: orderRow } = await supabase
+    .from('orders')
+    .select('points_earned')
+    .eq('id', orderId)
+    .maybeSingle();
+
+  const purchased = (orderRow as { points_earned: number | null } | null)?.points_earned ?? 0;
+  if (purchased > 0) {
+    try {
+      await changePoints(userId, -purchased, 'cancel', '주문 취소로 구매 적립 회수', orderId);
+      await supabase.from('orders').update({ points_earned: 0 }).eq('id', orderId);
+    } catch (error) {
+      console.warn('[points] 구매 적립 회수 실패(잔액 부족일 수 있음):', orderId, error);
+    }
+  }
+
+  // 3) 이 주문의 상품에 쓴 리뷰로 적립된 포인트를 회수합니다.
 
   const { data } = await supabase
     .from('reviews')

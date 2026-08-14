@@ -9,9 +9,11 @@ import {
   BRANDING_KEY,
   COPY_KEY,
   DESIGN_KEY,
+  EVENT_KEY,
   PAYMENT_KEY,
   POINTS_KEY,
   REVIEW_KEY,
+  SALES_KEY,
   SETTINGS_TAG,
   SHIPPING_KEY,
   STORE_KEY,
@@ -19,9 +21,11 @@ import {
   getCopySettings,
   normalizeAnalytics,
   normalizeDesign,
+  normalizeEvent,
   normalizePayment,
   normalizePoints,
   normalizeReview,
+  normalizeSales,
   normalizeShipping,
   normalizeStore,
   writeSetting,
@@ -33,9 +37,11 @@ import {
   type CopyKey,
   type CopySection,
   type DesignSettings,
+  type EventSettings,
   type PaymentSettings,
   type PointSettings,
   type ReviewSettings,
+  type SalesSettings,
   type ShippingSettings,
   type StoreSettings,
 } from '@/lib/site-config';
@@ -179,6 +185,15 @@ export async function saveRewardAction(
   if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   if (points.minUse < 0) return { ok: false, error: '최소 사용 금액은 0 이상이어야 합니다.' };
+  if (points.purchase.amount < 0 || points.purchase.amount > 100) {
+    return { ok: false, error: '구매 적립률은 0~100 사이로 넣어 주세요.' };
+  }
+  if (points.expireMonths < 0 || points.expireMonths > 120) {
+    return { ok: false, error: '포인트 유효기간은 0~120개월 사이로 넣어 주세요.' };
+  }
+  if (points.popupIntervalHours < 1) {
+    return { ok: false, error: '팝업 재표시 간격은 1시간 이상으로 넣어 주세요.' };
+  }
   if (points.maxUseRate < 0 || points.maxUseRate > 100) {
     return { ok: false, error: '최대 사용 비율은 0~100 사이로 넣어 주세요.' };
   }
@@ -197,6 +212,49 @@ export async function saveRewardAction(
     return { ok: true, data: undefined };
   } catch (error) {
     return fail(error, '리뷰·포인트 설정을 저장하지 못했습니다.');
+  }
+}
+
+/* ── 3-B. 판매정보 ────────────────────────────────────────── */
+
+export async function saveSalesAction(input: SalesSettings): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  try {
+    await writeSetting(SALES_KEY, normalizeSales(input));
+    revalidateTag(SETTINGS_TAG);
+    // 전 상품의 [판매정보] 탭에 실립니다.
+    revalidatePath('/products', 'page');
+    revalidatePath('/', 'layout');
+    revalidatePath('/admin/settings');
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '판매정보를 저장하지 못했습니다.');
+  }
+}
+
+/* ── 3-B. 문구 · 이벤트 ───────────────────────────────────── */
+
+export async function saveEventAction(input: EventSettings): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  const ribbon = input.ribbon;
+  if (ribbon.enabled && !ribbon.text.trim()) {
+    return { ok: false, error: '띠배너 문구를 입력해 주세요.' };
+  }
+  if (ribbon.startsAt && ribbon.endsAt && ribbon.startsAt > ribbon.endsAt) {
+    return { ok: false, error: '띠배너 노출 기간의 시작일이 종료일보다 늦습니다.' };
+  }
+
+  try {
+    await writeSetting(EVENT_KEY, normalizeEvent(input));
+    revalidateTag(SETTINGS_TAG);
+    // 띠배너와 적립 안내는 모든 화면에 실립니다.
+    revalidatePath('/', 'layout');
+    revalidatePath('/admin/settings');
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '문구를 저장하지 못했습니다.');
   }
 }
 

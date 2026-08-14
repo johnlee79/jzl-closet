@@ -6,6 +6,8 @@ import {
   createProfile,
   emailTaken,
   getProfile,
+  getProviderByEmail,
+  isSocialProvider,
   profilesTableReady,
   touchLastLogin,
 } from '@/lib/profiles';
@@ -344,7 +346,19 @@ export async function logoutAction(): Promise<ActionResult> {
  * ------------------------------------------------------------------ */
 
 /** 재설정 메일을 보냅니다. 가입 여부를 알려 주지 않도록 항상 성공으로 답합니다. */
-export async function requestPasswordResetAction(email: string): Promise<ActionResult> {
+/**
+ * 비밀번호 재설정 메일 요청.
+ *
+ * ★ 가입 여부는 절대 알려 주지 않습니다. 가입하지 않은 주소로 요청해도
+ *   "메일을 보냈습니다" 로 똑같이 답합니다. (계정 목록을 긁어 가는 것을 막습니다)
+ *
+ * ★ 예외 하나 — 간편가입(구글·카카오·네이버) 계정입니다.
+ *   이 계정에는 비밀번호가 없어 메일을 보내도 손님이 할 수 있는 일이 없습니다.
+ *   그래서 어느 소셜로 가입했는지만 알려 주고 메일은 보내지 않습니다.
+ */
+export async function requestPasswordResetAction(
+  email: string
+): Promise<ActionResult<{ socialProvider: string }>> {
   const limited = rateLimit(`reset:${clientIp(headers())}`, 5, 60_000);
   if (!limited.ok) {
     return {
@@ -359,12 +373,19 @@ export async function requestPasswordResetAction(email: string): Promise<ActionR
   const supabase = createAuthClient();
   if (!supabase) return noAuth();
 
-  await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+  const address = email.trim().toLowerCase();
+
+  const provider = await getProviderByEmail(address);
+  if (provider && isSocialProvider(provider)) {
+    return { ok: true, data: { socialProvider: provider } };
+  }
+
+  await supabase.auth.resetPasswordForEmail(address, {
     redirectTo: `${SITE_URL}/auth/callback?next=/reset-password/update`,
   });
 
   // ★ 가입한 이메일인지 알려 주지 않기 위해 결과와 상관없이 같은 답을 합니다.
-  return { ok: true, data: undefined };
+  return { ok: true, data: { socialProvider: '' } };
 }
 
 /** 메일 링크로 들어와 새 비밀번호를 정합니다. (링크로 이미 세션이 생긴 상태) */

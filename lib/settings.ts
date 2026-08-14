@@ -9,9 +9,11 @@ import {
   DEFAULT_DESIGN,
   DEFAULT_PAYMENT,
   DEFAULT_POINTS,
+  DEFAULT_EVENT,
   DEFAULT_REMOTE_AREA_RULES,
   DEFAULT_REVIEW,
   DEFAULT_REVIEW_TAGS,
+  DEFAULT_SALES,
   DEFAULT_SHIPPING,
   DEFAULT_STORE,
   MAX_BANNERS,
@@ -24,10 +26,13 @@ import {
   type CopySection,
   type CopySettings,
   type DesignSettings,
+  type EventSettings,
   type PaymentSettings,
   type PointRule,
   type PointSettings,
   type ReviewSettings,
+  type RibbonSettings,
+  type SalesSettings,
   type ShippingSettings,
   type StoreSettings,
 } from '@/lib/site-config';
@@ -69,6 +74,8 @@ export const PAYMENT_KEY = 'payment';
 /* ── 3-A ─────────────────────────────────────────────────── */
 export const REVIEW_KEY = 'review';
 export const POINTS_KEY = 'points';
+export const SALES_KEY = 'sales';
+export const EVENT_KEY = 'event';
 
 /** 테이블이 아직 없을 때 PostgREST 가 돌려주는 코드들 */
 const MISSING_TABLE_CODES = new Set(['42P01', 'PGRST205', 'PGRST202']);
@@ -488,12 +495,24 @@ export function normalizePoints(value: unknown): PointSettings {
   const raw = value as Record<string, unknown>;
 
   const rate = count(raw.maxUseRate, DEFAULT_POINTS.maxUseRate);
+  const interval = count(raw.popupIntervalHours, DEFAULT_POINTS.popupIntervalHours);
+
   return {
     signup: normalizeRule(raw.signup, DEFAULT_POINTS.signup),
     reviewText: normalizeRule(raw.reviewText, DEFAULT_POINTS.reviewText),
     reviewPhoto: normalizeRule(raw.reviewPhoto, DEFAULT_POINTS.reviewPhoto),
+    // 구매 적립의 amount 는 % 라 100 을 넘기지 않습니다.
+    purchase: (() => {
+      const rule = normalizeRule(raw.purchase, DEFAULT_POINTS.purchase);
+      return { ...rule, amount: Math.min(100, rule.amount) };
+    })(),
+    birthday: normalizeRule(raw.birthday, DEFAULT_POINTS.birthday),
     minUse: count(raw.minUse, DEFAULT_POINTS.minUse),
     maxUseRate: Math.min(100, Math.max(0, rate)),
+    // 0 이면 소멸하지 않습니다. 너무 짧으면 실수로 다 날아가므로 최대 120개월로 둡니다.
+    expireMonths: Math.min(120, count(raw.expireMonths, DEFAULT_POINTS.expireMonths)),
+    popupEnabled: raw.popupEnabled !== false,
+    popupIntervalHours: Math.min(720, Math.max(1, interval)),
   };
 }
 
@@ -502,6 +521,67 @@ export async function getPointSettings(): Promise<PointSettings> {
 }
 
 export const getCachedPoints = unstable_cache(getPointSettings, ['points'], {
+  tags: [SETTINGS_TAG],
+  revalidate: 3600,
+});
+
+/* ── 판매정보 (3-B) ───────────────────────────────────────── */
+
+export function normalizeSales(value: unknown): SalesSettings {
+  if (!value || typeof value !== 'object') return DEFAULT_SALES;
+  const raw = value as Record<string, unknown>;
+  return {
+    shippingNote: text(raw.shippingNote, ''),
+    deliveryPeriod: text(raw.deliveryPeriod, DEFAULT_SALES.deliveryPeriod),
+    exchangePolicy: text(raw.exchangePolicy, DEFAULT_SALES.exchangePolicy),
+    exchangeCost: text(raw.exchangeCost, DEFAULT_SALES.exchangeCost),
+    notAllowed: text(raw.notAllowed, DEFAULT_SALES.notAllowed),
+    returnAddress: text(raw.returnAddress, ''),
+    asInfo: text(raw.asInfo, DEFAULT_SALES.asInfo),
+  };
+}
+
+export async function getSalesSettings(): Promise<SalesSettings> {
+  return normalizeSales(await readSetting(SALES_KEY));
+}
+
+export const getCachedSales = unstable_cache(getSalesSettings, ['sales'], {
+  tags: [SETTINGS_TAG],
+  revalidate: 3600,
+});
+
+/* ── 문구 · 이벤트 (3-B) ──────────────────────────────────── */
+
+function normalizeRibbon(value: unknown): RibbonSettings {
+  if (!value || typeof value !== 'object') return DEFAULT_EVENT.ribbon;
+  const raw = value as Record<string, unknown>;
+  const tone = text(raw.tone, 'ink');
+  return {
+    enabled: raw.enabled === true,
+    text: text(raw.text, ''),
+    linkUrl: text(raw.linkUrl, ''),
+    tone: tone === 'wine' || tone === 'stone' ? tone : 'ink',
+    startsAt: text(raw.startsAt, ''),
+    endsAt: text(raw.endsAt, ''),
+  };
+}
+
+export function normalizeEvent(value: unknown): EventSettings {
+  if (!value || typeof value !== 'object') return DEFAULT_EVENT;
+  const raw = value as Record<string, unknown>;
+  return {
+    signupComplete: text(raw.signupComplete, DEFAULT_EVENT.signupComplete),
+    mypageWelcome: text(raw.mypageWelcome, DEFAULT_EVENT.mypageWelcome),
+    earnNotice: text(raw.earnNotice, DEFAULT_EVENT.earnNotice),
+    ribbon: normalizeRibbon(raw.ribbon),
+  };
+}
+
+export async function getEventSettings(): Promise<EventSettings> {
+  return normalizeEvent(await readSetting(EVENT_KEY));
+}
+
+export const getCachedEvent = unstable_cache(getEventSettings, ['event'], {
   tags: [SETTINGS_TAG],
   revalidate: 3600,
 });
