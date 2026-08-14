@@ -7,7 +7,9 @@
 -- 그래서 이 파일이 하는 일은 두 가지입니다.
 --
 --   1) 3-A 까지 걸어 둔 정책이 그대로 살아 있는지 다시 보장 (여러 번 실행해도 안전)
---   2) 새로 만든 포인트 함수의 실행 권한을 서버(service_role)로 좁힘
+--   2) 서버 전용 함수(포인트 · 주문번호 · 문의번호)의 실행 권한을 service_role 로 좁힘
+--      ★ 함수 인자는 파일에 적어 두지 않고 pg_proc 에서 실제 시그니처를 읽어 씁니다.
+--        단계마다 인자가 바뀌어 왔기 때문에 손으로 적으면 곧 어긋납니다.
 --
 -- 원칙은 그대로입니다.
 --   · service_role 은 RLS 를 우회합니다. 관리자 화면은 영향이 없습니다.
@@ -65,33 +67,50 @@ create policy profiles_update_own
   using (auth.uid() = id)
   with check (auth.uid() = id);
 
--- ── 3. 포인트 함수 실행 권한 ──────────────────────────────
--- ★ 이 함수들은 잔액을 직접 바꿉니다.
---   브라우저(anon · authenticated)에서 부를 수 있으면 포인트를 마음대로 만들 수 있으므로
---   실행 권한을 서버(service_role)에게만 줍니다.
-revoke all on function public.apply_point_change(uuid, integer, text, text, uuid, timestamptz)
-  from public, anon, authenticated;
-revoke all on function public.consume_point_lots(uuid, integer)   from public, anon, authenticated;
-revoke all on function public.refresh_point_expiry(uuid)          from public, anon, authenticated;
-revoke all on function public.expire_points()                     from public, anon, authenticated;
-
-grant execute on function public.apply_point_change(uuid, integer, text, text, uuid, timestamptz)
-  to service_role;
-grant execute on function public.consume_point_lots(uuid, integer) to service_role;
-grant execute on function public.refresh_point_expiry(uuid)        to service_role;
-grant execute on function public.expire_points()                   to service_role;
-
--- 문의번호 발급 함수도 서버만 부르면 됩니다.
+-- ── 3. 서버 전용 함수 실행 권한 ───────────────────────────
+-- ★ 아래 함수들은 포인트 잔액을 바꾸거나 주문·문의 번호를 발급합니다.
+--   브라우저(anon · authenticated)에서 부를 수 있으면 포인트를 마음대로 만들거나
+--   번호를 소진시킬 수 있으므로 실행 권한을 서버(service_role)에게만 줍니다.
+--
+-- ★ 인자 목록을 여기에 적어 두지 않습니다.
+--   함수 시그니처는 단계가 올라가며 바뀌었습니다.
+--     · next_inquiry_no(date) · next_order_no(date) — 날짜를 받습니다
+--     · apply_point_change(uuid, integer, text, text, uuid, timestamptz) — 3-B 에서 인자가 하나 늘었습니다
+--   손으로 적어 두면 실제 DB 와 어긋나는 순간 "함수를 찾을 수 없습니다" 로 실패합니다.
+--   그래서 pg_proc 에서 지금 실제로 존재하는 시그니처를 읽어 그대로 적용합니다.
+--   이름이 같은 함수가 여러 개(오버로드) 있어도 전부 처리하고,
+--   없는 함수는 조용히 건너뜁니다. 여러 번 실행해도 안전합니다.
 do $$
+declare
+  fn record;
+  signature text;
 begin
-  if exists (
-    select 1 from pg_proc p
+  for fn in
+    select p.oid,
+           p.proname,
+           pg_get_function_identity_arguments(p.oid) as args
+      from pg_proc p
       join pg_namespace n on n.oid = p.pronamespace
-     where n.nspname = 'public' and p.proname = 'next_inquiry_no'
-  ) then
-    execute 'revoke all on function public.next_inquiry_no() from public, anon, authenticated';
-    execute 'grant execute on function public.next_inquiry_no() to service_role';
-  end if;
+     where n.nspname = 'public'
+       and p.prokind = 'f'
+       and p.proname in (
+         'apply_point_change',
+         'consume_point_lots',
+         'refresh_point_expiry',
+         'expire_points',
+         'next_inquiry_no',
+         'next_order_no'
+       )
+  loop
+    signature := format('public.%I(%s)', fn.proname, fn.args);
+
+    execute format(
+      'revoke all on function %s from public, anon, authenticated', signature
+    );
+    execute format('grant execute on function %s to service_role', signature);
+
+    raise notice '서버 전용으로 잠금: %', signature;
+  end loop;
 end $$;
 
 -- ── 확인 ──────────────────────────────────────────────────
@@ -107,12 +126,17 @@ end $$;
 -- select tablename, policyname, cmd, roles from pg_policies
 --  where schemaname = 'public' order by tablename, policyname;
 --
--- 함수 권한
--- select p.proname, pg_get_userbyid(p.proowner) as owner, p.proacl
+-- 함수 권한 — 실제 시그니처와 함께 확인합니다.
+-- (has_function_privilege 가 false 로 나와야 브라우저에서 못 부릅니다)
+-- select p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' as signature,
+--        has_function_privilege('anon',          p.oid, 'execute') as anon_can_run,
+--        has_function_privilege('authenticated', p.oid, 'execute') as user_can_run,
+--        has_function_privilege('service_role',  p.oid, 'execute') as server_can_run
 --   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
 --  where n.nspname = 'public'
 --    and p.proname in ('apply_point_change','expire_points','consume_point_lots',
---                      'refresh_point_expiry','next_inquiry_no');
+--                      'refresh_point_expiry','next_inquiry_no','next_order_no')
+--  order by 1;
 --
 -- ★ 실행한 뒤 확인할 것
 --   1) 로그아웃 상태에서 상품 상세의 리뷰·Q&A 가 그대로 보이는지
