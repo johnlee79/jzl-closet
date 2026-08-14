@@ -32,7 +32,8 @@ Supabase 대시보드 > SQL Editor 에 아래 순서로 한 번씩 실행합니�
 5. `supabase/schema-2a.sql` — 주문(orders · order_items · order_status_history)
 6. `supabase/rls-2a.sql` — 주문 접근 제어(RLS)
 7. `supabase/schema-2b.sql` — 회원(profiles) · 1:1 문의(inquiries) · orders.user_id
-8. `supabase/rls-2b.sql` — 회원·문의 접근 제어(RLS). **반드시 마지막에**
+8. `supabase/rls-2b.sql` — 회원·문의 접근 제어(RLS)
+9. 이어서 `schema-3a` → `schema-3b` → `schema-3c` → `rls-3a` → `rls-3b` → `rls-3c` 순으로 실행합니다. 리뷰·포인트·공지·팝업(3-A), 가입경로·포인트 유효기간(3-B), 팝업 기간·입금대기 자동취소(3-C)이며, 각 파일 맨 위 주석에 그 파일이 하는 일과 전체 순서가 적혀 있습니다. **RLS 파일이 반드시 마지막입니다.**
 
 3·4번을 실행하기 전에도 사이트는 정상 동작합니다.
 테이블이 없거나 비어 있으면 `lib/categories.ts` · `lib/brands.ts` 의 폴백 값을 씁니다.
