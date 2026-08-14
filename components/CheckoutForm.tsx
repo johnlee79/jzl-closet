@@ -9,7 +9,11 @@ import { placeOrderAction, quoteShippingAction } from '@/app/(shop)/checkout/act
 import { useCart } from '@/lib/cart';
 import { formatPhone } from '@/lib/format';
 import { formatPrice } from '@/lib/product-utils';
-import { PAYMENT_METHODS, type ShippingSettings } from '@/lib/site-config';
+import {
+  PAYMENT_METHODS,
+  maxUsablePoints,
+  type ShippingSettings,
+} from '@/lib/site-config';
 import type { CashReceiptType } from '@/lib/types';
 
 /** 다음 우편번호 서비스 — 라이브러리를 설치하지 않고 스크립트만 불러 씁니다. */
@@ -61,6 +65,13 @@ const MEMO_PRESETS = [
 ];
 
 /** 로그인 회원이면 저장된 정보로 주문서를 미리 채웁니다. */
+/** 로그인 회원의 포인트 정보. 비회원이면 null 입니다. */
+export type PointInfo = {
+  balance: number;
+  minUse: number;
+  maxUseRate: number;
+};
+
 export type MemberPrefill = {
   name: string;
   phone: string;
@@ -74,11 +85,14 @@ export default function CheckoutForm({
   shipping,
   storePhone,
   member,
+  points,
 }: {
   shipping: ShippingSettings;
   storePhone: string;
   /** 비로그인이면 null */
   member: MemberPrefill | null;
+  /** 비로그인이거나 포인트가 없으면 null */
+  points: PointInfo | null;
 }) {
   const router = useRouter();
   const { items, total, ready, clear } = useCart();
@@ -161,7 +175,20 @@ export default function CheckoutForm({
     };
   }, [form.postcode, total]);
 
-  const totalAmount = total + fees.shippingFee + fees.extraShippingFee;
+  /* ── 포인트 사용 ─────────────────────────────────────
+   * ★ 화면에서 미리 깎아 보여 주지만, 실제 금액은 서버가 다시 계산합니다. */
+  const [usePoints, setUsePoints] = useState(0);
+
+  const pointLimit = points ? maxUsablePoints(total, points.balance, points) : 0;
+  const canUsePoints = Boolean(
+    points && points.balance > 0 && pointLimit >= (points.minUse || 0)
+  );
+  const appliedPoints = canUsePoints ? Math.min(usePoints, pointLimit) : 0;
+
+  const totalAmount = Math.max(
+    0,
+    total + fees.shippingFee + fees.extraShippingFee - appliedPoints
+  );
 
   const freeShippingLeft = useMemo(() => {
     if (shipping.freeThreshold <= 0) return 0;
@@ -254,6 +281,8 @@ export default function CheckoutForm({
           quantity: item.quantity,
         })),
         agreed: form.agreed,
+        // 서버가 잔액·설정으로 다시 깎습니다. 여기 값은 요청일 뿐입니다.
+        usePoints: appliedPoints,
       });
 
       if (!result.ok) {
@@ -730,7 +759,70 @@ export default function CheckoutForm({
                     <dd className="text-ink">{formatPrice(fees.extraShippingFee)}원</dd>
                   </div>
                 ) : null}
+                {appliedPoints > 0 ? (
+                  <div className="flex justify-between">
+                    <dt className="text-muted">포인트 사용</dt>
+                    <dd className="text-wine">− {formatPrice(appliedPoints)}원</dd>
+                  </div>
+                ) : null}
               </dl>
+
+              {/* ── 포인트 사용 ─────────────────────────── */}
+              {points ? (
+                <div className="mt-6 border-t border-stone pt-6">
+                  <div className="flex items-baseline justify-between">
+                    <label htmlFor="use-points" className="label-xs">
+                      포인트 사용
+                    </label>
+                    <span className="text-[13px] text-muted">
+                      보유 {formatPrice(points.balance)}원
+                    </span>
+                  </div>
+
+                  {canUsePoints ? (
+                    <>
+                      <div className="mt-2 flex gap-2">
+                        <input
+                          id="use-points"
+                          type="number"
+                          min={0}
+                          max={pointLimit}
+                          step={100}
+                          value={usePoints === 0 ? '' : usePoints}
+                          onChange={(event) => {
+                            const next = Math.max(
+                              0,
+                              Math.min(pointLimit, Number(event.target.value) || 0)
+                            );
+                            setUsePoints(next);
+                          }}
+                          placeholder="0"
+                          className="min-h-[48px] w-full border border-stone bg-transparent px-4 py-3 text-right text-[15px] tabular-nums text-ink outline-none focus:border-ink"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setUsePoints(pointLimit)}
+                          className="btn-secondary min-h-[48px] shrink-0 px-4 py-0 text-[14px]"
+                        >
+                          전액
+                        </button>
+                      </div>
+                      <p className="mt-2 text-[13px] leading-relaxed text-muted">
+                        최대 {formatPrice(pointLimit)}원까지 쓸 수 있습니다.
+                        {points.minUse > 0
+                          ? ` ${formatPrice(points.minUse)}원 이상부터 사용 가능합니다.`
+                          : ''}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="mt-2 text-[13px] leading-relaxed text-muted">
+                      {points.balance <= 0
+                        ? '아직 사용할 수 있는 포인트가 없습니다.'
+                        : `${formatPrice(points.minUse)}원 이상부터 사용하실 수 있습니다.`}
+                    </p>
+                  )}
+                </div>
+              ) : null}
 
               {freeShippingLeft > 0 ? (
                 <p className="mt-4 text-[13px] leading-relaxed text-muted">

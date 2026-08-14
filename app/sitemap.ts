@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { visibleBrands } from '@/lib/brands';
 import { visibleCategories, visibleSubCategories } from '@/lib/categories';
+import { getVisibleNotices } from '@/lib/notices';
 import { getProductSitemapRows } from '@/lib/products';
 import { SITE_URL } from '@/lib/store';
 import { getCachedBrands, getCachedCategories } from '@/lib/taxonomy';
@@ -15,10 +16,11 @@ export const revalidate = 60;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const lastModified = new Date();
 
-  const [categories, brands, productRows] = await Promise.all([
+  const [categories, brands, productRows, notices] = await Promise.all([
     getCachedCategories(),
     getCachedBrands(),
     getProductSitemapRows(),
+    getVisibleNotices(),
   ]);
 
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -26,6 +28,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/products`, lastModified, changeFrequency: 'weekly', priority: 0.9 },
     { url: `${SITE_URL}/brand`, lastModified, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${SITE_URL}/about`, lastModified, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/notice`, lastModified, changeFrequency: 'weekly', priority: 0.5 },
     { url: `${SITE_URL}/guide`, lastModified, changeFrequency: 'yearly', priority: 0.4 },
     { url: `${SITE_URL}/terms`, lastModified, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${SITE_URL}/privacy`, lastModified, changeFrequency: 'yearly', priority: 0.3 },
@@ -62,5 +65,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  return [...staticRoutes, ...categoryRoutes, ...brandRoutes, ...productRoutes];
+  const noticeRoutes: MetadataRoute.Sitemap = notices.map((notice) => ({
+    url: `${SITE_URL}/notice/${notice.id}`,
+    lastModified: notice.updatedAt ? new Date(notice.updatedAt) : lastModified,
+    changeFrequency: 'monthly',
+    priority: 0.4,
+  }));
+
+  return [
+    ...staticRoutes,
+    ...categoryRoutes,
+    ...brandRoutes,
+    ...productRoutes,
+    ...noticeRoutes,
+  ];
 }

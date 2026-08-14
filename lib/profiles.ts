@@ -40,6 +40,8 @@ export type Profile = {
   lastLoginAt: string | null;
   withdrawnAt: string | null;
   adminMemo: string;
+  /** 보유 포인트. 바꿀 때는 lib/points.ts 의 changePoints 만 씁니다. */
+  pointBalance: number;
   createdAt: string | null;
   updatedAt: string | null;
 };
@@ -61,6 +63,8 @@ type ProfileRow = {
   last_login_at: string | null;
   withdrawn_at: string | null;
   admin_memo: string | null;
+  /** 3-A 에서 추가한 컬럼. 아직 없을 수 있어 선택 항목으로 둡니다. */
+  point_balance?: number | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -87,6 +91,7 @@ function rowToProfile(row: ProfileRow): Profile {
     lastLoginAt: row.last_login_at,
     withdrawnAt: row.withdrawn_at,
     adminMemo: row.admin_memo ?? '',
+    pointBalance: row.point_balance ?? 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

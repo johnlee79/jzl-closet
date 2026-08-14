@@ -1,5 +1,6 @@
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
+import PopupLayer from '@/components/PopupLayer';
 import SiteNotices from '@/components/SiteNotices';
 import SiteProvider from '@/components/SiteProvider';
 import { CartProvider } from '@/lib/cart';
@@ -10,6 +11,7 @@ import {
   getEscrowNotice,
 } from '@/lib/settings';
 import { SITE_URL } from '@/lib/store';
+import { getActivePopups } from '@/lib/popups';
 import { getTaxonomy } from '@/lib/taxonomy';
 
 /**
@@ -24,14 +26,17 @@ import { getTaxonomy } from '@/lib/taxonomy';
  * Organization JSON-LD 는 프론트 전 페이지에만 실립니다.
  */
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
-  const [{ categories, brands }, store, shipping, branding, escrow] = await Promise.all([
-    getTaxonomy(),
-    getCachedStore(),
-    getCachedShipping(),
-    getCachedBranding(),
-    // ★ 계좌번호가 아니라 구매안전 표시 정보만 뽑아 옵니다.
-    getEscrowNotice(),
-  ]);
+  const [{ categories, brands }, store, shipping, branding, escrow, popups] =
+    await Promise.all([
+      getTaxonomy(),
+      getCachedStore(),
+      getCachedShipping(),
+      getCachedBranding(),
+      // ★ 계좌번호가 아니라 구매안전 표시 정보만 뽑아 옵니다.
+      getEscrowNotice(),
+      // 노출 기간에 든 팝업만 내려옵니다.
+      getActivePopups(),
+    ]);
 
   const organizationJsonLd = {
     '@context': 'https://schema.org',
@@ -76,6 +81,8 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
           <SiteNotices />
           <main id="main">{children}</main>
           <Footer categories={categories} store={store} escrow={escrow} />
+          {/* 팝업 — 노출 화면(메인만/전체) 판단은 컴포넌트가 주소를 보고 합니다. */}
+          <PopupLayer popups={popups} />
         </CartProvider>
       </SiteProvider>
     </>

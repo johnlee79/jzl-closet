@@ -5,6 +5,7 @@ import { formatPrice } from '@/lib/product-utils';
 import { SITE_URL } from '@/lib/store';
 import { TELEGRAM_MAX_LENGTH, buildNewOrderMessage } from '@/lib/telegram-format';
 import type { Inquiry } from '@/lib/inquiries';
+import type { Review } from '@/lib/reviews';
 import type { Order } from '@/lib/types';
 
 /**
@@ -130,16 +131,29 @@ export async function notifyNewInquiry(inquiry: Inquiry): Promise<void> {
   await sendTelegramMessage(lines.join('\n'));
 }
 
-/* ------------------------------------------------------------------
- * 다음 단계에서 채울 자리
- * ------------------------------------------------------------------ */
+/**
+ * ⭐ 새 리뷰.
+ * ★ 별점 3점 이하면 앞에 ⚠️ 를 붙여 눈에 띄게 합니다. 먼저 확인해야 할 후기입니다.
+ * ★ 관리자가 직접 등록한 체험단 후기에는 이 함수를 부르지 않습니다.
+ */
+export async function notifyNewReview(
+  review: Review,
+  productName: string
+): Promise<void> {
+  const low = review.rating <= 3;
+  const photos = review.attachments.length;
 
-/** ⭐ 새 리뷰 — 다음 단계에서 사용 예정 */
-export async function notifyNewReview(_payload: {
-  id: string;
-  productName: string;
-  rating: number;
-}): Promise<void> {
-  void _payload;
-  // 리뷰 기능을 만들 때 sendTelegramMessage 로 채웁니다.
+  const lines = [
+    `${low ? '⚠️ ' : ''}⭐ <b>새 리뷰</b> (별점 ${review.rating})`,
+    '',
+    escapeHtml(productName),
+    `${escapeHtml(review.writerName)}${photos > 0 ? ` · 사진 ${photos}장` : ''}`,
+    '',
+    // 앞부분만 보여 주고 나머지는 관리자에서 봅니다.
+    escapeHtml(review.content.slice(0, 100)) + (review.content.length > 100 ? '…' : ''),
+    '',
+    `관리자: ${SITE_URL}/admin/reviews`,
+  ];
+
+  await sendTelegramMessage(lines.join('\n'));
 }

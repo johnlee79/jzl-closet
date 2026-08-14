@@ -14,13 +14,20 @@ import type { Order } from '@/lib/types';
  * 마이페이지 주문 목록.
  * 상태 필터와 "비회원 주문 불러오기"를 함께 둡니다.
  */
+/** 배송이 끝난 주문에만 후기를 쓸 수 있습니다. */
+const REVIEWABLE = ['delivered', 'confirmed'];
+
 export default function MemberOrderList({
   orders,
   status,
+  reviewedKeys,
 }: {
   orders: Order[];
   status: string;
+  /** 이미 후기를 쓴 "주문id:상품id" 조합 */
+  reviewedKeys: string[];
 }) {
+  const reviewed = new Set(reviewedKeys);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -117,16 +124,42 @@ export default function MemberOrderList({
                   </span>
                 </div>
 
-                <ul className="mt-3">
-                  {live.map((item) => (
-                    <li key={item.id} className="text-[15px] leading-snug text-ink">
-                      {item.productName}
-                      {item.optionKey ? (
-                        <span className="text-muted"> ({item.optionKey})</span>
-                      ) : null}
-                      <span className="text-muted"> · {item.quantity}개</span>
-                    </li>
-                  ))}
+                <ul className="mt-3 flex flex-col gap-2">
+                  {live.map((item) => {
+                    // ★ 배송이 끝났고 아직 안 쓴 상품에만 버튼을 보여 줍니다.
+                    const canReview =
+                      REVIEWABLE.includes(order.status) &&
+                      Boolean(item.productId) &&
+                      !reviewed.has(`${order.id}:${item.productId}`);
+
+                    return (
+                      <li
+                        key={item.id}
+                        className="flex flex-wrap items-center justify-between gap-2"
+                      >
+                        <span className="text-[15px] leading-snug text-ink">
+                          {item.productName}
+                          {item.optionKey ? (
+                            <span className="text-muted"> ({item.optionKey})</span>
+                          ) : null}
+                          <span className="text-muted"> · {item.quantity}개</span>
+                        </span>
+
+                        {canReview ? (
+                          <Link
+                            href={`/mypage/reviews/new?order=${order.id}&product=${item.productSlug}`}
+                            className="inline-flex min-h-[36px] shrink-0 items-center border border-ink px-3.5 text-[13px] text-ink transition-colors hover:bg-ink hover:text-paper"
+                          >
+                            리뷰 쓰기
+                          </Link>
+                        ) : REVIEWABLE.includes(order.status) && item.productId ? (
+                          <span className="shrink-0 text-[13px] text-muted">
+                            후기 작성 완료
+                          </span>
+                        ) : null}
+                      </li>
+                    );
+                  })}
                   {live.length === 0 ? (
                     <li className="text-[15px] text-muted">전체 취소된 주문입니다.</li>
                   ) : null}

@@ -2,7 +2,12 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import CheckoutForm from '@/components/CheckoutForm';
 import { getCurrentProfile, getCurrentUser } from '@/lib/auth';
-import { getCachedShipping, getCachedStore, getPaymentSettings } from '@/lib/settings';
+import {
+  getCachedShipping,
+  getCachedStore,
+  getPaymentSettings,
+  getPointSettings,
+} from '@/lib/settings';
 import { hasBankAccount } from '@/lib/site-config';
 
 /**
@@ -19,13 +24,14 @@ export const metadata: Metadata = {
 };
 
 export default async function CheckoutPage() {
-  const [shipping, store, payment, user, profile] = await Promise.all([
+  const [shipping, store, payment, user, profile, pointSettings] = await Promise.all([
     getCachedShipping(),
     getCachedStore(),
     // ★ 계좌 등록 여부만 확인합니다. 계좌번호는 이 화면에 내려보내지 않습니다.
     getPaymentSettings(),
     getCurrentUser(),
     getCurrentProfile(),
+    getPointSettings(),
   ]);
 
   const ready = hasBankAccount(payment);
@@ -40,6 +46,16 @@ export default async function CheckoutPage() {
           postcode: profile.postcode,
           address1: profile.address1,
           address2: profile.address2,
+        }
+      : null;
+
+  // 비회원이면 포인트를 쓸 수 없습니다.
+  const points =
+    profile && profile.status === 'active'
+      ? {
+          balance: profile.pointBalance,
+          minUse: pointSettings.minUse,
+          maxUseRate: pointSettings.maxUseRate,
         }
       : null;
 
@@ -66,7 +82,12 @@ export default async function CheckoutPage() {
         </div>
       ) : (
         <div className="mt-12">
-          <CheckoutForm shipping={shipping} storePhone={store.phone} member={member} />
+          <CheckoutForm
+            shipping={shipping}
+            storePhone={store.phone}
+            member={member}
+            points={points}
+          />
         </div>
       )}
     </div>

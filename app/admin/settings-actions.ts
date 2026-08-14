@@ -10,6 +10,8 @@ import {
   COPY_KEY,
   DESIGN_KEY,
   PAYMENT_KEY,
+  POINTS_KEY,
+  REVIEW_KEY,
   SETTINGS_TAG,
   SHIPPING_KEY,
   STORE_KEY,
@@ -18,6 +20,8 @@ import {
   normalizeAnalytics,
   normalizeDesign,
   normalizePayment,
+  normalizePoints,
+  normalizeReview,
   normalizeShipping,
   normalizeStore,
   writeSetting,
@@ -30,6 +34,8 @@ import {
   type CopySection,
   type DesignSettings,
   type PaymentSettings,
+  type PointSettings,
+  type ReviewSettings,
   type ShippingSettings,
   type StoreSettings,
 } from '@/lib/site-config';
@@ -161,6 +167,36 @@ export async function savePaymentAction(input: PaymentSettings): Promise<ActionR
     return { ok: true, data: undefined };
   } catch (error) {
     return fail(error, '결제 설정을 저장하지 못했습니다.');
+  }
+}
+
+/* ── 3-A. 리뷰·포인트 ─────────────────────────────────────── */
+
+export async function saveRewardAction(
+  points: PointSettings,
+  review: ReviewSettings
+): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  if (points.minUse < 0) return { ok: false, error: '최소 사용 금액은 0 이상이어야 합니다.' };
+  if (points.maxUseRate < 0 || points.maxUseRate > 100) {
+    return { ok: false, error: '최대 사용 비율은 0~100 사이로 넣어 주세요.' };
+  }
+  if (review.tags.length === 0) {
+    return { ok: false, error: '리뷰 태그를 하나 이상 남겨 주세요.' };
+  }
+
+  try {
+    await writeSetting(POINTS_KEY, normalizePoints(points));
+    await writeSetting(REVIEW_KEY, normalizeReview(review));
+
+    revalidateTag(SETTINGS_TAG);
+    // 적립 안내와 태그가 주문서·리뷰 작성 화면에 실립니다.
+    revalidatePath('/', 'layout');
+    revalidatePath('/admin/settings');
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '리뷰·포인트 설정을 저장하지 못했습니다.');
   }
 }
 

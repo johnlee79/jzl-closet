@@ -5,6 +5,7 @@ import type { StoreSettings } from '@/lib/site-config';
 
 const infoLinks = [
   { href: '/about', label: '브랜드 소개' },
+  { href: '/notice', label: '공지사항' },
   { href: '/brand', label: '브랜드 목록' },
   { href: '/guide', label: '배송·교환·반품 안내' },
   { href: '/terms', label: '이용약관' },

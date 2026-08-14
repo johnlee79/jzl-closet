@@ -4,9 +4,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { sendResetMailAction, updateMemberAction } from '@/app/admin/member-actions';
+import { adjustPointsAction } from '@/app/admin/content-actions';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { statusBadgeClass, statusLabel } from '@/lib/order-status';
 import { formatPrice } from '@/lib/product-utils';
+import { pointReasonLabel } from '@/lib/site-config';
+import type { PointTransaction } from '@/lib/points';
 import type { Profile } from '@/lib/profiles';
 import type { Order } from '@/lib/types';
 
@@ -33,14 +36,20 @@ export default function MemberDetail({
   profile,
   orders,
   totalSpent,
+  pointHistory,
 }: {
   profile: Profile;
   orders: Order[];
   totalSpent: number;
+  pointHistory: PointTransaction[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<Message>(null);
+
+  /** 포인트 수동 조정 */
+  const [pointAmount, setPointAmount] = useState('');
+  const [pointMemo, setPointMemo] = useState('');
 
   const [form, setForm] = useState({
     name: profile.name,
@@ -80,6 +89,25 @@ export default function MemberDetail({
         return;
       }
       setMessage({ tone: 'ok', text: '재설정 메일을 보냈습니다.' });
+    });
+  };
+
+  /** 액션 하나를 돌리고 결과 메시지를 띄웁니다. */
+  const run = (
+    action: () => Promise<{ ok: boolean; error?: string }>,
+    okText: string
+  ) => {
+    setMessage(null);
+    startTransition(async () => {
+      const result = await action();
+      if (!result.ok) {
+        setMessage({ tone: 'error', text: result.error ?? '처리하지 못했습니다.' });
+        return;
+      }
+      setMessage({ tone: 'ok', text: okText });
+      setPointAmount('');
+      setPointMemo('');
+      router.refresh();
     });
   };
 
@@ -294,6 +322,86 @@ export default function MemberDetail({
                 {profile.agreedAt ? formatDateTime(profile.agreedAt) : '기록 없음'}
               </span>
             </p>
+          </section>
+
+          {/* ── 포인트 ─────────────────────────────────── */}
+          <section className="admin-card p-4 md:p-5">
+            <h2 className="text-[16px] font-semibold text-slate-900">포인트</h2>
+            <p className="mt-2 text-[22px] font-semibold tabular-nums text-slate-900">
+              {formatPrice(profile.pointBalance)}
+              <span className="ml-1 text-[14px] font-normal">원</span>
+            </p>
+
+            <div className="mt-4 border-t border-slate-200 pt-4">
+              <label className="admin-label" htmlFor="point-amount">
+                수동 지급 · 차감
+              </label>
+              <input
+                id="point-amount"
+                type="number"
+                step={100}
+                value={pointAmount}
+                onChange={(event) => setPointAmount(event.target.value)}
+                placeholder="지급은 1000, 차감은 -1000"
+                className="admin-input tabular-nums"
+              />
+
+              <label className="admin-label mt-3" htmlFor="point-memo">
+                사유 (필수)
+              </label>
+              <input
+                id="point-memo"
+                type="text"
+                value={pointMemo}
+                onChange={(event) => setPointMemo(event.target.value)}
+                placeholder="예: 이벤트 당첨 / 오적립 회수"
+                className="admin-input"
+              />
+
+              <button
+                type="button"
+                disabled={pending || !pointAmount || !pointMemo.trim()}
+                onClick={() =>
+                  run(
+                    () => adjustPointsAction(profile.id, Number(pointAmount), pointMemo),
+                    '포인트를 조정했습니다.'
+                  )
+                }
+                className="admin-btn mt-3 w-full"
+              >
+                포인트 조정
+              </button>
+              <p className="mt-2 text-[12px] leading-relaxed text-slate-500">
+                사유는 회원의 포인트 내역에도 함께 보입니다. 잔액보다 많이 차감할 수는
+                없습니다.
+              </p>
+            </div>
+
+            {pointHistory.length > 0 ? (
+              <ul className="mt-4 max-h-[220px] divide-y divide-slate-100 overflow-y-auto border-t border-slate-200 pt-2">
+                {pointHistory.map((entry) => (
+                  <li key={entry.id} className="py-2 text-[13px]">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-slate-700">
+                        {pointReasonLabel(entry.reason)}
+                      </span>
+                      <span
+                        className={`tabular-nums ${
+                          entry.amount > 0 ? 'text-slate-900' : 'text-red-700'
+                        }`}
+                      >
+                        {entry.amount > 0 ? '+' : '−'}
+                        {formatPrice(Math.abs(entry.amount))}
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-2 text-[12px] text-slate-500">
+                      <span className="truncate">{entry.memo}</span>
+                      <span className="shrink-0">잔액 {formatPrice(entry.balance)}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </section>
 
           <section className="admin-card p-4 md:p-5">

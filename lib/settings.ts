@@ -8,7 +8,10 @@ import {
   DEFAULT_BANNER_INTERVAL,
   DEFAULT_DESIGN,
   DEFAULT_PAYMENT,
+  DEFAULT_POINTS,
   DEFAULT_REMOTE_AREA_RULES,
+  DEFAULT_REVIEW,
+  DEFAULT_REVIEW_TAGS,
   DEFAULT_SHIPPING,
   DEFAULT_STORE,
   MAX_BANNERS,
@@ -22,6 +25,9 @@ import {
   type CopySettings,
   type DesignSettings,
   type PaymentSettings,
+  type PointRule,
+  type PointSettings,
+  type ReviewSettings,
   type ShippingSettings,
   type StoreSettings,
 } from '@/lib/site-config';
@@ -60,6 +66,9 @@ export const COPY_KEY = 'copy';
 export const ANALYTICS_KEY = 'analytics';
 /** ★ 입금 계좌가 들어 있는 key. 공개 읽기 정책에서 제외되어 있습니다. (supabase/rls-2a.sql) */
 export const PAYMENT_KEY = 'payment';
+/* ── 3-A ─────────────────────────────────────────────────── */
+export const REVIEW_KEY = 'review';
+export const POINTS_KEY = 'points';
 
 /** 테이블이 아직 없을 때 PostgREST 가 돌려주는 코드들 */
 const MISSING_TABLE_CODES = new Set(['42P01', 'PGRST205', 'PGRST202']);
@@ -428,6 +437,71 @@ export async function getPaymentSettings(): Promise<PaymentSettings> {
 }
 
 export const getCachedPayment = unstable_cache(getPaymentSettings, ['payment'], {
+  tags: [SETTINGS_TAG],
+  revalidate: 3600,
+});
+
+/* ── 리뷰 (3-A) ───────────────────────────────────────────── */
+
+export function normalizeReview(value: unknown): ReviewSettings {
+  if (!value || typeof value !== 'object') return DEFAULT_REVIEW;
+  const raw = value as Record<string, unknown>;
+
+  const tags = Array.isArray(raw.tags)
+    ? raw.tags
+        .filter((item): item is string => typeof item === 'string')
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : DEFAULT_REVIEW_TAGS;
+
+  return {
+    // 태그를 전부 지웠으면 기본 목록으로 돌립니다. (빈 목록이면 고를 것이 없습니다)
+    tags: tags.length > 0 ? tags : DEFAULT_REVIEW_TAGS,
+    telegramEnabled: raw.telegramEnabled !== false,
+  };
+}
+
+export async function getReviewSettings(): Promise<ReviewSettings> {
+  return normalizeReview(await readSetting(REVIEW_KEY));
+}
+
+export const getCachedReview = unstable_cache(getReviewSettings, ['review'], {
+  tags: [SETTINGS_TAG],
+  revalidate: 3600,
+});
+
+/* ── 포인트 (3-A) ─────────────────────────────────────────── */
+
+function normalizeRule(value: unknown, fallback: PointRule): PointRule {
+  if (!value || typeof value !== 'object') return fallback;
+  const raw = value as Record<string, unknown>;
+  const amount = count(raw.amount, fallback.amount);
+  return {
+    // 금액이 0이면 켜져 있어도 적립하지 않습니다.
+    enabled: raw.enabled !== false && amount > 0,
+    amount,
+  };
+}
+
+export function normalizePoints(value: unknown): PointSettings {
+  if (!value || typeof value !== 'object') return DEFAULT_POINTS;
+  const raw = value as Record<string, unknown>;
+
+  const rate = count(raw.maxUseRate, DEFAULT_POINTS.maxUseRate);
+  return {
+    signup: normalizeRule(raw.signup, DEFAULT_POINTS.signup),
+    reviewText: normalizeRule(raw.reviewText, DEFAULT_POINTS.reviewText),
+    reviewPhoto: normalizeRule(raw.reviewPhoto, DEFAULT_POINTS.reviewPhoto),
+    minUse: count(raw.minUse, DEFAULT_POINTS.minUse),
+    maxUseRate: Math.min(100, Math.max(0, rate)),
+  };
+}
+
+export async function getPointSettings(): Promise<PointSettings> {
+  return normalizePoints(await readSetting(POINTS_KEY));
+}
+
+export const getCachedPoints = unstable_cache(getPointSettings, ['points'], {
   tags: [SETTINGS_TAG],
   revalidate: 3600,
 });

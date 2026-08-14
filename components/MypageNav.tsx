@@ -7,6 +7,7 @@ const MENU = [
   { href: '/mypage', label: '요약', exact: true },
   { href: '/mypage/orders', label: '주문 내역' },
   { href: '/mypage/inquiries', label: '문의 내역' },
+  { href: '/mypage/points', label: '포인트' },
   { href: '/mypage/profile', label: '회원정보 수정' },
   { href: '/mypage/withdraw', label: '회원 탈퇴' },
 ];

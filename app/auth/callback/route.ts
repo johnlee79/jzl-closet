@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { earnSignupPoints } from '@/lib/points';
 import { ensureProfile, getProfile, touchLastLogin } from '@/lib/profiles';
 import { createAuthClient } from '@/lib/supabase/auth-server';
 
@@ -73,7 +74,9 @@ export async function GET(request: NextRequest) {
             ? metadata.name
             : '';
 
-      await ensureProfile({ id: user.id, email: user.email ?? '', name });
+      const created = await ensureProfile({ id: user.id, email: user.email ?? '', name });
+      // 구글로 처음 들어온 회원에게도 가입 축하 포인트를 드립니다.
+      if (created) await earnSignupPoints(user.id);
 
       // 탈퇴한 계정이면 다시 들여보내지 않습니다.
       const profile = await getProfile(user.id);

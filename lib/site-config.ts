@@ -239,6 +239,114 @@ export const PAYMENT_METHODS = [
 
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number]['key'];
 
+/* ── 리뷰 (3-A) ───────────────────────────────────────────── */
+
+export type ReviewSettings = {
+  /** 리뷰 작성 화면에 보여 줄 긍정 태그 목록 */
+  tags: string[];
+  /** 새 리뷰가 등록되면 텔레그램으로 알릴지 */
+  telegramEnabled: boolean;
+};
+
+export const DEFAULT_REVIEW_TAGS = [
+  '빠른배송',
+  '포장이 꼼꼼해요',
+  '품질이 좋아요',
+  '사진과 같아요',
+  '가성비 좋아요',
+  '재구매할게요',
+];
+
+export const DEFAULT_REVIEW: ReviewSettings = {
+  tags: DEFAULT_REVIEW_TAGS,
+  telegramEnabled: true,
+};
+
+/** 리뷰 첨부 최대 개수 */
+export const MAX_REVIEW_ATTACHMENTS = 5;
+
+/** 리뷰 본문 최대 글자수 */
+export const MAX_REVIEW_LENGTH = 500;
+
+/**
+ * ★ 체험단·무상제공 후기에 반드시 붙는 문구입니다.
+ *   표시광고법상 요구되는 표시이므로 숨기거나 흐리게 만들지 마세요.
+ */
+export const SPONSORED_NOTICE = '※ 제품을 무상으로 제공받아 작성된 후기입니다';
+
+/* ── 포인트 (3-A) ─────────────────────────────────────────── */
+
+/** 적립 규칙 한 줄 — 켜고 끌 수 있고 금액을 정합니다. */
+export type PointRule = {
+  enabled: boolean;
+  amount: number;
+};
+
+export type PointSettings = {
+  /** 회원가입 축하 포인트 (가입 즉시 1회) */
+  signup: PointRule;
+  /** 글만 있는 리뷰 */
+  reviewText: PointRule;
+  /** 사진·동영상이 하나라도 있는 리뷰 */
+  reviewPhoto: PointRule;
+  /** 이 금액 이상부터 쓸 수 있습니다. */
+  minUse: number;
+  /** 상품금액 대비 최대 사용 비율 (%) */
+  maxUseRate: number;
+};
+
+export const DEFAULT_POINTS: PointSettings = {
+  signup: { enabled: true, amount: 1000 },
+  reviewText: { enabled: true, amount: 500 },
+  reviewPhoto: { enabled: true, amount: 1000 },
+  minUse: 1000,
+  maxUseRate: 100,
+};
+
+/** 포인트 적립·사용 사유 — 내역 화면에 한글로 보여 줍니다. */
+export const POINT_REASON_LABEL: Record<string, string> = {
+  signup: '회원가입 축하',
+  review_text: '리뷰 작성',
+  review_photo: '포토 리뷰 작성',
+  order_use: '주문 사용',
+  admin: '관리자 조정',
+  cancel: '주문 취소 반환',
+};
+
+export function pointReasonLabel(reason: string): string {
+  return POINT_REASON_LABEL[reason] ?? reason;
+}
+
+/**
+ * 주문에서 실제로 쓸 수 있는 포인트 상한.
+ * ★ 화면 표시용이자 서버 검증용입니다. 같은 함수를 양쪽에서 씁니다.
+ */
+export function maxUsablePoints(
+  itemsTotal: number,
+  balance: number,
+  // 비율만 있으면 됩니다. 주문서 화면은 적립 규칙까지 알 필요가 없습니다.
+  settings: Pick<PointSettings, 'maxUseRate'>
+): number {
+  if (balance <= 0) return 0;
+  const byRate = Math.floor((itemsTotal * settings.maxUseRate) / 100);
+  return Math.max(0, Math.min(balance, byRate, itemsTotal));
+}
+
+/* ── 팝업 (3-A) ───────────────────────────────────────────── */
+
+export const POPUP_POSITIONS = [
+  { key: 'left', label: '왼쪽' },
+  { key: 'center', label: '가운데' },
+  { key: 'right', label: '오른쪽' },
+] as const;
+
+export type PopupPosition = (typeof POPUP_POSITIONS)[number]['key'];
+
+export const POPUP_SHOW_ON = [
+  { key: 'home', label: '메인 화면에서만' },
+  { key: 'all', label: '모든 화면' },
+] as const;
+
 /* ── 구글 애널리틱스 ──────────────────────────────────────── */
 
 export type AnalyticsSettings = {

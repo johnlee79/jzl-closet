@@ -7,8 +7,11 @@ import MeasurementTable from '@/components/MeasurementTable';
 import ProductCard from '@/components/ProductCard';
 import ProductGallery from '@/components/ProductGallery';
 import ProductInquiries from '@/components/ProductInquiries';
+import ProductReviews from '@/components/ProductReviews';
+import StarRating from '@/components/StarRating';
 import ViewItemTracker from '@/components/ViewItemTracker';
 import { getProductInquiries } from '@/lib/inquiries';
+import { getProductReviews, summarize } from '@/lib/reviews';
 import { findBrand } from '@/lib/brands';
 import { findCategory, findSubCategory } from '@/lib/categories';
 import { formatPrice, getDiscountRate, isProductSoldOut } from '@/lib/product-utils';
@@ -80,7 +83,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const [related, brandRelated, categories, brands, store, shipping, inquiries] =
+  const [related, brandRelated, categories, brands, store, shipping, inquiries, reviews] =
     await Promise.all([
       getRelated(product, 4),
       getBrandRelated(product, 4),
@@ -90,7 +93,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
       getCachedShipping(),
       // 비밀글은 서버에서 제목을 가려 내려보냅니다.
       getProductInquiries(product.id),
+      // 노출 중인 리뷰만 내려옵니다.
+      getProductReviews(product.id),
     ]);
+
+  const reviewSummary = summarize(reviews);
 
   const brand = findBrand(brands, product.brandSlug);
   const brandName = brand?.name ?? store.name; // alt·JSON-LD 용 정식 명칭
@@ -129,6 +136,18 @@ export default async function ProductDetailPage({ params }: PageProps) {
       '@type': 'Brand',
       name: brandName,
     },
+    // 후기가 있으면 검색 결과에 별점이 함께 나옵니다.
+    ...(reviewSummary.count > 0
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: reviewSummary.average,
+            reviewCount: reviewSummary.count,
+            bestRating: 5,
+            worstRating: 1,
+          },
+        }
+      : {}),
     offers: {
       '@type': 'Offer',
       url: `${SITE_URL}/products/${product.slug}`,
@@ -254,6 +273,20 @@ export default async function ProductDetailPage({ params }: PageProps) {
           <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[32px]">
             {product.name}
           </h1>
+
+          {/* 평균 별점 요약 — 누르면 아래 리뷰 영역으로 갑니다. */}
+          {reviewSummary.count > 0 ? (
+            <a href="#review-title" className="mt-3 inline-flex items-center gap-2">
+              <StarRating value={reviewSummary.average} size={15} />
+              <span className="text-[14px] text-ink">
+                {reviewSummary.average.toFixed(1)}
+              </span>
+              <span className="text-[14px] text-muted underline underline-offset-4">
+                후기 {reviewSummary.count}개
+              </span>
+            </a>
+          ) : null}
+
           <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
             {product.summary}
           </p>
@@ -328,6 +361,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
           </div>
         ) : null}
       </section>
+
+      <ProductReviews reviews={reviews} summary={reviewSummary} />
 
       <ProductInquiries inquiries={inquiries} productSlug={product.slug} />
 

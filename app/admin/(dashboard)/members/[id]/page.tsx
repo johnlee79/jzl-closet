@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import MemberDetail from '@/components/admin/MemberDetail';
 import { getOrdersOfUser } from '@/lib/orders';
+import { getPointHistory } from '@/lib/points';
 import { getProfile } from '@/lib/profiles';
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,10 @@ export default async function AdminMemberDetailPage({
   const profile = await getProfile(params.id);
   if (!profile) notFound();
 
-  const orders = await getOrdersOfUser(params.id);
+  const [orders, pointHistory] = await Promise.all([
+    getOrdersOfUser(params.id),
+    getPointHistory(params.id, 20),
+  ]);
   // 취소·반품·결제실패는 구매금액에서 뺍니다.
   const totalSpent = orders
     .filter((order) => !['cancelled', 'returned', 'failed'].includes(order.status))
@@ -26,7 +30,12 @@ export default async function AdminMemberDetailPage({
 
   return (
     <div className="mx-auto w-full max-w-[1280px]">
-      <MemberDetail profile={profile} orders={orders} totalSpent={totalSpent} />
+      <MemberDetail
+        profile={profile}
+        orders={orders}
+        totalSpent={totalSpent}
+        pointHistory={pointHistory}
+      />
     </div>
   );
 }

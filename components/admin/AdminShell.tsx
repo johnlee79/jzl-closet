@@ -18,19 +18,19 @@ const menu: MenuItem[] = [
   { href: '/admin/orders', label: '주문 관리', ready: true },
   { href: '/admin/members', label: '회원 관리', ready: true },
   { href: '/admin/inquiries', label: '문의 관리', ready: true },
+  { href: '/admin/reviews', label: '리뷰 관리', ready: true },
   { href: '/admin/products', label: '상품 관리', ready: true },
   { href: '/admin/categories', label: '분류 관리', ready: true },
   { href: '/admin/brands', label: '브랜드 관리', ready: true },
   { href: '/admin/design', label: '디자인 관리', ready: true },
+  { href: '/admin/notices', label: '공지 관리', ready: true },
+  { href: '/admin/popups', label: '팝업 관리', ready: true },
+  { href: '/admin/stats', label: '통계', ready: true },
   { href: '/admin/settings', label: '설정', ready: true },
 ];
 
 /** 다음 단계에서 만들 메뉴. 회색으로 표시만 합니다. */
-const upcoming: MenuItem[] = [
-  { href: '/admin/reviews', label: '리뷰 관리', ready: false },
-  { href: '/admin/points', label: '포인트', ready: false },
-  { href: '/admin/notices', label: '공지', ready: false },
-];
+const upcoming: MenuItem[] = [];
 
 export default function AdminShell({
   children,
@@ -103,7 +103,9 @@ export default function AdminShell({
         );
       })}
 
-      <span className="my-2 border-t border-slate-200" aria-hidden="true" />
+      {upcoming.length > 0 ? (
+        <span className="my-2 border-t border-slate-200" aria-hidden="true" />
+      ) : null}
 
       {upcoming.map((item) => (
         <span

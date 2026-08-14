@@ -9,6 +9,7 @@ import {
   profilesTableReady,
   touchLastLogin,
 } from '@/lib/profiles';
+import { earnSignupPoints } from '@/lib/points';
 import { clientIp, rateLimit } from '@/lib/rate-limit';
 import { SITE_URL } from '@/lib/store';
 import { createAuthClient } from '@/lib/supabase/auth-server';
@@ -181,6 +182,9 @@ export async function signupAction(
         : '회원 정보를 저장하지 못했습니다.';
     return { ok: false, error: message };
   }
+
+  // 회원가입 축하 포인트 — 실패해도 가입은 그대로 진행됩니다.
+  await earnSignupPoints(userId);
 
   // 이메일 인증이 꺼져 있으면 여기서 이미 세션이 생겨 자동 로그인 상태입니다.
   // 켜져 있으면 세션이 없고, 손님은 메일의 링크를 눌러야 합니다.

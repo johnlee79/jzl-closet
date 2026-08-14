@@ -148,6 +148,8 @@ export async function placeOrderAction(
     order = await createOrder({
       ...input,
       userId: user?.id ?? null,
+      // 비회원이면 포인트를 쓸 수 없습니다.
+      usePoints: user ? Math.max(0, Math.trunc(Number(input.usePoints) || 0)) : 0,
       cashReceiptType: toCashReceiptType(input.cashReceiptType),
       items: input.items.map((item) => ({
         productSlug: String(item.productSlug),

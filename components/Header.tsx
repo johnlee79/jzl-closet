@@ -56,18 +56,24 @@ export default function Header({
     };
   }, [open]);
 
+  /**
+   * 로고.
+   * ★ 좁은 화면에서 버튼과 겹치거나 줄바꿈되지 않도록 글자 크기와 자간을
+   *   단계별로 줄입니다. (모바일 15px → sm 18px → md 24px)
+   */
   const logo = logoUrl ? (
     /* eslint-disable-next-line @next/next/no-img-element */
-    <img src={logoUrl} alt={storeName} className="h-8 w-auto object-contain md:h-9" />
+    <img src={logoUrl} alt={storeName} className="h-7 w-auto object-contain sm:h-8 md:h-9" />
   ) : (
-    <span className="font-display text-[20px] font-light tracking-[0.34em] text-ink md:text-[24px]">
+    <span className="whitespace-nowrap font-display text-[15px] font-light tracking-[0.18em] text-ink sm:text-[18px] sm:tracking-[0.26em] md:text-[24px] md:tracking-[0.34em]">
       {storeName}
     </span>
   );
 
   return (
     <header className="sticky top-0 z-40 border-b border-stone bg-paper">
-      <div className="shell flex h-16 items-center justify-between gap-6 md:h-20">
+      {/* 좁은 화면에서는 간격을 줄여 로고와 버튼이 겹치지 않게 합니다. */}
+      <div className="shell flex h-16 items-center justify-between gap-2 sm:gap-4 md:h-20 md:gap-6">
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -116,8 +122,20 @@ export default function Header({
           </ul>
         </nav>
 
-        <div className="flex shrink-0 items-center gap-5">
+        {/* 오른쪽 — 로그인/회원가입 버튼과 장바구니.
+            장바구니는 세로 구분선으로 버튼과 나눠 둡니다. */}
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          {/* 데스크탑: 버튼 두 개 */}
           <AccountMenu />
+          {/* 모바일·태블릿: 버튼 하나 (또는 사람 아이콘) */}
+          <span className="lg:hidden">
+            <AccountMenu variant="mobile" />
+          </span>
+
+          <span
+            aria-hidden="true"
+            className="hidden h-4 w-px bg-stone sm:block"
+          />
           <CartBadge />
         </div>
       </div>
@@ -139,7 +157,13 @@ export default function Header({
           </div>
 
           <nav aria-label="모바일 메뉴" className="shell pb-20 pt-4">
-            <ul className="border-t border-stone">
+            {/* ★ 로그인·회원가입을 메뉴 맨 위에 크게 둡니다. */}
+            <div className="pb-6">
+              <AccountMenu variant="drawer" />
+            </div>
+
+            <p className="label-xs">CATEGORY</p>
+            <ul className="mt-4 border-t border-stone">
               {menu.map((category) => (
                 <li key={category.slug} className="border-b border-stone py-4">
                   <Link
@@ -166,9 +190,6 @@ export default function Header({
                 </li>
               ))}
             </ul>
-
-            <p className="label-xs mt-10">MY</p>
-            <AccountMenu variant="mobile" />
 
             <p className="label-xs mt-10">INFORMATION</p>
             <ul className="mt-4 border-t border-stone">

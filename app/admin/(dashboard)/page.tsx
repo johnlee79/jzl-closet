@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { countPendingInquiries } from '@/lib/inquiries';
+import { countReviewsToday } from '@/lib/reviews';
 import { statusBadgeClass, statusLabel, ORDER_STATUSES } from '@/lib/order-status';
 import { getDashboardStats } from '@/lib/orders';
 import { formatPrice } from '@/lib/product-utils';
@@ -135,13 +136,14 @@ export default async function AdminDashboardPage() {
     recentOrders: [],
   };
 
-  const [stats, pendingInquiryCount, memberCounts] = configured
+  const [stats, pendingInquiryCount, memberCounts, reviewCounts] = configured
     ? await Promise.all([
         getDashboardStats(),
         countPendingInquiries(),
         countMembersByStatus(),
+        countReviewsToday(),
       ])
-    : [empty, 0, {} as Record<string, number>];
+    : [empty, 0, {} as Record<string, number>, { today: 0, lowRating: 0 }];
 
   const activeMembers = memberCounts.active ?? 0;
 
@@ -229,6 +231,22 @@ export default async function AdminDashboardPage() {
           value={activeMembers}
           suffix="명"
           href="/admin/members"
+        />
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          label="오늘 등록된 리뷰"
+          value={reviewCounts.today}
+          suffix="건"
+          href="/admin/reviews"
+        />
+        <StatCard
+          label="별점 3점 이하 리뷰"
+          value={reviewCounts.lowRating}
+          suffix="건"
+          tone="alert"
+          href="/admin/reviews?rating=3"
         />
       </div>
 

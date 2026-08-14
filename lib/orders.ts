@@ -6,10 +6,15 @@ import {
   isStockReleasing,
   type OrderStatus,
 } from '@/lib/order-status';
+import { changePoints, getPointBalance, revokeOrderPoints } from '@/lib/points';
 import { isCombinationAvailable } from '@/lib/product-utils';
 import { normalizeOptions } from '@/lib/products';
-import { getPaymentSettings, getShippingSettings } from '@/lib/settings';
-import { isRemoteArea } from '@/lib/site-config';
+import {
+  getPaymentSettings,
+  getPointSettings,
+  getShippingSettings,
+} from '@/lib/settings';
+import { isRemoteArea, maxUsablePoints } from '@/lib/site-config';
 import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
 import { getBrands } from '@/lib/taxonomy';
 import { brandLabel } from '@/lib/brands';
@@ -659,6 +664,35 @@ export async function calcShipping(
   return { shippingFee, extraShippingFee, remote };
 }
 
+/**
+ * 실제로 쓸 수 있는 포인트를 계산합니다.
+ *
+ * ★ 클라이언트가 보낸 값은 "요청"일 뿐입니다.
+ *   잔액·최소 사용액·최대 비율을 서버에서 다시 적용해 깎습니다.
+ *   비회원이거나 조건에 못 미치면 0 입니다.
+ */
+export async function resolveUsedPoints(
+  userId: string | null,
+  itemsTotal: number,
+  requested: number
+): Promise<number> {
+  if (!userId) return 0;
+
+  const want = Math.max(0, Math.trunc(Number(requested) || 0));
+  if (want <= 0) return 0;
+
+  const [settings, balance] = await Promise.all([
+    getPointSettings(),
+    getPointBalance(userId),
+  ]);
+
+  // 최소 사용 금액에 못 미치면 아예 쓰지 않습니다.
+  if (settings.minUse > 0 && want < settings.minUse) return 0;
+
+  const limit = maxUsablePoints(itemsTotal, balance, settings);
+  return Math.min(want, limit);
+}
+
 /** 옵션 조합의 재고를 delta 만큼 더합니다. (주문 시 -수량, 취소 시 +수량) */
 async function adjustStock(
   entries: { productId: string | null; optionKey: string; quantity: number }[],
@@ -731,7 +765,12 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
     input.postcode,
     allFreeShipping
   );
-  const discount = 0; // 쿠폰·적립금은 다음 단계입니다.
+
+  /* ── 포인트 사용 ─────────────────────────────────────
+   * ★ 클라이언트가 보낸 금액을 그대로 쓰지 않습니다.
+   *   실제 잔액과 설정(최소 사용액·최대 비율)으로 다시 깎습니다.
+   *   실제 차감은 주문을 저장한 뒤에 합니다. */
+  const discount = await resolveUsedPoints(input.userId ?? null, itemsTotal, input.usePoints ?? 0);
   const totalAmount = itemsTotal + shippingFee + extraShippingFee - discount;
 
   const base = {
@@ -812,6 +851,23 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
 
   await addHistory(row.id, null, 'pending_payment', '주문이 접수되었습니다.');
 
+  /* 포인트 차감.
+     ★ 여기서 실패하면 주문 금액과 어긋나므로 할인을 0으로 되돌립니다.
+       (동시에 다른 곳에서 포인트를 다 써 버린 경우입니다) */
+  if (discount > 0 && input.userId) {
+    try {
+      await changePoints(input.userId, -discount, 'order_use', '주문 사용', row.id);
+    } catch (error) {
+      console.warn('[orders] 포인트 차감 실패 — 할인 없이 진행합니다:', row.id, error);
+      await supabase
+        .from(ORDERS)
+        .update({ discount: 0, total_amount: totalAmount + discount })
+        .eq('id', row.id);
+      row.discount = 0;
+      row.total_amount = totalAmount + discount;
+    }
+  }
+
   // 재고 차감 — 재고를 관리하는 조합만 줄어듭니다.
   await adjustStock(
     lines.map((line) => ({
@@ -884,6 +940,11 @@ export async function updateOrderStatus(
         })),
       1
     );
+
+    // ★ 쓴 포인트는 돌려주고, 이 주문의 리뷰로 적립된 포인트는 회수합니다.
+    if (before.userId) {
+      await revokeOrderPoints(before.userId, before.id, before.discount);
+    }
   }
 
   const after = await getOrderById(id);
