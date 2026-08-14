@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import StarRating from '@/components/StarRating';
 import { formatDate } from '@/lib/format';
 import { SPONSORED_NOTICE } from '@/lib/site-config';
@@ -21,7 +21,14 @@ function isVideo(url: string): boolean {
   return VIDEO_PATTERN.test(url);
 }
 
-type Media = { url: string; video: boolean; reviewId: string };
+type Media = {
+  url: string;
+  video: boolean;
+  reviewId: string;
+  /** 썸네일 위에 겹쳐 보여 줄 후기 앞부분 */
+  excerpt: string;
+  rating: number;
+};
 
 /** 별점 분포 막대 — 라이브러리 없이 폭만 조절해 그립니다. */
 function DistributionBar({
@@ -89,12 +96,45 @@ export default function ProductReviews({
   const gallery = useMemo<Media[]>(() => {
     const list: Media[] = [];
     for (const review of reviews) {
+      // 줄바꿈을 공백으로 바꿔 두 줄 안에 깔끔히 들어가게 합니다.
+      const excerpt = review.content.replace(/\s+/g, ' ').trim();
       for (const url of review.attachments) {
-        list.push({ url, video: isVideo(url), reviewId: review.id });
+        list.push({
+          url,
+          video: isVideo(url),
+          reviewId: review.id,
+          excerpt,
+          rating: review.rating,
+        });
       }
     }
     return list;
   }, [reviews]);
+
+  /* ── 갤러리에서 후기로 이동 ──────────────────────────
+   * ★ 썸네일을 누르면 확대가 아니라 그 후기 자리로 부드럽게 내려갑니다.
+   *   사진만 크게 봐서는 무슨 후기인지 알 수 없어 맥락이 끊깁니다.
+   *   확대 보기는 후기 카드 안의 사진을 눌렀을 때만 뜹니다. */
+  const cardRefs = useRef<Record<string, HTMLLIElement | null>>({});
+  const [highlighted, setHighlighted] = useState('');
+
+  const goToReview = useCallback(
+    (reviewId: string) => {
+      // 사진 없는 후기가 걸러져 있으면 먼저 필터를 풀어 줍니다.
+      if (photoOnly) setPhotoOnly(false);
+
+      // 목록이 다시 그려진 뒤에 스크롤해야 위치가 맞습니다.
+      window.requestAnimationFrame(() => {
+        const card = cardRefs.current[reviewId];
+        if (!card) return;
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setHighlighted(reviewId);
+        // 1.5초 뒤 강조를 풉니다.
+        window.setTimeout(() => setHighlighted(''), 1500);
+      });
+    },
+    [photoOnly]
+  );
 
   const visible = useMemo(() => {
     const filtered = photoOnly
@@ -150,9 +190,9 @@ export default function ProductReviews({
                   <li key={`${media.reviewId}-${media.url}`} className="shrink-0">
                     <button
                       type="button"
-                      onClick={() => setZoom(index)}
-                      aria-label={media.video ? '후기 영상 보기' : '후기 사진 크게 보기'}
-                      className="relative block h-[104px] w-[104px] overflow-hidden border border-stone md:h-[124px] md:w-[124px]"
+                      onClick={() => goToReview(media.reviewId)}
+                      aria-label={`후기 보기 — 별점 ${media.rating}점`}
+                      className="group relative block h-[132px] w-[132px] overflow-hidden border border-stone md:h-[156px] md:w-[156px]"
                     >
                       {media.video ? (
                         <>
@@ -172,9 +212,20 @@ export default function ProductReviews({
                           src={media.url}
                           alt=""
                           loading="lazy"
-                          className="h-full w-full object-cover transition-opacity hover:opacity-80"
+                          className="h-full w-full object-cover transition-opacity group-hover:opacity-90"
                         />
                       )}
+
+                      {/* ★ 무슨 후기인지 알 수 있게 본문 앞부분을 겹쳐 둡니다.
+                          그림자가 아니라 그라데이션이라 규칙에 어긋나지 않습니다. */}
+                      <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/80 via-ink/45 to-transparent px-2 pb-2 pt-6 text-left">
+                        <span className="block text-[11px] tracking-[0.1em] text-paper/90">
+                          {'★'.repeat(media.rating)}
+                        </span>
+                        <span className="mt-0.5 line-clamp-2 block text-[12px] leading-snug text-paper">
+                          {media.excerpt}
+                        </span>
+                      </span>
                     </button>
                   </li>
                 ))}
@@ -264,7 +315,15 @@ export default function ProductReviews({
           ) : (
             <ul>
               {visible.map((review) => (
-                <li key={review.id} className="border-b border-stone py-8">
+                <li
+                  key={review.id}
+                  ref={(node) => {
+                    cardRefs.current[review.id] = node;
+                  }}
+                  className={`scroll-mt-24 border-b border-stone px-3 py-8 transition-colors duration-500 ${
+                    highlighted === review.id ? 'bg-stone/40' : 'bg-transparent'
+                  }`}
+                >
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                     <StarRating value={review.rating} />
                     <span className="text-[14px] text-ink">{review.writerName}</span>

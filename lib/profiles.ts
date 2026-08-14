@@ -271,17 +271,29 @@ export async function getOrderStats(
   return result;
 }
 
+/**
+ * 상태별 회원 수.
+ * ★ 행을 가져와 세지 않고 상태마다 count 쿼리를 던집니다.
+ */
 export async function countMembersByStatus(): Promise<Record<string, number>> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return {};
 
-  const { data, error } = await supabase.from(TABLE).select('status');
-  if (error || !data) return {};
+  const statuses: MemberStatus[] = ['active', 'inactive', 'withdrawn'];
+
+  const results = await Promise.all(
+    statuses.map(async (status) => {
+      const { count, error } = await supabase
+        .from(TABLE)
+        .select('id', { count: 'exact', head: true })
+        .eq('status', status);
+      return { status, count: error ? 0 : (count ?? 0) };
+    })
+  );
 
   const result: Record<string, number> = {};
-  for (const row of data as { status: string | null }[]) {
-    const status = toStatus(row.status);
-    result[status] = (result[status] ?? 0) + 1;
+  for (const row of results) {
+    if (row.count > 0) result[row.status] = row.count;
   }
   return result;
 }

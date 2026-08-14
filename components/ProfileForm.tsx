@@ -3,9 +3,11 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import PostcodeSearch from '@/components/PostcodeSearch';
+import { useSite } from '@/components/SiteProvider';
 import { changePasswordAction } from '@/app/(shop)/auth-actions';
 import { updateProfileAction } from '@/app/(shop)/mypage/actions';
 import { formatPhone } from '@/lib/format';
+import { postcodeFallbackNotice } from '@/lib/postcode';
 
 type Message = { tone: 'ok' | 'error'; text: string } | null;
 
@@ -40,9 +42,12 @@ export default function ProfileForm({
   //   입력할 값이 없는 폼을 띄우면 아무리 눌러도 성공하지 않으므로 아예 감춥니다.
   const isSocial = provider !== 'email';
   const router = useRouter();
+  const { store } = useSite();
   const [pending, startTransition] = useTransition();
   const [form, setForm] = useState(initial);
   const [message, setMessage] = useState<Message>(null);
+  /** 주소 검색을 못 불러왔을 때 직접 입력으로 전환합니다. */
+  const [manualAddress, setManualAddress] = useState(false);
 
   // 비밀번호 변경은 별도 폼으로 둡니다.
   const [current, setCurrent] = useState('');
@@ -143,13 +148,20 @@ export default function ProfileForm({
               <input
                 id="profile-postcode"
                 type="text"
+                inputMode="numeric"
                 value={form.postcode}
-                readOnly
+                // ★ 주소 검색을 못 불러오면 직접 입력할 수 있게 풀어 줍니다.
+                readOnly={!manualAddress}
+                onChange={(event) =>
+                  set('postcode', event.target.value.replace(/[^0-9]/g, '').slice(0, 5))
+                }
                 placeholder="우편번호"
                 className={`${inputClass} max-w-[160px]`}
               />
               <div className="mt-2">
                 <PostcodeSearch
+                  showNotice={false}
+                  onStateChange={(state) => setManualAddress(state === 'failed')}
                   onSelect={(result) =>
                     setForm((prev) => ({
                       ...prev,
@@ -160,11 +172,19 @@ export default function ProfileForm({
                 />
               </div>
             </div>
+            {manualAddress ? (
+              <p
+                role="alert"
+                className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-wine"
+              >
+                {postcodeFallbackNotice(store.phone)}
+              </p>
+            ) : null}
             <input
               type="text"
               value={form.address1}
               onChange={(event) => set('address1', event.target.value)}
-              placeholder="주소 검색을 눌러 주세요"
+              placeholder={manualAddress ? '주소를 직접 입력해 주세요' : '주소 검색을 눌러 주세요'}
               aria-label="주소"
               className={inputClass}
             />

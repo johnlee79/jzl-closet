@@ -229,6 +229,8 @@ export type Order = {
   courier: string;
   trackingNo: string;
   adminMemo: string;
+  /** 켜 두면 입금 기한이 지나도 자동취소하지 않습니다. (공급처에 발송 요청이 나간 건) */
+  autoCancelExcluded: boolean;
 
   createdAt: string | null;
   updatedAt: string | null;

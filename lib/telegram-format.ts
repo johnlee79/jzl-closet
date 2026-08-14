@@ -39,7 +39,44 @@ function samePhone(a: string, b: string): boolean {
  *   ──────────────
  *   관리자: {SITE_URL}/admin/orders/{id}
  */
-export function buildNewOrderMessage(order: Order): string {
+/**
+ * 입금기한을 '08/15 14:30' 형태로. 한국시간 기준입니다.
+ * 기한을 넘기지 않으면 빈 문자열이라 줄 자체가 들어가지 않습니다.
+ */
+export function depositDeadlineLabel(
+  createdAt: string | null,
+  hours: number
+): string {
+  if (!createdAt || hours < 1) return '';
+  const created = new Date(createdAt);
+  if (Number.isNaN(created.getTime())) return '';
+
+  const deadline = new Date(created.getTime() + hours * 60 * 60 * 1000);
+
+  // ★ 지역화 문자열을 잘라 쓰면 형식이 바뀔 때 깨집니다. 조각으로 받아 직접 붙입니다.
+  const parts = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(deadline);
+
+  const pick = (type: string): string =>
+    parts.find((part) => part.type === type)?.value ?? '';
+
+  const month = pick('month');
+  const day = pick('day');
+  // hour12:false 에서 자정이 '24' 로 나오는 환경이 있어 맞춰 둡니다.
+  const hour = pick('hour') === '24' ? '00' : pick('hour');
+  const minute = pick('minute');
+
+  if (!month || !day || !hour || !minute) return '';
+  return `${month}/${day} ${hour}:${minute}`;
+}
+
+export function buildNewOrderMessage(order: Order, depositHours = 0): string {
   /* 배송지 한 줄 — (우편번호) 기본주소, 상세주소
      상세주소가 없으면 콤마도 넣지 않습니다. */
   const base = [order.postcode ? `(${order.postcode})` : '', order.address1]
@@ -65,10 +102,14 @@ export function buildNewOrderMessage(order: Order): string {
     DIVIDER,
   ];
 
+  const deadline = depositDeadlineLabel(order.createdAt, depositHours);
+
   const tail = [
     DIVIDER,
     `결제금액 ${formatPrice(order.totalAmount)}원`,
     `입금자명 ${order.depositorName || '(미입력)'}`,
+    // ★ 기한을 모르고 자동취소되는 일이 없도록 알림에도 남깁니다.
+    ...(deadline ? [`입금기한 ${deadline}`] : []),
     DIVIDER,
     `관리자: ${SITE_URL}/admin/orders/${order.id}`,
   ];

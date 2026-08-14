@@ -10,6 +10,7 @@ import {
   getOrderById,
   getOrdersByNos,
   setAdminMemo,
+  setAutoCancelExcluded,
   setTracking,
   updateOrderStatus,
   updateShippingAddress,
@@ -255,6 +256,29 @@ export async function setMemoAction(id: string, memo: string): Promise<ActionRes
     return { ok: true, data: undefined };
   } catch (error) {
     return fail(error, '메모를 저장하지 못했습니다.');
+  }
+}
+
+/**
+ * 자동취소 제외 토글.
+ *
+ * ★ 위탁배송이라 공급처에 이미 발송 요청이 나간 건이 있습니다.
+ *   그런 주문이 미입금으로 자동취소되면 물건은 가는데 주문은 사라집니다.
+ *   그래서 관리자가 직접 잠가 둘 수 있게 합니다.
+ *   (송장번호가 들어간 주문은 이 체크 없이도 자동으로 제외됩니다)
+ */
+export async function setAutoCancelExcludedAction(
+  id: string,
+  excluded: boolean
+): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  try {
+    await setAutoCancelExcluded(id, excluded);
+    refresh(id);
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '자동취소 제외 설정을 바꾸지 못했습니다.');
   }
 }
 

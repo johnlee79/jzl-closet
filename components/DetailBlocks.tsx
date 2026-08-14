@@ -15,13 +15,17 @@ export default function DetailBlocks({ blocks, productName }: DetailBlocksProps)
           case 'image':
             return (
               <figure key={`image-${index}`} className="w-full">
-                <div className="aspect-[4/5] w-full overflow-hidden bg-stone">
+                {/* ★ 틀을 씌우지 않습니다.
+                    상세설명 이미지는 세로로 아주 긴 경우가 많아
+                    4:5 틀에 넣으면 아래쪽이 통째로 잘립니다. */}
+                <div className="w-full overflow-hidden bg-stone">
                   <SafeImage
                     src={block.src}
                     alt={block.alt}
                     label={productName}
                     width={860}
                     height={1075}
+                    fit="natural"
                   />
                 </div>
                 {block.caption ? (

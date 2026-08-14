@@ -242,7 +242,7 @@ export async function savePopupAction(
   if (!input.imageUrl.trim() && !input.content.trim()) {
     return { ok: false, error: '이미지나 내용 중 하나는 넣어 주세요.' };
   }
-  if (input.startsAt && input.endsAt && input.startsAt > input.endsAt) {
+  if (input.startsOn && input.endsOn && input.startsOn > input.endsOn) {
     return { ok: false, error: '노출 시작일이 종료일보다 늦습니다.' };
   }
 

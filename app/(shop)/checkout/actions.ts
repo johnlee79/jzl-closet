@@ -178,7 +178,7 @@ export async function placeOrderAction(
   // ★ 알림 실패가 주문을 막으면 안 됩니다. 실패해도 주문은 이미 저장되어 있습니다.
   if (payment.telegramEnabled) {
     try {
-      await notifyNewOrder(order);
+      await notifyNewOrder(order, payment.depositHours);
     } catch (error) {
       console.warn('[checkout] 텔레그램 알림 실패:', error);
     }

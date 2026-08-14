@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { authButtonClass, authInputClass } from '@/components/AuthCard';
+import SignupPointBadge from '@/components/SignupPointBadge';
 import GoogleButton, { OrDivider } from '@/components/GoogleButton';
 import ResendVerification from '@/components/ResendVerification';
 import { loginAction } from '@/app/(shop)/auth-actions';
@@ -146,7 +147,12 @@ export default function LoginForm({
           </Link>
         </div>
 
-        <button type="submit" disabled={pending} className={`${authButtonClass} mt-7`}>
+        {/* 아직 회원이 아닌 분에게 가입 혜택을 알려 줍니다. */}
+        <div className="mt-7 flex justify-center">
+          <SignupPointBadge />
+        </div>
+
+        <button type="submit" disabled={pending} className={`${authButtonClass} mt-4`}>
           {pending ? '확인 중…' : '로그인'}
         </button>
       </form>

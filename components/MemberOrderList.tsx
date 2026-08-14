@@ -17,15 +17,34 @@ import type { Order } from '@/lib/types';
 /** 배송이 끝난 주문에만 후기를 쓸 수 있습니다. */
 const REVIEWABLE = ['delivered', 'confirmed'];
 
+/** '8월 15일 14:30' — 한국시간 기준 */
+function deadlineLabel(createdAt: string | null, hours: number): string {
+  if (!createdAt || hours < 1) return '';
+  const created = new Date(createdAt);
+  if (Number.isNaN(created.getTime())) return '';
+
+  return new Date(created.getTime() + hours * 60 * 60 * 1000).toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
 export default function MemberOrderList({
   orders,
   status,
   reviewedKeys,
+  depositHours,
 }: {
   orders: Order[];
   status: string;
   /** 이미 후기를 쓴 "주문id:상품id" 조합 */
   reviewedKeys: string[];
+  /** 입금 기한(시간). 0 이면 기한 안내를 하지 않습니다. */
+  depositHours: number;
 }) {
   const reviewed = new Set(reviewedKeys);
   const router = useRouter();
@@ -168,6 +187,10 @@ export default function MemberOrderList({
                 <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
                   <span className="text-[15px] font-medium text-ink">
                     {statusLabel(order.status)}
+                    {/* ★ 입금대기 주문에는 기한을 함께 보여 줍니다. */}
+                    {order.status === 'pending_payment' && depositHours > 0
+                      ? ` · ${deadlineLabel(order.createdAt, depositHours)}까지`
+                      : ''}
                   </span>
                   <span className="text-[15px] text-ink">
                     {formatPrice(order.totalAmount)}원

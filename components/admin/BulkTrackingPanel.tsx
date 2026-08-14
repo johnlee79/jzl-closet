@@ -28,12 +28,17 @@ ORD-20260814-0002, 한진, 987654321098`;
  *   2) 확인한 건만 한 번에 저장합니다.
  * 저장하면 상태가 자동으로 '배송중' 으로 바뀝니다.
  */
-export default function BulkTrackingPanel() {
+export default function BulkTrackingPanel({
+  /** 전용 화면에서는 처음부터 펼쳐 둡니다. */
+  defaultOpen = false,
+}: {
+  defaultOpen?: boolean;
+} = {}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [text, setText] = useState('');
   const [rows, setRows] = useState<TrackingMatchRow[] | null>(null);
   const [overwrite, setOverwrite] = useState(false);

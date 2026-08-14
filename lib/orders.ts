@@ -2,6 +2,7 @@ import 'server-only';
 import { assertWritten } from '@/lib/db-write';
 
 import {
+  ORDER_STATUSES,
   UNSHIPPED_STATUSES,
   isOrderStatus,
   isStockReleasing,
@@ -98,6 +99,8 @@ type OrderRow = {
   courier: string | null;
   tracking_no: string | null;
   admin_memo: string | null;
+  /** 3-C 에서 추가한 컬럼. 아직 없을 수 있어 선택 항목으로 둡니다. */
+  auto_cancel_excluded?: boolean | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -190,6 +193,7 @@ function rowToOrder(
     courier: row.courier ?? '',
     trackingNo: row.tracking_no ?? '',
     adminMemo: row.admin_memo ?? '',
+    autoCancelExcluded: row.auto_cancel_excluded === true,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     items,
@@ -1164,16 +1168,30 @@ export async function requestCancel(orderId: string, reason: string): Promise<vo
  * ------------------------------------------------------------------ */
 
 /** 상태별 건수. 목록 탭의 뱃지와 대시보드 카드에 씁니다. */
+/**
+ * 상태별 주문 건수.
+ *
+ * ★ 예전에는 status 컬럼 전체를 가져와 세었습니다.
+ *   주문이 쌓일수록 전송량이 계속 늘어납니다.
+ *   지금은 상태마다 count 쿼리를 던지고 한 번에 기다립니다. (행을 가져오지 않습니다)
+ */
 export async function countOrdersByStatus(): Promise<Record<string, number>> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return {};
 
-  const { data, error } = await supabase.from(ORDERS).select('status');
-  if (error || !data) return {};
+  const results = await Promise.all(
+    ORDER_STATUSES.map(async (status) => {
+      const { count, error } = await supabase
+        .from(ORDERS)
+        .select('id', { count: 'exact', head: true })
+        .eq('status', status);
+      return { status, count: error ? 0 : (count ?? 0) };
+    })
+  );
 
   const result: Record<string, number> = {};
-  for (const row of data as { status: string }[]) {
-    result[row.status] = (result[row.status] ?? 0) + 1;
+  for (const row of results) {
+    if (row.count > 0) result[row.status] = row.count;
   }
   return result;
 }
@@ -1288,4 +1306,218 @@ export async function getDashboardStats(now = new Date()): Promise<DashboardStat
 /** 상태 문자열을 안전하게 OrderStatus 로 바꿉니다. */
 export function toOrderStatus(value: string): OrderStatus | null {
   return isOrderStatus(value) ? value : null;
+}
+
+/* ------------------------------------------------------------------
+ * 입금대기 자동취소 (3-C)
+ * ------------------------------------------------------------------ */
+
+/**
+ * 자동취소에서 제외되는 조건.
+ *
+ * ★ JZL CLOSET 은 위탁배송 구조입니다.
+ *   공급처(뉴욕트렌딕)에 이미 발송 요청이 나간 건을 자동으로 취소하면
+ *   물건은 가는데 주문은 없어지는 배송 사고가 납니다.
+ *   아래에 해당하면 건드리지 않고 관리자가 직접 처리하게 둡니다.
+ */
+function isAutoCancelExempt(order: Order): boolean {
+  // 1) 관리자가 직접 제외 표시를 한 주문
+  if (order.autoCancelExcluded) return true;
+  // 2) 송장번호가 들어간 주문 — 이미 발송된 것으로 봅니다
+  if (order.trackingNo.trim()) return true;
+  // 3) 관리자 메모에 발송요청 표시가 있는 주문
+  if (/발송\s*요청|출고\s*요청/.test(order.adminMemo)) return true;
+  return false;
+}
+
+export type AutoCancelResult = {
+  /** 실제로 취소한 주문 */
+  cancelled: Order[];
+  /** 기한은 지났지만 제외 조건에 걸려 남겨 둔 주문 수 */
+  skipped: number;
+};
+
+/**
+ * 입금 기한이 지난 '입금대기' 주문을 취소합니다.
+ *
+ * ★ 상태 변경은 updateOrderStatus 를 그대로 씁니다.
+ *   재고 되돌리기 · 사용 포인트 반환 · 상태 이력 남기기가 이미 그 안에 있습니다.
+ *   같은 로직을 여기서 다시 쓰면 언젠가 어긋납니다.
+ * ★ 적립 예정 포인트는 배송완료 시점에 지급하므로 이 단계에서는 나간 적이 없습니다.
+ *   (그래도 updateOrderStatus 가 회수까지 확인합니다)
+ *
+ * @param hours 입금 기한(시간). 관리자 설정의 depositHours 를 넘깁니다.
+ * @param limit 한 번에 처리할 최대 건수. 폭주를 막기 위한 안전장치입니다.
+ */
+export async function autoCancelUnpaidOrders(
+  hours: number,
+  limit = 50
+): Promise<AutoCancelResult> {
+  const empty: AutoCancelResult = { cancelled: [], skipped: 0 };
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return empty;
+  if (!Number.isFinite(hours) || hours < 1) return empty;
+
+  const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+
+  // ★ 후보만 가볍게 뽑습니다. select('*') 로 전체를 끌어오지 않습니다.
+  const { data, error } = await supabase
+    .from(ORDERS)
+    .select('id')
+    .eq('status', 'pending_payment')
+    .lt('created_at', cutoff)
+    .order('created_at', { ascending: true })
+    .limit(limit);
+
+  if (error || !data || data.length === 0) return empty;
+
+  const result: AutoCancelResult = { cancelled: [], skipped: 0 };
+
+  for (const row of data as { id: string }[]) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const order = await getOrderById(row.id);
+      if (!order || order.status !== 'pending_payment') continue;
+
+      if (isAutoCancelExempt(order)) {
+        result.skipped += 1;
+        continue;
+      }
+
+      // eslint-disable-next-line no-await-in-loop
+      const cancelled = await updateOrderStatus(order.id, 'cancelled', '미입금 자동취소');
+      result.cancelled.push(cancelled);
+    } catch (error) {
+      // 한 건이 실패해도 나머지는 계속 처리합니다.
+      console.warn('[orders] 자동취소 실패:', row.id, error);
+    }
+  }
+
+  return result;
+}
+
+/** 관리자 주문 상세의 '자동취소 제외' 토글 */
+export async function setAutoCancelExcluded(
+  id: string,
+  excluded: boolean
+): Promise<void> {
+  const supabase = requireSupabaseAdmin();
+  assertWritten(
+    await supabase
+      .from(ORDERS)
+      .update({ auto_cancel_excluded: excluded })
+      .eq('id', id)
+      .select('id'),
+    '자동취소 제외 설정을 바꾸지 못했습니다'
+  );
+}
+
+/**
+ * 입금 기한 시각.
+ * ★ 주문 완료 화면·마이페이지·텔레그램이 모두 이 함수를 씁니다.
+ *   각자 계산하면 언젠가 한 곳만 어긋납니다.
+ */
+export function depositDeadline(createdAt: string | null, hours: number): Date | null {
+  if (!createdAt) return null;
+  const created = new Date(createdAt);
+  if (Number.isNaN(created.getTime())) return null;
+  return new Date(created.getTime() + Math.max(1, hours) * 60 * 60 * 1000);
+}
+
+/* ------------------------------------------------------------------
+ * 주문자 목록 (3-C)
+ * ------------------------------------------------------------------ */
+
+export type OrdererSummary = {
+  /** 이름+연락처를 합친 식별자. 비회원도 같은 사람으로 묶입니다. */
+  key: string;
+  name: string;
+  phone: string;
+  email: string;
+  /** 회원이면 회원 id. 여러 번 중 한 번이라도 회원이면 채워집니다. */
+  userId: string | null;
+  orderCount: number;
+  /** 취소·반품·실패를 뺀 실매출 합계 */
+  totalAmount: number;
+  cancelledCount: number;
+  lastOrderedAt: string | null;
+};
+
+/** 매출에서 빼는 상태 — 통계와 같은 기준입니다. */
+const NOT_SALES = new Set(['cancelled', 'returned', 'failed']);
+
+/**
+ * 주문자별 요약.
+ *
+ * ★ 회원 목록은 가입한 사람만 보여 줍니다. 비회원 주문이 그대로 유지되는 구조라
+ *   "누가 얼마나 샀는지" 를 보려면 주문 쪽에서 묶어야 합니다.
+ * ★ 필요한 컬럼만 한 번에 읽고 메모리에서 묶습니다. 조회는 한 번뿐입니다.
+ */
+export async function getOrdererSummaries(
+  limit = 500
+): Promise<OrdererSummary[]> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from(ORDERS)
+    .select(
+      'user_id, orderer_name, orderer_phone, orderer_email, total_amount, status, created_at'
+    )
+    .order('created_at', { ascending: false })
+    .limit(4000);
+
+  if (error || !data) return [];
+
+  type Row = {
+    user_id: string | null;
+    orderer_name: string | null;
+    orderer_phone: string | null;
+    orderer_email: string | null;
+    total_amount: number | null;
+    status: string;
+    created_at: string | null;
+  };
+
+  const map = new Map<string, OrdererSummary>();
+
+  for (const row of data as Row[]) {
+    const name = (row.orderer_name ?? '').trim();
+    const phone = (row.orderer_phone ?? '').replace(/[^0-9]/g, '');
+    // 회원이면 회원 id 로, 비회원이면 이름+연락처로 묶습니다.
+    const key = row.user_id ?? `${name}:${phone}`;
+    if (!key.trim() || key === ':') continue;
+
+    const current =
+      map.get(key) ??
+      ({
+        key,
+        name,
+        phone: (row.orderer_phone ?? '').trim(),
+        email: (row.orderer_email ?? '').trim(),
+        userId: row.user_id,
+        orderCount: 0,
+        totalAmount: 0,
+        cancelledCount: 0,
+        lastOrderedAt: null,
+      } satisfies OrdererSummary);
+
+    current.orderCount += 1;
+    if (NOT_SALES.has(row.status)) {
+      current.cancelledCount += 1;
+    } else {
+      current.totalAmount += row.total_amount ?? 0;
+    }
+    if (!current.userId && row.user_id) current.userId = row.user_id;
+    if (!current.email && row.orderer_email) current.email = row.orderer_email.trim();
+    // 목록을 최신순으로 읽었으므로 처음 만난 값이 가장 최근입니다.
+    if (!current.lastOrderedAt) current.lastOrderedAt = row.created_at;
+
+    map.set(key, current);
+  }
+
+  return Array.from(map.values())
+    .sort((a, b) => b.totalAmount - a.totalAmount)
+    .slice(0, limit);
 }

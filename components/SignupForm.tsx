@@ -6,8 +6,10 @@ import { useState, useTransition } from 'react';
 import { authButtonClass, authInputClass } from '@/components/AuthCard';
 import GoogleButton, { OrDivider } from '@/components/GoogleButton';
 import PostcodeSearch from '@/components/PostcodeSearch';
+import { useSite } from '@/components/SiteProvider';
 import { checkEmailAction, signupAction } from '@/app/(shop)/auth-actions';
 import { formatPhone } from '@/lib/format';
+import { postcodeFallbackNotice } from '@/lib/postcode';
 
 type Form = {
   email: string;
@@ -33,6 +35,9 @@ const AGREEMENTS = [
 
 export default function SignupForm() {
   const router = useRouter();
+  const { store } = useSite();
+  /** 주소 검색을 못 불러왔을 때 직접 입력으로 전환합니다. */
+  const [manualAddress, setManualAddress] = useState(false);
   const [pending, startTransition] = useTransition();
   const [form, setForm] = useState<Form>({
     email: '',
@@ -279,13 +284,20 @@ export default function SignupForm() {
               <input
                 id="postcode"
                 type="text"
+                inputMode="numeric"
                 value={form.postcode}
-                readOnly
+                // ★ 주소 검색을 못 불러오면 직접 입력할 수 있게 풀어 줍니다.
+                readOnly={!manualAddress}
+                onChange={(event) =>
+                  set('postcode', event.target.value.replace(/[^0-9]/g, '').slice(0, 5))
+                }
                 placeholder="우편번호"
                 className={`${inputClass} max-w-[160px]`}
               />
               <div className="mt-2">
                 <PostcodeSearch
+                  showNotice={false}
+                  onStateChange={(state) => setManualAddress(state === 'failed')}
                   onSelect={(result) =>
                     setForm((prev) => ({
                       ...prev,
@@ -296,11 +308,19 @@ export default function SignupForm() {
                 />
               </div>
             </div>
+            {manualAddress ? (
+              <p
+                role="alert"
+                className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-wine"
+              >
+                {postcodeFallbackNotice(store.phone)}
+              </p>
+            ) : null}
             <input
               type="text"
               value={form.address1}
               onChange={(event) => set('address1', event.target.value)}
-              placeholder="주소 검색을 눌러 주세요"
+              placeholder={manualAddress ? '주소를 직접 입력해 주세요' : '주소 검색을 눌러 주세요'}
               aria-label="주소"
               className={inputClass}
             />

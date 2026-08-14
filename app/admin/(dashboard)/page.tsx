@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { sweepAutoCancelQuietly } from '@/lib/auto-cancel';
 import { countPendingInquiries } from '@/lib/inquiries';
 import { countReviewsToday } from '@/lib/reviews';
 import { statusBadgeClass, statusLabel, ORDER_STATUSES } from '@/lib/order-status';
@@ -135,6 +136,9 @@ export default async function AdminDashboardPage() {
     countByStatus: {},
     recentOrders: [],
   };
+
+  // 관리자 첫 화면에서도 기한 지난 입금대기 건을 정리합니다.
+  if (configured) await sweepAutoCancelQuietly();
 
   const [stats, pendingInquiryCount, memberCounts, reviewCounts] = configured
     ? await Promise.all([

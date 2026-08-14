@@ -12,6 +12,32 @@
   --stone: #dbd7d1;
   --muted: #55524e; /* 보조 텍스트 — 캡션·라벨 전용. 본문은 ink 를 쓴다 */
   --wine: #6a2e3c;
+
+  /* ============================================================
+     관리자 팔레트 (라이트 = 기본값)
+     ★ 상품 이미지의 색감을 판단해야 하므로 기본은 항상 라이트입니다.
+     ★ 고객 화면은 이 값을 쓰지 않습니다. 다크모드는 /admin 안에서만 돕니다.
+     ============================================================ */
+  --admin-bg: #f1f5f9;
+  --admin-card: #ffffff;
+  --admin-border: #e2e8f0;
+  --admin-border-strong: #cbd5e1;
+  --admin-text: #0f172a;
+  --admin-sub: #475569;
+  --admin-muted: #94a3b8;
+  --admin-hover: #f8fafc;
+}
+
+/* 다크 팔레트 — html.dark 일 때만 바뀝니다. */
+.dark {
+  --admin-bg: #0f1117;
+  --admin-card: #161923;
+  --admin-border: #252a36;
+  --admin-border-strong: #333a4a;
+  --admin-text: #e6e8ec;
+  --admin-sub: #9ba1ac;
+  --admin-muted: #6f7683;
+  --admin-hover: #1c2130;
 }
 
 @layer base {
@@ -101,11 +127,23 @@
      시스템 폰트 · 흰 배경 · 명확한 대비의 실용 위주 스타일입니다.
      ============================================================ */
   .admin-root {
-    font-family: ui-sans-serif, system-ui, 'Segoe UI', 'Malgun Gothic', sans-serif;
+    /* ★ 관리자는 Pretendard 하나로 통일합니다.
+       고객 화면의 명조체(Gowun Batang)·영문 디스플레이(Cormorant)는 그대로 둡니다.
+       관리자는 업무 도구, 고객 화면은 브랜드 얼굴이라 의도적으로 다르게 갑니다. */
+    font-family: 'Pretendard Variable', Pretendard, ui-sans-serif, system-ui,
+      'Segoe UI', 'Malgun Gothic', sans-serif;
     font-weight: 400;
     line-height: 1.5;
     letter-spacing: 0;
-    @apply bg-slate-100 text-slate-900;
+    background-color: var(--admin-bg);
+    color: var(--admin-text);
+  }
+
+  /* 금액·건수가 자릿수까지 딱 맞게 서도록 숫자 폭을 고정합니다. */
+  .admin-root table,
+  .admin-root input,
+  .admin-root .admin-badge {
+    font-variant-numeric: tabular-nums;
   }
 
   .admin-root h1,
@@ -116,19 +154,36 @@
   }
 
   .admin-card {
-    @apply rounded-lg border border-slate-200 bg-white shadow-sm;
+    @apply rounded-lg border shadow-sm;
+    border-color: var(--admin-border);
+    background-color: var(--admin-card);
   }
 
   .admin-label {
-    @apply mb-1 block text-[13px] font-medium text-slate-700;
+    @apply mb-1 block text-[13px] font-medium;
+    color: var(--admin-sub);
   }
 
   .admin-input {
-    @apply w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[14px] text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-500;
+    @apply w-full rounded-md border px-3 py-2 text-[14px] outline-none transition-colors focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:opacity-60;
+    border-color: var(--admin-border-strong);
+    background-color: var(--admin-card);
+    color: var(--admin-text);
+  }
+
+  .admin-input::placeholder {
+    color: var(--admin-muted);
   }
 
   .admin-btn {
-    @apply inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-2 text-[14px] font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-[14px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    border-color: var(--admin-border-strong);
+    background-color: var(--admin-card);
+    color: var(--admin-sub);
+  }
+
+  .admin-btn:hover:not(:disabled) {
+    background-color: var(--admin-hover);
   }
 
   .admin-btn-primary {
@@ -136,12 +191,151 @@
   }
 
   .admin-btn-danger {
-    @apply inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md border border-red-300 bg-white px-3 py-2 text-[14px] font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md border border-red-300 px-3 py-2 text-[14px] font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50;
+    background-color: var(--admin-card);
   }
 
   .admin-badge {
     @apply inline-flex items-center rounded px-2 py-0.5 text-[12px] font-medium;
   }
+}
+
+/* ============================================================
+   관리자 다크모드
+   ============================================================
+
+   ★ 왜 이런 방식인가
+     관리자 화면 곳곳에 bg-white · text-slate-900 같은 유틸리티가 직접 박혀 있습니다.
+     수십 개 파일을 전부 dark: 변형으로 고치면 손이 많이 가고 빠뜨리기도 쉽습니다.
+     그래서 /admin 안에서만 그 유틸리티들의 색을 팔레트 변수로 다시 칠합니다.
+     선택자가 .dark .admin-root .bg-white 라 원래 유틸리티보다 우선합니다.
+
+   ★ 고객 화면(.admin-root 바깥)에는 어떤 영향도 없습니다.
+   ============================================================ */
+
+.dark .admin-root .bg-white {
+  background-color: var(--admin-card);
+}
+
+.dark .admin-root .bg-slate-50,
+.dark .admin-root .bg-slate-100 {
+  background-color: var(--admin-hover);
+}
+
+.dark .admin-root .text-slate-900,
+.dark .admin-root .text-slate-800 {
+  color: var(--admin-text);
+}
+
+.dark .admin-root .text-slate-700,
+.dark .admin-root .text-slate-600 {
+  color: var(--admin-sub);
+}
+
+.dark .admin-root .text-slate-500,
+.dark .admin-root .text-slate-400 {
+  color: var(--admin-muted);
+}
+
+.dark .admin-root .border-slate-200,
+.dark .admin-root .border-slate-300 {
+  border-color: var(--admin-border);
+}
+
+.dark .admin-root .hover\:bg-slate-50:hover,
+.dark .admin-root .hover\:bg-slate-100:hover {
+  background-color: var(--admin-hover);
+}
+
+.dark .admin-root .divide-slate-200 > * + * {
+  border-color: var(--admin-border);
+}
+
+/* 그림자는 어두운 배경에서 보이지 않고 탁하기만 합니다. */
+.dark .admin-root .shadow-sm,
+.dark .admin-root .shadow,
+.dark .admin-root .shadow-md {
+  box-shadow: none;
+}
+
+/* ── 주문 상태 뱃지 ──────────────────────────────────────────
+   라이트에서는 연한 배경 + 진한 글씨,
+   다크에서는 반투명 배경 + 밝은 글씨로 대비를 맞춥니다. */
+.dark .admin-root .bg-amber-50 {
+  background-color: rgba(217, 119, 6, 0.16);
+}
+.dark .admin-root .bg-amber-100 {
+  background-color: rgba(217, 119, 6, 0.24);
+}
+.dark .admin-root .text-amber-700,
+.dark .admin-root .text-amber-800,
+.dark .admin-root .text-amber-900 {
+  color: #fbbf24;
+}
+.dark .admin-root .border-amber-300,
+.dark .admin-root .border-amber-400 {
+  border-color: rgba(217, 119, 6, 0.5);
+}
+
+.dark .admin-root .bg-blue-50 {
+  background-color: rgba(37, 99, 235, 0.16);
+}
+.dark .admin-root .bg-blue-100 {
+  background-color: rgba(37, 99, 235, 0.26);
+}
+.dark .admin-root .text-blue-700,
+.dark .admin-root .text-blue-800 {
+  color: #7dabff;
+}
+
+.dark .admin-root .bg-green-50 {
+  background-color: rgba(22, 163, 74, 0.16);
+}
+.dark .admin-root .bg-green-100 {
+  background-color: rgba(22, 163, 74, 0.26);
+}
+.dark .admin-root .text-green-700,
+.dark .admin-root .text-green-800 {
+  color: #6ee7a8;
+}
+
+.dark .admin-root .bg-red-50 {
+  background-color: rgba(220, 38, 38, 0.16);
+}
+.dark .admin-root .bg-red-100 {
+  background-color: rgba(220, 38, 38, 0.26);
+}
+.dark .admin-root .text-red-600,
+.dark .admin-root .text-red-700 {
+  color: #ff9a9a;
+}
+.dark .admin-root .border-red-300 {
+  border-color: rgba(220, 38, 38, 0.5);
+}
+
+/* 선택 상태(파란 채움)는 다크에서도 그대로 두되 글씨만 확실히 흰색으로 */
+.dark .admin-root .bg-blue-700 {
+  background-color: #2f5fd0;
+}
+
+/*
+ * 가입 유도 배지의 숨쉬기 애니메이션.
+ * ★ 깜박임이 아니라 밝기가 서서히 오르내리는 정도입니다.
+ *   급격한 점멸은 브랜드 톤을 해치고 시각적으로도 피로합니다.
+ * ★ 아래 prefers-reduced-motion 규칙이 이 움직임도 함께 멈춥니다.
+ */
+@keyframes jzl-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.72;
+  }
+}
+
+.jzl-breathe {
+  animation: jzl-breathe 2.5s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -152,5 +346,11 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* 배지는 완전히 선명한 상태로 멈춰 있어야 읽힙니다. */
+  .jzl-breathe {
+    animation: none !important;
+    opacity: 1 !important;
   }
 }

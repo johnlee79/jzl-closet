@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { signInWithGoogleAction } from '@/app/(shop)/auth-actions';
 
 /** 구글 정품 로고(4색)를 인라인 SVG 로 직접 그립니다. 외부 이미지를 쓰지 않습니다. */
@@ -54,16 +54,43 @@ export default function GoogleButton({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState('');
 
+  /**
+   * 구글 응답이 느릴 때 멈춘 것으로 오해하지 않게 상태를 알려 줍니다.
+   *   0  아직 시작 전
+   *   1  연결 중
+   *   2  3초 넘음 — "곧 연결됩니다" 안내
+   *   3  15초 넘음 — 실패로 보고 다시 시도 버튼
+   */
+  const [stage, setStage] = useState(0);
+  const timers = useRef<number[]>([]);
+
+  const clearTimers = () => {
+    timers.current.forEach((id) => window.clearTimeout(id));
+    timers.current = [];
+  };
+
+  // 화면을 떠날 때 타이머를 정리합니다.
+  useEffect(() => clearTimers, []);
+
   const start = () => {
-    if (pending) return;
+    // ★ 중복 클릭 차단. 여러 번 누르면 인증 요청이 겹쳐 더 느려집니다.
+    if (pending || stage === 1 || stage === 2) return;
+
     setError('');
+    setStage(1);
+    clearTimers();
+    timers.current.push(window.setTimeout(() => setStage(2), 3000));
+    timers.current.push(window.setTimeout(() => setStage(3), 15000));
+
     startTransition(async () => {
       const result = await signInWithGoogleAction(next);
       if (!result.ok) {
+        clearTimers();
+        setStage(0);
         setError(result.error);
         return;
       }
-      // 구글 동의 화면으로 넘어갑니다.
+      // 구글 동의 화면으로 넘어갑니다. (여기서 페이지가 통째로 바뀝니다)
       window.location.assign(result.data.url);
     });
   };
@@ -73,12 +100,24 @@ export default function GoogleButton({
       <button
         type="button"
         onClick={start}
-        disabled={pending}
+        disabled={stage === 1 || stage === 2}
         className="inline-flex min-h-[52px] w-full items-center justify-center gap-3 rounded-sm border border-[#DADCE0] bg-white px-6 text-[15px] font-medium text-[#1F1F1F] transition-colors duration-200 hover:bg-[#F8F9FA] disabled:cursor-not-allowed disabled:opacity-50"
       >
         <GoogleLogo />
-        {pending ? '이동 중…' : label}
+        {stage === 0 ? label : stage === 3 ? '다시 시도하기' : '연결 중…'}
       </button>
+
+      {stage === 2 ? (
+        <p role="status" className="mt-3 text-center text-[13px] leading-relaxed text-muted">
+          잠시만 기다려 주세요. 곧 연결됩니다.
+        </p>
+      ) : null}
+
+      {stage === 3 ? (
+        <p role="alert" className="mt-3 text-center text-[13px] leading-relaxed text-wine">
+          연결이 오래 걸리고 있습니다. 위 버튼으로 다시 시도해 주세요.
+        </p>
+      ) : null}
 
       {/* TODO: 카카오 로그인 버튼 */}
       {/* TODO: 네이버 로그인 버튼 */}

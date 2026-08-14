@@ -3,10 +3,10 @@ import WelcomeNotice from '@/components/WelcomeNotice';
 import { getActiveMember } from '@/lib/auth';
 import { countInquiriesOfUser } from '@/lib/inquiries';
 import { statusLabel } from '@/lib/order-status';
-import { countOrdersOfUser, getOrdersOfUser } from '@/lib/orders';
+import { countOrdersOfUser, depositDeadline, getOrdersOfUser } from '@/lib/orders';
 import { formatDate } from '@/lib/format';
 import { formatPrice } from '@/lib/product-utils';
-import { getCachedEvent } from '@/lib/settings';
+import { getCachedEvent, getCachedPayment } from '@/lib/settings';
 
 export const metadata = { title: '요약' };
 
@@ -21,12 +21,27 @@ export default async function MypageHomePage() {
   const member = await getActiveMember();
   if (!member) return null;
 
-  const [counts, recent, inquiryCounts, event] = await Promise.all([
+  const [counts, recent, inquiryCounts, event, payment] = await Promise.all([
     countOrdersOfUser(member.user.id),
     getOrdersOfUser(member.user.id),
     countInquiriesOfUser(member.user.id),
     getCachedEvent(),
+    getCachedPayment(),
   ]);
+
+  /* ── 입금 기한이 1시간 남은 주문 ────────────────────────
+   * ★ 기한을 모르고 자동취소당하는 일이 없도록 미리 알려 줍니다.
+   *   비회원은 연락할 방법이 없어 이 안내를 못 받습니다. (문자 발송은 다음 작업)
+   *   이미 불러온 주문 목록에서 고르므로 조회가 늘지 않습니다. */
+  const soonExpiring = payment.autoCancelEnabled
+    ? recent.filter((order) => {
+        if (order.status !== 'pending_payment') return false;
+        const deadline = depositDeadline(order.createdAt, payment.depositHours);
+        if (!deadline) return false;
+        const left = deadline.getTime() - Date.now();
+        return left > 0 && left <= 60 * 60 * 1000;
+      })
+    : [];
 
   // 가입 축하 안내 — 최근 7일 안에 가입한 회원에게만, 브라우저에서 한 번만 보여 줍니다.
   const joined = member.profile.createdAt
@@ -39,6 +54,26 @@ export default async function MypageHomePage() {
 
   return (
     <div className="flex flex-col gap-12">
+      {/* ★ 입금 기한이 1시간 남았습니다. */}
+      {soonExpiring.length > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 border border-wine bg-wine/5 px-5 py-4">
+          <p className="text-[15px] leading-relaxed text-wine">
+            입금 기한이 1시간 남았습니다. 기한이 지나면 주문이 자동 취소됩니다.
+            {soonExpiring.length > 1 ? ` (${soonExpiring.length}건)` : ''}
+          </p>
+          <Link
+            href={
+              soonExpiring.length === 1
+                ? `/mypage/orders/${soonExpiring[0].id}`
+                : '/mypage/orders?status=pending_payment'
+            }
+            className="btn-secondary min-h-[40px] px-4 py-0 text-[13px]"
+          >
+            주문 확인
+          </Link>
+        </div>
+      ) : null}
+
       {showWelcome ? <WelcomeNotice message={event.mypageWelcome} /> : null}
 
       <section aria-labelledby="summary-heading">

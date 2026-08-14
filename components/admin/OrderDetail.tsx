@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import {
   cancelItemAction,
+  setAutoCancelExcludedAction,
   setMemoAction,
   setTrackingAction,
   updateAddressAction,
@@ -47,6 +48,8 @@ export default function OrderDetail({ order }: { order: Order }) {
   const [courier, setCourier] = useState(order.courier);
   const [trackingNo, setTrackingNo] = useState(order.trackingNo);
   const [memo, setMemo] = useState(order.adminMemo);
+  /** 자동취소 제외 — 공급처에 발송 요청이 나간 주문을 잠급니다. */
+  const [autoCancelExcluded, setAutoCancelExcluded] = useState(order.autoCancelExcluded);
 
   const [addressOpen, setAddressOpen] = useState(false);
   const [address, setAddress] = useState({
@@ -548,6 +551,42 @@ export default function OrderDetail({ order }: { order: Order }) {
               >
                 {courierName(order.courier)} 배송 조회 ↗
               </a>
+            ) : null}
+          </section>
+
+          {/* ── 자동취소 제외 ───────────────────────────── */}
+          <section className="admin-card p-4 md:p-5">
+            <h2 className="text-[16px] font-semibold text-slate-900">미입금 자동취소</h2>
+            <label className="mt-3 flex cursor-pointer items-start gap-2 text-[14px] text-slate-800">
+              <input
+                type="checkbox"
+                checked={autoCancelExcluded}
+                disabled={pending}
+                onChange={(event) => {
+                  const next = event.target.checked;
+                  setAutoCancelExcluded(next);
+                  run(
+                    () => setAutoCancelExcludedAction(order.id, next),
+                    next
+                      ? '이 주문은 자동취소되지 않습니다.'
+                      : '자동취소 대상으로 되돌렸습니다.'
+                  );
+                }}
+                className="mt-0.5 h-4 w-4"
+              />
+              <span>
+                이 주문은 자동취소하지 않기
+                <span className="mt-1 block text-[12px] leading-relaxed text-slate-500">
+                  공급처에 이미 발송 요청을 넘긴 주문에 체크하세요. 송장번호가 들어간
+                  주문은 체크하지 않아도 자동으로 제외됩니다.
+                </span>
+              </span>
+            </label>
+
+            {order.trackingNo ? (
+              <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[12px] leading-relaxed text-slate-600">
+                송장번호가 있어 이미 자동취소 대상에서 빠져 있습니다.
+              </p>
             ) : null}
           </section>
 

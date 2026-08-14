@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import CopyOrderButton from '@/components/CopyOrderButton';
+import DepositCountdown from '@/components/DepositCountdown';
 import OrderReceipt, { orderToText } from '@/components/OrderReceipt';
-import { getOrderByNo } from '@/lib/orders';
+import { depositDeadline, getOrderByNo } from '@/lib/orders';
 import { verifyOrderToken } from '@/lib/order-token';
 import { getCachedStore, getPaymentSettings } from '@/lib/settings';
 
@@ -53,8 +54,20 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
   }
 
   const payment = await getPaymentSettings();
-  const placedAt = order.createdAt ? new Date(order.createdAt) : new Date();
-  const deadline = new Date(placedAt.getTime() + payment.depositHours * 60 * 60 * 1000);
+  const deadline =
+    depositDeadline(order.createdAt, payment.depositHours) ??
+    new Date(Date.now() + payment.depositHours * 60 * 60 * 1000);
+
+  /** '2026년 8월 15일 (금) 오후 2시 30분' — 한국시간으로 고정해 보여 줍니다. */
+  const deadlineLabel = deadline.toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 
   const receiptText = orderToText(order, store.name);
 
@@ -85,6 +98,7 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
             accountNo: payment.accountNo,
             accountHolder: payment.accountHolder,
             deadline: deadline.toLocaleString('ko-KR', {
+              timeZone: 'Asia/Seoul',
               month: 'long',
               day: 'numeric',
               hour: '2-digit',
@@ -92,6 +106,11 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
             }),
           }}
         />
+
+        {/* ★ 입금 계좌 바로 아래. 기한을 모르고 취소당하는 일이 없게 합니다. */}
+        {payment.autoCancelEnabled ? (
+          <DepositCountdown deadline={deadline.toISOString()} label={deadlineLabel} />
+        ) : null}
 
         <aside className="lg:sticky lg:top-28 lg:self-start">
           <div className="border border-stone p-6 md:p-8">

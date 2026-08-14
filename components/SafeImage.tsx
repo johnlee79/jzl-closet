@@ -10,6 +10,13 @@ type SafeImageProps = {
   height: number;
   className?: string;
   priority?: boolean;
+  /**
+   * 이미지를 어떻게 채울지.
+   *   cover    틀에 꽉 채우고 넘치는 부분을 자릅니다 (상품 썸네일·갤러리)
+   *   contain  틀 안에 전부 들어오게 줄입니다 (잘리면 안 되는 미리보기)
+   *   natural  틀을 두지 않고 원본 비율 그대로 폭에 맞춥니다 (상세설명 세로 이미지)
+   */
+  fit?: 'cover' | 'contain' | 'natural';
 };
 
 /**
@@ -24,6 +31,7 @@ export default function SafeImage({
   height,
   className = '',
   priority = false,
+  fit = 'cover',
 }: SafeImageProps) {
   const [failed, setFailed] = useState(false);
 
@@ -58,17 +66,26 @@ export default function SafeImage({
     );
   }
 
+  // ★ natural 은 틀을 두지 않습니다.
+  //   상세설명 이미지는 세로로 아주 긴 경우가 많아 비율을 미리 정해 두면 잘립니다.
+  //   비율을 모르므로 width/height 도 넘기지 않습니다.
+  const fitClass =
+    fit === 'natural'
+      ? 'block h-auto w-full'
+      : fit === 'contain'
+        ? 'h-full w-full object-contain'
+        : 'h-full w-full object-cover';
+
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
       alt={alt}
-      width={width}
-      height={height}
+      {...(fit === 'natural' ? {} : { width, height })}
       loading={priority ? 'eager' : 'lazy'}
       decoding="async"
       onError={() => setFailed(true)}
-      className={`h-full w-full object-cover ${className}`}
+      className={`${fitClass} ${className}`}
     />
   );
 }

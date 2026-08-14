@@ -27,7 +27,16 @@ export type OrderStatus = (typeof ORDER_STATUSES)[number];
 type StatusMeta = {
   label: string;
   /** 관리자 목록 뱃지 색 */
-  tone: 'wait' | 'go' | 'done' | 'stop';
+  /**
+   * 뱃지 색.
+   *   wait  입금대기 — 앰버
+   *   go    결제완료 — 블루
+   *   prep  상품준비중 — 슬레이트
+   *   ship  배송중 — 앰버
+   *   done  배송완료·구매확정 — 그린
+   *   stop  취소·반품·실패 — 레드
+   */
+  tone: 'wait' | 'go' | 'prep' | 'ship' | 'done' | 'stop';
   /** 손님에게 보여 주는 한 줄 설명 */
   hint: string;
 };
@@ -45,12 +54,12 @@ export const ORDER_STATUS_META: Record<OrderStatus, StatusMeta> = {
   },
   preparing: {
     label: '상품준비중',
-    tone: 'go',
+    tone: 'prep',
     hint: '주문하신 상품을 포장하고 있습니다.',
   },
   shipping: {
     label: '배송중',
-    tone: 'go',
+    tone: 'ship',
     hint: '상품이 출고되었습니다. 송장번호로 배송 조회가 가능합니다.',
   },
   delivered: {
@@ -129,9 +138,15 @@ export function isStockReleasing(status: string): boolean {
 export const UNSHIPPED_STATUSES: OrderStatus[] = ['paid', 'preparing'];
 
 /** 관리자 뱃지 색 */
+/**
+ * 관리자 목록의 상태 뱃지 색.
+ * ★ 라이트·다크 양쪽에서 대비가 확보되도록 다크에서의 색은
+ *   app/globals.css 의 .dark .admin-root 규칙이 다시 칠합니다.
+ */
 export function statusBadgeClass(status: string): string {
   switch (ORDER_STATUS_META[status as OrderStatus]?.tone) {
     case 'wait':
+    case 'ship':
       return 'bg-amber-100 text-amber-800';
     case 'go':
       return 'bg-blue-100 text-blue-800';
@@ -139,6 +154,7 @@ export function statusBadgeClass(status: string): string {
       return 'bg-green-100 text-green-800';
     case 'stop':
       return 'bg-red-100 text-red-700';
+    case 'prep':
     default:
       return 'bg-slate-100 text-slate-700';
   }

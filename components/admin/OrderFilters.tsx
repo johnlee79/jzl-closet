@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { STATUS_TABS } from '@/lib/order-status';
+import { useNavTransition } from '@/lib/use-nav-transition';
 
 /**
  * 주문 목록 상단 — 상태 탭 · 검색 · 기간 필터.
@@ -18,7 +19,8 @@ export default function OrderFilters({
   /** 전체 건수 */
   total: number;
 }) {
-  const router = useRouter();
+  // ★ 필터를 바꿔도 새 데이터가 올 때까지 지금 표가 그대로 남습니다.
+  const { pending, go } = useNavTransition();
   const pathname = usePathname();
   const params = useSearchParams();
 
@@ -39,7 +41,7 @@ export default function OrderFilters({
     return query ? `${pathname}?${query}` : pathname;
   };
 
-  const apply = (patch: Record<string, string>) => router.push(buildHref(patch));
+  const apply = (patch: Record<string, string>) => go(buildHref(patch));
 
   /** 오늘 / 7일 / 30일 버튼 */
   const quickRange = (days: number) => {
@@ -54,7 +56,8 @@ export default function OrderFilters({
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    // ★ 새 데이터를 기다리는 동안 지금 표를 살짝 흐리게만 합니다. 화면이 비지 않습니다.
+    <div className={`flex flex-col gap-4 transition-opacity ${pending ? 'opacity-60' : ''}`}>
       {/* 상태 탭 */}
       <nav aria-label="주문 상태" className="overflow-x-auto">
         <ul className="flex min-w-max gap-1 border-b border-slate-200">
@@ -63,8 +66,9 @@ export default function OrderFilters({
             const count = tab.key === 'all' ? total : (counts[tab.key] ?? 0);
             return (
               <li key={tab.key}>
-                <Link
-                  href={buildHref({ status: tab.key === 'all' ? '' : tab.key })}
+                <button
+                  type="button"
+                  onClick={() => apply({ status: tab.key === 'all' ? '' : tab.key })}
                   aria-current={active ? 'page' : undefined}
                   className={`inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-[14px] transition-colors ${
                     active
@@ -82,7 +86,7 @@ export default function OrderFilters({
                   >
                     {count}
                   </span>
-                </Link>
+                </button>
               </li>
             );
           })}

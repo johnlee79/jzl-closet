@@ -1,6 +1,9 @@
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
+  // ★ 관리자 화면에만 다크모드를 씁니다. 고객 화면은 항상 밝게 갑니다.
+  //   html 에 .dark 가 붙으면 .dark .admin-root 규칙이 켜집니다. (app/globals.css)
+  darkMode: 'class',
   content: [
     './app/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',

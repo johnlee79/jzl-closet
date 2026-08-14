@@ -1,7 +1,16 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ACCEPT_IMAGE, deleteImages, uploadImages } from '@/lib/upload-client';
+
+type ImageMeta = { width?: number; height?: number; bytes?: number };
+
+/** 1.2MB 처럼 읽기 쉬운 형태로 */
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
 
 type ImageUploaderProps = {
   images: string[];
@@ -33,6 +42,19 @@ export default function ImageUploader({
   const [error, setError] = useState('');
   const dragIndex = useRef<number | null>(null);
 
+  /**
+   * 이미지별 원본 크기·용량.
+   * ★ 방금 올린 이미지는 서버 응답에 크기·용량이 들어 있습니다.
+   *   예전에 올려 둔 이미지는 용량을 알 수 없어, 화면에 뜰 때 픽셀만 재서 채웁니다.
+   */
+  const [meta, setMeta] = useState<Record<string, ImageMeta>>({});
+
+  const noteSize = useCallback((src: string, width: number, height: number) => {
+    setMeta((prev) =>
+      prev[src]?.width === width ? prev : { ...prev, [src]: { ...prev[src], width, height } }
+    );
+  }, []);
+
   const handleFiles = async (fileList: FileList | null) => {
     const files = Array.from(fileList ?? []);
     if (files.length === 0) return;
@@ -46,6 +68,16 @@ export default function ImageUploader({
         setProgress
       );
       const urls = uploaded.map((item) => item.url);
+
+      // 방금 올린 이미지의 크기·용량을 기억해 둡니다.
+      setMeta((prev) => {
+        const next = { ...prev };
+        for (const item of uploaded) {
+          next[item.url] = { width: item.width, height: item.height, bytes: item.bytes };
+        }
+        return next;
+      });
+
       onChange(multiple ? [...images, ...urls] : urls.slice(0, 1));
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : '업로드에 실패했습니다.');
@@ -140,45 +172,96 @@ export default function ImageUploader({
       </div>
 
       {images.length > 0 ? (
-        <ul className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-          {images.map((src, index) => (
-            <li
-              key={`${src}-${index}`}
-              draggable
-              onDragStart={() => {
-                dragIndex.current = index;
-              }}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={() => handleDrop(index)}
-              className="group relative cursor-move overflow-hidden rounded-md border border-slate-200 bg-slate-100"
-            >
-              <div className="aspect-[3/4] w-full">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={src} alt="" className="h-full w-full object-cover" />
-              </div>
-
-              {showPrimaryBadge && index === 0 ? (
-                <span className="admin-badge absolute left-1 top-1 bg-blue-700 text-white">
-                  대표
-                </span>
-              ) : null}
-
-              <button
-                type="button"
-                onClick={() => removeAt(index)}
-                aria-label={`${index + 1}번째 이미지 삭제`}
-                className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-[14px] leading-none text-white transition-opacity hover:bg-black/80"
+        <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {images.map((src, index) => {
+            const info = meta[src];
+            return (
+              <li
+                key={`${src}-${index}`}
+                draggable
+                onDragStart={() => {
+                  dragIndex.current = index;
+                }}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={() => handleDrop(index)}
+                className="relative cursor-move overflow-hidden rounded-md border border-slate-200 bg-white"
               >
-                ×
-              </button>
-            </li>
-          ))}
+                {/* ★ 왼쪽은 고객 화면에서 실제로 보이는 범위(잘림),
+                    오른쪽은 원본 전체입니다. 어디가 잘리는지 바로 비교됩니다. */}
+                <div className="grid grid-cols-2">
+                  <div className="relative border-r border-slate-200 bg-slate-100">
+                    <div className="aspect-[3/4] w-full">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={src}
+                        alt=""
+                        onLoad={(event) =>
+                          noteSize(
+                            src,
+                            event.currentTarget.naturalWidth,
+                            event.currentTarget.naturalHeight
+                          )
+                        }
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <span className="absolute inset-x-0 bottom-0 bg-slate-900/70 py-0.5 text-center text-[11px] text-white">
+                      고객 화면
+                    </span>
+                  </div>
+
+                  <div className="relative bg-slate-50">
+                    <div className="flex aspect-[3/4] w-full items-center justify-center p-1">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={src}
+                        alt=""
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    </div>
+                    <span className="absolute inset-x-0 bottom-0 bg-slate-900/70 py-0.5 text-center text-[11px] text-white">
+                      원본 전체
+                    </span>
+                  </div>
+                </div>
+
+                <p className="flex items-center justify-between gap-2 px-2 py-1.5 text-[11px] tabular-nums text-slate-500">
+                  <span>
+                    {info?.width
+                      ? `${info.width} × ${info.height}px`
+                      : '크기 확인 중…'}
+                    {info?.bytes ? ` · ${formatBytes(info.bytes)}` : ''}
+                  </span>
+                  <span className="text-slate-400">{index + 1}번</span>
+                </p>
+
+                {showPrimaryBadge && index === 0 ? (
+                  <span className="admin-badge absolute left-1 top-1 bg-blue-700 text-white">
+                    대표
+                  </span>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={() => removeAt(index)}
+                  aria-label={`${index + 1}번째 이미지 삭제`}
+                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-[14px] leading-none text-white transition-opacity hover:bg-black/80"
+                >
+                  ×
+                </button>
+              </li>
+            );
+          })}
         </ul>
       ) : null}
 
-      {images.length > 1 ? (
-        <p className="mt-2 text-[12px] text-slate-500">
-          썸네일을 끌어다 놓으면 순서가 바뀝니다. 맨 앞이 대표 이미지입니다.
+      {images.length > 0 ? (
+        <p className="mt-2 text-[12px] leading-relaxed text-slate-500">
+          왼쪽이 고객 화면에서 실제로 보이는 범위입니다. 오른쪽 원본과 비교해 잘리면 안 되는
+          부분이 있는지 확인하세요.
+          {images.length > 1
+            ? ' 썸네일을 끌어다 놓으면 순서가 바뀌고 미리보기도 바로 따라갑니다. 맨 앞이 대표 이미지입니다.'
+            : ''}
         </p>
       ) : null}
     </div>

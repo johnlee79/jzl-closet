@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { useNavTransition } from '@/lib/use-nav-transition';
 import { useState } from 'react';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { formatPrice } from '@/lib/product-utils';
@@ -37,7 +38,7 @@ export default function MemberTable({
   counts: Record<string, number>;
   total: number;
 }) {
-  const router = useRouter();
+  const { pending, go } = useNavTransition();
   const pathname = usePathname();
   const params = useSearchParams();
 
@@ -100,7 +101,7 @@ export default function MemberTable({
           <form
             onSubmit={(event) => {
               event.preventDefault();
-              router.push(buildHref({ q: search.trim() }));
+              go(buildHref({ q: search.trim() }));
             }}
             className="flex flex-1 items-end gap-2"
           >
@@ -142,7 +143,7 @@ export default function MemberTable({
               />
               <button
                 type="button"
-                onClick={() => router.push(buildHref({ from, to }))}
+                onClick={() => go(buildHref({ from, to }))}
                 className="admin-btn"
               >
                 적용

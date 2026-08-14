@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 import OptionSelector from '@/components/OptionSelector';
+import SignupPointBadge from '@/components/SignupPointBadge';
 import { useSite } from '@/components/SiteProvider';
 import { brandLabel as findBrandLabel, brandName as findBrandName } from '@/lib/brands';
 import { categoryNameKo } from '@/lib/categories';
@@ -20,11 +22,33 @@ import type { Product } from '@/lib/types';
 const MAX_QUANTITY = 99;
 
 export default function AddToCartButton({ product }: { product: Product }) {
+  const router = useRouter();
   const { addItem } = useCart();
   const { brands, categories, store } = useSite();
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+
+  /**
+   * 로그인 여부에 따라 버튼 문구만 바꿉니다.
+   * ★ 서버에서 쿠키를 읽으면 상품 상세가 정적 생성에서 빠집니다. (SEO 최우선)
+   *   문구가 조금 늦게 바뀌는 것은 문제가 되지 않습니다.
+   */
+  const [isMember, setIsMember] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/auth/me')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { loggedIn?: boolean } | null) => {
+        if (alive && data?.loggedIn) setIsMember(true);
+      })
+      .catch(() => {
+        /* 확인하지 못하면 비회원으로 봅니다. */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const hasOptions = product.optionGroups.length > 0;
 
@@ -58,8 +82,8 @@ export default function AddToCartButton({ product }: { product: Product }) {
     setAdded(false);
   };
 
-  const handleAdd = () => {
-    if (!canAdd) return;
+  const handleAdd = (): boolean => {
+    if (!canAdd) return false;
     const amount = Math.min(quantity, maxQuantity);
 
     addItem({
@@ -89,6 +113,17 @@ export default function AddToCartButton({ product }: { product: Product }) {
     });
 
     setAdded(true);
+    return true;
+  };
+
+  /**
+   * 비회원 구매 / 바로 구매 — 장바구니를 거치지 않고 주문서로 갑니다.
+   * ★ 장바구니에 담는 동작 자체는 같습니다. 담자마자 주문서로 넘어갈 뿐입니다.
+   *   따로 "바로구매 전용" 흐름을 만들면 금액 계산이 두 벌이 됩니다.
+   */
+  const handleBuyNow = () => {
+    if (!handleAdd()) return;
+    router.push('/checkout');
   };
 
   if (isProductSoldOut(product)) {
@@ -191,16 +226,32 @@ export default function AddToCartButton({ product }: { product: Product }) {
       <div className="mt-4 flex flex-col gap-3">
         <button
           type="button"
-          onClick={handleAdd}
+          onClick={() => handleAdd()}
           disabled={!canAdd}
           className="btn-primary w-full"
         >
           장바구니 담기
         </button>
+        {/* ★ 비회원도 그대로 주문할 수 있게 길을 하나 더 둡니다. 가입을 강요하지 않습니다. */}
+        <button
+          type="button"
+          onClick={handleBuyNow}
+          disabled={!canAdd}
+          className="btn-secondary w-full"
+        >
+          {isMember ? '바로 구매' : '비회원 구매'}
+        </button>
         <a href={`tel:${store.phone}`} className="btn-secondary w-full">
           바로 문의 {store.phone}
         </a>
       </div>
+
+      {/* 가입 유도 — 설정에서 가입 축하 포인트를 껐거나 0이면 나오지 않습니다. */}
+      {isMember ? null : (
+        <div className="mt-4 flex justify-center">
+          <SignupPointBadge />
+        </div>
+      )}
 
       {added ? (
         <p className="mt-4 text-[15px] leading-relaxed text-ink">

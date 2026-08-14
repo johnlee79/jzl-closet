@@ -5,7 +5,6 @@ import { useState, useTransition } from 'react';
 import ImageUploader from '@/components/admin/ImageUploader';
 import RichTextEditor from '@/components/admin/RichTextEditor';
 import { deletePopupAction, savePopupAction } from '@/app/admin/content-actions';
-import { formatDate } from '@/lib/format';
 import { sanitizeRichText } from '@/lib/product-utils';
 import { POPUP_POSITIONS, POPUP_SHOW_ON } from '@/lib/site-config';
 import type { Popup } from '@/lib/popups';
@@ -19,21 +18,12 @@ type Draft = {
   linkUrl: string;
   position: string;
   width: number;
-  startsAt: string;
-  endsAt: string;
+  startsOn: string;
+  endsOn: string;
   isVisible: boolean;
   showOn: string;
   displayOrder: number;
 };
-
-/** ISO 시각 → <input type="datetime-local"> 이 읽는 형태 */
-function toLocalInput(value: string | null): string {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  const offset = date.getTimezoneOffset() * 60000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
-}
 
 function emptyDraft(order: number): Draft {
   return {
@@ -43,8 +33,8 @@ function emptyDraft(order: number): Draft {
     linkUrl: '',
     position: 'center',
     width: 400,
-    startsAt: '',
-    endsAt: '',
+    startsOn: '',
+    endsOn: '',
     isVisible: true,
     showOn: 'home',
     displayOrder: order,
@@ -177,27 +167,29 @@ function PopupForm({
 
         <div>
           <label className="admin-label" htmlFor="popup-start">
-            노출 시작 (비우면 제한 없음)
+            노출 시작일 (비우면 제한 없음)
           </label>
           <input
             id="popup-start"
-            type="datetime-local"
-            value={draft.startsAt}
-            onChange={(event) => set('startsAt', event.target.value)}
+            type="date"
+            value={draft.startsOn}
+            onChange={(event) => set('startsOn', event.target.value)}
             className="admin-input"
           />
+          <p className="mt-1 text-[12px] text-slate-500">그날 0시부터 (한국시간)</p>
         </div>
         <div>
           <label className="admin-label" htmlFor="popup-end">
-            노출 종료 (비우면 제한 없음)
+            노출 종료일 (비우면 무기한)
           </label>
           <input
             id="popup-end"
-            type="datetime-local"
-            value={draft.endsAt}
-            onChange={(event) => set('endsAt', event.target.value)}
+            type="date"
+            value={draft.endsOn}
+            onChange={(event) => set('endsOn', event.target.value)}
             className="admin-input"
           />
+          <p className="mt-1 text-[12px] text-slate-500">그날 밤 12시까지 (한국시간)</p>
         </div>
 
         <div>
@@ -407,9 +399,9 @@ export default function PopupManager({ popups }: { popups: Popup[] }) {
                   </span>
 
                   <span className="text-[12px] text-slate-500">
-                    {popup.startsAt || popup.endsAt
-                      ? `${formatDate(popup.startsAt) || '제한 없음'} ~ ${
-                          formatDate(popup.endsAt) || '제한 없음'
+                    {popup.startsOn || popup.endsOn
+                      ? `${popup.startsOn || '제한 없음'} ~ ${
+                          popup.endsOn || '무기한'
                         }`
                       : '기간 제한 없음'}
                   </span>
@@ -450,8 +442,8 @@ export default function PopupManager({ popups }: { popups: Popup[] }) {
                         linkUrl: popup.linkUrl,
                         position: popup.position,
                         width: popup.width,
-                        startsAt: toLocalInput(popup.startsAt),
-                        endsAt: toLocalInput(popup.endsAt),
+                        startsOn: popup.startsOn,
+                        endsOn: popup.endsOn,
                         isVisible: popup.isVisible,
                         showOn: popup.showOn,
                         displayOrder: popup.displayOrder,

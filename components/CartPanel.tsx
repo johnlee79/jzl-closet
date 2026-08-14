@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import CopyOrderButton from '@/components/CopyOrderButton';
+import SignupPointBadge from '@/components/SignupPointBadge';
 import SafeImage from '@/components/SafeImage';
 import { useSite } from '@/components/SiteProvider';
 import { useCart } from '@/lib/cart';
@@ -9,6 +11,26 @@ import { formatPrice } from '@/lib/product-utils';
 import { expectedPurchasePoints } from '@/lib/site-config';
 
 export default function CartPanel() {
+  /**
+   * 로그인 여부. 배지를 보여 줄지만 정합니다.
+   * ★ 서버에서 쿠키를 읽으면 정적 생성이 깨지므로 브라우저에서 물어봅니다.
+   */
+  const [isMember, setIsMember] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/auth/me')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { loggedIn?: boolean } | null) => {
+        if (alive && data?.loggedIn) setIsMember(true);
+      })
+      .catch(() => {
+        /* 확인하지 못하면 비회원으로 봅니다. */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const { items, total, count, ready, removeItem, updateQuantity, clear } = useCart();
   // 브랜드명·고객센터 번호·배송비는 관리자 설정 값을 씁니다.
   const { store, shipping, points } = useSite();
@@ -209,7 +231,17 @@ export default function CartPanel() {
             </span>
           </div>
 
-          <Link href="/checkout" className="btn-primary mt-8 w-full">
+          {/* ★ 전환이 가장 잘 일어나는 자리입니다. 비회원에게만 보여 줍니다. */}
+          {isMember ? null : (
+            <div className="mt-8 flex justify-center">
+              <SignupPointBadge href="/signup?next=/checkout" />
+            </div>
+          )}
+
+          <Link
+            href="/checkout"
+            className={`btn-primary w-full ${isMember ? 'mt-8' : 'mt-4'}`}
+          >
             주문하기
           </Link>
 

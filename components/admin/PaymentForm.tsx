@@ -117,8 +117,31 @@ export default function PaymentForm({
             className="admin-input tabular-nums"
           />
           <p className="mt-1 text-[12px] text-slate-500">
-            주문 완료 화면에 “언제까지”로 환산해 보여 줍니다.
+            주문 완료 화면에 “언제까지”로 환산해 보여 주고, 자동취소 기준으로도 씁니다.
           </p>
+        </div>
+
+        {/* ── 미입금 자동취소 ───────────────────────────── */}
+        <div className="mt-5 border-t border-slate-200 pt-5">
+          <label className="flex items-start gap-2 text-[14px] text-slate-800">
+            <input
+              type="checkbox"
+              checked={form.autoCancelEnabled}
+              onChange={(event) => set('autoCancelEnabled', event.target.checked)}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>
+              입금 기한이 지난 주문을 자동으로 취소하기
+              <span className="mt-1 block text-[12px] leading-relaxed text-slate-500">
+                위 <strong>입금 기한 {form.depositHours}시간</strong>이 지난 입금대기 주문을
+                취소하고, 재고와 사용 포인트를 되돌립니다. 취소되면 텔레그램으로 알려 드립니다.
+              </span>
+              <span className="mt-1 block text-[12px] leading-relaxed text-amber-800">
+                ★ 송장번호가 들어갔거나 주문 상세에서 <strong>자동취소 제외</strong>를 켜 둔
+                주문은 건드리지 않습니다. 공급처에 발송 요청을 넘긴 건은 꼭 체크해 두세요.
+              </span>
+            </span>
+          </label>
         </div>
 
         <p className="mt-4 rounded-md bg-amber-50 px-3 py-2 text-[13px] leading-relaxed text-amber-900">

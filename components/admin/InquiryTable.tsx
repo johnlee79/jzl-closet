@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { useNavTransition } from '@/lib/use-nav-transition';
 import { useState } from 'react';
 import { formatDate } from '@/lib/format';
 import {
@@ -21,7 +22,7 @@ export default function InquiryTable({
   counts: Record<string, number>;
   total: number;
 }) {
-  const router = useRouter();
+  const { pending, go } = useNavTransition();
   const pathname = usePathname();
   const params = useSearchParams();
 
@@ -78,7 +79,7 @@ export default function InquiryTable({
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            router.push(buildHref({ q: search.trim() }));
+            go(buildHref({ q: search.trim() }));
           }}
           className="mt-4 flex items-end gap-2"
         >

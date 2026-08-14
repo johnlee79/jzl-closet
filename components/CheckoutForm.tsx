@@ -1,13 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import Script from 'next/script';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import SafeImage from '@/components/SafeImage';
+import SignupPointBadge from '@/components/SignupPointBadge';
 import { useSite } from '@/components/SiteProvider';
 import { placeOrderAction, quoteShippingAction } from '@/app/(shop)/checkout/actions';
 import { useCart } from '@/lib/cart';
+import {
+  clearDraft,
+  loadDraft,
+  pickDraft,
+  saveDraft,
+  type CheckoutDraft,
+} from '@/lib/checkout-draft';
+import { postcodeFallbackNotice, usePostcodeScript } from '@/lib/postcode';
 import { formatPhone } from '@/lib/format';
 import { formatPrice } from '@/lib/product-utils';
 import {
@@ -17,29 +25,6 @@ import {
   type ShippingSettings,
 } from '@/lib/site-config';
 import type { CashReceiptType } from '@/lib/types';
-
-/** 다음 우편번호 서비스 — 라이브러리를 설치하지 않고 스크립트만 불러 씁니다. */
-const POSTCODE_SRC =
-  'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
-
-type DaumPostcodeResult = {
-  zonecode: string;
-  roadAddress: string;
-  jibunAddress: string;
-  buildingName?: string;
-  apartment?: string;
-};
-
-declare global {
-  interface Window {
-    daum?: {
-      Postcode: new (options: {
-        oncomplete: (data: DaumPostcodeResult) => void;
-        onclose?: () => void;
-      }) => { open: () => void };
-    };
-  }
-}
 
 type Form = {
   ordererName: string;
@@ -125,7 +110,16 @@ export default function CheckoutForm({
     extraShippingFee: 0,
     remote: false,
   });
-  const [postcodeReady, setPostcodeReady] = useState(false);
+  /**
+   * 주소 검색 스크립트.
+   * ★ 화면에 들어오는 순간 미리 받아 둡니다. 실패하면 자동으로 두 번 더 시도하고,
+   *   그래도 안 되면 직접 입력으로 전환합니다. (lib/postcode.ts)
+   */
+  const postcode = usePostcodeScript();
+  const manualAddress = postcode.state === 'failed';
+
+  /** 임시저장본을 불러왔는지 — 상단 안내에 씁니다. */
+  const [restored, setRestored] = useState(false);
 
   /** 오류가 났을 때 그 칸으로 스크롤하기 위한 참조 */
   const refs = {
@@ -140,6 +134,75 @@ export default function CheckoutForm({
     setForm((prev) => ({ ...prev, [key]: value }));
     setInvalid((prev) => ({ ...prev, [key]: false }));
     setError('');
+  };
+
+  /* ── 임시저장 복구 ───────────────────────────────────
+   * ★ 회원은 저장된 배송지가 우선입니다. 임시저장은 비어 있는 칸만 채웁니다.
+   *   (회원 정보를 임시저장본이 덮어쓰면 예전 주소로 되돌아갑니다) */
+  const restoredOnce = useRef(false);
+  useEffect(() => {
+    if (restoredOnce.current) return;
+    restoredOnce.current = true;
+
+    const draft = loadDraft();
+    if (!draft) return;
+
+    setForm((prev) => {
+      const next = { ...prev };
+      let changed = false;
+
+      for (const [key, value] of Object.entries(draft) as [
+        keyof Form,
+        string | boolean,
+      ][]) {
+        if (typeof value === 'boolean') {
+          if (next[key] !== value) {
+            (next[key] as boolean) = value;
+            changed = true;
+          }
+          continue;
+        }
+        if (!value.trim()) continue;
+        // 회원 정보로 이미 채워진 칸은 건드리지 않습니다.
+        const current = next[key];
+        if (typeof current === 'string' && current.trim()) continue;
+        (next[key] as string) = value;
+        changed = true;
+      }
+
+      if (changed) setRestored(true);
+      return next;
+    });
+  }, []);
+
+  /* ── 임시저장 ────────────────────────────────────────
+   * 입력이 멈춘 뒤 0.6초에 한 번만 씁니다. 글자마다 저장하면 낭비입니다.
+   * ★ 비밀번호·카드정보는 담기지 않습니다. (lib/checkout-draft.ts 가 걸러 냅니다) */
+  useEffect(() => {
+    const draft: CheckoutDraft = pickDraft(form as unknown as Record<string, unknown>);
+    const timer = window.setTimeout(() => saveDraft(draft), 600);
+    return () => window.clearTimeout(timer);
+  }, [form]);
+
+  /** [새로 입력하기] — 저장본을 버리고 빈 칸(회원이면 회원 정보)으로 되돌립니다. */
+  const resetDraft = () => {
+    clearDraft();
+    setRestored(false);
+    setForm((prev) => ({
+      ...prev,
+      ordererName: member?.name ?? '',
+      ordererPhone: member?.phone ?? '',
+      ordererEmail: member?.email ?? '',
+      sameAsOrderer: true,
+      receiverName: member?.name ?? '',
+      receiverPhone: member?.phone ?? '',
+      postcode: member?.postcode ?? '',
+      address1: member?.address1 ?? '',
+      address2: member?.address2 ?? '',
+      deliveryMemo: '',
+      cashReceiptType: 'none',
+      cashReceiptNo: '',
+    }));
   };
 
   /** 주문자 정보와 동일 — 체크되어 있으면 주문자 값을 그대로 따라갑니다. */
@@ -181,7 +244,7 @@ export default function CheckoutForm({
    * ★ 화면에서 미리 깎아 보여 주지만, 실제 금액은 서버가 다시 계산합니다. */
   const [usePoints, setUsePoints] = useState(0);
   /** 적립률은 사이트 설정에서 읽습니다. (조회를 추가하지 않습니다) */
-  const { points: sitePoints } = useSite();
+  const { points: sitePoints, store } = useSite();
 
   const pointLimit = points ? maxUsablePoints(total, points.balance, points) : 0;
   const canUsePoints = Boolean(
@@ -207,23 +270,20 @@ export default function CheckoutForm({
   }, [shipping.freeThreshold, total]);
 
   const openPostcode = () => {
-    if (!window.daum?.Postcode) {
-      setError('주소 검색을 불러오지 못했습니다. 잠시 후 다시 시도하거나 직접 입력해 주세요.');
+    if (manualAddress) {
+      // 이미 실패한 뒤라면 버튼이 "다시 시도" 로 바뀌어 있습니다.
+      postcode.retry();
       return;
     }
-    new window.daum.Postcode({
-      oncomplete: (data) => {
-        const base = data.roadAddress || data.jibunAddress;
-        const building = data.buildingName ? ` (${data.buildingName})` : '';
-        setForm((prev) => ({
-          ...prev,
-          postcode: data.zonecode,
-          address1: `${base}${building}`,
-        }));
-        setInvalid((prev) => ({ ...prev, postcode: false, address1: false }));
-        setError('');
-      },
-    }).open();
+    void postcode.open((result) => {
+      setForm((prev) => ({
+        ...prev,
+        postcode: result.postcode,
+        address1: result.address,
+      }));
+      setInvalid((prev) => ({ ...prev, postcode: false, address1: false }));
+      setError('');
+    });
   };
 
   /** 필수값을 확인하고, 비어 있으면 해당 칸으로 스크롤합니다. */
@@ -303,8 +363,9 @@ export default function CheckoutForm({
         return;
       }
 
-      // 주문이 저장되었으니 장바구니를 비우고 완료 화면으로 갑니다.
+      // 주문이 저장되었으니 장바구니를 비우고 임시저장본도 지웁니다.
       clear();
+      clearDraft();
       const query = new URLSearchParams({
         no: result.data.orderNo,
         k: result.data.token,
@@ -342,13 +403,23 @@ export default function CheckoutForm({
 
   return (
     <>
-      <Script
-        src={POSTCODE_SRC}
-        strategy="afterInteractive"
-        onLoad={() => setPostcodeReady(true)}
-      />
-
       <form onSubmit={handleSubmit} noValidate>
+        {/* ★ 새로고침·뒤로가기로 날아간 입력을 되살립니다. */}
+        {restored ? (
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-3 border border-stone px-5 py-4">
+            <p className="text-[14px] leading-relaxed text-ink">
+              이전에 입력하시던 내용을 불러왔습니다.
+            </p>
+            <button
+              type="button"
+              onClick={resetDraft}
+              className="btn-secondary min-h-[40px] px-4 py-0 text-[13px]"
+            >
+              새로 입력하기
+            </button>
+          </div>
+        ) : null}
+
         {/* 회원이면 정보가 채워졌음을 알리고, 아니면 로그인을 권하되 강요하지 않습니다. */}
         {member ? (
           <p className="mb-8 border border-stone px-5 py-4 text-[14px] leading-relaxed text-ink">
@@ -357,12 +428,17 @@ export default function CheckoutForm({
           </p>
         ) : (
           // ★ 로그인을 강요하지 않습니다. 한 줄 안내만 두고 그대로 넘어갈 수 있게 합니다.
-          <p className="mb-8 text-[14px] leading-relaxed text-muted">
-            <Link href="/login?next=/checkout" className="link-wine">
-              로그인
-            </Link>
-            하면 배송지가 자동 입력됩니다. 로그인 없이 그대로 주문하셔도 됩니다.
-          </p>
+          <div className="mb-8">
+            <div className="flex">
+              <SignupPointBadge href="/signup?next=/checkout" />
+            </div>
+            <p className="mt-3 text-[14px] leading-relaxed text-muted">
+              <Link href="/login?next=/checkout" className="link-wine">
+                로그인
+              </Link>
+              하면 배송지가 자동 입력됩니다. 로그인 없이 그대로 주문하셔도 됩니다.
+            </p>
+          </div>
         )}
 
         {error ? (
@@ -557,12 +633,25 @@ export default function CheckoutForm({
                     <button
                       type="button"
                       onClick={openPostcode}
-                      disabled={!postcodeReady}
+                      disabled={postcode.state === 'loading'}
                       className="btn-secondary min-h-[48px] shrink-0 px-6 py-0 text-[14px] disabled:opacity-40"
                     >
-                      {postcodeReady ? '주소 검색' : '불러오는 중…'}
+                      {postcode.state === 'ready'
+                        ? '주소 검색'
+                        : postcode.state === 'loading'
+                          ? '불러오는 중…'
+                          : '주소 검색 다시 시도'}
                     </button>
                   </div>
+
+                  {manualAddress ? (
+                    <p
+                      role="alert"
+                      className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-wine"
+                    >
+                      {postcodeFallbackNotice(store.phone)}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div>

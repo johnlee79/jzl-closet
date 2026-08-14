@@ -32,8 +32,12 @@ export type Popup = {
   linkUrl: string;
   position: PopupPosition;
   width: number;
+  /** 실제 시각. 기간 판단에만 씁니다. */
   startsAt: string | null;
   endsAt: string | null;
+  /** 관리자 화면에 보여 줄 날짜 (한국시간 YYYY-MM-DD) */
+  startsOn: string;
+  endsOn: string;
   isVisible: boolean;
   showOn: string;
   displayOrder: number;
@@ -58,6 +62,44 @@ function toPosition(value: string | null): PopupPosition {
   return value === 'left' || value === 'right' ? value : 'center';
 }
 
+/* ── 기간은 날짜 단위로만 다룹니다 ──────────────────────────
+ *
+ * ★ 예전에는 시각까지 받았습니다.
+ *   그런데 관리자가 넣은 'YYYY-MM-DDTHH:mm' 을 서버가 그대로 new Date() 로 읽는 바람에
+ *   서버 시간대(Vercel 은 UTC)로 해석되어 실제로는 9시간이 밀렸습니다.
+ *   "오늘부터" 로 걸어 둔 팝업이 한국시간 오전 9시가 지나야 뜨는 식이었습니다.
+ *
+ *   그래서 시각을 아예 없애고 날짜만 받습니다.
+ *   시작일은 그날 한국시간 00:00:00, 종료일은 23:59:59 로 저장합니다.
+ *   종료일을 비우면 제한이 없습니다.
+ */
+
+const KST_OFFSET = 9 * 60 * 60 * 1000;
+
+/** 'YYYY-MM-DD' → 그날 한국시간 00:00:00 (ISO) */
+function kstDayStart(date: string): string | null {
+  const day = date.trim().slice(0, 10);
+  if (!/^d{4}-d{2}-d{2}$/.test(day)) return null;
+  const parsed = new Date(`${day}T00:00:00+09:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+/** 'YYYY-MM-DD' → 그날 한국시간 23:59:59.999 (ISO) */
+function kstDayEnd(date: string): string | null {
+  const day = date.trim().slice(0, 10);
+  if (!/^d{4}-d{2}-d{2}$/.test(day)) return null;
+  const parsed = new Date(`${day}T23:59:59.999+09:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+/** 저장된 시각 → 관리자 화면에 보여 줄 한국시간 날짜 */
+export function toKstDate(iso: string | null): string {
+  if (!iso) return '';
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return new Date(parsed.getTime() + KST_OFFSET).toISOString().slice(0, 10);
+}
+
 function rowToPopup(row: PopupRow): Popup {
   return {
     id: row.id,
@@ -70,6 +112,8 @@ function rowToPopup(row: PopupRow): Popup {
     width: Math.min(720, Math.max(240, row.width ?? 400)),
     startsAt: row.starts_at,
     endsAt: row.ends_at,
+    startsOn: toKstDate(row.starts_at),
+    endsOn: toKstDate(row.ends_at),
     isVisible: row.is_visible !== false,
     showOn: row.show_on === 'all' ? 'all' : 'home',
     displayOrder: row.display_order ?? 0,
@@ -111,7 +155,11 @@ async function readVisiblePopups(): Promise<Popup[]> {
  */
 const getCachedPopups = unstable_cache(readVisiblePopups, ['popups-visible'], {
   tags: [POPUP_TAG],
-  revalidate: 300,
+  // ★ 페이지 자체의 ISR(60초)과 맞춥니다.
+  //   300초로 두면 팝업을 새로 등록하고도 최대 5분을 기다려야 해서
+  //   "설정했는데 안 뜬다" 로 보입니다.
+  //   저장할 때 revalidateTag(POPUP_TAG) 로 바로 비우지만, 그래도 여유를 줄여 둡니다.
+  revalidate: 60,
 });
 
 /**
@@ -157,8 +205,9 @@ export type PopupInput = {
   linkUrl: string;
   position: string;
   width: number;
-  startsAt: string;
-  endsAt: string;
+  /** 'YYYY-MM-DD'. 비워 두면 제한 없음입니다. */
+  startsOn: string;
+  endsOn: string;
   isVisible: boolean;
   showOn: string;
   displayOrder: number;
@@ -172,9 +221,10 @@ function toRow(input: PopupInput): Record<string, unknown> {
     link_url: input.linkUrl.trim() || null,
     position: toPosition(input.position),
     width: Math.min(720, Math.max(240, input.width || 400)),
-    // 비워 두면 제한 없음입니다.
-    starts_at: input.startsAt ? new Date(input.startsAt).toISOString() : null,
-    ends_at: input.endsAt ? new Date(input.endsAt).toISOString() : null,
+    // ★ 한국시간 기준으로 시작일 00:00:00 ~ 종료일 23:59:59 입니다.
+    //   비워 두면 제한 없음입니다.
+    starts_at: input.startsOn ? kstDayStart(input.startsOn) : null,
+    ends_at: input.endsOn ? kstDayEnd(input.endsOn) : null,
     is_visible: input.isVisible,
     show_on: input.showOn === 'all' ? 'all' : 'home',
     display_order: input.displayOrder,

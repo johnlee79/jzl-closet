@@ -4,7 +4,7 @@ import { assertWritten } from '@/lib/db-write';
 import { maskName } from '@/lib/mask-name';
 import { hashPassword, verifyPassword } from '@/lib/password';
 import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
-import type { InquiryStatus } from '@/lib/inquiry-status';
+import { INQUIRY_STATUSES, type InquiryStatus } from '@/lib/inquiry-status';
 
 /**
  * 1:1 문의 저장·조회. 서버 전용이며 service_role 로만 접근합니다.
@@ -414,16 +414,27 @@ export async function getInquiries(
   }
 }
 
+/**
+ * 상태별 문의 건수.
+ * ★ 행을 가져와 세지 않고 상태마다 count 쿼리를 던져 한 번에 기다립니다.
+ */
 export async function countInquiriesByStatus(): Promise<Record<string, number>> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return {};
 
-  const { data, error } = await supabase.from(TABLE).select('status');
-  if (error || !data) return {};
+  const results = await Promise.all(
+    INQUIRY_STATUSES.map(async (status) => {
+      const { count, error } = await supabase
+        .from(TABLE)
+        .select('id', { count: 'exact', head: true })
+        .eq('status', status);
+      return { status, count: error ? 0 : (count ?? 0) };
+    })
+  );
 
   const result: Record<string, number> = {};
-  for (const row of data as { status: string }[]) {
-    result[row.status] = (result[row.status] ?? 0) + 1;
+  for (const row of results) {
+    if (row.count > 0) result[row.status] = row.count;
   }
   return result;
 }

@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import BulkTrackingPanel from '@/components/admin/BulkTrackingPanel';
 import OrderFilters from '@/components/admin/OrderFilters';
 import OrderTable from '@/components/admin/OrderTable';
+import { sweepAutoCancelQuietly } from '@/lib/auto-cancel';
 import { countOrdersByStatus, getOrders } from '@/lib/orders';
 import { isSupabaseConfigured } from '@/lib/supabase/server';
 
@@ -27,6 +28,11 @@ export default async function AdminOrdersPage({
   searchParams: SearchParams;
 }) {
   const configured = isSupabaseConfigured();
+
+  // ★ 크론을 아직 걸지 않았어도 관리자가 들어오면 기한 지난 입금대기 건이 정리됩니다.
+  //   최근에 한 번 돌았으면 그냥 넘어갑니다. (lib/auto-cancel.ts)
+  if (configured) await sweepAutoCancelQuietly();
+
   const page = Math.max(1, Number(searchParams.page ?? '1') || 1);
 
   const filter = {

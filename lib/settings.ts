@@ -424,6 +424,7 @@ export function normalizePayment(value: unknown): PaymentSettings {
     accountHolder: optionalText(raw.accountHolder, '').trim(),
     // 0시간이면 기한 안내를 못 하므로 1시간 밑으로는 내려가지 않게 합니다.
     depositHours: Math.max(1, count(raw.depositHours, DEFAULT_PAYMENT.depositHours)),
+    autoCancelEnabled: raw.autoCancelEnabled !== false,
     remoteAreaRules: rules,
     telegramEnabled: raw.telegramEnabled !== false,
     inquiryTelegramEnabled: raw.inquiryTelegramEnabled !== false,

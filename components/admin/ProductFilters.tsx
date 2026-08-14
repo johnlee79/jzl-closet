@@ -1,6 +1,7 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import { useNavTransition } from '@/lib/use-nav-transition';
 import { useEffect, useState } from 'react';
 
 type ProductFiltersProps = {
@@ -9,7 +10,8 @@ type ProductFiltersProps = {
 
 /** 검색(상품명·브랜드) + 카테고리·노출·품절 필터. 주소창에 조건을 남겨 새로고침해도 유지됩니다. */
 export default function ProductFilters({ categories }: ProductFiltersProps) {
-  const router = useRouter();
+  // ★ 필터를 바꿔도 새 데이터가 올 때까지 지금 목록이 그대로 남습니다.
+  const { pending, go } = useNavTransition();
   const searchParams = useSearchParams();
 
   const [keyword, setKeyword] = useState(searchParams.get('q') ?? '');
@@ -26,7 +28,7 @@ export default function ProductFilters({ categories }: ProductFiltersProps) {
     }
     params.delete('page'); // 조건이 바뀌면 1페이지부터
     const query = params.toString();
-    router.push(query ? `/admin/products?${query}` : '/admin/products');
+    go(query ? `/admin/products?${query}` : '/admin/products');
   };
 
   const category = searchParams.get('category') ?? '';
@@ -107,7 +109,7 @@ export default function ProductFilters({ categories }: ProductFiltersProps) {
             type="button"
             onClick={() => {
               setKeyword('');
-              router.push('/admin/products');
+              go('/admin/products');
             }}
             className="admin-btn"
           >

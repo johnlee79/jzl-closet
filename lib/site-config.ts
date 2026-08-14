@@ -155,6 +155,11 @@ export type PaymentSettings = {
    *   40200        정확히 일치
    */
   remoteAreaRules: string[];
+  /**
+   * 입금 기한이 지난 주문을 자동으로 취소할지.
+   * ★ 기한은 depositHours 를 그대로 씁니다. (주문 완료 화면 안내와 같은 값)
+   */
+  autoCancelEnabled: boolean;
   /** 새 주문이 들어오면 텔레그램으로 알릴지 */
   telegramEnabled: boolean;
   /** 새 1:1 문의가 들어오면 텔레그램으로 알릴지 */
@@ -187,6 +192,7 @@ export const DEFAULT_PAYMENT: PaymentSettings = {
   accountNo: '',
   accountHolder: '',
   depositHours: 24,
+  autoCancelEnabled: true,
   remoteAreaRules: DEFAULT_REMOTE_AREA_RULES,
   telegramEnabled: true,
   inquiryTelegramEnabled: true,

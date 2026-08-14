@@ -94,8 +94,8 @@ export async function sendTelegramMessage(
  * 메시지 본문은 lib/telegram-format.ts 가 만듭니다.
  * ★ 공급처에 그대로 복사해 넘길 내용이라 서식 없이(parse_mode 없이) 보냅니다.
  */
-export async function notifyNewOrder(order: Order): Promise<void> {
-  await sendTelegramMessage(buildNewOrderMessage(order), 'none');
+export async function notifyNewOrder(order: Order, depositHours = 0): Promise<void> {
+  await sendTelegramMessage(buildNewOrderMessage(order, depositHours), 'none');
 }
 
 /** ⚠️ 손님의 주문 취소 요청 */
@@ -113,6 +113,35 @@ export async function notifyCancelRequest(order: Order, reason: string): Promise
   ];
 
   await sendTelegramMessage(lines.join('\n'));
+}
+
+/**
+ * 🚫 입금 기한이 지나 자동취소된 주문.
+ *
+ * ★ 여러 건이 한 번에 취소될 수 있어 한 통으로 묶어 보냅니다.
+ *   건마다 보내면 알림이 도배됩니다.
+ * ★ 재고와 사용 포인트는 이미 되돌린 뒤에 부릅니다.
+ */
+export async function notifyAutoCancel(orders: Order[], hours: number): Promise<void> {
+  if (orders.length === 0) return;
+
+  const head = [
+    `🚫 <b>미입금 자동취소</b> ${orders.length}건`,
+    '',
+    `입금 기한 ${hours}시간이 지나 자동으로 취소했습니다.`,
+    '재고와 사용 포인트는 되돌렸습니다.',
+    '',
+  ];
+
+  const rows = orders.map(
+    (order) =>
+      `· ${escapeHtml(order.orderNo)} ${escapeHtml(order.ordererName)} ` +
+      `${formatPrice(order.totalAmount)}원`
+  );
+
+  const tail = ['', `관리자: ${SITE_URL}/admin/orders?status=cancelled`];
+
+  await sendTelegramMessage([...head, ...rows, ...tail].join('\n'));
 }
 
 /** 💬 새 1:1 문의 */
