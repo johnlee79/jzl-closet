@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import DetailEditor from '@/components/admin/DetailEditor';
 import ImageUploader from '@/components/admin/ImageUploader';
+import OptionEditor from '@/components/admin/OptionEditor';
 import {
   createTemplateAction,
   deleteTemplateAction,
@@ -12,7 +13,7 @@ import {
 } from '@/app/admin/actions';
 import { brands } from '@/lib/brands';
 import { getFilterableCategories, getVisibleSubCategories } from '@/lib/categories';
-import { slugify } from '@/lib/product-utils';
+import { rebuildCombinations, slugify } from '@/lib/product-utils';
 import type { Gender, Product, ProductInput, Template } from '@/lib/types';
 
 export const PREVIEW_STORAGE_KEY = 'jzl-admin-preview-draft';
@@ -38,7 +39,8 @@ function emptyInput(): ProductInput {
     gender: 'women',
     season: null,
     thumbnails: [],
-    options: [],
+    optionGroups: [],
+    optionCombinations: [],
     detail: [],
     measurements: [],
     isNew: false,
@@ -71,7 +73,9 @@ export default function ProductForm({ product, templates }: ProductFormProps) {
     product ? toInput(product) : emptyInput()
   );
   const [templateList, setTemplateList] = useState<Template[]>(templates);
-  const [useOptions, setUseOptions] = useState(() => (product?.options.length ?? 0) > 0);
+  const [useOptions, setUseOptions] = useState(
+    () => (product?.optionGroups.length ?? 0) > 0
+  );
   const [slugTouched, setSlugTouched] = useState(() => Boolean(product));
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -110,35 +114,32 @@ export default function ProductForm({ product, templates }: ProductFormProps) {
 
   const uploadSlug = form.slug || slugify(form.name) || 'untitled';
 
-  /* ── 옵션 ─────────────────────────────────────────────── */
-  const setOption = (index: number, next: ProductInput['options'][number]) => {
-    set(
-      'options',
-      form.options.map((option, position) => (position === index ? next : option))
-    );
-  };
-
   /* ── 저장 ─────────────────────────────────────────────── */
-  const buildPayload = (): ProductInput => ({
-    ...form,
-    slug: form.slug.trim(),
-    name: form.name.trim(),
-    options: useOptions
-      ? form.options
-          .filter((option) => option.name.trim() && option.values.length > 0)
-          .map((option) => ({
-            name: option.name.trim(),
-            values: option.values.filter((value) => value.trim()),
-            soldOutValues: option.soldOutValues.filter((value) => value.trim()),
-          }))
-      : [],
-    measurements: form.measurements.filter((row) => row.label.trim()),
-    detail: form.detail.filter((block) => {
-      if (block.type === 'image') return Boolean(block.src);
-      if (block.type === 'text') return Boolean(block.heading?.trim() || block.body.trim());
-      return block.rows.some((row) => row.label.trim() || row.value.trim());
-    }),
-  });
+  const buildPayload = (): ProductInput => {
+    // 이름이나 값이 비어 있는 그룹은 저장하지 않습니다.
+    const groups = useOptions
+      ? form.optionGroups
+          .filter((group) => group.name.trim() && group.values.length > 0)
+          .map((group) => ({ name: group.name.trim(), values: group.values }))
+      : [];
+
+    return {
+      ...form,
+      slug: form.slug.trim(),
+      name: form.name.trim(),
+      optionGroups: groups,
+      // [조합 생성] 을 누르지 않고 저장해도 표가 어긋나지 않게 여기서 맞춰 둡니다.
+      optionCombinations: rebuildCombinations(groups, form.optionCombinations),
+      measurements: form.measurements.filter((row) => row.label.trim()),
+      detail: form.detail.filter((block) => {
+        if (block.type === 'image') return Boolean(block.src);
+        if (block.type === 'text') {
+          return Boolean(block.heading?.trim() || block.body.trim());
+        }
+        return block.rows.some((row) => row.label.trim() || row.value.trim());
+      }),
+    };
+  };
 
   const save = async (mode: 'close' | 'continue') => {
     if (saving) return;
@@ -584,8 +585,8 @@ export default function ProductForm({ product, templates }: ProductFormProps) {
                 onChange={(event) => {
                   setUseOptions(event.target.checked);
                   setDirty(true);
-                  if (event.target.checked && form.options.length === 0) {
-                    set('options', [{ name: '', values: [], soldOutValues: [] }]);
+                  if (event.target.checked && form.optionGroups.length === 0) {
+                    set('optionGroups', [{ name: '', values: [] }]);
                   }
                 }}
                 className="h-4 w-4"
@@ -595,122 +596,19 @@ export default function ProductForm({ product, templates }: ProductFormProps) {
           </div>
 
           {useOptions ? (
-            <div className="mt-4 flex flex-col gap-4">
-              {form.options.map((option, index) => (
-                <div key={index} className="rounded-md border border-slate-200 p-3">
-                  <div className="flex flex-wrap items-end gap-2">
-                    <div className="flex-1">
-                      <label className="admin-label" htmlFor={`option-name-${index}`}>
-                        옵션명
-                      </label>
-                      <input
-                        id={`option-name-${index}`}
-                        type="text"
-                        value={option.name}
-                        onChange={(event) =>
-                          setOption(index, { ...option, name: event.target.value })
-                        }
-                        placeholder="예: 컬러"
-                        className="admin-input"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        set(
-                          'options',
-                          form.options.filter((_, position) => position !== index)
-                        )
-                      }
-                      className="admin-btn-danger"
-                    >
-                      옵션 삭제
-                    </button>
-                  </div>
-
-                  <div className="mt-3">
-                    <span className="admin-label">옵션값 · 품절 체크</span>
-                    <div className="flex flex-col gap-2">
-                      {option.values.map((value, valueIndex) => (
-                        <div key={valueIndex} className="flex flex-wrap items-center gap-2">
-                          <input
-                            type="text"
-                            value={value}
-                            onChange={(event) => {
-                              const nextValue = event.target.value;
-                              setOption(index, {
-                                ...option,
-                                values: option.values.map((item, position) =>
-                                  position === valueIndex ? nextValue : item
-                                ),
-                                // 이름이 바뀌면 품절 표시도 따라갑니다
-                                soldOutValues: option.soldOutValues.map((item) =>
-                                  item === value ? nextValue : item
-                                ),
-                              });
-                            }}
-                            placeholder="예: 블랙"
-                            aria-label={`옵션값 ${valueIndex + 1}`}
-                            className="admin-input w-[200px] flex-none"
-                          />
-                          <label className="flex items-center gap-1.5 text-[13px] text-slate-700">
-                            <input
-                              type="checkbox"
-                              checked={option.soldOutValues.includes(value)}
-                              onChange={(event) =>
-                                setOption(index, {
-                                  ...option,
-                                  soldOutValues: event.target.checked
-                                    ? [...option.soldOutValues, value]
-                                    : option.soldOutValues.filter((item) => item !== value),
-                                })
-                              }
-                              className="h-4 w-4"
-                            />
-                            품절
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setOption(index, {
-                                ...option,
-                                values: option.values.filter(
-                                  (_, position) => position !== valueIndex
-                                ),
-                                soldOutValues: option.soldOutValues.filter(
-                                  (item) => item !== value
-                                ),
-                              })
-                            }
-                            className="admin-btn min-h-0 px-2 py-1"
-                          >
-                            삭제
-                          </button>
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setOption(index, { ...option, values: [...option.values, ''] })
-                        }
-                        className="admin-btn self-start"
-                      >
-                        + 옵션값 추가
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              <button
-                type="button"
-                onClick={() =>
-                  set('options', [...form.options, { name: '', values: [], soldOutValues: [] }])
-                }
-                className="admin-btn self-start"
-              >
-                + 옵션 그룹 추가 (예: 컬러 + 사이즈)
-              </button>
+            <div className="mt-4">
+              <OptionEditor
+                groups={form.optionGroups}
+                combinations={form.optionCombinations}
+                onChange={(next) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    optionGroups: next.groups,
+                    optionCombinations: next.combinations,
+                  }));
+                  setDirty(true);
+                }}
+              />
             </div>
           ) : (
             <p className="mt-3 text-[14px] text-slate-500">

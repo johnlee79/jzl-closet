@@ -11,11 +11,33 @@ export type DetailBlock =
   | { type: 'text'; heading?: string; body: string }
   | { type: 'spec'; rows: { label: string; value: string }[] };
 
-/** 옵션 그룹. soldOutValues 에 담긴 값은 선택할 수 없습니다. */
-export type ProductOption = {
+/**
+ * 옵션 조합 이름을 잇는 구분자. 예: 컬러 "블랙" + 사이즈 "S" → "블랙/S"
+ * 옵션값에는 이 문자를 넣을 수 없습니다. (관리자 입력 단계에서 걸러 냅니다)
+ */
+export const COMBINATION_SEPARATOR = '/';
+
+/** 옵션 그룹 — 이름과 값 목록만 가집니다. 품절 여부는 조합이 관리합니다. */
+export type OptionGroup = {
   name: string;
   values: string[];
-  soldOutValues: string[];
+};
+
+/**
+ * 옵션 조합 하나. 그룹의 값들을 곱집합으로 조합한 결과입니다.
+ * key 는 그룹 순서대로 값을 "/" 로 이은 문자열입니다.
+ */
+export type OptionCombination = {
+  key: string; // "블랙/S"
+  isActive: boolean; // false 면 이 조합만 품절
+  stock: number | null; // null 이면 재고를 관리하지 않음
+  extraPrice: number; // 옵션별 추가금액. 기본 0
+};
+
+/** DB 의 options(jsonb) 에 저장하는 형태 */
+export type StoredOptions = {
+  groups: OptionGroup[];
+  combinations: OptionCombination[];
 };
 
 /** 실측 항목 — 항목명과 값 한 쌍 */
@@ -40,7 +62,8 @@ export type Product = {
   gender: Gender;
   season: string | null;
   thumbnails: string[];
-  options: ProductOption[];
+  optionGroups: OptionGroup[];
+  optionCombinations: OptionCombination[];
   detail: DetailBlock[];
   measurements: Measurement[];
   isNew: boolean;
@@ -113,6 +136,26 @@ export type ProductFilter = {
   visible?: boolean;
   limit?: number;
   offset?: number;
+};
+
+/* ── 사이트 설정 (site_settings 테이블) ────────────────────── */
+
+/** 브라우저 탭·홈 화면에 쓰이는 아이콘 한 벌 */
+export type BrandingIcon = {
+  url: string;
+  type: string; // image/png · image/svg+xml · image/x-icon
+  sizes: string; // "32x32"
+};
+
+/** site_settings 의 key = 'branding' 에 담기는 값 */
+export type Branding = {
+  favicon: BrandingIcon | null;
+  appleTouchIcon: BrandingIcon | null;
+  /** 관리자가 올린 원본. 미리보기와 재생성에 씁니다. */
+  source: { url: string; type: string; name: string } | null;
+  /** R2 에 올라간 키들 — 교체·삭제할 때 지웁니다. */
+  keys: string[];
+  updatedAt: string | null;
 };
 
 /** 업로드 API 응답 */

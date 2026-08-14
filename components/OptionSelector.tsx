@@ -1,45 +1,47 @@
 'use client';
 
+import type { OptionGroup } from '@/lib/types';
+
 type OptionSelectorProps = {
-  options: { name: string; values: string[] }[];
+  groups: OptionGroup[];
   selected: Record<string, string>;
   onChange: (name: string, value: string) => void;
-  /** 옵션 값이 품절인지 판단합니다. 재고를 관리하지 않는 상품이면 생략하세요. */
-  isSoldOut?: (optionIndex: number, value: string) => boolean;
+  /** 이 값을 지금 고를 수 있는지. 남은 조합이 하나도 없으면 false 입니다. */
+  isSelectable?: (groupIndex: number, value: string) => boolean;
   disabled?: boolean;
 };
 
 export default function OptionSelector({
-  options,
+  groups,
   selected,
   onChange,
-  isSoldOut,
+  isSelectable,
   disabled = false,
 }: OptionSelectorProps) {
   return (
     <div className="flex flex-col gap-4">
-      {options.map((option, optionIndex) => {
-        const id = `option-${optionIndex}`;
+      {groups.map((group, groupIndex) => {
+        const id = `option-${groupIndex}`;
         return (
-          <div key={option.name} className="flex flex-col gap-2">
+          <div key={group.name} className="flex flex-col gap-2">
             <label htmlFor={id} className="text-[13px] tracking-[0.14em] text-muted">
-              {option.name}
+              {group.name}
             </label>
             <div className="relative">
               <select
                 id={id}
-                name={option.name}
-                value={selected[option.name] ?? ''}
+                name={group.name}
+                value={selected[group.name] ?? ''}
                 disabled={disabled}
-                onChange={(event) => onChange(option.name, event.target.value)}
+                onChange={(event) => onChange(group.name, event.target.value)}
                 className="w-full appearance-none rounded-none border border-stone bg-transparent px-4 py-3.5 pr-10 text-[15px] text-ink outline-none transition-colors duration-200 focus:border-ink disabled:cursor-not-allowed disabled:text-muted"
               >
-                <option value="">{option.name}을(를) 선택해 주세요</option>
-                {option.values.map((value) => {
-                  const soldOut = isSoldOut ? isSoldOut(optionIndex, value) : false;
+                <option value="">{group.name}을(를) 선택해 주세요</option>
+                {group.values.map((value) => {
+                  const selectable = isSelectable ? isSelectable(groupIndex, value) : true;
                   return (
-                    <option key={value} value={value} disabled={soldOut}>
-                      {soldOut ? `${value} (품절)` : value}
+                    <option key={value} value={value} disabled={!selectable}>
+                      {selectable ? value : `${value} (품절)`}
                     </option>
                   );
                 })}

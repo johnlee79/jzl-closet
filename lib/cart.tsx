@@ -15,9 +15,14 @@ export type CartItem = {
   productId: string;
   name: string;
   brand: string;
+  /** 옵션 추가금액까지 더한 개당 가격 */
   price: number;
   thumbnail: string;
   options: Record<string, string>;
+  /** 선택한 조합 이름. 예: "블랙/S" (옵션이 없으면 빈 문자열) */
+  optionKey: string;
+  /** 조합의 추가금액. price 에 이미 포함되어 있고, 표시용으로 따로 둡니다. */
+  extraPrice: number;
   quantity: number;
 };
 
@@ -44,16 +49,40 @@ function makeKey(productId: string, options: Record<string, string>): string {
   return suffix ? `${productId}__${suffix}` : productId;
 }
 
-function isCartItem(value: unknown): value is CartItem {
-  if (typeof value !== 'object' || value === null) return false;
+/**
+ * 저장된 값을 CartItem 으로 되살립니다.
+ * 조합 정보(optionKey·extraPrice)가 없던 시절에 담아 둔 항목도 그대로 살립니다.
+ */
+function toCartItem(value: unknown): CartItem | null {
+  if (typeof value !== 'object' || value === null) return null;
   const item = value as Record<string, unknown>;
-  return (
-    typeof item.key === 'string' &&
-    typeof item.productId === 'string' &&
-    typeof item.name === 'string' &&
-    typeof item.price === 'number' &&
-    typeof item.quantity === 'number'
-  );
+  if (
+    typeof item.key !== 'string' ||
+    typeof item.productId !== 'string' ||
+    typeof item.name !== 'string' ||
+    typeof item.price !== 'number' ||
+    typeof item.quantity !== 'number'
+  ) {
+    return null;
+  }
+
+  const options =
+    item.options && typeof item.options === 'object'
+      ? (item.options as Record<string, string>)
+      : {};
+
+  return {
+    key: item.key,
+    productId: item.productId,
+    name: item.name,
+    brand: typeof item.brand === 'string' ? item.brand : '',
+    price: item.price,
+    thumbnail: typeof item.thumbnail === 'string' ? item.thumbnail : '',
+    options,
+    optionKey: typeof item.optionKey === 'string' ? item.optionKey : '',
+    extraPrice: typeof item.extraPrice === 'number' ? item.extraPrice : 0,
+    quantity: item.quantity,
+  };
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -67,7 +96,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (raw) {
         const parsed: unknown = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          setItems(parsed.filter(isCartItem));
+          setItems(
+            parsed
+              .map(toCartItem)
+              .filter((item): item is CartItem => item !== null)
+          );
         }
       }
     } catch {

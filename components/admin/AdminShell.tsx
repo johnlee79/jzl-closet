@@ -4,11 +4,20 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-/** 이번 단계(1-A)에서 만든 메뉴만 활성화하고, 다음 단계 메뉴는 회색으로 표시만 합니다. */
-const menu: { href: string; label: string; ready: boolean }[] = [
+type MenuItem = {
+  href: string;
+  label: string;
+  ready: boolean;
+  /** 한 단계 들여쓴 하위 메뉴 */
+  child?: boolean;
+};
+
+/** 아직 만들지 않은 메뉴는 회색으로 표시만 합니다. */
+const menu: MenuItem[] = [
   { href: '/admin/products', label: '상품 관리', ready: true },
   { href: '/admin/categories', label: '분류 관리', ready: false },
-  { href: '/admin/settings', label: '설정', ready: false },
+  { href: '/admin/settings', label: '설정', ready: true },
+  { href: '/admin/settings/branding', label: '브랜딩 · 파비콘', ready: true, child: true },
 ];
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
@@ -33,14 +42,22 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const nav = (
     <nav aria-label="관리자 메뉴" className="flex flex-col gap-1">
       {menu.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        // 하위 메뉴가 있는 항목은 정확히 그 주소일 때만 켭니다. (부모·자식이 같이 켜지지 않게)
+        const hasChild = menu.some(
+          (other) => other.href !== item.href && other.href.startsWith(`${item.href}/`)
+        );
+        const active =
+          pathname === item.href ||
+          (!hasChild && pathname.startsWith(`${item.href}/`));
+        const indent = item.child ? 'ml-3' : '';
+
         if (!item.ready) {
           return (
             <span
               key={item.href}
               aria-disabled="true"
               title="다음 단계에서 제공됩니다"
-              className="flex cursor-not-allowed items-center justify-between rounded-md px-3 py-2.5 text-[14px] text-slate-400"
+              className={`flex cursor-not-allowed items-center justify-between rounded-md px-3 py-2.5 text-[14px] text-slate-400 ${indent}`}
             >
               {item.label}
               <span className="text-[11px] text-slate-400">준비 중</span>
@@ -52,11 +69,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             key={item.href}
             href={item.href}
             aria-current={active ? 'page' : undefined}
-            className={`rounded-md px-3 py-2.5 text-[14px] font-medium transition-colors ${
-              active
-                ? 'bg-blue-700 text-white'
-                : 'text-slate-700 hover:bg-slate-100'
-            }`}
+            className={`rounded-md px-3 py-2.5 transition-colors ${indent} ${
+              item.child ? 'text-[13px]' : 'text-[14px] font-medium'
+            } ${active ? 'bg-blue-700 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
           >
             {item.label}
           </Link>

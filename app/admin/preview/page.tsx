@@ -7,7 +7,11 @@ import ProductGallery from '@/components/ProductGallery';
 import { getBrandLabel, getBrandName } from '@/lib/brands';
 import { getCategoryBySlug, getSubCategory } from '@/lib/categories';
 import { PREVIEW_STORAGE_KEY } from '@/components/admin/ProductForm';
-import { formatPrice, getDiscountRate } from '@/lib/product-utils';
+import {
+  formatPrice,
+  getDiscountRate,
+  isCombinationAvailable,
+} from '@/lib/product-utils';
 import { store } from '@/lib/store';
 import type { ProductInput } from '@/lib/types';
 
@@ -112,18 +116,20 @@ export default function AdminPreviewPage() {
             </div>
           </dl>
 
-          {draft.options.length > 0 ? (
-            <div className="mt-8 border-t border-stone pt-6">
-              {draft.options.map((option) => (
-                <p key={option.name} className="text-[14px] text-ink">
-                  <span className="text-muted">{option.name}</span> —{' '}
-                  {option.values
-                    .map((value) =>
-                      option.soldOutValues.includes(value) ? `${value} (품절)` : value
-                    )
-                    .join(' / ')}
+          {draft.optionGroups.length > 0 ? (
+            <div className="mt-8 flex flex-col gap-1.5 border-t border-stone pt-6">
+              {draft.optionGroups.map((group) => (
+                <p key={group.name} className="text-[14px] text-ink">
+                  <span className="text-muted">{group.name}</span> —{' '}
+                  {group.values.join(' / ')}
                 </p>
               ))}
+              {draft.optionCombinations.length > 0 ? (
+                <p className="mt-2 text-[13px] text-muted">
+                  조합 {draft.optionCombinations.length}개 · 판매 가능{' '}
+                  {draft.optionCombinations.filter(isCombinationAvailable).length}개
+                </p>
+              ) : null}
             </div>
           ) : null}
         </section>

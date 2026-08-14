@@ -6,13 +6,16 @@ import OptionSelector from '@/components/OptionSelector';
 import { getBrandLabel } from '@/lib/brands';
 import { useCart } from '@/lib/cart';
 import {
+  findCombination,
   formatPrice,
+  isCombinationAvailable,
   isProductSoldOut,
-  isSelectionAvailable,
-  isValueSoldOut,
+  isValueSelectable,
 } from '@/lib/product-utils';
 import { store } from '@/lib/store';
 import type { Product } from '@/lib/types';
+
+const MAX_QUANTITY = 99;
 
 export default function AddToCartButton({ product }: { product: Product }) {
   const { addItem } = useCart();
@@ -20,16 +23,31 @@ export default function AddToCartButton({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
 
+  const hasOptions = product.optionGroups.length > 0;
+
   const allSelected = useMemo(
-    () => product.options.every((option) => Boolean(selected[option.name])),
-    [product.options, selected]
+    () => product.optionGroups.every((group) => Boolean(selected[group.name])),
+    [product.optionGroups, selected]
   );
 
-  /** 선택한 조합에 품절 옵션값이 섞여 있으면 담을 수 없습니다. */
-  const soldOutCombination =
-    allSelected && !isSelectionAvailable(product, selected);
-  const maxQuantity = 99;
-  const canAdd = allSelected && !soldOutCombination;
+  /** 고른 값들에 해당하는 조합. 옵션이 없는 상품이면 null 입니다. */
+  const combination = useMemo(
+    () => (hasOptions && allSelected ? findCombination(product, selected) : null),
+    [hasOptions, allSelected, product, selected]
+  );
+
+  const available = hasOptions ? isCombinationAvailable(combination) : true;
+  const soldOutCombination = hasOptions && allSelected && !available;
+
+  const extraPrice = combination?.extraPrice ?? 0;
+  const unitPrice = product.price + extraPrice;
+
+  /** 재고를 관리하는 조합이면 남은 수량까지만 담을 수 있습니다. */
+  const maxQuantity = Math.max(
+    1,
+    Math.min(MAX_QUANTITY, combination?.stock ?? MAX_QUANTITY)
+  );
+  const canAdd = (!hasOptions || allSelected) && available;
 
   const handleChange = (name: string, value: string) => {
     setSelected((prev) => ({ ...prev, [name]: value }));
@@ -44,10 +62,12 @@ export default function AddToCartButton({ product }: { product: Product }) {
       productId: product.slug,
       name: product.name,
       brand: product.brandSlug ? getBrandLabel(product.brandSlug) : '',
-      price: product.price,
+      price: unitPrice,
       thumbnail: product.thumbnails[0] ?? '',
       options: selected,
-      quantity,
+      optionKey: combination?.key ?? '',
+      extraPrice,
+      quantity: Math.min(quantity, maxQuantity),
     });
     setAdded(true);
   };
@@ -67,17 +87,22 @@ export default function AddToCartButton({ product }: { product: Product }) {
 
   return (
     <div className="mt-8 border-t border-stone pt-8">
-      <OptionSelector
-        options={product.options}
-        selected={selected}
-        onChange={handleChange}
-        isSoldOut={(optionIndex, value) => {
-          const option = product.options[optionIndex];
-          return option ? isValueSoldOut(option, value) : false;
-        }}
-      />
+      {hasOptions ? (
+        <OptionSelector
+          groups={product.optionGroups}
+          selected={selected}
+          onChange={handleChange}
+          isSelectable={(groupIndex, value) =>
+            isValueSelectable(product, groupIndex, value, selected)
+          }
+        />
+      ) : null}
 
-      <div className="mt-6 flex items-center justify-between border-t border-stone pt-6">
+      <div
+        className={`flex items-center justify-between border-stone ${
+          hasOptions ? 'mt-6 border-t pt-6' : ''
+        }`}
+      >
         <span className="text-[13px] tracking-[0.14em] text-muted">수량</span>
         <div className="flex items-center border border-stone">
           <button
@@ -110,15 +135,23 @@ export default function AddToCartButton({ product }: { product: Product }) {
         </div>
       </div>
 
+      {extraPrice !== 0 ? (
+        <p className="mt-3 text-right text-[13px] text-muted">
+          기본가 {formatPrice(product.price)}원
+          {extraPrice > 0 ? ' + 옵션 ' : ' − 옵션 '}
+          {formatPrice(Math.abs(extraPrice))}원
+        </p>
+      ) : null}
+
       <div className="mt-6 flex items-baseline justify-between border-t border-stone pt-6">
         <span className="text-[13px] tracking-[0.14em] text-muted">합계</span>
         <span className="font-display text-[26px] font-medium tracking-wide text-ink">
-          {formatPrice(product.price * quantity)}
+          {formatPrice(unitPrice * quantity)}
           <span className="ml-1 font-sans text-[15px]">원</span>
         </span>
       </div>
 
-      {!allSelected ? (
+      {hasOptions && !allSelected ? (
         <p className="mt-4 text-[13px] leading-relaxed text-muted">
           옵션을 모두 선택하시면 장바구니에 담을 수 있습니다.
         </p>
@@ -127,6 +160,12 @@ export default function AddToCartButton({ product }: { product: Product }) {
       {soldOutCombination ? (
         <p className="mt-4 text-[13px] leading-relaxed text-wine">
           선택하신 옵션은 품절되었습니다. 다른 옵션을 골라 주세요.
+        </p>
+      ) : null}
+
+      {canAdd && combination?.stock !== null && combination?.stock !== undefined ? (
+        <p className="mt-4 text-[13px] leading-relaxed text-muted">
+          남은 수량 {combination.stock}개
         </p>
       ) : null}
 

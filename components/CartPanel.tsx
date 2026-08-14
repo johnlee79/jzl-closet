@@ -14,10 +14,15 @@ export default function CartPanel() {
     `[${store.name} 주문 문의]`,
     '',
     ...items.map((item) => {
-      const options = Object.entries(item.options)
-        .map(([name, value]) => `${name}: ${value}`)
-        .join(' / ');
-      return `· ${item.name} (${item.brand})${options ? ` — ${options}` : ''} — ${item.quantity}개 — ${formatPrice(item.price * item.quantity)}원`;
+      const options =
+        Object.entries(item.options)
+          .map(([name, value]) => `${name}: ${value}`)
+          .join(' / ') || item.optionKey;
+      const extra =
+        item.extraPrice !== 0
+          ? ` (옵션 ${item.extraPrice > 0 ? '+' : '−'}${formatPrice(Math.abs(item.extraPrice))}원)`
+          : '';
+      return `· ${item.name} (${item.brand})${options ? ` — ${options}` : ''}${extra} — ${item.quantity}개 — ${formatPrice(item.price * item.quantity)}원`;
     }),
     '',
     `합계: ${formatPrice(total)}원 (총 ${count}개)`,
@@ -83,7 +88,15 @@ export default function CartPanel() {
                 <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
                   {Object.entries(item.options)
                     .map(([name, value]) => `${name} · ${value}`)
-                    .join(' / ') || '옵션 없음'}
+                    .join(' / ') ||
+                    item.optionKey ||
+                    '옵션 없음'}
+                  {item.extraPrice !== 0 ? (
+                    <span className="ml-1.5 text-ink">
+                      (옵션 {item.extraPrice > 0 ? '+' : '−'}
+                      {formatPrice(Math.abs(item.extraPrice))}원)
+                    </span>
+                  ) : null}
                 </p>
 
                 <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-4">

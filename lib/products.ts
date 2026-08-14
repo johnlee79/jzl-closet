@@ -1,15 +1,23 @@
 import 'server-only';
 
 import { getCategoryBySlug } from '@/lib/categories';
+import {
+  buildCombinationKeys,
+  cleanOptionValue,
+  fromCombinationKey,
+  rebuildCombinations,
+} from '@/lib/product-utils';
 import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
 import type {
   DetailBlock,
   Measurement,
+  OptionCombination,
+  OptionGroup,
   Product,
   ProductFilter,
   ProductInput,
-  ProductOption,
   ProductRow,
+  StoredOptions,
   Template,
   TemplateRow,
 } from '@/lib/types';
@@ -33,16 +41,100 @@ function asArray<T>(value: unknown): T[] {
   return [];
 }
 
-function normalizeOptions(value: unknown): ProductOption[] {
-  return asArray<Partial<ProductOption>>(value)
-    .filter((option) => typeof option?.name === 'string')
-    .map((option) => ({
-      name: String(option.name),
-      values: Array.isArray(option.values) ? option.values.map(String) : [],
-      soldOutValues: Array.isArray(option.soldOutValues)
-        ? option.soldOutValues.map(String)
-        : [],
+/* ── 옵션 ────────────────────────────────────────────────────
+ * DB 의 options(jsonb) 는 두 가지 형태가 섞여 있을 수 있습니다.
+ *   (구) [{ name, values, soldOutValues }]            ← 조합 개념이 없던 시절
+ *   (신) { groups: [...], combinations: [...] }
+ * 읽을 때 항상 신 형태로 맞춰 돌려줍니다.
+ * ---------------------------------------------------------- */
+
+type LegacyOption = { name?: unknown; values?: unknown; soldOutValues?: unknown };
+
+function toGroup(option: LegacyOption): OptionGroup {
+  const values = Array.isArray(option.values)
+    ? option.values.map((value) => cleanOptionValue(String(value))).filter(Boolean)
+    : [];
+  return {
+    name: String(option.name ?? '').trim(),
+    // 같은 값이 두 번 들어가면 조합이 중복되므로 여기서 걸러 냅니다.
+    values: Array.from(new Set(values)),
+  };
+}
+
+function normalizeGroups(value: unknown): OptionGroup[] {
+  return asArray<LegacyOption>(value)
+    .filter((option) => option && typeof option === 'object')
+    .map(toGroup)
+    .filter((group) => group.name.length > 0);
+}
+
+function normalizeCombinations(value: unknown): OptionCombination[] {
+  return asArray<Record<string, unknown>>(value)
+    .filter((item) => typeof item?.key === 'string' && item.key.length > 0)
+    .map((item) => ({
+      key: String(item.key),
+      isActive: item.isActive !== false,
+      stock:
+        typeof item.stock === 'number' && Number.isFinite(item.stock)
+          ? Math.max(0, Math.trunc(item.stock))
+          : null,
+      extraPrice:
+        typeof item.extraPrice === 'number' && Number.isFinite(item.extraPrice)
+          ? Math.trunc(item.extraPrice)
+          : 0,
     }));
+}
+
+/** 구 형식 → 신 형식. 품절 체크가 있던 값이 들어간 조합을 품절로 옮깁니다. */
+function fromLegacyOptions(value: unknown): StoredOptions {
+  const raw = asArray<LegacyOption>(value).filter(
+    (option) => option && typeof option === 'object' && String(option.name ?? '').trim()
+  );
+  const groups = raw.map(toGroup);
+  const soldOutByGroup = raw.map(
+    (option) =>
+      new Set(
+        Array.isArray(option.soldOutValues)
+          ? option.soldOutValues.map((item) => cleanOptionValue(String(item)))
+          : []
+      )
+  );
+
+  const combinations = buildCombinationKeys(groups).map((key) => {
+    const parts = fromCombinationKey(key);
+    const soldOut = parts.some((part, index) => soldOutByGroup[index]?.has(part));
+    return { key, isActive: !soldOut, stock: null, extraPrice: 0 };
+  });
+
+  return { groups, combinations };
+}
+
+export function normalizeOptions(value: unknown): StoredOptions {
+  let parsed: unknown = value;
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed) as unknown;
+    } catch {
+      parsed = null;
+    }
+  }
+
+  const options: StoredOptions = Array.isArray(parsed)
+    ? fromLegacyOptions(parsed)
+    : parsed && typeof parsed === 'object'
+      ? {
+          groups: normalizeGroups((parsed as { groups?: unknown }).groups),
+          combinations: normalizeCombinations(
+            (parsed as { combinations?: unknown }).combinations
+          ),
+        }
+      : { groups: [], combinations: [] };
+
+  // 그룹과 조합이 어긋나 있으면(값 추가·삭제 후 조합 미생성) 여기서 맞춰 줍니다.
+  return {
+    groups: options.groups,
+    combinations: rebuildCombinations(options.groups, options.combinations),
+  };
 }
 
 function normalizeMeasurements(value: unknown): Measurement[] {
@@ -60,6 +152,7 @@ function normalizeDetail(value: unknown): DetailBlock[] {
 
 export function rowToProduct(row: ProductRow): Product {
   const gender = row.gender === 'men' || row.gender === 'unisex' ? row.gender : 'women';
+  const options = normalizeOptions(row.options);
   return {
     id: row.id,
     slug: row.slug,
@@ -75,7 +168,8 @@ export function rowToProduct(row: ProductRow): Product {
     gender,
     season: row.season,
     thumbnails: asArray<string>(row.thumbnails).map(String),
-    options: normalizeOptions(row.options),
+    optionGroups: options.groups,
+    optionCombinations: options.combinations,
     detail: normalizeDetail(row.detail_blocks),
     measurements: normalizeMeasurements(row.measurements),
     isNew: Boolean(row.is_new),
@@ -104,7 +198,10 @@ export function productToRow(input: ProductInput): Omit<ProductRow, 'id' | 'crea
     gender: input.gender,
     season: input.season,
     thumbnails: input.thumbnails,
-    options: input.options,
+    options: {
+      groups: input.optionGroups,
+      combinations: input.optionCombinations,
+    } satisfies StoredOptions,
     detail_blocks: input.detail,
     measurements: input.measurements,
     is_new: input.isNew,
@@ -368,7 +465,8 @@ export async function duplicateProduct(id: string): Promise<Product> {
     gender: original.gender,
     season: original.season,
     thumbnails: original.thumbnails,
-    options: original.options,
+    optionGroups: original.optionGroups,
+    optionCombinations: original.optionCombinations,
     detail: original.detail,
     measurements: original.measurements,
     isNew: original.isNew,
