@@ -11,7 +11,7 @@ import { Suspense, useState } from 'react';
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get('next') ?? '/admin/products';
+  const next = searchParams.get('next') ?? '/admin';
 
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -39,7 +39,7 @@ function LoginForm() {
       }
 
       // 미들웨어가 쿠키를 다시 읽도록 새로고침합니다.
-      router.replace(next.startsWith('/admin') ? next : '/admin/products');
+      router.replace(next.startsWith('/admin') ? next : '/admin');
       router.refresh();
     } catch {
       setError('서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.');

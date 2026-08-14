@@ -138,6 +138,104 @@ export function emptyBanner(id: string): Banner {
   };
 }
 
+/* ── 결제·주문 (2-A) ──────────────────────────────────────── */
+
+export type PaymentSettings = {
+  /** 입금 계좌 — ★ 주문 완료·주문 조회 화면에서만 보여 줍니다. */
+  bankName: string;
+  accountNo: string;
+  accountHolder: string;
+  /** 입금 기한 (시간). 주문 완료 화면에 "언제까지" 로 환산해 보여 줍니다. */
+  depositHours: number;
+  /**
+   * 도서산간 추가배송비를 적용할 우편번호 규칙.
+   * 한 줄에 하나씩. 세 가지 형태를 지원합니다.
+   *   63000-63644  범위
+   *   63*          앞자리 일치
+   *   40200        정확히 일치
+   */
+  remoteAreaRules: string[];
+  /** 새 주문이 들어오면 텔레그램으로 알릴지 */
+  telegramEnabled: boolean;
+  /** 구매안전(에스크로) 서비스 안내 문구. 비어 있으면 표시하지 않습니다. */
+  escrowNotice: string;
+  /** 구매안전 서비스 인증 이미지 주소. 비어 있으면 표시하지 않습니다. */
+  escrowImageUrl: string;
+  /** 인증 이미지를 눌렀을 때 열리는 확인 페이지 주소 (선택) */
+  escrowLinkUrl: string;
+};
+
+/**
+ * 도서산간 기본 규칙.
+ * 제주 전역, 울릉군, 인천 옹진군 일부를 기본으로 넣어 두었습니다.
+ * 실제 택배사 계약에 맞게 관리자 화면에서 고치세요.
+ */
+export const DEFAULT_REMOTE_AREA_RULES = [
+  '63000-63644', // 제주특별자치도 전역
+  '40200-40240', // 경상북도 울릉군
+  '23004', // 인천 옹진군 백령면
+  '23100-23116', // 인천 옹진군 (연평·대청 등)
+  '22386-22388', // 인천 중구 도서 지역
+  '53031-53033', // 경남 통영 한산·욕지 등
+  '59790-59791', // 전남 신안 흑산 등
+];
+
+export const DEFAULT_PAYMENT: PaymentSettings = {
+  bankName: '',
+  accountNo: '',
+  accountHolder: '',
+  depositHours: 24,
+  remoteAreaRules: DEFAULT_REMOTE_AREA_RULES,
+  telegramEnabled: true,
+  escrowNotice: '',
+  escrowImageUrl: '',
+  escrowLinkUrl: '',
+};
+
+/** 입금 계좌를 다 채웠는지 — 안 채웠으면 주문을 받을 수 없습니다. */
+export function hasBankAccount(payment: PaymentSettings): boolean {
+  return Boolean(
+    payment.bankName.trim() && payment.accountNo.trim() && payment.accountHolder.trim()
+  );
+}
+
+/**
+ * 우편번호가 도서산간에 해당하는지.
+ * 규칙이 하나라도 맞으면 추가배송비를 더합니다.
+ */
+export function isRemoteArea(postcode: string, rules: string[]): boolean {
+  const code = postcode.replace(/[^0-9]/g, '');
+  if (code.length < 5) return false;
+
+  return rules.some((raw) => {
+    const rule = raw.trim();
+    if (!rule) return false;
+
+    // 63000-63644 — 범위
+    const range = /^(\d{5})\s*-\s*(\d{5})$/.exec(rule);
+    if (range) {
+      const value = Number(code);
+      return value >= Number(range[1]) && value <= Number(range[2]);
+    }
+
+    // 63* — 앞자리 일치
+    if (rule.endsWith('*')) {
+      return code.startsWith(rule.slice(0, -1));
+    }
+
+    // 40200 — 정확히 일치
+    return code === rule.replace(/[^0-9]/g, '');
+  });
+}
+
+/** 결제 수단 — 지금은 무통장입금만 씁니다. 카드는 자리만 비워 둡니다. */
+export const PAYMENT_METHODS = [
+  { key: 'bank_transfer', label: '무통장입금 (계좌이체)', ready: true },
+  { key: 'card', label: '신용카드 · 간편결제', ready: false },
+] as const;
+
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number]['key'];
+
 /* ── 구글 애널리틱스 ──────────────────────────────────────── */
 
 export type AnalyticsSettings = {

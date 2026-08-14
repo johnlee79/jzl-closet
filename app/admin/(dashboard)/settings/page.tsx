@@ -2,14 +2,17 @@ import Link from 'next/link';
 import AnalyticsForm from '@/components/admin/AnalyticsForm';
 import FaviconUploader from '@/components/admin/FaviconUploader';
 import LogoUploader from '@/components/admin/LogoUploader';
+import PaymentForm from '@/components/admin/PaymentForm';
 import ShippingForm from '@/components/admin/ShippingForm';
 import StoreSettingsForm from '@/components/admin/StoreSettingsForm';
 import {
   getAnalyticsSettings,
   getBranding,
+  getPaymentSettings,
   getShippingSettings,
   getStoreSettings,
 } from '@/lib/settings';
+import { isTelegramConfigured } from '@/lib/telegram';
 
 /** 설정 화면은 항상 최신 DB 값을 봐야 하므로 캐시하지 않습니다. */
 export const dynamic = 'force-dynamic';
@@ -20,6 +23,7 @@ const TABS = [
   { key: 'store', label: '스토어 정보' },
   { key: 'branding', label: '브랜딩' },
   { key: 'shipping', label: '배송·반품' },
+  { key: 'payment', label: '결제·주문' },
   { key: 'export', label: '데이터 내보내기' },
   { key: 'analytics', label: '분석 (GA4)' },
 ] as const;
@@ -37,11 +41,12 @@ export default async function AdminSettingsPage({
 }) {
   const tab: TabKey = isTab(searchParams.tab) ? searchParams.tab : 'store';
 
-  const [store, branding, shipping, analytics] = await Promise.all([
+  const [store, branding, shipping, analytics, payment] = await Promise.all([
     getStoreSettings(),
     getBranding(),
     getShippingSettings(),
     getAnalyticsSettings(),
+    getPaymentSettings(),
   ]);
 
   return (
@@ -91,6 +96,10 @@ export default async function AdminSettingsPage({
 
         {tab === 'shipping' ? <ShippingForm initial={shipping} /> : null}
 
+        {tab === 'payment' ? (
+          <PaymentForm initial={payment} telegramConfigured={isTelegramConfigured()} />
+        ) : null}
+
         {tab === 'export' ? (
           <section className="admin-card p-4 md:p-5">
             <h2 className="text-[16px] font-semibold text-slate-900">상품 전체 내려받기</h2>
@@ -117,6 +126,13 @@ export default async function AdminSettingsPage({
               <p className="mt-3">
                 엑셀에서 한글이 깨져 보이면 파일을 “텍스트 마법사”로 열지 말고 그냥 더블클릭해
                 열어 주세요.
+              </p>
+              <p className="mt-3">
+                주문 내보내기(택배사 일괄등록 양식 포함)는{' '}
+                <Link href="/admin/orders" className="text-blue-700 underline">
+                  주문 관리
+                </Link>{' '}
+                화면에 있습니다. 필터를 걸어 둔 상태 그대로 받을 수 있습니다.
               </p>
             </div>
           </section>

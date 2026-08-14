@@ -8,10 +8,14 @@ type MenuItem = {
   href: string;
   label: string;
   ready: boolean;
+  /** 정확히 이 주소일 때만 활성 표시 (대시보드처럼 하위 경로가 많은 경우) */
+  exact?: boolean;
 };
 
 /** 지금 쓸 수 있는 메뉴 */
 const menu: MenuItem[] = [
+  { href: '/admin', label: '대시보드', ready: true, exact: true },
+  { href: '/admin/orders', label: '주문 관리', ready: true },
   { href: '/admin/products', label: '상품 관리', ready: true },
   { href: '/admin/categories', label: '분류 관리', ready: true },
   { href: '/admin/brands', label: '브랜드 관리', ready: true },
@@ -21,13 +25,19 @@ const menu: MenuItem[] = [
 
 /** 다음 단계에서 만들 메뉴. 회색으로 표시만 합니다. */
 const upcoming: MenuItem[] = [
-  { href: '/admin/orders', label: '주문 관리', ready: false },
   { href: '/admin/members', label: '회원 관리', ready: false },
   { href: '/admin/inquiries', label: '문의 관리', ready: false },
   { href: '/admin/reviews', label: '리뷰 관리', ready: false },
 ];
 
-export default function AdminShell({ children }: { children: React.ReactNode }) {
+export default function AdminShell({
+  children,
+  pendingCount = 0,
+}: {
+  children: React.ReactNode;
+  /** 입금대기 건수 — 주문 관리 옆에 뱃지로 붙습니다. */
+  pendingCount?: number;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -49,17 +59,32 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const nav = (
     <nav aria-label="관리자 메뉴" className="flex flex-col gap-1">
       {menu.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const active = item.exact
+          ? pathname === item.href
+          : pathname === item.href || pathname.startsWith(`${item.href}/`);
+        // 입금대기가 있으면 주문 관리 옆에 숫자를 붙여 눈에 띄게 합니다.
+        const badge = item.href === '/admin/orders' && pendingCount > 0 ? pendingCount : 0;
+
         return (
           <Link
             key={item.href}
             href={item.href}
             aria-current={active ? 'page' : undefined}
-            className={`rounded-md px-3 py-2.5 text-[14px] font-medium transition-colors ${
+            className={`flex items-center justify-between gap-2 rounded-md px-3 py-2.5 text-[14px] font-medium transition-colors ${
               active ? 'bg-blue-700 text-white' : 'text-slate-700 hover:bg-slate-100'
             }`}
           >
             {item.label}
+            {badge > 0 ? (
+              <span
+                title={`입금대기 ${badge}건`}
+                className={`admin-badge ${
+                  active ? 'bg-white text-blue-700' : 'bg-amber-100 text-amber-800'
+                }`}
+              >
+                {badge}
+              </span>
+            ) : null}
           </Link>
         );
       })}
@@ -83,7 +108,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   return (
     <div className="admin-root min-h-screen">
       {/* 모바일 상단 바 — 폰으로 급히 품절 처리할 때 쓰는 화면입니다. */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
+      {/* 인쇄할 때는 사이드바와 상단 바를 숨기고 본문만 남깁니다. (주문서 인쇄) */}
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:hidden print:hidden">
         <button
           type="button"
           onClick={() => setOpen((prev) => !prev)}
@@ -107,7 +133,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           id="admin-sidebar"
           className={`${
             open ? 'block' : 'hidden'
-          } border-b border-slate-200 bg-white p-4 lg:sticky lg:top-0 lg:block lg:h-screen lg:w-[220px] lg:shrink-0 lg:border-b-0 lg:border-r`}
+          } border-b border-slate-200 bg-white p-4 lg:sticky lg:top-0 lg:block lg:h-screen lg:w-[220px] lg:shrink-0 lg:border-b-0 lg:border-r print:hidden`}
         >
           <div className="mb-6 hidden lg:block">
             <p className="text-[15px] font-semibold text-slate-900">JZL CLOSET</p>
@@ -136,7 +162,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1 p-4 md:p-6">{children}</main>
+        <main className="min-w-0 flex-1 p-4 md:p-6 print:p-0">{children}</main>
       </div>
     </div>
   );

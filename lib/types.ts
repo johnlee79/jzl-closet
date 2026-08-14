@@ -160,6 +160,126 @@ export type Branding = {
   updatedAt: string | null;
 };
 
+/* ── 주문 (2-A) ────────────────────────────────────────────
+ * 상태값과 헬퍼는 lib/order-status.ts 에 있습니다.
+ * DB 접근은 lib/orders.ts (서버 전용) 가 담당합니다.
+ * ---------------------------------------------------------- */
+
+/** 현금영수증 신청 구분 */
+export type CashReceiptType = 'none' | 'personal' | 'business';
+
+/** 주문 상품 한 줄. 주문 시점의 이름·가격을 그대로 들고 있습니다. */
+export type OrderItem = {
+  id: string;
+  productId: string | null;
+  productSlug: string;
+  productName: string;
+  brandLabel: string;
+  optionKey: string;
+  unitPrice: number;
+  quantity: number;
+  lineTotal: number;
+  thumbnailUrl: string;
+  /** cancelled 면 부분취소된 품목입니다. */
+  itemStatus: 'normal' | 'cancelled';
+};
+
+export type OrderStatusEntry = {
+  id: string;
+  fromStatus: string | null;
+  toStatus: string;
+  memo: string;
+  createdAt: string | null;
+};
+
+export type Order = {
+  id: string;
+  orderNo: string;
+  status: string;
+
+  ordererName: string;
+  ordererPhone: string;
+  ordererEmail: string;
+
+  receiverName: string;
+  receiverPhone: string;
+  postcode: string;
+  address1: string;
+  address2: string;
+  deliveryMemo: string;
+
+  depositorName: string;
+  paymentMethod: string;
+  itemsTotal: number;
+  shippingFee: number;
+  extraShippingFee: number;
+  discount: number;
+  totalAmount: number;
+
+  cashReceiptType: CashReceiptType;
+  cashReceiptNo: string;
+
+  /** PG 연동 자리 — 무통장입금이면 비어 있습니다. */
+  pgProvider: string | null;
+  pgTid: string | null;
+  paidAt: string | null;
+
+  courier: string;
+  trackingNo: string;
+  adminMemo: string;
+
+  createdAt: string | null;
+  updatedAt: string | null;
+
+  items: OrderItem[];
+  history: OrderStatusEntry[];
+};
+
+/** 주문서에서 서버로 보내는 값. 금액은 보내지 않습니다. (서버가 다시 계산합니다) */
+export type CheckoutInput = {
+  ordererName: string;
+  ordererPhone: string;
+  ordererEmail: string;
+  receiverName: string;
+  receiverPhone: string;
+  postcode: string;
+  address1: string;
+  address2: string;
+  deliveryMemo: string;
+  depositorName: string;
+  paymentMethod: string;
+  cashReceiptType: CashReceiptType;
+  cashReceiptNo: string;
+  /** 장바구니에서 넘어온 품목. 가격은 서버가 상품 테이블에서 다시 읽습니다. */
+  items: { productSlug: string; optionKey: string; quantity: number }[];
+  agreed: boolean;
+};
+
+/** 관리자 주문 목록 필터 */
+export type OrderFilter = {
+  status?: string;
+  search?: string;
+  /** ISO 날짜 (yyyy-mm-dd). 이 날짜 00:00 부터 */
+  from?: string;
+  /** ISO 날짜 (yyyy-mm-dd). 이 날짜 23:59 까지 */
+  to?: string;
+  limit?: number;
+  offset?: number;
+};
+
+/** 대시보드 숫자 묶음 */
+export type DashboardStats = {
+  todayAmount: number;
+  yesterdayAmount: number;
+  monthAmount: number;
+  lastMonthAmount: number;
+  todayCount: number;
+  pendingPaymentCount: number;
+  unshippedCount: number;
+  countByStatus: Record<string, number>;
+  recentOrders: Order[];
+};
+
 /** 업로드 API 응답 */
 export type UploadedImage = {
   url: string;

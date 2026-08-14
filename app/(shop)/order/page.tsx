@@ -35,8 +35,15 @@ export default async function OrderPage() {
           장바구니 · 주문 문의
         </h1>
         <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
-          온라인 결제 대신 문의 접수 방식으로 운영합니다. 담으신 상품을 복사해 고객센터로
-          보내주시면 재고와 배송 일정을 확인한 뒤 결제 방법을 문자로 안내드립니다.
+          담으신 상품을 확인하고 주문서를 작성해 주세요. 회원가입 없이 주문하실 수 있으며,
+          결제는 무통장입금(계좌이체)으로 진행합니다.
+        </p>
+        <p className="mt-3 text-[15px] text-ink">
+          이미 주문하셨다면{' '}
+          <Link href="/order-lookup" className="link-wine">
+            주문 조회
+          </Link>
+          에서 진행 상황을 확인하실 수 있습니다.
         </p>
       </header>
 

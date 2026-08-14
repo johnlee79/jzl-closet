@@ -7,6 +7,8 @@ import {
   DEFAULT_ANALYTICS,
   DEFAULT_BANNER_INTERVAL,
   DEFAULT_DESIGN,
+  DEFAULT_PAYMENT,
+  DEFAULT_REMOTE_AREA_RULES,
   DEFAULT_SHIPPING,
   DEFAULT_STORE,
   MAX_BANNERS,
@@ -19,6 +21,7 @@ import {
   type CopySection,
   type CopySettings,
   type DesignSettings,
+  type PaymentSettings,
   type ShippingSettings,
   type StoreSettings,
 } from '@/lib/site-config';
@@ -55,6 +58,8 @@ export const SHIPPING_KEY = 'shipping';
 export const DESIGN_KEY = 'design';
 export const COPY_KEY = 'copy';
 export const ANALYTICS_KEY = 'analytics';
+/** ★ 입금 계좌가 들어 있는 key. 공개 읽기 정책에서 제외되어 있습니다. (supabase/rls-2a.sql) */
+export const PAYMENT_KEY = 'payment';
 
 /** 테이블이 아직 없을 때 PostgREST 가 돌려주는 코드들 */
 const MISSING_TABLE_CODES = new Set(['42P01', 'PGRST205', 'PGRST202']);
@@ -383,3 +388,59 @@ export const getCachedAnalytics = unstable_cache(getAnalyticsSettings, ['analyti
   tags: [SETTINGS_TAG],
   revalidate: 3600,
 });
+
+/* ── 결제·주문 (2-A) ──────────────────────────────────────── */
+
+export function normalizePayment(value: unknown): PaymentSettings {
+  if (!value || typeof value !== 'object') return DEFAULT_PAYMENT;
+  const raw = value as Record<string, unknown>;
+
+  const rules = Array.isArray(raw.remoteAreaRules)
+    ? raw.remoteAreaRules
+        .filter((item): item is string => typeof item === 'string')
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : DEFAULT_REMOTE_AREA_RULES;
+
+  return {
+    bankName: optionalText(raw.bankName, '').trim(),
+    accountNo: optionalText(raw.accountNo, '').trim(),
+    accountHolder: optionalText(raw.accountHolder, '').trim(),
+    // 0시간이면 기한 안내를 못 하므로 1시간 밑으로는 내려가지 않게 합니다.
+    depositHours: Math.max(1, count(raw.depositHours, DEFAULT_PAYMENT.depositHours)),
+    remoteAreaRules: rules,
+    telegramEnabled: raw.telegramEnabled !== false,
+    escrowNotice: optionalText(raw.escrowNotice, '').trim(),
+    escrowImageUrl: optionalText(raw.escrowImageUrl, '').trim(),
+    escrowLinkUrl: optionalText(raw.escrowLinkUrl, '').trim(),
+  };
+}
+
+/**
+ * ★ 이 값에는 계좌번호가 들어 있습니다.
+ *   주문 완료·주문 조회 화면과 관리자에서만 읽으세요.
+ *   상품 페이지나 푸터에 내려보내면 스팸 수집 대상이 됩니다.
+ *   (푸터에 필요한 구매안전 문구는 getCachedEscrow 로 따로 뽑아 씁니다)
+ */
+export async function getPaymentSettings(): Promise<PaymentSettings> {
+  return normalizePayment(await readSetting(PAYMENT_KEY));
+}
+
+export const getCachedPayment = unstable_cache(getPaymentSettings, ['payment'], {
+  tags: [SETTINGS_TAG],
+  revalidate: 3600,
+});
+
+/** 푸터용 — 계좌번호를 뺀 구매안전 서비스 표시 정보만 돌려줍니다. */
+export async function getEscrowNotice(): Promise<{
+  notice: string;
+  imageUrl: string;
+  linkUrl: string;
+}> {
+  const payment = await getCachedPayment();
+  return {
+    notice: payment.escrowNotice,
+    imageUrl: payment.escrowImageUrl,
+    linkUrl: payment.escrowLinkUrl,
+  };
+}

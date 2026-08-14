@@ -9,8 +9,17 @@ import { formatPrice } from '@/lib/product-utils';
 
 export default function CartPanel() {
   const { items, total, count, ready, removeItem, updateQuantity, clear } = useCart();
-  // 브랜드명·고객센터 번호는 관리자 설정 값을 씁니다.
-  const { store } = useSite();
+  // 브랜드명·고객센터 번호·배송비는 관리자 설정 값을 씁니다.
+  const { store, shipping } = useSite();
+
+  /**
+   * 장바구니에서 보여 주는 배송비는 어림값입니다.
+   * 도서산간 추가비는 주소를 받아야 알 수 있어 주문서에서 확정됩니다.
+   */
+  const freeByThreshold = shipping.freeThreshold > 0 && total >= shipping.freeThreshold;
+  const shippingFee = freeByThreshold ? 0 : shipping.baseFee;
+  const freeShippingLeft =
+    shipping.freeThreshold > 0 ? Math.max(0, shipping.freeThreshold - total) : 0;
 
   const orderText = [
     `[${store.name} 주문 문의]`,
@@ -169,30 +178,44 @@ export default function CartPanel() {
             </div>
             <div className="flex justify-between">
               <dt className="text-muted">배송비</dt>
-              <dd className="text-ink">주문 확인 후 안내</dd>
+              <dd className="text-ink">
+                {shippingFee === 0 ? '무료' : `${formatPrice(shippingFee)}원`}
+              </dd>
             </div>
           </dl>
+
+          {freeShippingLeft > 0 ? (
+            <p className="mt-4 text-[13px] leading-relaxed text-muted">
+              {formatPrice(freeShippingLeft)}원 더 담으시면 배송비가 무료입니다.
+            </p>
+          ) : null}
 
           <div className="mt-6 flex items-baseline justify-between border-t border-stone pt-6">
             <span className="text-[13px] tracking-[0.14em] text-muted">합계</span>
             <span className="font-display text-[28px] font-medium tracking-wide text-ink">
-              {formatPrice(total)}
+              {formatPrice(total + shippingFee)}
               <span className="ml-1 font-sans text-[15px]">원</span>
             </span>
           </div>
 
-          <div className="mt-8">
-            <CopyOrderButton text={orderText} />
-          </div>
+          <Link href="/checkout" className="btn-primary mt-8 w-full">
+            주문하기
+          </Link>
 
-          <a href={`tel:${store.phone}`} className="btn-primary mt-3 w-full">
-            전화로 주문 문의
-          </a>
-
-          <p className="mt-6 text-[13px] leading-relaxed text-muted">
-            온라인 결제 절차는 제공하지 않습니다. 복사한 주문 내역을 고객센터로 보내주시면
-            재고와 배송 일정을 확인한 뒤 결제 방법을 문자로 안내드립니다.
+          <p className="mt-3 text-[13px] leading-relaxed text-muted">
+            무통장입금(계좌이체)으로 결제합니다. 주문 후 안내되는 계좌로 입금하시면 확인
+            후 발송해 드립니다. 도서산간 추가 배송비는 주소를 입력하면 계산됩니다.
           </p>
+
+          <div className="mt-6 border-t border-stone pt-6">
+            <CopyOrderButton text={orderText} />
+            <a href={`tel:${store.phone}`} className="btn-secondary mt-3 w-full">
+              전화로 문의 {store.phone}
+            </a>
+            <p className="mt-3 text-[13px] leading-relaxed text-muted">
+              온라인 주문이 어려우시면 위 내용을 복사해 보내주시거나 전화 주세요.
+            </p>
+          </div>
         </div>
 
         <div className="mt-6 border border-stone p-6 md:p-8">

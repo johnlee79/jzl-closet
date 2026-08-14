@@ -2,7 +2,12 @@ import Footer from '@/components/Footer';
 import Header from '@/components/Header';
 import SiteProvider from '@/components/SiteProvider';
 import { CartProvider } from '@/lib/cart';
-import { getCachedBranding, getCachedShipping, getCachedStore } from '@/lib/settings';
+import {
+  getCachedBranding,
+  getCachedShipping,
+  getCachedStore,
+  getEscrowNotice,
+} from '@/lib/settings';
 import { SITE_URL } from '@/lib/store';
 import { getTaxonomy } from '@/lib/taxonomy';
 
@@ -18,11 +23,13 @@ import { getTaxonomy } from '@/lib/taxonomy';
  * Organization JSON-LD 는 프론트 전 페이지에만 실립니다.
  */
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
-  const [{ categories, brands }, store, shipping, branding] = await Promise.all([
+  const [{ categories, brands }, store, shipping, branding, escrow] = await Promise.all([
     getTaxonomy(),
     getCachedStore(),
     getCachedShipping(),
     getCachedBranding(),
+    // ★ 계좌번호가 아니라 구매안전 표시 정보만 뽑아 옵니다.
+    getEscrowNotice(),
   ]);
 
   const organizationJsonLd = {
@@ -65,7 +72,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
             logoUrl={branding.logo?.url ?? ''}
           />
           <main id="main">{children}</main>
-          <Footer categories={categories} store={store} />
+          <Footer categories={categories} store={store} escrow={escrow} />
         </CartProvider>
       </SiteProvider>
     </>

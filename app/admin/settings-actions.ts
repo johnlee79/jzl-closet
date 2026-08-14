@@ -9,6 +9,7 @@ import {
   BRANDING_KEY,
   COPY_KEY,
   DESIGN_KEY,
+  PAYMENT_KEY,
   SETTINGS_TAG,
   SHIPPING_KEY,
   STORE_KEY,
@@ -16,6 +17,7 @@ import {
   getCopySettings,
   normalizeAnalytics,
   normalizeDesign,
+  normalizePayment,
   normalizeShipping,
   normalizeStore,
   writeSetting,
@@ -27,6 +29,7 @@ import {
   type CopyKey,
   type CopySection,
   type DesignSettings,
+  type PaymentSettings,
   type ShippingSettings,
   type StoreSettings,
 } from '@/lib/site-config';
@@ -119,6 +122,45 @@ export async function saveShippingAction(input: ShippingSettings): Promise<Actio
     return { ok: true, data: undefined };
   } catch (error) {
     return fail(error, '배송 설정을 저장하지 못했습니다.');
+  }
+}
+
+/* ── 2-A. 결제·주문 (입금 계좌 · 도서산간 · 알림 · 구매안전) ── */
+
+export async function savePaymentAction(input: PaymentSettings): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  const bankFilled = [input.bankName, input.accountNo, input.accountHolder].filter((value) =>
+    value.trim()
+  ).length;
+  // 셋 중 일부만 채우면 주문 완료 화면에 반쪽짜리 계좌가 나옵니다.
+  if (bankFilled > 0 && bankFilled < 3) {
+    return { ok: false, error: '은행 · 계좌번호 · 예금주를 모두 입력해 주세요.' };
+  }
+  if (input.depositHours < 1) {
+    return { ok: false, error: '입금 기한은 1시간 이상으로 넣어 주세요.' };
+  }
+
+  // 우편번호 규칙이 형식에 맞는지 확인합니다. (63000-63644 · 63* · 40200)
+  const badRule = input.remoteAreaRules.find(
+    (rule) => rule.trim() && !/^(\d{5}\s*-\s*\d{5}|\d{1,5}\*|\d{5})$/.test(rule.trim())
+  );
+  if (badRule) {
+    return {
+      ok: false,
+      error: `우편번호 규칙 형식이 올바르지 않습니다: ${badRule} (예: 63000-63644 · 63* · 40200)`,
+    };
+  }
+
+  try {
+    await writeSetting(PAYMENT_KEY, normalizePayment(input));
+    revalidateTag(SETTINGS_TAG);
+    // 계좌·구매안전 문구는 주문 화면과 푸터에 실립니다.
+    revalidatePath('/', 'layout');
+    revalidatePath('/admin/settings');
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '결제 설정을 저장하지 못했습니다.');
   }
 }
 

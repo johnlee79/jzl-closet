@@ -9,16 +9,26 @@ const infoLinks = [
   { href: '/guide', label: '배송·교환·반품 안내' },
   { href: '/terms', label: '이용약관' },
   { href: '/privacy', label: '개인정보처리방침' },
-  { href: '/order', label: '장바구니 · 주문' },
+  { href: '/order', label: '장바구니' },
+  { href: '/order-lookup', label: '주문 조회' },
 ];
+
+/** 구매안전(에스크로) 서비스 표시. 설정에 값이 있을 때만 넘어옵니다. */
+export type EscrowNotice = {
+  notice: string;
+  imageUrl: string;
+  linkUrl: string;
+};
 
 /** 분류와 스토어 정보는 DB 에서 읽어 레이아웃이 넘겨 줍니다. */
 export default function Footer({
   categories,
   store,
+  escrow,
 }: {
   categories: Category[];
   store: StoreSettings;
+  escrow?: EscrowNotice;
 }) {
   const menu = visibleCategories(categories);
 
@@ -126,6 +136,32 @@ export default function Footer({
               <dd className="text-ink">{store.phone}</dd>
             </div>
           </dl>
+          {/* 구매안전서비스 — 무통장입금 선결제는 표시가 필요합니다. */}
+          {escrow && (escrow.notice || escrow.imageUrl) ? (
+            <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-stone pt-6">
+              {escrow.imageUrl ? (
+                <a
+                  href={escrow.linkUrl || undefined}
+                  target={escrow.linkUrl ? '_blank' : undefined}
+                  rel="noreferrer"
+                  className="shrink-0"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={escrow.imageUrl}
+                    alt="구매안전서비스 가입 확인"
+                    className="h-auto max-w-[120px]"
+                  />
+                </a>
+              ) : null}
+              {escrow.notice ? (
+                <p className="max-w-[640px] text-[13px] leading-relaxed text-muted">
+                  {escrow.notice}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           <p className="mt-6 text-[13px] tracking-[0.1em] text-muted">
             © {store.name} ALL RIGHTS RESERVED.
           </p>
