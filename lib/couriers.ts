@@ -86,6 +86,87 @@ export function findCourier(code: string | null | undefined): Courier | undefine
   return COURIERS.find((courier) => courier.code === code);
 }
 
+/* ------------------------------------------------------------------
+ * 택배사 별칭
+ *
+ * 공급처가 회신하는 송장 목록에는 택배사가 제각각으로 적혀 옵니다.
+ * ("CJ", "CJ대한통운", "대한통운", "cj" …)
+ * 송장 일괄등록에서 이 표를 거쳐 내부 코드로 바꿉니다.
+ * ------------------------------------------------------------------ */
+
+const COURIER_ALIASES: Record<string, string> = {
+  // CJ대한통운
+  cj: 'cj',
+  cj대한통운: 'cj',
+  대한통운: 'cj',
+  cjlogistics: 'cj',
+  cj택배: 'cj',
+  // 한진
+  한진: 'hanjin',
+  hanjin: 'hanjin',
+  // 롯데
+  롯데: 'lotte',
+  lotte: 'lotte',
+  현대: 'lotte', // 롯데택배의 옛 이름(현대택배)으로 적어 오는 곳이 있습니다
+  // 우체국
+  우체국: 'epost',
+  epost: 'epost',
+  우편: 'epost',
+  // 로젠
+  로젠: 'logen',
+  logen: 'logen',
+  // 그 밖
+  경동: 'kdexp',
+  kdexp: 'kdexp',
+  대신: 'daesin',
+  daesin: 'daesin',
+  gs: 'cvsnet',
+  gs편의점: 'cvsnet',
+  gspostbox: 'cvsnet',
+  cvsnet: 'cvsnet',
+  편의점: 'cvsnet',
+  직접전달: 'direct',
+  방문수령: 'direct',
+  direct: 'direct',
+};
+
+/**
+ * 사람이 적어 넣은 택배사 이름을 내부 코드로 바꿉니다.
+ * 공백·괄호를 지우고 뒤에 붙은 "택배" 를 떼어 낸 뒤 표에서 찾습니다.
+ * 알아볼 수 없으면 null 입니다.
+ */
+export function resolveCourier(input: string): string | null {
+  const cleaned = input
+    .trim()
+    .toLowerCase()
+    .replace(/[\s()（）·・.-]/g, '');
+  if (!cleaned) return null;
+
+  // "한진택배" → "한진" 처럼 꼬리말을 떼어 봅니다.
+  const candidates = [cleaned, cleaned.replace(/(택배|로지스|logistics|express)$/, '')];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const code = COURIER_ALIASES[candidate];
+    if (code) return code;
+    // 코드 자체를 그대로 적어 온 경우
+    if (COURIERS.some((courier) => courier.code === candidate)) return candidate;
+  }
+  return null;
+}
+
+/** 관리자 화면에 보여 줄 별칭 안내 — "이렇게 적어도 인식합니다" */
+export const COURIER_ALIAS_HINTS: { code: string; name: string; aliases: string[] }[] = [
+  { code: 'cj', name: 'CJ대한통운', aliases: ['CJ', 'CJ대한통운', '대한통운'] },
+  { code: 'hanjin', name: '한진택배', aliases: ['한진', '한진택배'] },
+  { code: 'lotte', name: '롯데택배', aliases: ['롯데', '롯데택배'] },
+  { code: 'epost', name: '우체국택배', aliases: ['우체국', '우체국택배'] },
+  { code: 'logen', name: '로젠택배', aliases: ['로젠', '로젠택배'] },
+  { code: 'kdexp', name: '경동택배', aliases: ['경동', '경동택배'] },
+  { code: 'daesin', name: '대신택배', aliases: ['대신', '대신택배'] },
+  { code: 'cvsnet', name: 'GS Postbox 택배', aliases: ['GS', 'GS편의점', '편의점'] },
+];
+
 export function courierName(code: string | null | undefined): string {
   if (!code) return '';
   return findCourier(code)?.name ?? code;

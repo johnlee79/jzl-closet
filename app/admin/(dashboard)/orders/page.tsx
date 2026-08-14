@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
+import BulkTrackingPanel from '@/components/admin/BulkTrackingPanel';
 import OrderFilters from '@/components/admin/OrderFilters';
 import OrderTable from '@/components/admin/OrderTable';
 import { countOrdersByStatus, getOrders } from '@/lib/orders';
@@ -80,6 +81,9 @@ export default async function AdminOrdersPage({
       </div>
 
       <div className="mt-5">
+        {/* 공급처가 회신한 송장을 한 번에 넣는 자리 */}
+        <BulkTrackingPanel />
+
         <Suspense fallback={<p className="text-[13px] text-slate-500">불러오는 중…</p>}>
           <OrderTable orders={orders} />
         </Suspense>

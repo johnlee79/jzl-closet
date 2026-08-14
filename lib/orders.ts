@@ -323,6 +323,70 @@ export async function getOrderByNo(orderNo: string): Promise<Order | null> {
   return rowToOrder(row, itemMap.get(row.id) ?? [], history);
 }
 
+/**
+ * 주문번호 여러 개를 한 번에 찾습니다. (송장 일괄등록의 매칭에 씁니다)
+ * 상품·이력은 읽지 않습니다. 매칭에 필요한 항목만 가져옵니다.
+ */
+export async function getOrdersByNos(
+  orderNos: string[]
+): Promise<
+  Map<
+    string,
+    {
+      id: string;
+      orderNo: string;
+      status: string;
+      ordererName: string;
+      courier: string;
+      trackingNo: string;
+    }
+  >
+> {
+  const result = new Map<
+    string,
+    {
+      id: string;
+      orderNo: string;
+      status: string;
+      ordererName: string;
+      courier: string;
+      trackingNo: string;
+    }
+  >();
+
+  const unique = Array.from(new Set(orderNos.filter(Boolean)));
+  if (unique.length === 0) return result;
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return result;
+
+  const { data, error } = await supabase
+    .from(ORDERS)
+    .select('id, order_no, status, orderer_name, courier, tracking_no')
+    .in('order_no', unique);
+
+  if (error || !data) return result;
+
+  for (const row of data as {
+    id: string;
+    order_no: string;
+    status: string;
+    orderer_name: string;
+    courier: string | null;
+    tracking_no: string | null;
+  }[]) {
+    result.set(row.order_no, {
+      id: row.id,
+      orderNo: row.order_no,
+      status: row.status,
+      ordererName: row.orderer_name,
+      courier: row.courier ?? '',
+      trackingNo: row.tracking_no ?? '',
+    });
+  }
+  return result;
+}
+
 async function loadHistory(orderId: string): Promise<OrderStatusEntry[]> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return [];

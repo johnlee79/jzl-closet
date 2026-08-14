@@ -234,6 +234,10 @@ export default function OptionEditor({
           {/* 빈칸과 0 이 헷갈리지 않도록 표 바로 위에 한 줄로 알려 줍니다. */}
           <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[13px] leading-relaxed text-slate-700">
             재고수량을 비워 두면 재고를 세지 않습니다. 0을 넣으면 품절 처리됩니다.
+            <br />
+            <span className="text-slate-600">
+              재고를 직접 보유하지 않는 경우 수량은 비워 두고 품절 체크만 사용하세요.
+            </span>
           </p>
 
           <div className="mt-2 overflow-x-auto rounded-md border border-slate-200">

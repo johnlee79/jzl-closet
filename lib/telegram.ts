@@ -3,6 +3,7 @@ import 'server-only';
 import { inquiryCategoryLabel } from '@/lib/inquiry-status';
 import { formatPrice } from '@/lib/product-utils';
 import { SITE_URL } from '@/lib/store';
+import { TELEGRAM_MAX_LENGTH, buildNewOrderMessage } from '@/lib/telegram-format';
 import type { Inquiry } from '@/lib/inquiries';
 import type { Order } from '@/lib/types';
 
@@ -44,8 +45,15 @@ function escapeHtml(value: string): string {
 /**
  * 메시지 한 통을 보냅니다.
  * 실패하면 콘솔에만 남기고 false 를 돌려줍니다. 예외를 던지지 않습니다.
+ *
+ * @param parseMode 'HTML' 이면 <b> 같은 태그를 씁니다.
+ *   'none' 은 서식 없이 보낸 그대로 나갑니다. 공급처에 복사해 넘길 내용처럼
+ *   이스케이프 실수로 전송이 통째로 실패하면 안 되는 메시지에 씁니다.
  */
-export async function sendTelegramMessage(text: string): Promise<boolean> {
+export async function sendTelegramMessage(
+  text: string,
+  parseMode: 'HTML' | 'none' = 'HTML'
+): Promise<boolean> {
   const auth = credentials();
   if (!auth) return false;
 
@@ -55,8 +63,9 @@ export async function sendTelegramMessage(text: string): Promise<boolean> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: auth.chatId,
-        text,
-        parse_mode: 'HTML',
+        // 만일을 대비한 마지막 안전장치입니다. (내용은 미리 줄여서 넘깁니다)
+        text: text.slice(0, TELEGRAM_MAX_LENGTH),
+        ...(parseMode === 'HTML' ? { parse_mode: 'HTML' } : {}),
         disable_web_page_preview: true,
       }),
       // 알림 때문에 주문 저장이 오래 걸리면 안 됩니다.
@@ -79,27 +88,13 @@ export async function sendTelegramMessage(text: string): Promise<boolean> {
  * 이벤트별 메시지
  * ------------------------------------------------------------------ */
 
-/** 🛍 새 주문 */
+/**
+ * 🛍 새 주문.
+ * 메시지 본문은 lib/telegram-format.ts 가 만듭니다.
+ * ★ 공급처에 그대로 복사해 넘길 내용이라 서식 없이(parse_mode 없이) 보냅니다.
+ */
 export async function notifyNewOrder(order: Order): Promise<void> {
-  const lines = [
-    `🛍 <b>새 주문</b> (${escapeHtml(order.orderNo)})`,
-    '',
-    `${escapeHtml(order.ordererName)} · ${escapeHtml(order.ordererPhone)}`,
-    '',
-    ...order.items.map(
-      (item) =>
-        `· ${escapeHtml(item.productName)}${
-          item.optionKey ? ` [${escapeHtml(item.optionKey)}]` : ''
-        } x${item.quantity}`
-    ),
-    '',
-    `결제금액 <b>${formatPrice(order.totalAmount)}원</b>`,
-    `입금자명 ${escapeHtml(order.depositorName || '(미입력)')}`,
-    '',
-    `관리자에서 보기: ${SITE_URL}/admin/orders/${order.id}`,
-  ];
-
-  await sendTelegramMessage(lines.join('\n'));
+  await sendTelegramMessage(buildNewOrderMessage(order), 'none');
 }
 
 /** ⚠️ 손님의 주문 취소 요청 */
