@@ -37,8 +37,15 @@ import { getCachedBrands, getCachedCategories } from '@/lib/taxonomy';
 /** 폴더명은 [id] 지만 실제로 들어오는 값은 상품 slug 입니다. (기존 주소 유지) */
 type PageProps = { params: { id: string } };
 
-/** ISR — 서버에서 HTML 을 완성해 내보내고 60초마다 갱신합니다. */
-export const revalidate = 60;
+/**
+ * ISR — 서버에서 HTML 을 완성해 내보내고 30초마다 갱신합니다.
+ *
+ * ★ 리뷰·Q&A 가 바뀌면 관리자·손님 동작에서 곧바로 revalidatePath 로 이 페이지를 다시 굽습니다.
+ *   그래서 평소에는 이 숫자를 기다릴 일이 없습니다.
+ *   이 값은 Supabase 대시보드에서 데이터를 직접 고친 경우처럼
+ *   앱을 거치지 않은 변경에만 걸리는 마지막 안전망입니다.
+ */
+export const revalidate = 30;
 /** 빌드 이후에 등록된 상품도 첫 요청 때 서버에서 구워 내보냅니다. */
 export const dynamicParams = true;
 

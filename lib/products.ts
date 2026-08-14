@@ -322,6 +322,27 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
   return rowToProduct(data as ProductRow);
 }
 
+/**
+ * 상품 slug 하나만 가져옵니다.
+ *
+ * ★ 문의·리뷰가 바뀌었을 때 어느 상품 페이지를 다시 구울지 정하는 데만 씁니다.
+ *   그것 때문에 상세설명까지 통째로 읽을 이유가 없습니다.
+ */
+export async function getProductSlugById(id: string): Promise<string> {
+  if (!id) return '';
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return '';
+
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('slug')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error || !data) return '';
+  return (data as { slug: string }).slug ?? '';
+}
+
 export async function getProductById(id: string): Promise<Product | null> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return null;

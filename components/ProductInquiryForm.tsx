@@ -18,13 +18,11 @@ const inputClass =
  */
 export default function ProductInquiryForm({
   productId,
-  productSlug,
   productName,
   isMember,
   onDone,
 }: {
   productId: string;
-  productSlug: string;
   productName: string;
   isMember: boolean;
   onDone: (message: string) => void;
@@ -69,7 +67,6 @@ export default function ProductInquiryForm({
         orderId: '',
         orderNo: '',
         productId,
-        productSlug,
       });
 
       if (!result.ok) {

@@ -41,10 +41,8 @@ export type InquiryFormInput = {
   orderId: string;
   /** 비회원이 입력한 주문번호 */
   orderNo: string;
-  /** 상품 문의면 상품 uuid */
+  /** 상품 문의면 상품 uuid. slug 는 서버가 직접 찾으므로 받지 않습니다. */
   productId: string;
-  /** 상품 상세를 다시 굽기 위한 slug. 없으면 비워 둡니다. */
-  productSlug?: string;
 };
 
 export async function submitInquiryAction(
@@ -133,12 +131,15 @@ export async function submitInquiryAction(
     return { ok: false, error: message };
   }
 
+  // 상품 문의면 어느 상품인지 서버에서 직접 찾습니다.
+  // ★ 화면이 slug 를 넘겨 주게 하면 한 곳만 빠뜨려도 조용히 반영이 안 됩니다.
+  //   실제로 /inquiry/new 폼은 slug 를 넘기지 않아 상품 페이지가 갱신되지 않았습니다.
+  const product = inquiry.productId ? await getProductById(inquiry.productId) : null;
+
   // ★ 알림 실패가 문의 저장을 막으면 안 됩니다. 이미 저장은 끝났습니다.
   const payment = await getPaymentSettings();
   if (payment.inquiryTelegramEnabled) {
     try {
-      // 상품 문의면 어느 상품인지 알림에 넣어 줍니다.
-      const product = inquiry.productId ? await getProductById(inquiry.productId) : null;
       await notifyNewInquiry(inquiry, product?.name ?? '');
     } catch (error) {
       console.warn('[inquiry] 텔레그램 알림 실패:', error);
@@ -149,7 +150,7 @@ export async function submitInquiryAction(
   revalidatePath('/admin/inquiries');
   if (isMember) revalidatePath('/mypage/inquiries');
   // 상품 상세의 Q&A 탭에 바로 나타나게 합니다.
-  if (input.productSlug) revalidatePath(`/products/${input.productSlug}`);
+  if (product) revalidatePath(`/products/${product.slug}`);
 
   return { ok: true, data: { inquiryNo: inquiry.inquiryNo, isMember } };
 }

@@ -118,7 +118,6 @@ export default function ProductQna({
         <div className="mt-8 border border-stone p-5 md:p-8">
           <ProductInquiryForm
             productId={productId}
-            productSlug={productSlug}
             productName={productName}
             isMember={isMember}
             onDone={(message) => {
