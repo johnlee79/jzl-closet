@@ -31,7 +31,11 @@ import {
   getCachedShipping,
   getCachedStore,
 } from '@/lib/settings';
-import { expectedPurchasePoints, fillTokens } from '@/lib/site-config';
+import {
+  expectedPurchasePoints,
+  fillTokens,
+  productShippingLine,
+} from '@/lib/site-config';
 import { SITE_URL } from '@/lib/store';
 import { getCachedBrands, getCachedCategories } from '@/lib/taxonomy';
 
@@ -138,12 +142,15 @@ export default async function ProductDetailPage({ params }: PageProps) {
     ? findSubCategory(categories, product.categorySlug, product.subCategorySlug)
     : undefined;
 
-  /** 배송 안내 — 관리자 > 설정 > 배송·반품 값을 그대로 씁니다. */
-  const shippingNote = product.freeShipping
-    ? `무료배송 — ${shipping.leadTime}`
-    : shipping.freeThreshold > 0
-      ? `배송비 ${formatPrice(shipping.baseFee)}원 · ${formatPrice(shipping.freeThreshold)}원 이상 무료 — ${shipping.leadTime}`
-      : `배송비 ${formatPrice(shipping.baseFee)}원 — ${shipping.leadTime}`;
+  /*
+   * 구매 영역에 넣을 배송 한 줄.
+   *
+   * ★ 예전에는 여기에 leadTime(출고·도착 소요일)까지 이어 붙였습니다.
+   *   좁은 자리라 두세 줄로 접히면서 오른쪽 영역만 계속 길어졌습니다.
+   *   자세한 배송 안내는 아래 [판매정보] 탭에 그대로 있으므로 여기서는 한 줄만 씁니다.
+   *   문구는 관리자 > 설정 > 배송·반품의 "상품 상세용 배송 한 줄 문구" 로 바꿉니다.
+   */
+  const shippingNote = productShippingLine(product.freeShipping, shipping);
   const soldOut = isProductSoldOut(product);
   const discount = getDiscountRate(product);
 
@@ -299,11 +306,28 @@ export default async function ProductDetailPage({ params }: PageProps) {
           맞추려 들면 3:4 비율이 깨져 세로로 길쭉한 사진이 됩니다.
       */}
       <div className="mt-8 grid grid-cols-1 gap-12 lg:grid-cols-[1.12fr_1fr] lg:gap-14">
-        <ProductGallery
-          images={product.thumbnails}
-          productName={product.name}
-          brand={brandName}
-        />
+        {/*
+          ★ 사진을 화면에 붙여 둡니다. (스크롤을 따라옵니다)
+
+          왼쪽 사진과 오른쪽 구매 영역은 높이가 같아질 수 없습니다.
+          옵션이 많은 상품은 색상·사이즈 버튼만으로도 700px 을 넘고,
+          사진은 3:4 비율이라 폭이 정해지면 높이도 정해지기 때문입니다.
+          실제로 이 상품은 사진 746px · 구매 영역 1310px 로 564px 차이가 납니다.
+
+          억지로 맞추려면 사진을 늘려 비율을 깨거나 옵션을 접어야 하는데
+          둘 다 손해입니다. 대신 사진을 붙여 두면, 옵션을 고르며 내려가는 동안
+          사진이 계속 보이고 왼쪽이 빈 채로 남지 않습니다.
+
+          top-[97px] 은 상단 고정 헤더(81px) 아래에 여백을 둔 값입니다.
+          자리가 좁은 모바일·태블릿에서는 위아래로 쌓이므로 적용하지 않습니다.
+        */}
+        <div className="lg:sticky lg:top-[97px] lg:self-start">
+          <ProductGallery
+            images={product.thumbnails}
+            productName={product.name}
+            brand={brandName}
+          />
+        </div>
 
         <section aria-label="상품 정보" className="lg:pt-4">
           {product.brandSlug ? (
@@ -392,6 +416,14 @@ export default async function ProductDetailPage({ params }: PageProps) {
               <div className="flex gap-4">
                 <dt className="w-20 shrink-0 text-muted">제조사</dt>
                 <dd className="text-ink">{product.manufacturer}</dd>
+              </div>
+            ) : null}
+            {/* ★ 시즌은 관리자에서 입력받으면서도 손님 화면 어디에도 나오지 않았습니다.
+                (내보내기 CSV 에만 실렸습니다) 옷은 시즌이 구매 판단에 들어가므로 여기에 둡니다. */}
+            {product.season ? (
+              <div className="flex gap-4">
+                <dt className="w-20 shrink-0 text-muted">시즌</dt>
+                <dd className="text-ink">{product.season}</dd>
               </div>
             ) : null}
             <div className="flex gap-4">

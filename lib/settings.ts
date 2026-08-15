@@ -297,6 +297,8 @@ export function normalizeShipping(value: unknown): ShippingSettings {
     islandFee: count(raw.islandFee, DEFAULT_SHIPPING.islandFee),
     returnAddress: optionalText(raw.returnAddress, DEFAULT_SHIPPING.returnAddress),
     leadTime: optionalText(raw.leadTime, DEFAULT_SHIPPING.leadTime),
+    // 비워 둘 수 있는 항목입니다. 비면 배송비 설정으로 문구를 만듭니다.
+    productLine: optionalText(raw.productLine, DEFAULT_SHIPPING.productLine),
   };
 }
 

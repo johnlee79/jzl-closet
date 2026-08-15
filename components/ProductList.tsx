@@ -82,6 +82,8 @@ export default function ProductList({
 
   const { brands } = useSite();
   const brandChips = visibleBrands(brands);
+  // 지금 고른 브랜드. 'all' 이면 없습니다.
+  const selectedBrand = brandChips.find((item) => item.slug === brand);
 
   const visible = useMemo(() => {
     const filtered = products.filter((product) => {
@@ -149,6 +151,26 @@ export default function ProductList({
                 </li>
               ))}
             </ul>
+          </div>
+        ) : null}
+
+        {/*
+          고른 브랜드의 소개 페이지로 가는 길.
+
+          ★ 위의 브랜드 칩은 링크가 아니라 이 목록을 걸러 내는 버튼입니다.
+            그래서 필터만 있고 브랜드 소개(대표 사진·스토리·원산지)로 갈 방법이 없었습니다.
+            칩 자체를 링크로 바꾸면 "이 목록에서 걸러 보기" 를 못 하게 되므로,
+            고른 뒤에만 따로 한 줄을 띄웁니다. 아무것도 고르지 않았으면 나오지 않습니다.
+        */}
+        {showBrandFilter && selectedBrand ? (
+          <div className="flex items-start gap-5 md:gap-7">
+            <span className="w-[74px] shrink-0 md:w-[84px]" aria-hidden="true" />
+            <Link
+              href={`/brand/${selectedBrand.slug}`}
+              className="tap-target text-[14px] tracking-[0.1em] text-muted underline underline-offset-4 transition-colors duration-200 hover:text-ink"
+            >
+              {selectedBrand.label} 브랜드 소개 보기
+            </Link>
           </div>
         ) : null}
 

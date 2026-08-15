@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import ProductList from '@/components/ProductList';
 import BrandMark from '@/components/BrandMark';
 import SafeImage from '@/components/SafeImage';
-import { brandImage, findBrand } from '@/lib/brands';
+import { brandImage, visibleBrands } from '@/lib/brands';
 import { getProductsByBrand } from '@/lib/products';
 import { getCachedStore } from '@/lib/settings';
 import { SITE_URL } from '@/lib/store';
@@ -18,12 +18,27 @@ export const dynamicParams = true;
 
 export async function generateStaticParams(): Promise<{ slug: string }[]> {
   const brands = await getCachedBrands();
-  return brands.map((brand) => ({ slug: brand.slug }));
+  // ★ 숨긴 브랜드는 미리 굽지 않습니다. 아래에서 404 로 막을 페이지라 만들 이유가 없습니다.
+  return visibleBrands(brands).map((brand) => ({ slug: brand.slug }));
+}
+
+/**
+ * 손님에게 보여 줄 브랜드만 찾습니다.
+ *
+ * ★ getCachedBrands() 는 숨긴 브랜드까지 전부 돌려줍니다. (관리자 화면도 같은 값을 씁니다)
+ *   그대로 findBrand 에 넘기면 "노출 끔" 으로 내려 둔 브랜드의 페이지가 그냥 열립니다.
+ *   주소만 알면 누구나 볼 수 있게 되므로, 노출 여부를 여기서 한 번 더 확인합니다.
+ */
+async function findVisibleBrand(slug: string) {
+  const brands = await getCachedBrands();
+  return visibleBrands(brands).find((brand) => brand.slug === slug);
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const [brands, store] = await Promise.all([getCachedBrands(), getCachedStore()]);
-  const brand = findBrand(brands, params.slug);
+  const [brand, store] = await Promise.all([
+    findVisibleBrand(params.slug),
+    getCachedStore(),
+  ]);
   if (!brand) {
     return { title: '브랜드를 찾을 수 없습니다' };
   }
@@ -52,8 +67,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function BrandDetailPage({ params }: PageProps) {
-  const brands = await getCachedBrands();
-  const brand = findBrand(brands, params.slug);
+  const brand = await findVisibleBrand(params.slug);
+  // 없는 브랜드도, 노출을 꺼 둔 브랜드도 똑같이 404 입니다.
   if (!brand) {
     notFound();
   }
@@ -71,7 +86,11 @@ export default async function BrandDetailPage({ params }: PageProps) {
     slogan: brand.tagline || undefined,
     description: brand.story.join(' '),
     url: `${SITE_URL}/brand/${brand.slug}`,
-    logo: brand.imageUrl || undefined,
+    // ★ logo 와 image 는 다른 것입니다.
+    //   logo 는 상표(정사각·투명 배경), image 는 대표 사진(가로 배너)입니다.
+    //   예전에는 대표 사진을 logo 로 넣고 있었습니다. 검색엔진이 상표로 오해합니다.
+    logo: brand.logoUrl || undefined,
+    image: brand.imageUrl || undefined,
   };
 
   return (
@@ -117,13 +136,29 @@ export default async function BrandDetailPage({ params }: PageProps) {
         ) : null}
       </header>
 
-      <div className="mt-10 aspect-[4/5] w-full overflow-hidden bg-stone md:aspect-[21/9]">
+      {/*
+        대표 이미지 — 가로로 넓게 깔리는 배너입니다.
+
+        ★ 원본 비율을 그대로 씁니다. 21:9 틀에 넣고 잘라내지 않습니다.
+          예전에는 틀을 21:9 로 못 박고 object-fit: cover 를 걸어 두어,
+          16:9 로 올린 사진의 좌우가 잘려 나갔습니다.
+          브랜드 사진은 운영자가 구도를 잡아 올리는 것이라 잘리면 안 됩니다.
+
+        ★ 높이 상한을 두지 않습니다.
+          상한을 두면 그 순간 다시 잘리거나 좌우에 빈 띠가 생깁니다.
+          어떤 비율로 올릴지는 운영자가 정하는 것이고, 관리자 화면에
+          가로로 넓은 사진을 권한다고 적어 두었습니다.
+      */}
+      <div className="mt-10 w-full bg-stone">
         <SafeImage
           src={brandImage(brand)}
           alt={`${brand.name} 브랜드 대표 이미지`}
           label={brand.name}
-          width={1400}
-          height={600}
+          // ★ 원본 크기를 모르므로 0 을 넘겨 width·height 속성을 붙이지 않습니다.
+          //   21:9 라고 찍어 두면 16:9 사진이 올라왔을 때 오히려 자리가 어긋납니다.
+          width={0}
+          height={0}
+          fit="natural"
           priority
         />
       </div>

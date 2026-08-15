@@ -81,6 +81,19 @@ export type ShippingSettings = {
   returnAddress: string;
   /** 평균 배송 소요일 안내 문구 */
   leadTime: string;
+  /**
+   * 상품 상세 구매 영역에만 쓰는 짧은 한 줄.
+   *
+   * ★ 왜 따로 두는가
+   *   구매 영역은 값·옵션·버튼이 모여 있는 좁은 자리입니다.
+   *   여기에 배송 안내를 통째로 넣으면 두세 줄로 늘어나 오른쪽만 길어집니다.
+   *   그렇다고 leadTime 을 줄이면 배송 안내 페이지와 판매정보 탭까지 같이 짧아집니다.
+   *   한 문구를 여러 화면이 나눠 쓰던 것을 여기서 끊습니다.
+   *
+   *   예) "무료배송" · "3,000원 · 50,000원 이상 무료"
+   *   비워 두면 배송비 설정으로 알아서 한 줄을 만듭니다.
+   */
+  productLine: string;
 };
 
 export const DEFAULT_SHIPPING: ShippingSettings = {
@@ -89,7 +102,51 @@ export const DEFAULT_SHIPPING: ShippingSettings = {
   islandFee: 3000,
   returnAddress: '인천광역시 부평구 부일로 38, 1102호 (부개동)',
   leadTime: '주문 확인 후 1~3영업일 내 출고되며, 출고 후 1~3일 내 도착합니다.',
+  productLine: '',
 };
+
+/** 구매 영역 한 줄이 넘어가면 안 되는 길이 */
+const PRODUCT_LINE_MAX = 34;
+
+/**
+ * 상품 상세 구매 영역에 쓸 배송 한 줄.
+ *
+ * 순서대로 시도합니다.
+ *   1) 관리자가 적어 둔 전용 문구 (productLine)
+ *   2) 배송비 설정으로 만든 짧은 문구
+ *   3) 그래도 길면 잘라 냅니다
+ *
+ * ★ 여기서는 leadTime(출고·도착 소요일)을 붙이지 않습니다.
+ *   그 안내는 [판매정보] 탭과 배송 안내 페이지에 이미 자세히 있습니다.
+ *   같은 말을 구매 버튼 옆에 또 적을 이유가 없습니다.
+ */
+export function productShippingLine(
+  freeShipping: boolean,
+  settings: Pick<ShippingSettings, 'baseFee' | 'freeThreshold' | 'productLine'>
+): string {
+  const custom = settings.productLine.trim();
+  if (custom) return cutToOneLine(custom);
+
+  if (freeShipping) return '무료배송';
+
+  const fee = `${formatNumber(settings.baseFee)}원`;
+  if (settings.freeThreshold > 0) {
+    return cutToOneLine(`${fee} · ${formatNumber(settings.freeThreshold)}원 이상 무료`);
+  }
+  return fee;
+}
+
+/** 한 줄에 안 들어가면 잘라 냅니다. 말줄임표까지 넣어 길이를 맞춥니다. */
+function cutToOneLine(text: string): string {
+  const flat = text.replace(/\s+/g, ' ').trim();
+  if (flat.length <= PRODUCT_LINE_MAX) return flat;
+  return `${flat.slice(0, PRODUCT_LINE_MAX - 1).trimEnd()}…`;
+}
+
+/** 천 단위 쉼표. formatPrice 는 상품 모듈에 있어 여기서는 따로 씁니다. */
+function formatNumber(value: number): string {
+  return value.toLocaleString('ko-KR');
+}
 
 /* ── 메인 배너 ────────────────────────────────────────────── */
 

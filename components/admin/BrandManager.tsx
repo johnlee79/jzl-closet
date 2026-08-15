@@ -247,7 +247,9 @@ function BrandForm({
         <div className="md:col-span-2">
           <span className="admin-label">대표 이미지</span>
           <p className="mb-2 text-[12px] leading-relaxed text-slate-500">
-            브랜드 페이지 상단에 가로로 넓게 깔립니다. (21:9 권장)
+            <code>/brand/{draft.slug || '{slug}'}</code> 페이지 맨 위에 가로로 넓게 깔립니다.{' '}
+            <strong>올린 비율 그대로 나오며 잘리지 않습니다.</strong> 가로로 넓은 사진을
+            권합니다. (21:9 또는 16:9) 세로로 긴 사진을 올리면 화면을 크게 차지합니다.
           </p>
           <ImageUploader
             images={draft.imageUrl ? [draft.imageUrl] : []}

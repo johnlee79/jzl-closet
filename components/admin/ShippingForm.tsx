@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveShippingAction } from '@/app/admin/settings-actions';
 import { formatPrice } from '@/lib/product-utils';
-import type { ShippingSettings } from '@/lib/site-config';
+import { productShippingLine, type ShippingSettings } from '@/lib/site-config';
 
 type Message = { tone: 'ok' | 'error'; text: string } | null;
 
@@ -134,6 +134,41 @@ export default function ShippingForm({ initial }: { initial: ShippingSettings })
               rows={2}
               className="admin-input leading-relaxed"
             />
+            <p className="mt-1 text-[12px] leading-relaxed text-slate-500">
+              배송 안내 페이지와 상품 상세의 [판매정보] 탭에 나갑니다. 길게 적으셔도
+              됩니다. 상품 상세 구매 영역에는 아래의 짧은 문구가 대신 나갑니다.
+            </p>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="admin-label" htmlFor="ship-product-line">
+              상품 상세용 배송 한 줄 문구
+            </label>
+            <input
+              id="ship-product-line"
+              type="text"
+              value={form.productLine}
+              onChange={(event) => set('productLine', event.target.value)}
+              placeholder="무료배송   또는   3,000원 · 50,000원 이상 무료"
+              maxLength={40}
+              className="admin-input"
+            />
+            <p className="mt-1 text-[12px] leading-relaxed text-slate-500">
+              상품 상세의 구매 영역(값·옵션·장바구니 버튼이 있는 자리) 한 줄에만
+              나갑니다. 좁은 자리라 <strong>한 줄을 넘기면 잘립니다.</strong>{' '}
+              <strong>비워 두면</strong> 위의 배송비 설정으로 자동으로 만듭니다.
+              (무료배송 상품은 이 문구와 상관없이 &ldquo;무료배송&rdquo; 으로 나갑니다)
+            </p>
+            <p className="mt-1 text-[12px] leading-relaxed text-slate-500">
+              지금 나갈 문구 —{' '}
+              <span className="text-slate-800">
+                {productShippingLine(false, {
+                  baseFee: form.baseFee,
+                  freeThreshold: form.freeThreshold,
+                  productLine: form.productLine,
+                })}
+              </span>
+            </p>
           </div>
         </div>
       </section>
