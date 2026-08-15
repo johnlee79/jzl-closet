@@ -68,7 +68,9 @@ export default function SafeImage({
 
   // ★ natural 은 틀을 두지 않습니다.
   //   상세설명 이미지는 세로로 아주 긴 경우가 많아 비율을 미리 정해 두면 잘립니다.
-  //   비율을 모르므로 width/height 도 넘기지 않습니다.
+  //   대신 원본 크기를 알고 있으면 width/height 를 넘겨 자리를 미리 잡아 둡니다.
+  //   (모르면 넘기지 않습니다. 엉뚱한 비율을 넘기면 오히려 더 밀립니다)
+  const knowsSize = width > 0 && height > 0;
   const fitClass =
     fit === 'natural'
       ? 'block h-auto w-full'
@@ -81,7 +83,7 @@ export default function SafeImage({
     <img
       src={src}
       alt={alt}
-      {...(fit === 'natural' ? {} : { width, height })}
+      {...(fit === 'natural' && !knowsSize ? {} : { width, height })}
       loading={priority ? 'eager' : 'lazy'}
       decoding="async"
       onError={() => setFailed(true)}

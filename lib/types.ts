@@ -7,7 +7,20 @@ export type Gender = 'women' | 'men' | 'unisex';
 
 /** 상세 본문 블록 — 운영자가 이미지/문구/표를 자유롭게 반복 배치합니다. */
 export type DetailBlock =
-  | { type: 'image'; src: string; alt: string; caption?: string }
+  /**
+   * width·height 는 원본 크기입니다. (올릴 때 서버가 알려 준 값)
+   * ★ 상세 이미지는 원본 비율 그대로 나가므로 미리 비율을 알려 주지 않으면
+   *   이미지가 늦게 뜰 때 아래 내용이 통째로 밀립니다. 검색 점수에도 좋지 않습니다.
+   *   예전에 올린 이미지에는 없을 수 있어 선택 항목으로 둡니다.
+   */
+  | {
+      type: 'image';
+      src: string;
+      alt: string;
+      caption?: string;
+      width?: number;
+      height?: number;
+    }
   | { type: 'text'; heading?: string; body: string }
   | { type: 'spec'; rows: { label: string; value: string }[] };
 

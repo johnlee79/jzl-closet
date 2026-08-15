@@ -151,8 +151,22 @@ export default function ProductGallery({
     'absolute top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center bg-paper/85 text-ink opacity-0 transition-opacity duration-200 hover:bg-paper focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:flex';
 
   return (
-    <div className="flex flex-col-reverse gap-4 md:flex-row md:gap-6">
-      <ul className="flex shrink-0 gap-3 overflow-x-auto md:w-[84px] md:flex-col md:overflow-visible">
+    /*
+     * ★ self-start 가 중요합니다.
+     *   이 갤러리는 2단 그리드의 왼쪽 칸입니다. 그리드는 기본으로 두 칸의 높이를 맞추는데,
+     *   오른쪽 구매 영역이 길어지면 왼쪽도 같이 늘어나면서
+     *   아래 프레임의 aspect 비율이 무시되고 이미지가 세로로 늘어납니다.
+     *   (적립 안내·비회원 구매 버튼이 늘면서 실제로 그렇게 됐습니다)
+     */
+    <div className="flex flex-col-reverse gap-4 self-start md:flex-row md:gap-6">
+      {/*
+       * 썸네일 목록.
+       * ★ 데스크탑에서는 absolute 로 띄웁니다.
+       *   그래야 썸네일이 아무리 많아도 이 목록이 갤러리 전체 높이를 밀어 올리지 않습니다.
+       *   높이는 오른쪽 큰 이미지가 정하고, 목록은 그 높이 안에서 스크롤됩니다.
+       */}
+      <div className="shrink-0 md:relative md:w-[84px]">
+      <ul className="flex gap-3 overflow-x-auto md:absolute md:inset-0 md:flex-col md:overflow-y-auto md:overflow-x-hidden">
         {list.map((src, index) => (
           <li key={`${src}-${index}`} className="shrink-0">
             <button
@@ -175,6 +189,7 @@ export default function ProductGallery({
           </li>
         ))}
       </ul>
+      </div>
 
       <div
         ref={frameRef}
@@ -182,7 +197,9 @@ export default function ProductGallery({
         onMouseLeave={() => setHovered(false)}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="group relative aspect-[4/5] w-full overflow-hidden bg-stone"
+        // ★ 3:4 고정. self-start 로 늘어나지 않게 못 박아 둡니다.
+        //   (aspect 는 높이가 auto 일 때만 먹습니다. 늘어나면 그냥 무시됩니다)
+        className="group relative aspect-[3/4] w-full self-start overflow-hidden bg-stone"
       >
         {/* 겹쳐 두고 투명도만 바꿉니다. 이미지가 밀리거나 튀지 않습니다. */}
         {list.map((src, index) =>

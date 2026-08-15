@@ -23,8 +23,9 @@ export default function DetailBlocks({ blocks, productName }: DetailBlocksProps)
                     src={block.src}
                     alt={block.alt}
                     label={productName}
-                    width={860}
-                    height={1075}
+                    // 원본 크기를 아는 이미지만 자리를 미리 잡습니다.
+                    width={block.width ?? 0}
+                    height={block.height ?? 0}
                     fit="natural"
                   />
                 </div>

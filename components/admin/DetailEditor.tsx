@@ -1,9 +1,10 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import BulkImageUpload from '@/components/admin/BulkImageUpload';
 import ImageUploader from '@/components/admin/ImageUploader';
 import RichTextEditor from '@/components/admin/RichTextEditor';
-import type { DetailBlock, Template } from '@/lib/types';
+import type { DetailBlock, Template, UploadedImage } from '@/lib/types';
 
 type DetailEditorProps = {
   blocks: DetailBlock[];
@@ -39,6 +40,27 @@ export default function DetailEditor({
   };
 
   const add = (block: DetailBlock) => onChange([...blocks, block]);
+
+  /**
+   * 여러 장을 한 번에 올려 이미지 칸을 그만큼 만듭니다.
+   * ★ alt 는 비워 둡니다. 검색 노출에 중요하므로 아래 각 칸에서 채워 주세요.
+   * ★ 원본 크기를 함께 저장합니다. 손님 화면에서 이미지 자리를 미리 잡아
+   *   늦게 뜰 때 아래 내용이 밀리지 않게 합니다.
+   */
+  const addImages = (images: UploadedImage[]) => {
+    if (images.length === 0) return;
+    onChange([
+      ...blocks,
+      ...images.map<DetailBlock>((image) => ({
+        type: 'image',
+        src: image.url,
+        alt: '',
+        caption: '',
+        width: image.width,
+        height: image.height,
+      })),
+    ]);
+  };
 
   const remove = (index: number) => {
     onChange(blocks.filter((_, position) => position !== index));
@@ -125,10 +147,20 @@ export default function DetailEditor({
         </div>
       </div>
 
+      {/* ★ 상세페이지는 이미지가 스무 장씩 되기도 합니다. 한 번에 올립니다. */}
+      <div className="mt-4">
+        <BulkImageUpload
+          slug={slug}
+          onUploaded={addImages}
+          label="상세 이미지를 여러 장 끌어다 놓거나 클릭해서 한 번에 선택하세요"
+          hint="고른 순서대로 아래에 이미지 칸이 만들어집니다. 순서는 나중에 끌어서 바꿀 수 있습니다."
+        />
+      </div>
+
       {blocks.length === 0 ? (
         <p className="mt-4 rounded-md border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-[14px] text-slate-500">
-          위 버튼으로 이미지·문구·표 블록을 추가하세요. 추가한 순서대로 상세 페이지에
-          쌓입니다.
+          위에서 이미지를 여러 장 올리거나, 이미지·문구·표 블록을 하나씩 추가하세요.
+          추가한 순서대로 상세 페이지에 쌓입니다.
         </p>
       ) : (
         <ul className="mt-4 flex flex-col gap-3">
