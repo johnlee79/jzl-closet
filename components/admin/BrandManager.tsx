@@ -24,6 +24,7 @@ type Draft = {
   origin: string;
   since: string;
   imageUrl: string;
+  logoUrl: string;
   isVisible: boolean;
   isFeatured: boolean;
 };
@@ -39,6 +40,7 @@ function toDraft(brand: Brand): Draft {
     origin: brand.origin,
     since: brand.since,
     imageUrl: brand.imageUrl,
+    logoUrl: brand.logoUrl,
     isVisible: brand.isVisible,
     isFeatured: brand.isFeatured,
   };
@@ -55,6 +57,7 @@ function emptyDraft(): Draft {
     origin: '대한민국',
     since: '',
     imageUrl: '',
+    logoUrl: '',
     isVisible: true,
     isFeatured: false,
   };
@@ -148,7 +151,7 @@ function BrandForm({
               set('label', value);
               if (isNew && !slugTouched) set('slug', slugify(value));
             }}
-            placeholder="NORD BLANC"
+            placeholder="GANNI"
             className="admin-input"
           />
         </div>
@@ -162,7 +165,7 @@ function BrandForm({
             type="text"
             value={draft.name}
             onChange={(event) => set('name', event.target.value)}
-            placeholder="NORD BLANC"
+            placeholder="GANNI"
             className="admin-input"
           />
         </div>
@@ -243,12 +246,33 @@ function BrandForm({
 
         <div className="md:col-span-2">
           <span className="admin-label">대표 이미지</span>
+          <p className="mb-2 text-[12px] leading-relaxed text-slate-500">
+            브랜드 페이지 상단에 가로로 넓게 깔립니다. (21:9 권장)
+          </p>
           <ImageUploader
             images={draft.imageUrl ? [draft.imageUrl] : []}
             onChange={(next) => set('imageUrl', next[0] ?? '')}
             slug={`brands/${draft.slug || 'new'}`}
             multiple={false}
             label="브랜드 대표 이미지를 끌어다 놓거나 클릭해서 선택하세요"
+            frame="full"
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <span className="admin-label">로고 (선택)</span>
+          <p className="mb-2 text-[12px] leading-relaxed text-slate-500">
+            ★ 상품 목록 필터와 브랜드 페이지에 씁니다. <strong>비워 두면 브랜드명이
+            글자로 나옵니다.</strong> 로고는 각 브랜드사의 등록상표라, 쓸 수 있는 것만
+            올려 주세요. 배경이 없는 PNG 를 권합니다. (가로로 긴 형태, 높이는 자동으로
+            맞춰집니다)
+          </p>
+          <ImageUploader
+            images={draft.logoUrl ? [draft.logoUrl] : []}
+            onChange={(next) => set('logoUrl', next[0] ?? '')}
+            slug={`brands/${draft.slug || 'new'}/logo`}
+            multiple={false}
+            label="로고 이미지를 끌어다 놓거나 클릭해서 선택하세요"
             frame="full"
           />
         </div>
@@ -365,6 +389,7 @@ export default function BrandManager({
             origin: draft.origin.trim(),
             since: draft.since.trim(),
             imageUrl: draft.imageUrl.trim(),
+            logoUrl: draft.logoUrl.trim(),
             isVisible: draft.isVisible,
             isFeatured: draft.isFeatured,
           },

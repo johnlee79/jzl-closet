@@ -379,10 +379,9 @@ export default async function ProductDetailPage({ params }: PageProps) {
               <dt className="w-20 shrink-0 text-muted">배송</dt>
               <dd className="text-ink">{shippingNote}</dd>
             </div>
-            <div className="flex gap-4">
-              <dt className="w-20 shrink-0 text-muted">문의</dt>
-              <dd className="text-ink">{store.phone}</dd>
-            </div>
+            {/* ★ 전화번호는 여기서 빼고 [판매정보] 탭의 판매자 정보에만 둡니다.
+                구매 영역에는 카카오톡 문의 버튼이 대신 들어갑니다.
+                같은 번호를 여러 곳에 두면 바꿀 때 한 곳을 빠뜨리게 됩니다. */}
           </dl>
 
           <AddToCartButton product={product} />

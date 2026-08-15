@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import BrandMark from '@/components/BrandMark';
 import ProductCard from '@/components/ProductCard';
 import { useSite } from '@/components/SiteProvider';
 import { visibleBrands } from '@/lib/brands';
@@ -44,6 +45,20 @@ function chipClass(active: boolean): string {
     : `${chipBase} border border-stone text-ink hover:border-ink`;
 }
 
+/**
+ * 브랜드는 네모 버튼으로 채우지 않습니다.
+ * 고르지 않은 상태는 muted 글자만, 고른 상태는 ink + 밑줄.
+ * 배경을 채우는 것보다 밑줄이 훨씬 정제되어 보입니다.
+ */
+function brandChipClass(active: boolean): string {
+  return [
+    'inline-flex min-h-[44px] items-center border-b-2 px-1 pb-2 pt-3 transition-colors duration-200',
+    active
+      ? 'border-ink text-ink'
+      : 'border-transparent text-muted hover:text-ink',
+  ].join(' ');
+}
+
 function RowLabel({ children }: { children: string }) {
   return (
     <span className="mt-3.5 w-[62px] shrink-0 text-[12px] tracking-[0.2em] text-muted">
@@ -63,8 +78,6 @@ export default function ProductList({
 
   const { brands } = useSite();
   const brandChips = visibleBrands(brands);
-  /** 브랜드가 8개를 넘으면 가로 스크롤로 처리합니다. (모바일 대응) */
-  const brandScroll = brandChips.length > 8;
 
   const visible = useMemo(() => {
     const filtered = products.filter((product) => {
@@ -92,7 +105,52 @@ export default function ProductList({
   return (
     <div>
       <div className="flex flex-col gap-4 border-b border-stone pb-6">
-        {/* 1행 — 소분류 필터 (링크). 대분류에 children 이 없으면 그리지 않습니다. */}
+        {/* 1행 — 브랜드 필터.
+         * ★ JZL CLOSET 은 브랜드 편집숍이라 손님이 브랜드로 먼저 찾습니다.
+         *   그래서 분류보다 위에 둡니다. */}
+        {showBrandFilter && brandChips.length > 0 ? (
+          <div className="flex items-start gap-3 md:gap-4">
+            <RowLabel>BRAND</RowLabel>
+            {/*
+              * ★ 브랜드는 셀스타에서 가져오며 계속 늘어납니다. (20개 이상도 예상)
+              *   모바일에서는 한 줄로 가로 스크롤 — 20개를 접으면 화면을 다 먹습니다.
+              *   데스크탑에서는 줄바꿈 — 가로 스크롤은 마우스로 넘기기 불편하고,
+              *   브랜드 편집숍이라 어떤 브랜드가 있는지 한눈에 보이는 편이 낫습니다.
+              *   개수에 따라 분기하지 않고 화면 폭으로만 갈라 두면 몇 개가 되든 깨지지 않습니다.
+              */}
+            {/* ★ min-w-0 이 없으면 가로로 늘어선 브랜드가 부모를 밀어내
+              *   스크롤 대신 화면 전체가 옆으로 밀립니다. (모바일에서 특히) */}
+            <ul className="flex min-w-0 flex-nowrap items-end gap-x-6 gap-y-3 overflow-x-auto pb-1 md:flex-wrap md:gap-x-8 md:overflow-x-visible md:pb-0">
+              <li className="shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setBrand('all')}
+                  aria-pressed={brand === 'all'}
+                  className={brandChipClass(brand === 'all')}
+                >
+                  <span className="font-display text-[15px] leading-none tracking-[0.18em] md:text-[16px]">
+                    ALL
+                  </span>
+                </button>
+              </li>
+              {brandChips.map((item) => (
+                <li key={item.slug} className="shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setBrand(item.slug)}
+                    aria-pressed={brand === item.slug}
+                    aria-label={item.label}
+                    className={brandChipClass(brand === item.slug)}
+                  >
+                    <BrandMark brand={item} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {/* 2행 — 소분류 필터 (링크). 대분류에 children 이 없으면 그리지 않습니다. */}
         {subFilter ? (
           <div className="flex items-start gap-3 md:gap-4">
             <RowLabel>CATEGORY</RowLabel>
@@ -115,43 +173,6 @@ export default function ProductList({
                   >
                     {item.label}
                   </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        {/* 2행 — 브랜드 필터. 소분류와 완전히 독립이며 동시에 적용됩니다. */}
-        {showBrandFilter && brandChips.length > 0 ? (
-          <div className="flex items-start gap-3 md:gap-4">
-            <RowLabel>BRAND</RowLabel>
-            <ul
-              className={
-                brandScroll
-                  ? 'flex flex-nowrap gap-2 overflow-x-auto pb-1'
-                  : 'flex flex-wrap gap-2'
-              }
-            >
-              <li className="shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setBrand('all')}
-                  aria-pressed={brand === 'all'}
-                  className={chipClass(brand === 'all')}
-                >
-                  전체
-                </button>
-              </li>
-              {brandChips.map((item) => (
-                <li key={item.slug} className="shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setBrand(item.slug)}
-                    aria-pressed={brand === item.slug}
-                    className={chipClass(brand === item.slug)}
-                  >
-                    {item.label}
-                  </button>
                 </li>
               ))}
             </ul>

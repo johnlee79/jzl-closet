@@ -67,6 +67,8 @@ type BrandRow = {
   origin: string | null;
   since: string | null;
   image_url: string | null;
+  /** 3-E 에서 추가한 컬럼. 아직 없을 수 있어 선택 항목으로 둡니다. */
+  logo_url?: string | null;
   display_order: number | null;
   is_visible: boolean | null;
   is_featured: boolean | null;
@@ -75,6 +77,10 @@ type BrandRow = {
 const CATEGORY_COLUMNS =
   'id, slug, label, name_ko, parent_slug, display_order, is_visible, description';
 const BRAND_COLUMNS =
+  'id, slug, label, name, name_ko, tagline, story, origin, since, image_url, logo_url, display_order, is_visible, is_featured';
+
+/** schema-3e.sql 을 아직 돌리지 않은 경우에 쓰는 목록 (logo_url 제외) */
+const BRAND_COLUMNS_LEGACY =
   'id, slug, label, name, name_ko, tagline, story, origin, since, image_url, display_order, is_visible, is_featured';
 
 function toSubCategory(row: CategoryRow): SubCategory {
@@ -125,6 +131,7 @@ function rowToBrand(row: BrandRow): Brand {
     origin: row.origin ?? '',
     since: row.since ?? '',
     imageUrl: row.image_url ?? '',
+    logoUrl: row.logo_url ?? '',
     order: row.display_order ?? 0,
     isVisible: row.is_visible !== false,
     isFeatured: Boolean(row.is_featured),
@@ -160,15 +167,40 @@ async function readCategories(): Promise<Category[] | null> {
   }
 }
 
+/** 아직 없는 컬럼을 골랐을 때 오는 코드 */
+const MISSING_COLUMN = '42703';
+
 async function readBrands(): Promise<Brand[] | null> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return null;
 
   try {
-    const { data, error } = await supabase
+    // 컬럼 목록이 두 가지라 결과 타입을 하나로 맞춰 둡니다. rowToBrand 가 안전하게 읽습니다.
+    type BrandRead = {
+      data: BrandRow[] | null;
+      error: { code?: string; message: string } | null;
+    };
+
+    let { data, error } = (await supabase
       .from(BRAND_TABLE)
       .select(BRAND_COLUMNS)
-      .order('display_order', { ascending: true });
+      .order('display_order', { ascending: true })) as BrandRead;
+
+    /*
+     * ★ logo_url 은 3-E 에서 새로 만든 칸입니다.
+     *   supabase/schema-3e.sql 을 아직 돌리지 않았다면 이 컬럼이 없어서
+     *   조회가 통째로 실패합니다. 그러면 브랜드가 하나도 안 보입니다.
+     *   그때는 로고 없이 한 번 더 읽어 사이트를 정상으로 굴립니다.
+     *   (SQL 을 돌리고 나면 자동으로 첫 번째 조회가 성공합니다)
+     */
+    if (error?.code === MISSING_COLUMN) {
+      const retry = (await supabase
+        .from(BRAND_TABLE)
+        .select(BRAND_COLUMNS_LEGACY)
+        .order('display_order', { ascending: true })) as BrandRead;
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       if (!isMissingTable(error.code)) {
@@ -176,8 +208,11 @@ async function readBrands(): Promise<Brand[] | null> {
       }
       return null;
     }
-    const rows = (data ?? []) as BrandRow[];
-    return rows.length > 0 ? rows.map(rowToBrand) : null;
+    // ★ 표가 비어 있으면 "브랜드가 없다" 가 정답입니다.
+    //   예전에는 여기서 null 을 돌려주는 바람에, 운영자가 브랜드를 전부 지워도
+    //   코드에 박아 둔 예시 브랜드가 되살아났습니다.
+    //   null 은 표가 아예 없거나 읽기에 실패했을 때만 씁니다.
+    return (data ?? []).map((row) => rowToBrand(row as BrandRow));
   } catch (error) {
     console.warn('[taxonomy] 브랜드를 읽지 못했습니다:', error);
     return null;
@@ -382,6 +417,8 @@ export type BrandInput = {
   origin: string;
   since: string;
   imageUrl: string;
+  /** 로고. 비워 두면 브랜드명을 글자로 보여 줍니다. */
+  logoUrl: string;
   isVisible: boolean;
   isFeatured: boolean;
   displayOrder?: number;
@@ -399,6 +436,7 @@ export async function createBrand(input: BrandInput): Promise<void> {
     origin: input.origin || null,
     since: input.since || null,
     image_url: input.imageUrl || null,
+    logo_url: input.logoUrl || null,
     is_visible: input.isVisible,
     is_featured: input.isFeatured,
     display_order: input.displayOrder ?? (await nextOrder(BRAND_TABLE, null)),
@@ -424,6 +462,7 @@ export async function updateBrand(
   if (patch.origin !== undefined) row.origin = patch.origin || null;
   if (patch.since !== undefined) row.since = patch.since || null;
   if (patch.imageUrl !== undefined) row.image_url = patch.imageUrl || null;
+  if (patch.logoUrl !== undefined) row.logo_url = patch.logoUrl || null;
   if (patch.isVisible !== undefined) row.is_visible = patch.isVisible;
   if (patch.isFeatured !== undefined) row.is_featured = patch.isFeatured;
   if (patch.displayOrder !== undefined) row.display_order = patch.displayOrder;

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import BrandMark from '@/components/BrandMark';
 import SafeImage from '@/components/SafeImage';
 import { brandImage, visibleBrands } from '@/lib/brands';
 import { getProducts } from '@/lib/products';
@@ -86,8 +87,9 @@ export default async function BrandListPage() {
                       height={brand.isFeatured ? 675 : 480}
                     />
                   </div>
-                  <h2 className="mt-5 font-display text-[20px] tracking-[0.16em] text-ink">
-                    {brand.label}
+                  {/* 로고가 있으면 로고, 없으면 브랜드명 — 목록에서도 같은 규칙입니다. */}
+                  <h2 className="mt-5 flex items-center text-ink">
+                    <BrandMark brand={brand} size="lg" className="!text-[20px] md:!text-[22px]" />
                   </h2>
                   {brand.nameKo ? (
                     <p className="mt-1 font-serif text-[15px] text-muted">{brand.nameKo}</p>

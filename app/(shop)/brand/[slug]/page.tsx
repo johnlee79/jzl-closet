@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ProductList from '@/components/ProductList';
+import BrandMark from '@/components/BrandMark';
 import SafeImage from '@/components/SafeImage';
 import { brandImage, findBrand } from '@/lib/brands';
 import { getProductsByBrand } from '@/lib/products';
@@ -107,9 +108,10 @@ export default async function BrandDetailPage({ params }: PageProps) {
         <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
           {brand.nameKo || brand.name}
         </h1>
-        <p className="mt-3 font-display text-[22px] tracking-[0.16em] text-ink">
-          {brand.label}
-        </p>
+        {/* 로고를 올린 브랜드는 로고로, 아니면 브랜드명을 글자로 보여 줍니다. */}
+        <div className="mt-3 flex items-center text-ink">
+          <BrandMark brand={brand} size="lg" />
+        </div>
         {brand.tagline ? (
           <p className="mt-5 text-[16px] leading-relaxed text-ink">{brand.tagline}</p>
         ) : null}
