@@ -11,6 +11,7 @@ import {
   DEFAULT_POINTS,
   DEFAULT_EVENT,
   DEFAULT_IMPORT,
+  DEFAULT_REFERRAL,
   DEFAULT_REMOTE_AREA_RULES,
   DEFAULT_REVIEW,
   DEFAULT_REVIEW_TAGS,
@@ -34,6 +35,7 @@ import {
   type PaymentSettings,
   type PointRule,
   type PointSettings,
+  type ReferralSettings,
   type ReviewSettings,
   type RibbonSettings,
   type SalesSettings,
@@ -81,6 +83,7 @@ export const POINTS_KEY = 'points';
 export const SALES_KEY = 'sales';
 export const EVENT_KEY = 'event';
 export const IMPORT_KEY = 'import';
+export const REFERRAL_KEY = 'referral';
 
 /** 테이블이 아직 없을 때 PostgREST 가 돌려주는 코드들 */
 const MISSING_TABLE_CODES = new Set(['42P01', 'PGRST205', 'PGRST202']);
@@ -631,6 +634,29 @@ export function normalizeImport(value: unknown): ImportSettings {
 export async function getImportSettings(): Promise<ImportSettings> {
   return normalizeImport(await readSetting(IMPORT_KEY));
 }
+
+/* ── 추천 코드 (3-F) ──────────────────────────────────────── */
+
+export function normalizeReferral(value: unknown): ReferralSettings {
+  if (!value || typeof value !== 'object') return DEFAULT_REFERRAL;
+  const raw = value as Record<string, unknown>;
+  return {
+    // ★ 기본은 켜짐. 값이 없다고 기능이 사라지면 안 됩니다.
+    enabled: raw.enabled !== false,
+    monthlyPointCap: count(raw.monthlyPointCap, DEFAULT_REFERRAL.monthlyPointCap),
+    inviteNotice: optionalText(raw.inviteNotice, DEFAULT_REFERRAL.inviteNotice),
+    shareLine: text(raw.shareLine, DEFAULT_REFERRAL.shareLine),
+  };
+}
+
+export async function getReferralSettings(): Promise<ReferralSettings> {
+  return normalizeReferral(await readSetting(REFERRAL_KEY));
+}
+
+export const getCachedReferral = unstable_cache(getReferralSettings, ['referral'], {
+  tags: [SETTINGS_TAG],
+  revalidate: 3600,
+});
 
 /** 푸터용 — 계좌번호를 뺀 구매안전 서비스 표시 정보만 돌려줍니다. */
 export async function getEscrowNotice(): Promise<{

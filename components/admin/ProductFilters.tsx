@@ -49,7 +49,7 @@ export default function ProductFilters({ categories }: ProductFiltersProps) {
           type="search"
           value={keyword}
           onChange={(event) => setKeyword(event.target.value)}
-          placeholder="상품명 또는 브랜드로 검색"
+          placeholder="상품명 또는 브랜드로 검색 (가니 / GANNI 둘 다 됩니다)"
           aria-label="상품 검색"
           className="admin-input"
         />

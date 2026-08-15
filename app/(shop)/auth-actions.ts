@@ -1,7 +1,13 @@
 'use server';
 
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
+import {
+  REF_COOKIE,
+  isReferralCode,
+  normalizeReferralCode,
+} from '@/lib/referral-code';
+import { attachReferrer, deviceKeyOf, ipHashOf } from '@/lib/referrals';
 import {
   createProfile,
   emailTaken,
@@ -78,6 +84,33 @@ export async function checkEmailAction(
  * 회원가입
  * ------------------------------------------------------------------ */
 
+/**
+ * 가입한 회원에게 추천인을 붙입니다.
+ *
+ * ★ 코드가 없거나 틀려도 가입은 그대로 성공입니다.
+ *   추천은 덤이지 가입 조건이 아닙니다. 여기서 막으면 손님만 잃습니다.
+ * ★ 손님이 적어 넣은 코드를 쿠키보다 먼저 씁니다.
+ *   링크를 눌러 들어왔더라도, 직접 고쳐 적었다면 그쪽이 손님의 뜻입니다.
+ */
+async function linkReferrer(userId: string, typed: string): Promise<void> {
+  const jar = cookies();
+  const fromCookie = jar.get(REF_COOKIE)?.value ?? '';
+  const code = normalizeReferralCode(typed) || normalizeReferralCode(fromCookie);
+  if (!isReferralCode(code)) return;
+
+  try {
+    const head = headers();
+    await attachReferrer({
+      inviteeId: userId,
+      code,
+      ipHash: ipHashOf(head),
+      deviceKey: deviceKeyOf(head),
+    });
+  } catch (error) {
+    console.warn('[auth] 추천 관계를 남기지 못했습니다:', error);
+  }
+}
+
 export type SignupInput = {
   email: string;
   password: string;
@@ -91,6 +124,12 @@ export type SignupInput = {
   agreeTerms: boolean;
   agreePrivacy: boolean;
   agreeMarketing: boolean;
+  /**
+   * 손님이 직접 적어 넣은 추천 코드 (선택).
+   * ★ 링크로 들어왔으면 쿠키에도 있습니다. 적어 넣은 값이 있으면 그쪽을 먼저 씁니다.
+   *   오프라인에서 코드를 받아 적는 손님이 실제로 있기 때문입니다.
+   */
+  referralCode?: string;
 };
 
 export async function signupAction(
@@ -187,6 +226,9 @@ export async function signupAction(
 
   // 회원가입 축하 포인트 — 실패해도 가입은 그대로 진행됩니다.
   await earnSignupPoints(userId);
+
+  // 추천 관계 — 실패해도 가입은 그대로 끝냅니다.
+  await linkReferrer(userId, input.referralCode ?? '');
 
   // 이메일 인증이 꺼져 있으면 여기서 이미 세션이 생겨 자동 로그인 상태입니다.
   // 켜져 있으면 세션이 없고, 손님은 메일의 링크를 눌러야 합니다.

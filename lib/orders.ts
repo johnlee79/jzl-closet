@@ -15,6 +15,7 @@ import {
   revokeOrderPoints,
 } from '@/lib/points';
 import { isCombinationAvailable } from '@/lib/product-utils';
+import { markFirstPurchase, revertFirstPurchase } from '@/lib/referrals';
 import { normalizeOptions } from '@/lib/products';
 import {
   getPaymentSettings,
@@ -956,6 +957,13 @@ export async function updateOrderStatus(
     // ★ 쓴 포인트는 돌려주고, 이 주문으로 적립된 포인트(구매·리뷰)는 회수합니다.
     if (before.userId) {
       await revokeOrderPoints(before.userId, before.id, before.discount);
+      /*
+       * ★ 추천 실적에서도 뺍니다.
+       *   취소·반품된 주문을 첫 구매로 인정해 두면, 주문했다가 바로 무르는 식으로
+       *   실적을 만들 수 있습니다. 진행률만 되돌리고 이미 나간 포인트는 두지만,
+       *   다음 회차 지급이 그만큼 늦어집니다.
+       */
+      await revertFirstPurchase(before.userId, before.id);
     }
   }
 
@@ -972,6 +980,18 @@ export async function updateOrderStatus(
       await earnPurchasePoints(before.userId, before.id, base);
     } catch (error) {
       console.warn('[orders] 구매 적립 실패:', id, error);
+    }
+
+    /*
+     * ★ 추천으로 가입한 회원이면 "첫 구매" 실적을 남깁니다.
+     *   적립과 같은 시점(배송완료·구매확정)에 처리합니다.
+     *   주문 즉시 인정하면 취소·반품 때 되돌릴 일이 훨씬 복잡해집니다.
+     *   실적이 늘면 추천인의 목표가 채워졌는지도 여기서 함께 확인합니다.
+     */
+    try {
+      await markFirstPurchase(before.userId, before.id);
+    } catch (error) {
+      console.warn('[orders] 추천 첫 구매 기록 실패:', id, error);
     }
   }
 

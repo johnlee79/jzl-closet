@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
+import { normalizeReferralCode } from '@/lib/referral-code';
 import { authButtonClass, authInputClass } from '@/components/AuthCard';
 import GoogleButton, { OrDivider } from '@/components/GoogleButton';
 import PostcodeSearch from '@/components/PostcodeSearch';
@@ -24,6 +25,8 @@ type Form = {
   agreeTerms: boolean;
   agreePrivacy: boolean;
   agreeMarketing: boolean;
+  /** 선택 항목. 링크로 들어왔으면 자동으로 채웁니다. */
+  referralCode: string;
 };
 
 const AGREEMENTS = [
@@ -52,9 +55,29 @@ export default function SignupForm() {
     agreeTerms: false,
     agreePrivacy: false,
     agreeMarketing: false,
+    referralCode: '',
   });
   const [error, setError] = useState('');
   const [emailState, setEmailState] = useState<'idle' | 'ok' | 'taken'>('idle');
+
+  /*
+   * 추천 링크로 들어왔으면 칸을 미리 채워 둡니다.
+   * ★ 쿠키는 httpOnly 라 브라우저에서 읽을 수 없습니다. 서버에 물어봅니다.
+   *   손님이 손으로 이미 고쳐 적었으면 덮어쓰지 않습니다.
+   */
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/referral/visit')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { code?: string } | null) => {
+        if (!alive || !data?.code) return;
+        setForm((prev) => (prev.referralCode ? prev : { ...prev, referralCode: data.code! }));
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const set = <K extends keyof Form>(key: K, value: Form[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -336,6 +359,35 @@ export default function SignupForm() {
               주소를 넣어 두시면 주문할 때 자동으로 채워집니다.
             </p>
           </div>
+        </div>
+
+        {/*
+          추천 코드 — 선택 항목입니다.
+          ★ 링크를 눌러 들어왔으면 자동으로 채워지고, 손님이 고칠 수 있습니다.
+            오프라인이나 말로 코드를 받은 손님을 위한 통로이기도 합니다.
+          ★ 비워 두어도 가입에는 아무 영향이 없습니다.
+        */}
+        <div className="mt-8">
+          <label htmlFor="referralCode" className="label-xs block">
+            추천 코드가 있으신가요? (선택)
+          </label>
+          <input
+            id="referralCode"
+            type="text"
+            value={form.referralCode}
+            onChange={(event) =>
+              set('referralCode', normalizeReferralCode(event.target.value))
+            }
+            placeholder="A3F9K2"
+            inputMode="text"
+            autoCapitalize="characters"
+            autoComplete="off"
+            maxLength={6}
+            className={`${inputClass} tracking-[0.3em]`}
+          />
+          <p className="mt-2 text-[13px] text-muted">
+            친구에게 받은 6자리 코드를 넣어 주세요. 코드는 대소문자를 가리지 않습니다.
+          </p>
         </div>
       </section>
 

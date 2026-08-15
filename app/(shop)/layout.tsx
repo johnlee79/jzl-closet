@@ -2,7 +2,9 @@ import Footer from '@/components/Footer';
 import Header from '@/components/Header';
 import PointPopup from '@/components/PointPopup';
 import PopupLayer from '@/components/PopupLayer';
+import ReferralCapture from '@/components/ReferralCapture';
 import SiteNotices from '@/components/SiteNotices';
+import { Suspense } from 'react';
 import SiteProvider from '@/components/SiteProvider';
 import TopRibbon from '@/components/TopRibbon';
 import { CartProvider } from '@/lib/cart';
@@ -103,6 +105,14 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
           <PopupLayer popups={popups} />
           {/* 보유 포인트 안내. 공지 팝업이 떠 있으면 이번에는 뜨지 않습니다. */}
           <PointPopup />
+          {/*
+            추천 링크(?ref=…)로 들어온 손님 기록.
+            ★ Suspense 로 감싸야 합니다. useSearchParams 는 감싸지 않으면
+              이 레이아웃을 쓰는 모든 페이지의 정적 생성이 통째로 풀립니다.
+          */}
+          <Suspense fallback={null}>
+            <ReferralCapture />
+          </Suspense>
         </CartProvider>
       </SiteProvider>
     </>

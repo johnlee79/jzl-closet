@@ -18,6 +18,12 @@ type ProductTableProps = {
   /** 분류·브랜드는 DB 에서 오므로 서버 페이지가 읽어 넘겨 줍니다. */
   categories: Category[];
   brands: Brand[];
+  /** 조건이 걸려 있는지 — 빈 목록일 때 안내 문구가 달라집니다. */
+  hasFilter?: boolean;
+  /** 조건을 모두 지운 주소 */
+  clearHref?: string;
+  /** 조건을 지웠을 때 나올 상품 수 */
+  totalAll?: number;
 };
 
 function categoryLabel(categories: Category[], product: Product): string {
@@ -28,7 +34,14 @@ function categoryLabel(categories: Category[], product: Product): string {
   return [category?.nameKo ?? product.categorySlug, sub?.nameKo].filter(Boolean).join(' · ');
 }
 
-export default function ProductTable({ products, categories, brands }: ProductTableProps) {
+export default function ProductTable({
+  products,
+  categories,
+  brands,
+  hasFilter = false,
+  clearHref = '/admin/products',
+  totalAll = 0,
+}: ProductTableProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -95,10 +108,24 @@ export default function ProductTable({ products, categories, brands }: ProductTa
   if (products.length === 0) {
     return (
       <div className="admin-card p-10 text-center">
-        <p className="text-[15px] text-slate-700">조건에 맞는 상품이 없습니다.</p>
-        <Link href="/admin/products/new" className="admin-btn-primary mt-4">
-          + 새 상품 등록
-        </Link>
+        {/*
+          ★ 조건 때문에 비어 있는 것과 상품 자체가 없는 것은 전혀 다른 상황입니다.
+            조건 때문이라면 지우는 버튼을 바로 옆에 놓아, 검색창까지
+            올라가서 하나씩 되돌리지 않아도 되게 합니다.
+        */}
+        <p className="text-[15px] text-slate-700">
+          {hasFilter ? '조건에 맞는 상품이 없습니다.' : '아직 등록된 상품이 없습니다.'}
+        </p>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          {hasFilter ? (
+            <Link href={clearHref} className="admin-btn">
+              조건 지우기{totalAll > 0 ? ` (전체 ${totalAll}개 보기)` : ''}
+            </Link>
+          ) : null}
+          <Link href="/admin/products/new" className="admin-btn-primary">
+            + 새 상품 등록
+          </Link>
+        </div>
       </div>
     );
   }

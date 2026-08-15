@@ -194,3 +194,26 @@ export async function notifyNewReview(
 
   await sendTelegramMessage(lines.join('\n'));
 }
+
+/**
+ * 🎁 친구 초대 보상 처리 알림 (3-F).
+ *
+ * ★ 보상이 나갈 때마다 알립니다.
+ *   포인트는 자동으로 나가므로, 알림이 없으면 어뷰징이 터져도 늦게 압니다.
+ *   사은품은 사람이 보내야 하니 놓치지 않도록 알립니다.
+ */
+export async function notifyReferralReward(
+  title: string,
+  detail: string
+): Promise<void> {
+  const lines = [
+    `🎁 <b>친구 초대 보상</b>`,
+    '',
+    escapeHtml(title),
+    escapeHtml(detail),
+    '',
+    `관리자: ${SITE_URL}/admin/referrals/rewards`,
+  ];
+
+  await sendTelegramMessage(lines.join('\n'));
+}

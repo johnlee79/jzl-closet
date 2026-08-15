@@ -6,6 +6,7 @@ import DetailBlocks from '@/components/DetailBlocks';
 import MeasurementTable from '@/components/MeasurementTable';
 import ProductCard from '@/components/ProductCard';
 import ProductGallery from '@/components/ProductGallery';
+import ShareButton from '@/components/ShareButton';
 import ProductQna from '@/components/ProductQna';
 import ProductReviews from '@/components/ProductReviews';
 import ProductTabs from '@/components/ProductTabs';
@@ -291,7 +292,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
         </ol>
       </nav>
 
-      <div className="mt-8 grid grid-cols-1 gap-12 lg:grid-cols-2 lg:gap-16">
+      {/*
+        ★ 왼쪽 사진을 조금 더 크게 잡습니다. (1.12 : 1)
+          옷은 사진이 전부라 조금이라도 크게 보이는 편이 낫습니다.
+          다만 오른쪽 구매 영역과 높이를 억지로 맞추지는 않습니다.
+          맞추려 들면 3:4 비율이 깨져 세로로 길쭉한 사진이 됩니다.
+      */}
+      <div className="mt-8 grid grid-cols-1 gap-12 lg:grid-cols-[1.12fr_1fr] lg:gap-14">
         <ProductGallery
           images={product.thumbnails}
           productName={product.name}
@@ -324,14 +331,26 @@ export default async function ProductDetailPage({ params }: PageProps) {
             </a>
           ) : null}
 
-          <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
-            {product.summary}
-          </p>
-
-          {earnNotice ? (
-            <p className="mt-4 inline-block border border-stone px-3 py-1.5 text-[13px] tracking-[0.06em] text-wine">
-              {earnNotice}
-            </p>
+          {/*
+            ★ 한 줄 소개와 적립 안내를 같은 줄에 둡니다.
+              따로 두면 구매 영역만 두 줄씩 길어져서 왼쪽 사진보다 훨씬 아래로
+              내려가고, 그만큼 사진이 눌려 보입니다.
+              좁은 화면에서는 flex-wrap 이 알아서 다음 줄로 내려 줍니다.
+              배지는 shrink-0 으로 두어, 자리가 모자라도 글자가 깨지지 않습니다.
+          */}
+          {product.summary || earnNotice ? (
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+              {product.summary ? (
+                <p className="text-[16px] leading-[1.9] text-ink md:text-[17px]">
+                  {product.summary}
+                </p>
+              ) : null}
+              {earnNotice ? (
+                <span className="shrink-0 border border-stone px-3 py-1.5 text-[13px] tracking-[0.06em] text-wine">
+                  {earnNotice}
+                </span>
+              ) : null}
+            </div>
           ) : null}
 
           <div className="mt-8 flex flex-wrap items-baseline gap-3">
@@ -385,6 +404,15 @@ export default async function ProductDetailPage({ params }: PageProps) {
           </dl>
 
           <AddToCartButton product={product} />
+
+          {/* 공유 — 로그인한 회원이면 주소에 자기 추천 코드가 따라붙습니다. */}
+          <div className="mt-6 border-t border-stone pt-5">
+            <ShareButton
+              path={`/products/${product.slug}`}
+              title={product.name}
+              label="친구에게 공유하기"
+            />
+          </div>
         </section>
       </div>
 

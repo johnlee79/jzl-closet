@@ -31,7 +31,9 @@ export type PointReason =
   | 'admin'
   | 'cancel'
   | 'expire'
-  | 'withdraw';
+  | 'withdraw'
+  // 친구 초대 목표 달성 보상 (3-F). 방문·가입 자체로는 주지 않습니다.
+  | 'referral';
 
 export type PointTransaction = {
   id: string;

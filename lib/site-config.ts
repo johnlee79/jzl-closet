@@ -363,6 +363,7 @@ export const POINT_REASON_LABEL: Record<string, string> = {
   cancel: '주문 취소 반환',
   expire: '유효기간 만료',
   withdraw: '탈퇴 소멸',
+  referral: '친구 초대 목표 달성',
 };
 
 export function pointReasonLabel(reason: string): string {
@@ -472,6 +473,36 @@ export const DEFAULT_EVENT: EventSettings = {
     startsAt: '',
     endsAt: '',
   },
+};
+
+/* ── 추천 코드 (3-F) ─────────────────────────────────────── */
+
+/**
+ * ★ 여기에는 "방문 몇 P · 가입 몇 P" 같은 항목이 없습니다.
+ *   방문·가입 자체로는 포인트를 주지 않기 때문입니다. 숫자만 셉니다.
+ *   보상은 관리자가 만든 목표를 달성했을 때만 나갑니다. (referral_goals)
+ */
+export type ReferralSettings = {
+  /** 기능 자체를 끌 수 있게 해 둡니다. 끄면 초대 화면과 공유 코드가 사라집니다. */
+  enabled: boolean;
+  /**
+   * 한 달에 추천 보상으로 나갈 수 있는 포인트 상한.
+   * ★ 어뷰징이 터졌을 때 피해를 이 금액에서 멈추게 하는 안전장치입니다.
+   *   넘으면 지급하지 않고 보류로 두고 관리자에게 알립니다. 0 이면 상한 없음.
+   */
+  monthlyPointCap: number;
+  /** 초대 화면 맨 위 안내 문구 */
+  inviteNotice: string;
+  /** 공유할 때 따라붙는 한 줄. {store} 자리에 스토어 이름이 들어갑니다. */
+  shareLine: string;
+};
+
+export const DEFAULT_REFERRAL: ReferralSettings = {
+  enabled: true,
+  monthlyPointCap: 500000,
+  inviteNotice:
+    '친구에게 링크를 보내 주세요. 친구가 가입하거나 첫 주문을 마치면 아래 목표가 채워집니다.',
+  shareLine: '{store}에서 확인해 보세요',
 };
 
 export const RIBBON_TONES = [

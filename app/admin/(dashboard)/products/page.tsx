@@ -43,8 +43,10 @@ export default async function AdminProductsPage({
   if (searchParams.soldOut === 'false') filter.soldOut = false;
 
   const configured = isSupabaseConfigured();
-  const [{ products, total }, allCategories, allBrands] = await Promise.all([
-    configured ? getProductsWithCount(filter) : { products: [], total: 0 },
+  const [{ products, total, totalAll }, allCategories, allBrands] = await Promise.all([
+    configured
+      ? getProductsWithCount(filter)
+      : { products: [], total: 0, totalAll: 0 },
     getCategories(),
     getBrands(),
   ]);
@@ -52,13 +54,29 @@ export default async function AdminProductsPage({
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const categories = filterableCategories(allCategories);
 
+  /*
+   * ★ 조건이 걸려 있는지에 따라 건수 문구를 다르게 씁니다.
+   *   그냥 "전체 3개"라고만 써 두면, 조건 때문에 줄어든 것인지
+   *   상품이 정말 3개뿐인지 알 수 없어 헷갈립니다.
+   */
+  const hasFilter = Boolean(
+    search || searchParams.category || searchParams.visible || searchParams.soldOut
+  );
+  const countText = hasFilter
+    ? `조건에 맞는 상품 ${total}개 · 전체 ${totalAll}개`
+    : `전체 ${total}개`;
+
+  /** 조건만 지우고 페이지는 1로 되돌리는 주소 */
+  const clearHref = '/admin/products';
+
   return (
     <div className="mx-auto w-full max-w-[1200px]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-[20px] font-semibold text-slate-900">상품 관리</h1>
           <p className="mt-1 text-[13px] text-slate-600">
-            전체 {total}개 · {page}/{totalPages} 페이지
+            {countText}
+            {totalPages > 1 ? ` · ${page}/${totalPages} 페이지` : ''}
           </p>
         </div>
         <Link href="/admin/products/new" className="admin-btn-primary">
@@ -84,7 +102,14 @@ export default async function AdminProductsPage({
       </div>
 
       <div className="mt-5">
-        <ProductTable products={products} categories={allCategories} brands={allBrands} />
+        <ProductTable
+          products={products}
+          categories={allCategories}
+          brands={allBrands}
+          hasFilter={hasFilter}
+          clearHref={clearHref}
+          totalAll={totalAll}
+        />
       </div>
 
       {totalPages > 1 ? (

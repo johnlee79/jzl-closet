@@ -7,6 +7,8 @@ import {
   touchLastLogin,
   type AuthProvider,
 } from '@/lib/profiles';
+import { REF_COOKIE, isReferralCode, normalizeReferralCode } from '@/lib/referral-code';
+import { attachReferrer, deviceKeyOf, ipHashOf } from '@/lib/referrals';
 import { createAuthClient } from '@/lib/supabase/auth-server';
 
 /**
@@ -98,6 +100,29 @@ export async function GET(request: NextRequest) {
       });
       // 구글로 처음 들어온 회원에게도 가입 축하 포인트를 드립니다.
       if (created) await earnSignupPoints(user.id);
+
+      /*
+       * 소셜로 처음 들어온 회원에게도 추천인을 붙입니다.
+       * ★ 소셜 가입 화면에는 코드를 적을 칸이 없습니다. 쿠키만 봅니다.
+       *   링크를 눌러 들어온 뒤 구글로 가입하는 흐름이 실제로 가장 흔합니다.
+       */
+      if (created) {
+        const code = normalizeReferralCode(
+          request.cookies.get(REF_COOKIE)?.value ?? ''
+        );
+        if (isReferralCode(code)) {
+          try {
+            await attachReferrer({
+              inviteeId: user.id,
+              code,
+              ipHash: ipHashOf(request.headers),
+              deviceKey: deviceKeyOf(request.headers),
+            });
+          } catch (error) {
+            console.warn('[auth] 소셜 가입 추천 연결 실패:', error);
+          }
+        }
+      }
 
       // 탈퇴한 계정이면 다시 들여보내지 않습니다.
       const profile = await getProfile(user.id);

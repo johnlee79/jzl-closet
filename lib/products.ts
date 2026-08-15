@@ -254,7 +254,9 @@ const LIST_COLUMNS = [
   'season',
   'origin',
   'manufacturer',
-  'images',
+  // ★ 컬럼 이름은 thumbnails 입니다. images 로 잘못 적어 두는 바람에
+  //   3-C 이후 관리자 상품 목록이 계속 비어 있었습니다. (건수만 맞고 목록은 0건)
+  'thumbnails',
   'options',
   'is_visible',
   'is_sold_out',
@@ -269,22 +271,94 @@ const LIST_COLUMNS = [
 export async function getProducts(filter: ProductFilter = {}): Promise<Product[]> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return [];
+  return readProducts(filter, filter.light ? LIST_COLUMNS : '*');
+}
 
-  // ★ 목록에서는 상세설명을 빼고 읽습니다. (filter.light)
-  let query = supabase.from(TABLE).select(filter.light ? LIST_COLUMNS : '*');
+/** 아직 없는 컬럼을 골랐을 때 오는 코드 */
+const MISSING_COLUMN = '42703';
 
-  if (!filter.includeHidden) query = query.eq('is_visible', true);
-  if (filter.visible !== undefined) query = query.eq('is_visible', filter.visible);
-  if (filter.categorySlug) query = query.eq('category_slug', filter.categorySlug);
-  if (filter.subCategorySlug) query = query.eq('sub_category_slug', filter.subCategorySlug);
-  if (filter.brandSlug) query = query.eq('brand_slug', filter.brandSlug);
-  if (filter.gender) query = query.eq('gender', filter.gender);
-  if (filter.onlySale) query = query.eq('is_sale', true);
-  if (filter.soldOut !== undefined) query = query.eq('is_sold_out', filter.soldOut);
-  if (filter.search) {
-    const term = filter.search.replace(/[%,]/g, '');
-    query = query.or(`name.ilike.%${term}%,brand_slug.ilike.%${term}%,slug.ilike.%${term}%`);
+/**
+ * 검색어와 이름이 닮은 브랜드의 slug 를 찾아 둡니다.
+ *
+ * ★ 상품 테이블에는 브랜드가 slug(`ganni`) 로만 들어 있습니다.
+ *   그래서 "가니" 라고 쳐도 상품 테이블만 뒤져서는 절대 걸리지 않습니다.
+ *   브랜드 테이블에서 표기(label)·정식명(name)·한글명(name_ko) 을 먼저 훑어
+ *   해당하는 slug 목록을 얻은 다음, 그 slug 로 상품을 찾습니다.
+ *   이렇게 해야 한글로 쳐도 영문으로 쳐도 같은 상품이 나옵니다.
+ */
+async function brandSlugsMatching(term: string): Promise<string[]> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase || !term) return [];
+
+  const like = `%${term}%`;
+  const { data, error } = await supabase
+    .from('brands')
+    .select('slug')
+    .or(`slug.ilike.${like},label.ilike.${like},name.ilike.${like},name_ko.ilike.${like}`);
+
+  if (error) {
+    console.error('[products] 브랜드 이름 검색 실패:', error.message);
+    return [];
   }
+  return (data as { slug: string }[]).map((row) => row.slug);
+}
+
+/** 검색어에 쓸 수 없는 글자를 걷어냅니다. (or 구문이 깨집니다) */
+function cleanTerm(search: string): string {
+  return search.replace(/[%,().]/g, '').trim();
+}
+
+function searchClause(term: string, brandSlugs: string[]): string {
+  const parts = [`name.ilike.%${term}%`, `slug.ilike.%${term}%`, `brand_slug.ilike.%${term}%`];
+  // 이름이 닮은 브랜드가 있으면 그 브랜드의 상품도 모두 검색 결과에 넣습니다.
+  if (brandSlugs.length > 0) parts.push(`brand_slug.in.(${brandSlugs.join(',')})`);
+  return parts.join(',');
+}
+
+/**
+ * 목록 조회와 건수 조회에 똑같은 조건을 겁니다.
+ *
+ * ★ 예전에는 두 곳에 조건을 따로 적어 두어서, 조건이 하나만 빠져도
+ *   "전체 3개"라고 써 놓고 목록에는 1개만 나오는 어긋남이 생겼습니다.
+ *   조건을 다는 곳을 이 함수 하나로 모아 두면 그런 일이 생기지 않습니다.
+ */
+/**
+ * 조건을 걸 수 있는 최소한의 모양.
+ * supabase 빌더의 진짜 타입은 조건을 걸 때마다 겹겹이 불어나서
+ * 그대로 쓰면 타입 검사가 끝나지 않습니다. 필요한 두 개만 추려 씁니다.
+ */
+type Filterable = {
+  eq: (column: string, value: never) => Filterable;
+  or: (query: string) => Filterable;
+};
+
+function applyFilter<T>(query: T, filter: ProductFilter, searchOr: string): T {
+  let q = query as Filterable;
+  if (!filter.includeHidden) q = q.eq('is_visible', true as never);
+  if (filter.visible !== undefined) q = q.eq('is_visible', filter.visible as never);
+  if (filter.categorySlug) q = q.eq('category_slug', filter.categorySlug as never);
+  if (filter.subCategorySlug) q = q.eq('sub_category_slug', filter.subCategorySlug as never);
+  if (filter.brandSlug) q = q.eq('brand_slug', filter.brandSlug as never);
+  if (filter.gender) q = q.eq('gender', filter.gender as never);
+  if (filter.onlySale) q = q.eq('is_sale', true as never);
+  if (filter.soldOut !== undefined) q = q.eq('is_sold_out', filter.soldOut as never);
+  if (searchOr) q = q.or(searchOr);
+  return q as T;
+}
+
+async function readProducts(
+  filter: ProductFilter,
+  columns: string,
+  searchOr?: string
+): Promise<Product[]> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return [];
+
+  const term = filter.search ? cleanTerm(filter.search) : '';
+  const or =
+    searchOr ?? (term ? searchClause(term, await brandSlugsMatching(term)) : '');
+
+  let query = applyFilter(supabase.from(TABLE).select(columns), filter, or);
 
   query = query.order('display_order', { ascending: true }).order('created_at', {
     ascending: false,
@@ -297,6 +371,16 @@ export async function getProducts(filter: ProductFilter = {}): Promise<Product[]
 
   const { data, error } = await query;
   if (error) {
+    /*
+     * ★ 고른 컬럼 중 하나가 없으면 조회 전체가 실패해 목록이 통째로 비어 버립니다.
+     *   화면에는 건수만 맞고 상품은 하나도 안 보이는 상태가 됩니다.
+     *   실제로 그 일이 있었기에, 컬럼 문제일 때는 전체 컬럼으로 한 번 더 읽습니다.
+     *   (느려지지만 빈 화면보다는 낫습니다. 로그를 보고 컬럼 목록을 고치면 됩니다)
+     */
+    if (error.code === MISSING_COLUMN && columns !== '*') {
+      console.error('[products] 컬럼 목록이 스키마와 다릅니다:', error.message);
+      return readProducts(filter, '*', or);
+    }
     console.error('[products] 목록 조회 실패:', error.message);
     return [];
   }
@@ -306,24 +390,39 @@ export async function getProducts(filter: ProductFilter = {}): Promise<Product[]
 /** 관리자 목록용 — 전체 개수까지 함께 돌려줍니다. */
 export async function getProductsWithCount(
   filter: ProductFilter = {}
-): Promise<{ products: Product[]; total: number }> {
+): Promise<{ products: Product[]; total: number; totalAll: number }> {
   const supabase = getSupabaseAdmin();
-  if (!supabase) return { products: [], total: 0 };
+  if (!supabase) return { products: [], total: 0, totalAll: 0 };
 
-  let countQuery = supabase.from(TABLE).select('id', { count: 'exact', head: true });
-  if (!filter.includeHidden) countQuery = countQuery.eq('is_visible', true);
-  if (filter.visible !== undefined) countQuery = countQuery.eq('is_visible', filter.visible);
-  if (filter.categorySlug) countQuery = countQuery.eq('category_slug', filter.categorySlug);
-  if (filter.soldOut !== undefined) countQuery = countQuery.eq('is_sold_out', filter.soldOut);
-  if (filter.search) {
-    const term = filter.search.replace(/[%,]/g, '');
-    countQuery = countQuery.or(
-      `name.ilike.%${term}%,brand_slug.ilike.%${term}%,slug.ilike.%${term}%`
-    );
-  }
+  // 검색어에 걸리는 브랜드는 한 번만 찾아서 목록·건수·전체건수에 함께 씁니다.
+  const term = filter.search ? cleanTerm(filter.search) : '';
+  const or = term ? searchClause(term, await brandSlugsMatching(term)) : '';
 
-  const [{ count }, products] = await Promise.all([countQuery, getProducts(filter)]);
-  return { products, total: count ?? products.length };
+  const countQuery = applyFilter(
+    supabase.from(TABLE).select('id', { count: 'exact', head: true }),
+    filter,
+    or
+  );
+
+  /*
+   * ★ 조건을 하나도 걸지 않았을 때의 전체 건수도 같이 셉니다.
+   *   "조건에 맞는 상품 2개 · 전체 31개" 처럼 보여 주려면 둘 다 필요합니다.
+   *   숨김 상품 포함 여부(includeHidden)만 맞춰 두고 나머지 조건은 뺍니다.
+   */
+  let allQuery = supabase.from(TABLE).select('id', { count: 'exact', head: true });
+  if (!filter.includeHidden) allQuery = allQuery.eq('is_visible', true);
+
+  const [{ count }, { count: allCount }, products] = await Promise.all([
+    countQuery,
+    allQuery,
+    readProducts(filter, filter.light ? LIST_COLUMNS : '*', or),
+  ]);
+
+  return {
+    products,
+    total: count ?? products.length,
+    totalAll: allCount ?? count ?? products.length,
+  };
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {

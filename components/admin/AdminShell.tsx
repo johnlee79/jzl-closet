@@ -121,6 +121,10 @@ const MENU: Group[] = [
       { href: '/admin/members', label: '회원 목록' },
       { href: '/admin/inquiries', label: '문의 목록', badge: 'inquiries' },
       { href: '/admin/reviews', label: '리뷰 관리' },
+      { href: '/admin/referrals', label: '추천 관리', exact: true },
+      { href: '/admin/referrals/goals', label: '목표·사은품' },
+      { href: '/admin/referrals/rewards', label: '보상 처리' },
+      { href: '/admin/referrals/review', label: '의심 건 검토' },
     ],
   },
   {
