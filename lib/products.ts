@@ -180,6 +180,10 @@ export function rowToProduct(row: ProductRow): Product {
     isVisible: row.is_visible !== false,
     freeShipping: Boolean(row.free_shipping),
     displayOrder: row.display_order ?? 0,
+    sellstarId: row.sellstar_id ?? 0,
+    sellstarSyncedAt: row.sellstar_synced_at ?? null,
+    sellstarPrice: row.sellstar_price ?? 0,
+    sellstarSalePrice: row.sellstar_sale_price ?? 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -212,6 +216,15 @@ export function productToRow(input: ProductInput): Omit<ProductRow, 'id' | 'crea
     is_visible: input.isVisible,
     free_shipping: input.freeShipping,
     display_order: input.displayOrder,
+    // ★ 셀스타에서 가져온 상품만 채웁니다. 손으로 등록한 상품은 건드리지 않습니다.
+    ...(input.sellstarId > 0
+      ? {
+          sellstar_id: input.sellstarId,
+          sellstar_synced_at: input.sellstarSyncedAt ?? new Date().toISOString(),
+          sellstar_price: input.sellstarPrice,
+          sellstar_sale_price: input.sellstarSalePrice,
+        }
+      : {}),
   };
 }
 
@@ -514,6 +527,12 @@ export async function duplicateProduct(id: string): Promise<Product> {
   }
 
   const input: ProductInput = {
+    // ★ 사본에는 셀스타 연결을 물려주지 않습니다.
+    //   같은 셀스타 번호가 두 상품에 붙으면 "다시 불러오기" 가 어느 쪽인지 알 수 없습니다.
+    sellstarId: 0,
+    sellstarSyncedAt: null,
+    sellstarPrice: 0,
+    sellstarSalePrice: 0,
     slug,
     name: `${original.name} (사본)`,
     brandSlug: original.brandSlug,
@@ -579,4 +598,32 @@ export async function deleteTemplate(id: string): Promise<void> {
     await supabase.from('templates').delete().eq('id', id).select('id'),
     '템플릿 삭제에 실패했습니다'
   );
+}
+
+/* ------------------------------------------------------------------
+ * 셀스타 연동 (3-D)
+ * ------------------------------------------------------------------ */
+
+/**
+ * 셀스타 상품번호로 이미 가져온 상품을 찾습니다.
+ * ★ 같은 상품을 두 번 등록하지 않도록 가져오기 화면에서 먼저 확인합니다.
+ */
+export async function getProductBySellstarId(
+  sellstarId: number
+): Promise<Product | null> {
+  if (!sellstarId || sellstarId <= 0) return null;
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('*')
+    .eq('sellstar_id', sellstarId)
+    .limit(1)
+    .maybeSingle();
+
+  // sellstar_id 컬럼이 아직 없으면(schema-3d.sql 미실행) 조용히 넘어갑니다.
+  if (error || !data) return null;
+  return rowToProduct(data as ProductRow);
 }

@@ -85,6 +85,17 @@ export type Product = {
   isVisible: boolean;
   freeShipping: boolean;
   displayOrder: number;
+  /**
+   * 셀스타에서 가져온 상품이면 그 상품번호.
+   * ★ 중복 확인과 "셀스타에서 다시 불러오기" 에 씁니다.
+   *   손으로 등록한 상품은 0 입니다.
+   */
+  sellstarId: number;
+  /** 마지막으로 가져온 시각 */
+  sellstarSyncedAt: string | null;
+  /** 가져올 당시의 셀스타 정가·판매가 — 마진을 견주어 볼 때 씁니다. */
+  sellstarPrice: number;
+  sellstarSalePrice: number;
   createdAt: string | null;
   updatedAt: string | null;
 };
@@ -117,6 +128,11 @@ export type ProductRow = {
   is_visible: boolean | null;
   free_shipping: boolean | null;
   display_order: number | null;
+  /** 3-D 에서 추가한 컬럼. 아직 없을 수 있어 선택 항목으로 둡니다. */
+  sellstar_id?: number | null;
+  sellstar_synced_at?: string | null;
+  sellstar_price?: number | null;
+  sellstar_sale_price?: number | null;
   created_at: string | null;
   updated_at: string | null;
 };

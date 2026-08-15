@@ -493,6 +493,51 @@ export function isRibbonActive(ribbon: RibbonSettings, today: string): boolean {
   return true;
 }
 
+/* ── 상품 가져오기 (3-D) ──────────────────────────────────── */
+
+/**
+ * 가져올 때마다 상세페이지 앞뒤에 자동으로 붙는 블록.
+ * ★ 매번 손으로 넣던 브랜드 배너·배송 안내를 한 번만 등록해 두고 씁니다.
+ *   상품마다 개별로 끌 수 있습니다.
+ */
+export type ImportBlock = {
+  enabled: boolean;
+  /** 'image' 면 imageUrl, 'text' 면 body 를 씁니다. */
+  kind: 'image' | 'text';
+  imageUrl: string;
+  body: string;
+};
+
+/** 자주 쓰는 SEO 문구. {상품명} 을 넣으면 가져올 때 실제 상품명으로 바뀝니다. */
+export type ImportTemplate = {
+  id: string;
+  title: string;
+  body: string;
+};
+
+export type ImportSettings = {
+  /** 상세페이지 맨 위에 붙습니다. */
+  topBlock: ImportBlock;
+  /** 상세페이지 맨 아래에 붙습니다. */
+  bottomBlock: ImportBlock;
+  templates: ImportTemplate[];
+};
+
+export function emptyImportBlock(): ImportBlock {
+  return { enabled: false, kind: 'image', imageUrl: '', body: '' };
+}
+
+export const DEFAULT_IMPORT: ImportSettings = {
+  topBlock: emptyImportBlock(),
+  bottomBlock: emptyImportBlock(),
+  templates: [],
+};
+
+/** 템플릿 치환 — 지금은 {상품명} 하나만 씁니다. */
+export function fillTemplate(body: string, productName: string): string {
+  return body.split('{상품명}').join(productName);
+}
+
 /* ── 팝업 (3-A) ───────────────────────────────────────────── */
 
 export const POPUP_POSITIONS = [

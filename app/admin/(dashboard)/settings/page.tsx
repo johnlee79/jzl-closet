@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import AnalyticsForm from '@/components/admin/AnalyticsForm';
 import EventForm from '@/components/admin/EventForm';
+import ImportSettingsForm from '@/components/admin/ImportSettingsForm';
 import FaviconUploader from '@/components/admin/FaviconUploader';
 import LogoUploader from '@/components/admin/LogoUploader';
 import PaymentForm from '@/components/admin/PaymentForm';
@@ -12,6 +13,7 @@ import {
   getAnalyticsSettings,
   getBranding,
   getEventSettings,
+  getImportSettings,
   getPaymentSettings,
   getPointSettings,
   getReviewSettings,
@@ -34,6 +36,7 @@ const TABS = [
   { key: 'reward', label: '리뷰·포인트' },
   { key: 'sales', label: '판매정보' },
   { key: 'event', label: '문구·이벤트' },
+  { key: 'import', label: '가져오기' },
   { key: 'export', label: '데이터 내보내기' },
   { key: 'analytics', label: '분석 (GA4)' },
 ] as const;
@@ -51,7 +54,7 @@ export default async function AdminSettingsPage({
 }) {
   const tab: TabKey = isTab(searchParams.tab) ? searchParams.tab : 'store';
 
-  const [store, branding, shipping, analytics, payment, points, review, sales, event] =
+  const [store, branding, shipping, analytics, payment, points, review, sales, event, importSettings] =
     await Promise.all([
       getStoreSettings(),
       getBranding(),
@@ -62,6 +65,7 @@ export default async function AdminSettingsPage({
       getReviewSettings(),
       getSalesSettings(),
       getEventSettings(),
+      getImportSettings(),
     ]);
 
   return (
@@ -124,6 +128,8 @@ export default async function AdminSettingsPage({
         ) : null}
 
         {tab === 'event' ? <EventForm initial={event} points={points} /> : null}
+
+        {tab === 'import' ? <ImportSettingsForm initial={importSettings} /> : null}
 
         {tab === 'payment' ? (
           <PaymentForm initial={payment} telegramConfigured={isTelegramConfigured()} />

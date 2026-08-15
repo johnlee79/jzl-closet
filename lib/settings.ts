@@ -10,6 +10,7 @@ import {
   DEFAULT_PAYMENT,
   DEFAULT_POINTS,
   DEFAULT_EVENT,
+  DEFAULT_IMPORT,
   DEFAULT_REMOTE_AREA_RULES,
   DEFAULT_REVIEW,
   DEFAULT_REVIEW_TAGS,
@@ -27,6 +28,9 @@ import {
   type CopySettings,
   type DesignSettings,
   type EventSettings,
+  type ImportBlock,
+  type ImportSettings,
+  type ImportTemplate,
   type PaymentSettings,
   type PointRule,
   type PointSettings,
@@ -76,6 +80,7 @@ export const REVIEW_KEY = 'review';
 export const POINTS_KEY = 'points';
 export const SALES_KEY = 'sales';
 export const EVENT_KEY = 'event';
+export const IMPORT_KEY = 'import';
 
 /** 테이블이 아직 없을 때 PostgREST 가 돌려주는 코드들 */
 const MISSING_TABLE_CODES = new Set(['42P01', 'PGRST205', 'PGRST202']);
@@ -586,6 +591,46 @@ export const getCachedEvent = unstable_cache(getEventSettings, ['event'], {
   tags: [SETTINGS_TAG],
   revalidate: 3600,
 });
+
+/* ── 상품 가져오기 (3-D) ──────────────────────────────────── */
+
+function normalizeImportBlock(value: unknown): ImportBlock {
+  if (!value || typeof value !== 'object') return { ...DEFAULT_IMPORT.topBlock };
+  const raw = value as Record<string, unknown>;
+  const kind = text(raw.kind, 'image');
+  return {
+    enabled: raw.enabled === true,
+    kind: kind === 'text' ? 'text' : 'image',
+    imageUrl: text(raw.imageUrl, ''),
+    body: text(raw.body, ''),
+  };
+}
+
+export function normalizeImport(value: unknown): ImportSettings {
+  if (!value || typeof value !== 'object') return DEFAULT_IMPORT;
+  const raw = value as Record<string, unknown>;
+
+  const templates: ImportTemplate[] = Array.isArray(raw.templates)
+    ? raw.templates
+        .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+        .map((item, index) => ({
+          id: text(item.id, String(index + 1)),
+          title: text(item.title, ''),
+          body: text(item.body, ''),
+        }))
+        .filter((item) => item.title.trim() || item.body.trim())
+    : [];
+
+  return {
+    topBlock: normalizeImportBlock(raw.topBlock),
+    bottomBlock: normalizeImportBlock(raw.bottomBlock),
+    templates,
+  };
+}
+
+export async function getImportSettings(): Promise<ImportSettings> {
+  return normalizeImport(await readSetting(IMPORT_KEY));
+}
 
 /** 푸터용 — 계좌번호를 뺀 구매안전 서비스 표시 정보만 돌려줍니다. */
 export async function getEscrowNotice(): Promise<{

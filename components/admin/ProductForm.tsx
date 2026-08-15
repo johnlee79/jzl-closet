@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import DetailEditor from '@/components/admin/DetailEditor';
 import ImageUploader from '@/components/admin/ImageUploader';
+import SellstarResync from '@/components/admin/SellstarResync';
 import OptionEditor from '@/components/admin/OptionEditor';
 import {
   createTemplateAction,
@@ -33,6 +34,11 @@ type ProductFormProps = {
 
 function emptyInput(): ProductInput {
   return {
+    // 손으로 등록하는 상품은 셀스타와 연결되지 않습니다.
+    sellstarId: 0,
+    sellstarSyncedAt: null,
+    sellstarPrice: 0,
+    sellstarSalePrice: 0,
     slug: '',
     name: '',
     brandSlug: null,
@@ -260,6 +266,32 @@ export default function ProductForm({
       ) : null}
 
       <div className="mt-5 flex flex-col gap-5">
+        {/* ── 셀스타 연결 (가져온 상품만) ───────────────── */}
+        {form.sellstarId > 0 ? (
+          <div className="mb-5">
+            <SellstarResync
+              sellstarId={form.sellstarId}
+              syncedAt={form.sellstarSyncedAt}
+              currentPrice={form.price}
+              currentOriginalPrice={form.originalPrice}
+              currentCombinations={form.optionCombinations}
+              onApply={(patch) => {
+                setForm((prev) => ({
+                  ...prev,
+                  ...(patch.price !== undefined ? { price: patch.price } : {}),
+                  ...(patch.originalPrice !== undefined
+                    ? { originalPrice: patch.originalPrice }
+                    : {}),
+                  ...(patch.combinations !== undefined
+                    ? { optionCombinations: patch.combinations }
+                    : {}),
+                  sellstarSyncedAt: new Date().toISOString(),
+                }));
+              }}
+            />
+          </div>
+        ) : null}
+
         {/* ── 1) 기본 정보 ─────────────────────────────── */}
         <section className={sectionClass}>
           <h2 className={sectionTitle}>1. 기본 정보</h2>
