@@ -4,10 +4,20 @@ import { runAutoCancel } from '@/lib/auto-cancel';
 /**
  * 입금대기 자동취소 — 정기 실행 입구.
  *
- * ★ 10분마다 부르면 됩니다. 부르는 쪽은 둘 중 아무거나 됩니다.
+ * ★★ vercel.json 의 cron 주기 (2026-08-15 현재 하루 1회)
+ *   Hobby 플랜은 크론을 하루 1회만 허용합니다. `*\/10 * * * *` 로 두면
+ *   배포 자체가 거부됩니다. 그래서 `0 19 * * *` (UTC 19시 = 한국시간 새벽 4시)로 두었습니다.
+ *   ▶ Pro 로 전환한 뒤 vercel.json 의 schedule 을 `*\/10 * * * *` 로 되돌리세요.
+ *     (vercel.json 은 주석을 넣을 수 없는 엄격한 JSON 이라 이 메모를 여기에 둡니다)
+ *
+ *   하루 1회여도 큰 문제는 없습니다. 관리자가 주문 목록·대시보드에 들어올 때마다
+ *   기한이 지난 건을 정리하므로(lib/auto-cancel.ts), 실제로는 그쪽이 먼저 처리합니다.
+ *   다만 관리자가 하루 종일 안 들어오면 그만큼 취소가 늦어집니다.
+ *
+ * ★ 부르는 쪽은 둘 중 아무거나 됩니다.
  *
  *   1) Vercel Cron (권장 · 설정이 가장 간단합니다)
- *      vercel.json 에 이미 넣어 두었습니다. Pro 로 올리면 그대로 돕니다.
+ *      vercel.json 에 이미 넣어 두었습니다.
  *      Vercel 이 보내는 Authorization: Bearer <CRON_SECRET> 을 확인합니다.
  *
  *   2) Supabase pg_cron + pg_net

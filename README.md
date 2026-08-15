@@ -21,7 +21,9 @@ GitHub 저장소를 Vercel에서 New Project → Import → Deploy 하면 추가
 배포 도메인이 정해지면 `lib/store.ts` 의 `SITE_URL` 을 실제 주소로 바꿔주세요.
 (사이트맵·JSON-LD·OG 태그가 이 값을 사용합니다.)
 
-환경변수는 `.env.local` 에 있는 값을 Vercel Project → Settings → Environment Variables 에 그대로 넣습니다. 특히 `CRON_SECRET` 은 입금대기 자동취소(`/api/cron/auto-cancel`, `vercel.json` 에 10분 주기로 등록)를 여는 열쇠라, 빠뜨리면 빌드는 되지만 자동취소가 영영 돌지 않습니다.
+환경변수는 `.env.local` 에 있는 값을 Vercel Project → Settings → Environment Variables 에 그대로 넣습니다. 특히 `CRON_SECRET` 은 입금대기 자동취소(`/api/cron/auto-cancel`)를 여는 열쇠라, 빠뜨리면 빌드는 되지만 자동취소가 영영 돌지 않습니다.
+
+`vercel.json` 의 크론은 **Hobby 플랜 제약(하루 1회)** 에 맞춰 `0 19 * * *` (UTC 19시 = 한국시간 새벽 4시)로 두었습니다. `*/10 * * * *` 로 두면 배포 자체가 거부됩니다. **Pro 로 전환하면 10분 주기로 되돌리세요.** 그 전까지는 관리자가 주문 목록·대시보드에 들어올 때마다 기한이 지난 건을 정리하므로 실무상 문제는 없습니다.
 
 ## Supabase SQL 실행 순서
 
