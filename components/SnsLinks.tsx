@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { SNS_ICONS, WeChatIcon } from '@/components/SnsIcons';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { SNS_BRAND_COLORS, SNS_ICONS, WeChatIcon } from '@/components/SnsIcons';
 import { SNS_ITEMS, hasAnySns, type SnsSettings } from '@/lib/site-config';
 
 /**
@@ -16,13 +16,24 @@ import { SNS_ITEMS, hasAnySns, type SnsSettings } from '@/lib/site-config';
  *   위챗만 다릅니다. 위챗은 프로필 주소라는 개념이 없어 QR 을 보여 줘야 하고,
  *   그래서 밖으로 내보내지 않고 이 자리에서 QR 을 띄웁니다.
  *
- * ★ 색을 칠하지 않습니다. 평소 muted, 올리면 ink 입니다. (브랜드컬러 금지)
+ * ★ 평소에는 전부 muted 한 색입니다. 마우스를 올린 하나만 그 SNS 의
+ *   브랜드 컬러로 부드럽게 넘어갑니다. 터치 화면에서는 색이 들어오지 않습니다.
+ *   (모양은 app/globals.css 의 .sns-icon 에 있습니다 — 거기 이유를 적어 두었습니다)
  * ★ 그림자를 쓰지 않습니다. 모달도 테두리로만 구분합니다.
  */
 
-/** 아이콘 하나가 차지하는 자리 — 손가락으로 누를 수 있는 크기(44px)를 지킵니다. */
-const ICON_SLOT =
-  'flex h-11 w-11 items-center justify-center text-muted transition-colors duration-200 hover:text-ink';
+/**
+ * 아이콘 하나가 차지하는 자리.
+ *
+ * ★ 그림은 24px 이지만 누를 수 있는 칸은 44px 입니다. 손가락은 뾰족하지 않습니다.
+ *   그래서 아래 목록에 gap-2 를 더해도 눈에 보이는 아이콘 사이는 훨씬 넓습니다.
+ */
+const ICON_SLOT = 'sns-icon';
+
+/** 브랜드 컬러를 CSS 변수로 넘깁니다. 색을 어디에 쓸지는 .sns-icon 이 정합니다. */
+function brandStyle(color: string) {
+  return { '--sns-brand': color } as CSSProperties;
+}
 
 function CloseIcon() {
   return (
@@ -109,7 +120,12 @@ export default function SnsLinks({
 
   return (
     <div className={className}>
-      <ul className="-ml-2.5 flex flex-wrap items-center">
+      {/*
+        ★ -ml-2.5 는 첫 아이콘의 왼쪽 여백을 걷어내 위아래 글줄과 왼끝을 맞춥니다.
+          44px 칸 안에 24px 그림이라 양쪽에 10px 씩 남고, 그만큼만 당깁니다.
+          아이콘 크기를 바꾸면 이 숫자도 (칸 - 그림) / 2 로 다시 맞춰야 합니다.
+      */}
+      <ul className="-ml-2.5 flex flex-wrap items-center gap-2">
         {SNS_ITEMS.map((item) => {
           const url = sns.links[item.key].trim();
           if (!url) return null;
@@ -123,6 +139,7 @@ export default function SnsLinks({
                 rel="noopener noreferrer"
                 aria-label={`${item.label} 새 창에서 열기`}
                 className={ICON_SLOT}
+                style={brandStyle(SNS_BRAND_COLORS[item.key])}
               >
                 <Icon />
               </a>
@@ -138,6 +155,7 @@ export default function SnsLinks({
               aria-label="위챗 QR 코드 보기"
               aria-haspopup="dialog"
               className={ICON_SLOT}
+              style={brandStyle(SNS_BRAND_COLORS.wechat)}
             >
               <WeChatIcon />
             </button>

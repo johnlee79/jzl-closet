@@ -8,18 +8,24 @@ import type { SnsKey } from '@/lib/site-config';
  * ★ 이모지·외부 이미지 링크를 쓰지 않습니다.
  *   이모지는 기기마다 모양이 다르고, 외부 이미지는 남의 서버가 죽으면 같이 깨집니다.
  *
- * ★ 색을 칠하지 않습니다. 전부 currentColor 입니다.
- *   각 SNS 의 브랜드컬러(인스타 그라데이션·틱톡 청록/분홍)를 그대로 쓰면
- *   절제된 푸터에 색이 네 개 튀어 들어옵니다. 쓰는 쪽에서 ink·muted 를 지정합니다.
+ * ★ 그림 자체에는 색을 칠하지 않습니다. 전부 currentColor 입니다.
+ *   색은 아래 SNS_BRAND_COLORS 로 따로 두고, 쓰는 쪽(SnsLinks)이
+ *   글자색으로 얹습니다. 평소에는 muted 라 한 줄이 조용하게 서 있고,
+ *   마우스를 올린 하나만 제 색이 됩니다.
  *
  * ★ 아이콘을 하나 더 붙이려면
  *     1) lib/site-config.ts 의 SnsKey 와 SNS_ITEMS 에 추가
- *     2) 여기 SNS_ICONS 에 추가
+ *     2) 여기 SNS_ICONS 와 SNS_BRAND_COLORS 에 추가
  *   화면(SnsLinks)과 관리자 폼은 목록을 돌며 그리므로 손댈 것이 없습니다.
  */
 
-/** 모든 아이콘이 쓰는 크기. 한 줄에 섞여도 눈높이가 맞습니다. */
-const SIZE = { width: 20, height: 20, viewBox: '0 0 24 24' } as const;
+/**
+ * 모든 아이콘이 쓰는 크기. 한 줄에 섞여도 눈높이가 맞습니다.
+ *
+ * ★ 24px 입니다. 20px 은 손가락으로 겨눌 때 무엇을 누르는지 알아보기 어려웠습니다.
+ *   누를 수 있는 자리(44px)는 SnsLinks 가 따로 잡습니다. 그림만 24px 입니다.
+ */
+const SIZE = { width: 24, height: 24, viewBox: '0 0 24 24' } as const;
 
 function Instagram() {
   return (
@@ -77,4 +83,19 @@ export const SNS_ICONS: Record<SnsKey, () => JSX.Element> = {
   instagram: Instagram,
   threads: Threads,
   tiktok: TikTok,
+};
+
+/**
+ * 마우스를 올렸을 때만 쓰는 각 SNS 의 브랜드 컬러.
+ *
+ * ★ 인스타는 원래 보라–주황 그라데이션이지만 단색(#E4405F)으로 씁니다.
+ *   그라데이션은 SVG 안에 defs 를 넣어야 하고, currentColor 로 못 다뤄
+ *   아이콘 하나 때문에 나머지 규칙이 전부 갈라집니다. 색 하나로 충분합니다.
+ * ★ 위챗은 SnsKey 에 없습니다. 링크가 아니라 QR 모달이라 따로 둡니다.
+ */
+export const SNS_BRAND_COLORS: Record<SnsKey | 'wechat', string> = {
+  instagram: '#E4405F',
+  threads: '#000000',
+  tiktok: '#000000',
+  wechat: '#07C160',
 };

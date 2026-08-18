@@ -113,6 +113,41 @@
     @apply text-wine underline decoration-wine underline-offset-4;
   }
 
+  /* ============================================================
+     SNS 아이콘 한 칸 (components/SnsLinks.tsx)
+     ============================================================
+
+     ★ 왜 Tailwind 의 hover: 가 아니라 여기서 처리하는가
+       hover: 유틸리티는 터치 화면에서도 걸립니다. 손가락으로 한 번 누르면
+       그 색이 손을 떼도 남아, 방금 누른 아이콘 하나만 계속 빨간 상태가 됩니다.
+       (hover: hover) 로 감싸면 진짜 마우스가 있는 기기에서만 켜집니다.
+       모바일에서는 어떤 아이콘도 색이 들어오지 않고 muted 그대로입니다.
+
+     ★ 브랜드 컬러는 --sns-brand 로 받습니다. 인스타·틱톡·위챗이 각각 다른데
+       색마다 클래스를 만들면 아이콘을 늘릴 때마다 CSS 를 같이 고쳐야 합니다.
+       값은 components/SnsIcons.tsx 의 SNS_BRAND_COLORS 한 곳에 있습니다.
+
+     ★ 키보드 초점(focus-visible)에도 같은 색을 줍니다. 마우스를 못 쓰는 손님이
+       지금 어디에 서 있는지는 알아야 합니다. 이건 호버가 아니라 초점입니다.
+
+     ★ 움직임을 줄여 달라는 설정(prefers-reduced-motion)은 이 파일 맨 아래
+       전역 규칙이 이미 잡습니다. 전환 없이 색만 즉시 바뀝니다.
+     ============================================================ */
+  .sns-icon {
+    @apply flex h-11 w-11 items-center justify-center transition-colors duration-200;
+    color: var(--muted);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .sns-icon:hover {
+      color: var(--sns-brand, var(--ink));
+    }
+  }
+
+  .sns-icon:focus-visible {
+    color: var(--sns-brand, var(--ink));
+  }
+
   /* 상세 본문(관리자 편집기에서 저장한 HTML) — 굵게·링크·정렬만 씁니다. */
   .detail-body a {
     @apply text-wine underline decoration-wine underline-offset-4;

@@ -5,8 +5,11 @@ import SnsLinks from '@/components/SnsLinks';
 import { visibleCategories, type Category } from '@/lib/categories';
 import { hasAnySns, type SnsSettings, type StoreSettings } from '@/lib/site-config';
 
+/** 푸터 링크 한 줄. strong 은 개인정보처리방침처럼 굵게 낼 항목에만 붙입니다. */
+type FooterLink = { href: string; label: string; strong?: boolean };
+
 /**
- * 이용 안내 목록.
+ * INFORMATION — 손님이 '무엇을 사고 어디까지 왔는지' 보는 곳.
  *
  * ★ '브랜드 소개' 와 '브랜드 목록' 은 서로 다른 곳입니다. (3-G 에서 정리했습니다)
  *     브랜드 소개 — 우리 자체 브랜드 페이지 (/brand/jzl-closet)
@@ -14,18 +17,59 @@ import { hasAnySns, type SnsSettings, type StoreSettings } from '@/lib/site-conf
  *   예전에는 소개가 /about, 목록이 /brand 로 가 있었습니다.
  *   브랜드 소개 주소는 DB 에 그 브랜드가 있어야 열리므로 레이아웃이 계산해 넘겨 줍니다.
  */
-function infoLinks(brandIntroHref: string) {
+function informationLinks(brandIntroHref: string): FooterLink[] {
   return [
     { href: brandIntroHref, label: '브랜드 소개' },
-    { href: '/notice', label: '공지사항' },
     { href: '/brands', label: '브랜드 목록' },
-    { href: '/guide', label: '배송·교환·반품 안내' },
-    { href: '/terms', label: '이용약관' },
-    { href: '/privacy', label: '개인정보처리방침' },
     { href: '/order', label: '장바구니' },
     { href: '/order-lookup', label: '주문 조회' },
     { href: '/inquiry/new', label: '1:1 문의' },
   ];
+}
+
+/**
+ * CUSTOMER — 공지와 약관처럼 '읽어 두어야 하는' 것들.
+ *
+ * ★ 개인정보처리방침만 굵게 냅니다. 취향이 아니라 의무입니다.
+ *   개인정보 보호법은 처리방침을 다른 고지사항과 구분해
+ *   알아보기 쉽게 표시하도록 정하고 있습니다. 굵기를 빼지 마세요.
+ */
+const CUSTOMER_LINKS: FooterLink[] = [
+  { href: '/notice', label: '공지사항' },
+  { href: '/guide', label: '배송·교환·반품 안내' },
+  { href: '/terms', label: '이용약관' },
+  { href: '/privacy', label: '개인정보처리방침', strong: true },
+];
+
+/** 제목 한 줄 + 링크 목록. 세 열이 모양을 공유하도록 한 곳에 모았습니다. */
+function FooterNav({
+  title,
+  ariaLabel,
+  links,
+}: {
+  title: string;
+  ariaLabel: string;
+  links: FooterLink[];
+}) {
+  return (
+    <nav aria-label={ariaLabel}>
+      <p className="label-xs">{title}</p>
+      <ul className="mt-4 flex flex-col gap-3">
+        {links.map((link) => (
+          <li key={link.href}>
+            <Link
+              href={link.href}
+              className={`tap-target break-keep text-[15px] text-ink transition-opacity duration-200 hover:opacity-60 ${
+                link.strong ? 'font-semibold' : ''
+              }`}
+            >
+              {link.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
 }
 
 /** 구매안전(에스크로) 서비스 표시. 설정에 값이 있을 때만 넘어옵니다. */
@@ -50,8 +94,14 @@ export default function Footer({
   /** '브랜드 소개' 가 갈 곳. 자체 브랜드 페이지가 없으면 /about 로 옵니다. */
   brandIntroHref: string;
 }) {
-  const menu = visibleCategories(categories);
-  const links = infoLinks(brandIntroHref);
+  /** CATEGORY 열 — DB 분류 뒤에 '전체 상품' 을 한 줄 덧붙입니다. */
+  const categoryLinks: FooterLink[] = [
+    ...visibleCategories(categories).map((category) => ({
+      href: `/category/${category.slug}`,
+      label: category.nameKo,
+    })),
+    { href: '/products', label: '전체 상품' },
+  ];
 
   /** 사업자 정보 — 표시 순서를 여기 한 줄로 정합니다. */
   const businessRows = [
@@ -65,8 +115,19 @@ export default function Footer({
 
   return (
     <footer className="mt-20 border-t border-stone md:mt-32">
-      <div className="shell grid grid-cols-1 gap-12 py-16 md:grid-cols-4 md:gap-8 md:py-20">
-        <div className="md:col-span-2">
+      {/*
+        브랜드 블록 + 링크 열 세 개입니다. 화면 폭에 따라 세 단계로 접힙니다.
+
+        ★ 모바일(2칸) — 브랜드가 한 줄을 다 쓰고, 그 아래 링크 열이 2단으로 흐릅니다.
+            CATEGORY · INFORMATION 이 한 줄, CUSTOMER 가 그 아래로 내려갑니다.
+          아코디언은 쓰지 않았습니다. 열어 봐야 나오는 메뉴는 눌러 본 사람만 보고,
+          약관·처리방침은 '항상 보이는 것' 이라야 표시한 의미가 있습니다.
+        ★ 태블릿(3칸) — 브랜드가 한 줄, 링크 열 셋이 그 아래 나란히 섭니다.
+        ★ 데스크톱(5칸) — 브랜드가 두 칸, 링크 열이 한 칸씩 오른쪽을 채웁니다.
+          열을 하나 더 늘릴 일이 생기면 lg:grid-cols-6 으로 올리면 됩니다.
+      */}
+      <div className="shell grid grid-cols-2 gap-x-6 gap-y-12 py-16 md:grid-cols-3 md:gap-8 md:py-20 lg:grid-cols-5">
+        <div className="col-span-2 md:col-span-3 lg:col-span-2">
           <p className="font-display text-[22px] font-light tracking-[0.34em] text-ink">
             {store.name}
           </p>
@@ -98,45 +159,13 @@ export default function Footer({
           </div>
         </div>
 
-        <nav aria-label="카테고리">
-          <p className="label-xs">CATEGORY</p>
-          <ul className="mt-4 flex flex-col gap-3">
-            {menu.map((category) => (
-              <li key={category.slug}>
-                <Link
-                  href={`/category/${category.slug}`}
-                  className="tap-target text-[15px] text-ink transition-opacity duration-200 hover:opacity-60"
-                >
-                  {category.nameKo}
-                </Link>
-              </li>
-            ))}
-            <li>
-              <Link
-                href="/products"
-                className="tap-target text-[15px] text-ink transition-opacity duration-200 hover:opacity-60"
-              >
-                전체 상품
-              </Link>
-            </li>
-          </ul>
-        </nav>
-
-        <nav aria-label="이용 안내">
-          <p className="label-xs">INFORMATION</p>
-          <ul className="mt-4 flex flex-col gap-3">
-            {links.map((link) => (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  className="tap-target text-[15px] text-ink transition-opacity duration-200 hover:opacity-60"
-                >
-                  {link.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <FooterNav title="CATEGORY" ariaLabel="카테고리" links={categoryLinks} />
+        <FooterNav
+          title="INFORMATION"
+          ariaLabel="이용 안내"
+          links={informationLinks(brandIntroHref)}
+        />
+        <FooterNav title="CUSTOMER" ariaLabel="고객 안내" links={CUSTOMER_LINKS} />
       </div>
 
       {/* SNS — 사업자 정보 바로 위. 채운 항목이 하나도 없으면 이 줄 자체가 없습니다. */}
