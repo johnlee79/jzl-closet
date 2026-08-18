@@ -161,10 +161,83 @@ export type Banner = {
   isVisible: boolean;
 };
 
+/**
+ * 메인 화면 섹션 노출 (3-K)
+ *
+ * ★ 왜 필요한가
+ *   준비가 덜 된 섹션을 잠시 감추고 싶을 때가 있습니다. (예: 분류 이미지를 아직 못 만듦)
+ *   지금까지는 코드를 고쳐야만 가능했습니다.
+ * ★ 끄면 그 섹션이 통째로 사라집니다. 빈 여백이 남지 않도록 section 태그째 그리지 않습니다.
+ * ★ 새 키를 넣을 때는 MAIN_SECTIONS 에도 한 줄 넣어 주세요.
+ *   관리자 화면은 그 목록을 돌면서 그리므로 화면을 따로 고칠 필요가 없습니다.
+ */
+export type MainSectionKey =
+  | 'banner'
+  | 'hero'
+  | 'newArrival'
+  | 'selection'
+  | 'category'
+  | 'brands';
+
+export type MainSections = Record<MainSectionKey, boolean>;
+
+/**
+ * 관리자 화면에 그대로 쓰는 목록.
+ * ★ where 는 그 섹션이 화면 어디에 있는지입니다. 이름만으로는 어느 섹션인지
+ *   운영자가 알 수 없어 자리 설명을 반드시 붙입니다.
+ */
+export const MAIN_SECTIONS: {
+  key: MainSectionKey;
+  label: string;
+  where: string;
+}[] = [
+  {
+    key: 'banner',
+    label: '메인 배너',
+    where: '맨 위, 슬라이드로 넘어가는 큰 사진. 등록한 배너가 없으면 원래도 나오지 않습니다',
+  },
+  {
+    key: 'hero',
+    label: '히어로 (브랜드명·소개·버튼)',
+    where: '배너 바로 아래, 브랜드명 큰 글씨와 버튼 두 개가 있는 자리',
+  },
+  {
+    key: 'newArrival',
+    label: 'NEW ARRIVAL (이번에 새로 들어온 것)',
+    where: '메인 위쪽, 상품 카드 네 장이 나오는 자리',
+  },
+  {
+    key: 'selection',
+    label: 'SELECTION (고르는 기준)',
+    where: '메인 중간, OUR STORY 라벨이 붙은 소개 글 자리',
+  },
+  {
+    key: 'category',
+    label: 'CATEGORY',
+    where: '메인 중간, 분류 네 칸이 나오는 자리',
+  },
+  {
+    key: 'brands',
+    label: 'BRANDS (취급 브랜드)',
+    where: '메인 아래쪽, 브랜드 이름이 격자로 늘어선 자리',
+  },
+];
+
+export const DEFAULT_MAIN_SECTIONS: MainSections = {
+  banner: true,
+  hero: true,
+  newArrival: true,
+  selection: true,
+  category: true,
+  brands: true,
+};
+
 export type DesignSettings = {
   banners: Banner[];
   /** 자동 슬라이드 간격(ms). 배너는 천천히 넘어가야 합니다. */
   interval: number;
+  /** 메인 섹션 노출 (3-K). 기존 design 설정을 확장했습니다. */
+  sections: MainSections;
 };
 
 /** 배너 최대 개수 */
@@ -182,6 +255,7 @@ export const BANNER_SIZE_MOBILE = '1080 × 1350';
 export const DEFAULT_DESIGN: DesignSettings = {
   banners: [],
   interval: DEFAULT_BANNER_INTERVAL,
+  sections: DEFAULT_MAIN_SECTIONS,
 };
 
 export function emptyBanner(id: string): Banner {
@@ -756,6 +830,13 @@ export const DEFAULT_ABOUT_PAGE: AboutPageSettings = { imageUrl: '' };
 
 /** 권장 이미지 크기 — 관리자 화면에 그대로 표시합니다. (가로로 넓은 배너 비율) */
 export const ABOUT_IMAGE_SIZE = '1600 × 700';
+
+/**
+ * 분류 대표 이미지 권장 크기. (3-K)
+ * ★ 메인 CATEGORY 카드는 3:4 로 잘라 씁니다. 데스크톱 네 칸 기준 한 칸이 약 320px 이라
+ *   고해상도 화면(2배)까지 감안해 가로 800 을 잡았습니다. 800 × 1067 이 3:4 입니다.
+ */
+export const CATEGORY_IMAGE_SIZE = '800 × 1067 (3:4)';
 
 /* ── 사이트 문구 ──────────────────────────────────────────── */
 

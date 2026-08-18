@@ -40,6 +40,13 @@ export type Category = {
   order: number;
   isVisible: boolean;
   description: string;
+  /**
+   * 대표 이미지 (R2). 관리자 > 분류 관리에서 올립니다. (3-K)
+   * ★ 비어 있으면 메인 CATEGORY 카드가 이미지 없이 글자만 나옵니다.
+   *   예전에는 public/images/category/{slug}.jpg 를 보고 있었는데 그 파일이 없어
+   *   네 칸이 전부 회색 상자였습니다.
+   */
+  imageUrl: string;
   children: SubCategory[];
   matchType?: 'all' | 'flag';
   matchFlag?: 'isSale';
@@ -68,6 +75,7 @@ export const FALLBACK_CATEGORIES: Category[] = [
     nameKo: '전체',
     order: 10,
     isVisible: true,
+    imageUrl: '',
     matchType: 'all',
     children: [],
     description:
@@ -79,6 +87,7 @@ export const FALLBACK_CATEGORIES: Category[] = [
     nameKo: '의류',
     order: 20,
     isVisible: true,
+    imageUrl: '',
     description:
       '매일 입어도 부담이 없는 옷을 고릅니다. 실측 치수를 모두 표기하니 평소 입는 옷과 비교해 보고 고르세요.',
     children: [
@@ -99,6 +108,7 @@ export const FALLBACK_CATEGORIES: Category[] = [
     nameKo: '가방·지갑',
     order: 30,
     isVisible: true,
+    imageUrl: '',
     description:
       '하루치 짐이 자연스럽게 들어가는 크기와, 어깨에서 흘러내리지 않는 끈. 매일 드는 가방의 기준을 그 두 가지에 두었습니다.',
     children: [
@@ -116,6 +126,7 @@ export const FALLBACK_CATEGORIES: Category[] = [
     nameKo: '슈즈',
     order: 40,
     isVisible: true,
+    imageUrl: '',
     description:
       '하루 종일 신고 걸어도 발이 아프지 않은지를 먼저 봅니다. 굽 높이와 발볼 여유를 상세 페이지에 적어 두었습니다.',
     children: [
@@ -131,6 +142,7 @@ export const FALLBACK_CATEGORIES: Category[] = [
     nameKo: '액세서리',
     order: 50,
     isVisible: true,
+    imageUrl: '',
     description:
       '가까이서 보면 보이고 멀리서 보면 옷을 방해하지 않는 크기. 하루 종일 착용해도 부담이 없는 무게로 골랐습니다.',
     children: [
@@ -148,6 +160,7 @@ export const FALLBACK_CATEGORIES: Category[] = [
     nameKo: '세일',
     order: 60,
     isVisible: true,
+    imageUrl: '',
     matchType: 'flag',
     matchFlag: 'isSale',
     children: [],
@@ -160,6 +173,7 @@ export const FALLBACK_CATEGORIES: Category[] = [
     nameKo: '브랜드',
     order: 70,
     isVisible: false,
+    imageUrl: '',
     children: [],
     description:
       'JZL CLOSET이 소개하는 브랜드입니다. 브랜드별 소개와 상품은 /brand 에서 계속 보실 수 있습니다.',
@@ -170,6 +184,7 @@ export const FALLBACK_CATEGORIES: Category[] = [
     nameKo: '뷰티',
     order: 80,
     isVisible: false,
+    imageUrl: '',
     description: '향과 피부에 관한 물건입니다. 준비가 끝나는 대로 공개합니다.',
     children: [
       { slug: 'perfume', label: 'PERFUME', nameKo: '향수', order: 10, isVisible: true },

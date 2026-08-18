@@ -1,5 +1,6 @@
 'use client';
 
+import { createPortal } from 'react-dom';
 import {
   useCallback,
   useEffect,
@@ -29,6 +30,21 @@ import {
  * ★ 열려 있는 동안 하단 구매 바와 맨 위로 버튼을 숨깁니다.
  *   html 에 data-viewer-open 을 달아 두면 globals.css 가 둘을 감춥니다.
  *   컴포넌트끼리 서로를 알 필요가 없어집니다.
+ *
+ * ★★ createPortal 로 document.body 바로 아래에 그립니다. 반드시 필요합니다. (3-K)
+ *   이 뷰어를 부르는 ProductGallery 는 상품 상세에서 `lg:sticky` 가 걸린 칸 안에
+ *   들어 있습니다. position: sticky 는 쌓임 맥락(stacking context)을 새로 만듭니다.
+ *   그 안에서는 z-index 가 아무리 커도 바깥 형제들과 겨루지 못합니다.
+ *
+ *   실제로 데스크톱(1920px)에서 이렇게 깨져 있었습니다.
+ *     · 뷰어는 fixed 이고 rect 도 0,0,1920,911 로 화면 전체를 덮고 있었는데
+ *     · 닫기 버튼 자리에서 elementFromPoint 를 찍으면 사이트 헤더(z-40)가 잡혔습니다
+ *     · 즉 뒤쪽 헤더·구매 영역이 뷰어 위로 덧칠되어, X 버튼이 눌리지 않고
+ *       옵션 선택 박스가 뚫고 올라와 보였습니다
+ *     · 아래쪽 n / N 표시만 멀쩡했던 것은 그 자리에 덧칠할 요소가 없어서였습니다
+ *
+ *   portal 로 body 바로 아래에 두면 그 맥락을 벗어나 z-[70] 이 제 값을 합니다.
+ *   ★ 모바일이 멀쩡했던 이유 — sticky 는 lg 이상에서만 걸립니다.
  */
 
 /** 확대 배율 한계. 너무 키우면 원본 해상도가 드러나 오히려 흐려 보입니다. */
@@ -248,7 +264,13 @@ export default function ImageViewer({
 
   const src = images[index] ?? '';
 
-  return (
+  /*
+    ★ portal 은 브라우저에서만 만들 수 있습니다. 서버에서 그릴 때는 아무것도 내지 않고,
+      붙고 난 뒤에 body 아래로 옮겨 그립니다. (그래야 서버·클라이언트 결과가 어긋나지 않습니다)
+  */
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div
       ref={dialogRef}
       role="dialog"
@@ -258,14 +280,23 @@ export default function ImageViewer({
       onClick={onClose}
       className="fixed inset-0 z-[70] flex flex-col bg-ink"
     >
-      {/* ── 위: 닫기 ─────────────────────────────────── */}
-      <div className="flex shrink-0 items-center justify-end p-4">
+      {/*
+        ── 위: 닫기 ───────────────────────────────────
+        ★ 흰 바탕 원에 검정 X 입니다. (3-K)
+          예전에는 어두운 배경 위에 흰 선 아이콘만 두었는데, 밝은 사진이 화면을
+          꽉 채우면 아이콘이 사진에 묻혀 보이지 않았습니다. 바탕을 깔면
+          사진이 밝든 어둡든 항상 같은 자리에서 보입니다.
+        ★ 44×44 입니다. 손가락으로 누를 수 있는 최소 크기입니다.
+        ★ 화면 가장자리에서 16px(데스크톱 24px) 띄웁니다.
+        ★ 그림자를 쓰지 않습니다. 바탕색만으로 구분합니다. (프로젝트 규칙)
+      */}
+      <div className="flex shrink-0 items-center justify-end p-4 md:p-6">
         <button
           ref={closeRef}
           type="button"
           onClick={onClose}
           aria-label="닫기"
-          className="flex h-11 w-11 items-center justify-center text-paper transition-opacity duration-200 hover:opacity-70"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-paper text-ink transition-colors duration-200 hover:bg-stone"
         >
           <CloseIcon />
         </button>
@@ -322,6 +353,7 @@ export default function ImageViewer({
           {index + 1} / {total}
         </span>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

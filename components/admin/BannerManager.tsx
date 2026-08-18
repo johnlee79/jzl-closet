@@ -58,7 +58,9 @@ export default function BannerManager({ initial }: { initial: DesignSettings }) 
   const save = () => {
     setMessage(null);
     startTransition(async () => {
-      const result = await saveDesignAction({ banners, interval });
+      // ★ 섹션 노출은 이 화면에서 다루지 않습니다. 지금 값을 그대로 다시 저장해
+      //   배너만 고쳐도 섹션 설정이 초기화되지 않게 합니다.
+      const result = await saveDesignAction({ banners, interval, sections: initial.sections });
       if (!result.ok) {
         setMessage({ tone: 'error', text: result.error });
         return;
@@ -127,9 +129,9 @@ export default function BannerManager({ initial }: { initial: DesignSettings }) 
 
         {banners.length === 0 ? (
           <p className="mt-4 rounded-md bg-slate-50 px-3 py-4 text-[13px] leading-relaxed text-slate-600">
-            등록된 배너가 없습니다. 배너를 하나도 넣지 않으면 첫 화면은 지금처럼
-            <code className="mx-1 rounded bg-white px-1">public/images/main/hero.jpg</code>
-            를 씁니다.
+            등록된 배너가 없습니다. 배너를 하나도 넣지 않으면 첫 화면은 큰 사진 없이
+            브랜드명부터 시작합니다. (3-K 에서 바꿨습니다 — 예전에는 없는 파일을
+            가리키느라 회색 상자만 남았습니다)
           </p>
         ) : (
           <ul className="mt-4 flex flex-col gap-4">

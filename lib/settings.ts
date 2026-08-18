@@ -11,6 +11,7 @@ import {
   DEFAULT_POINTS,
   DEFAULT_EVENT,
   DEFAULT_HERO_BUTTONS,
+  DEFAULT_MAIN_SECTIONS,
   DEFAULT_IMPORT,
   DEFAULT_REFERRAL,
   DEFAULT_REMOTE_AREA_RULES,
@@ -37,6 +38,7 @@ import {
   type ImportBlock,
   type ImportSettings,
   type ImportTemplate,
+  type MainSections,
   type PaymentSettings,
   type PointRule,
   type PointSettings,
@@ -408,9 +410,24 @@ export function normalizeDesign(value: unknown): DesignSettings {
     : [];
 
   const interval = count(raw.interval, DEFAULT_BANNER_INTERVAL);
+
+  /*
+    ★ 섹션 노출 (3-K). 저장된 적이 없으면 전부 켬입니다.
+      키 하나하나를 따로 봅니다. 나중에 섹션을 더 넣어도 옛 설정이 그대로 살아 있고
+      새 섹션만 기본값(켬)으로 들어옵니다.
+  */
+  const rawSections = (raw.sections && typeof raw.sections === 'object'
+    ? raw.sections
+    : {}) as Record<string, unknown>;
+  const sections = { ...DEFAULT_MAIN_SECTIONS };
+  for (const key of Object.keys(DEFAULT_MAIN_SECTIONS) as (keyof MainSections)[]) {
+    if (typeof rawSections[key] === 'boolean') sections[key] = rawSections[key] as boolean;
+  }
+
   return {
     banners,
     interval: Math.min(MAX_BANNER_INTERVAL, Math.max(MIN_BANNER_INTERVAL, interval)),
+    sections,
   };
 }
 

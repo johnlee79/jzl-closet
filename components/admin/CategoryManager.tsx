@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
+import ImageUploader from '@/components/admin/ImageUploader';
+import { CATEGORY_IMAGE_SIZE } from '@/lib/site-config';
 import { useRouter } from 'next/navigation';
 import {
   deleteCategoryAction,
@@ -23,12 +25,14 @@ type Draft = {
   nameKo: string;
   description: string;
   isVisible: boolean;
+  /** 대표 이미지 (R2). 메인 CATEGORY 카드에 씁니다. (3-K) */
+  imageUrl: string;
 };
 
 type Message = { tone: 'ok' | 'error'; text: string } | null;
 
 function emptyDraft(): Draft {
-  return { slug: '', label: '', nameKo: '', description: '', isVisible: true };
+  return { slug: '', label: '', nameKo: '', description: '', isVisible: true, imageUrl: '' };
 }
 
 /* ------------------------------------------------------------------
@@ -176,6 +180,33 @@ function CategoryForm({
             className="admin-input"
           />
         </div>
+
+        {/*
+          대표 이미지 (3-K)
+          ★ 대분류에만 씁니다. 메인 CATEGORY 섹션의 네 칸에 들어가는 사진입니다.
+            소분류는 그 카드에 나오지 않으므로 자리를 만들지 않습니다.
+          ★ 올리지 않으면 카드가 이미지 없이 글자만 나옵니다. 회색 빈 상자가 남지 않습니다.
+          ★ frame='thumb' 입니다. 카드가 3:4 로 잘라 쓰기 때문에 잘림 미리보기를 함께 봅니다.
+        */}
+        {parentSlug === null ? (
+          <div className="md:col-span-2">
+            <span className="admin-label">
+              대표 이미지 (선택) — 메인 CATEGORY 카드. 권장 {CATEGORY_IMAGE_SIZE}
+            </span>
+            <p className="mb-2 text-[12px] leading-relaxed text-slate-500">
+              올리지 않으면 카드에 이미지 없이 이름과 상품 수만 나옵니다. 세로로 긴 3:4
+              비율로 잘려 나갑니다.
+            </p>
+            <ImageUploader
+              images={draft.imageUrl ? [draft.imageUrl] : []}
+              onChange={(next) => set('imageUrl', next[0] ?? '')}
+              slug={`category/${draft.slug || 'new'}`}
+              multiple={false}
+              frame="thumb"
+              label="분류 대표 이미지를 끌어다 놓거나 클릭해서 선택하세요"
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
@@ -293,6 +324,7 @@ export default function CategoryManager({
             parentSlug,
             description: draft.description.trim(),
             isVisible: draft.isVisible,
+            imageUrl: draft.imageUrl.trim(),
           },
           isNew
         ),
@@ -490,6 +522,7 @@ export default function CategoryManager({
                         nameKo: category.nameKo,
                         description: category.description,
                         isVisible: category.isVisible,
+                        imageUrl: category.imageUrl,
                       }}
                       parentSlug={null}
                       isNew={false}
@@ -619,6 +652,8 @@ export default function CategoryManager({
                                     nameKo: child.nameKo,
                                     description: child.description ?? '',
                                     isVisible: child.isVisible,
+                                    // 소분류에는 대표 이미지가 없습니다. (메인 카드에 안 나옵니다)
+                                    imageUrl: '',
                                   }}
                                   parentSlug={category.slug}
                                   isNew={false}

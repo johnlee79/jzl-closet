@@ -3,6 +3,7 @@ import BannerManager from '@/components/admin/BannerManager';
 import AboutImageForm from '@/components/admin/AboutImageForm';
 import CopyManager from '@/components/admin/CopyManager';
 import HeroButtonsForm from '@/components/admin/HeroButtonsForm';
+import MainSectionsForm from '@/components/admin/MainSectionsForm';
 import {
   getAboutPageSettings,
   getCopySettings,
@@ -16,6 +17,7 @@ export const metadata = { title: '디자인 관리' };
 
 const TABS = [
   { key: 'banner', label: '메인 배너' },
+  { key: 'sections', label: '메인 섹션 노출' },
   { key: 'copy', label: '사이트 문구' },
 ] as const;
 
@@ -70,6 +72,15 @@ export default async function AdminDesignPage({
 
       <div className="mt-5">
         {tab === 'banner' ? <BannerManager initial={design} /> : null}
+        {tab === 'sections' ? (
+          <>
+            <p className="mb-4 text-[13px] leading-relaxed text-slate-600">
+              메인 화면의 섹션을 하나씩 켜고 끕니다. 끄면 그 자리가 통째로 사라지고 빈
+              여백도 남지 않습니다. 준비가 덜 된 섹션을 잠시 감출 때 쓰세요.
+            </p>
+            <MainSectionsForm initial={design.sections} />
+          </>
+        ) : null}
         {tab === 'copy' ? (
           <>
             <p className="mb-4 text-[13px] leading-relaxed text-slate-600">

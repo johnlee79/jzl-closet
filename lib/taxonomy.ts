@@ -54,6 +54,8 @@ type CategoryRow = {
   display_order: number | null;
   is_visible: boolean | null;
   description: string | null;
+  /** 3-K 에서 추가한 컬럼. 아직 없을 수 있어 선택 항목으로 둡니다. */
+  image_url?: string | null;
 };
 
 type BrandRow = {
@@ -75,6 +77,10 @@ type BrandRow = {
 };
 
 const CATEGORY_COLUMNS =
+  'id, slug, label, name_ko, parent_slug, display_order, is_visible, description, image_url';
+
+/** schema-3k.sql 을 아직 돌리지 않은 경우에 쓰는 목록 (image_url 제외) */
+const CATEGORY_COLUMNS_LEGACY =
   'id, slug, label, name_ko, parent_slug, display_order, is_visible, description';
 const BRAND_COLUMNS =
   'id, slug, label, name, name_ko, tagline, story, origin, since, image_url, logo_url, display_order, is_visible, is_featured';
@@ -114,6 +120,7 @@ function rowsToCategories(rows: CategoryRow[]): Category[] {
       order: row.display_order ?? 0,
       isVisible: row.is_visible !== false,
       description: row.description ?? '',
+      imageUrl: row.image_url ?? '',
       children: (childrenBySlug.get(row.slug) ?? []).sort((a, b) => a.order - b.order),
       ...matchTypeOf(row.slug),
     }))
@@ -148,10 +155,32 @@ async function readCategories(): Promise<Category[] | null> {
   if (!supabase) return null;
 
   try {
-    const { data, error } = await supabase
+    // 컬럼 목록이 두 가지라 결과 타입을 하나로 맞춰 둡니다. rowsToCategories 가 안전하게 읽습니다.
+    type CategoryRead = {
+      data: CategoryRow[] | null;
+      error: { code?: string; message: string } | null;
+    };
+
+    let { data, error } = (await supabase
       .from(CATEGORY_TABLE)
       .select(CATEGORY_COLUMNS)
-      .order('display_order', { ascending: true });
+      .order('display_order', { ascending: true })) as CategoryRead;
+
+    /*
+     * ★ image_url 은 3-K 에서 추가한 컬럼입니다. (supabase/schema-3k.sql)
+     *   운영자가 아직 그 SQL 을 돌리지 않았다면 "없는 컬럼" 오류가 납니다.
+     *   그때는 대표 이미지 없이 한 번 더 읽어 사이트를 정상으로 굴립니다.
+     *   (SQL 을 돌리고 나면 자동으로 첫 번째 조회가 성공합니다)
+     *   브랜드의 logo_url 도 같은 방식으로 견디고 있습니다.
+     */
+    if (error?.code === MISSING_COLUMN) {
+      const retry = (await supabase
+        .from(CATEGORY_TABLE)
+        .select(CATEGORY_COLUMNS_LEGACY)
+        .order('display_order', { ascending: true })) as CategoryRead;
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       if (!isMissingTable(error.code)) {
@@ -343,6 +372,8 @@ export type CategoryInput = {
   description: string;
   isVisible: boolean;
   displayOrder?: number;
+  /** 대표 이미지 (R2). 3-K 에서 추가했습니다. */
+  imageUrl?: string;
 };
 
 export async function createCategory(input: CategoryInput): Promise<void> {
@@ -375,6 +406,7 @@ export async function updateCategory(
   if (patch.description !== undefined) row.description = patch.description || null;
   if (patch.isVisible !== undefined) row.is_visible = patch.isVisible;
   if (patch.displayOrder !== undefined) row.display_order = patch.displayOrder;
+  if (patch.imageUrl !== undefined) row.image_url = patch.imageUrl || null;
 
   const result = await supabase
     .from(CATEGORY_TABLE)

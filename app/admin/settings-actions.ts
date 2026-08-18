@@ -22,6 +22,7 @@ import {
   STORE_KEY,
   getBranding,
   getCopySettings,
+  getDesignSettings,
   normalizeAnalytics,
   normalizeDesign,
   normalizeEvent,
@@ -45,6 +46,7 @@ import {
   type DesignSettings,
   type EventSettings,
   type HeroButtonsSettings,
+  type MainSections,
   type PaymentSettings,
   type PointSettings,
   type ReviewSettings,
@@ -343,6 +345,29 @@ export async function saveDesignAction(input: DesignSettings): Promise<ActionRes
     return { ok: true, data: undefined };
   } catch (error) {
     return fail(error, '배너를 저장하지 못했습니다.');
+  }
+}
+
+/**
+ * 메인 섹션 노출만 따로 저장합니다. (3-K)
+ *
+ * ★ 배너 목록은 건드리지 않습니다. 지금 저장된 값을 먼저 읽어 그대로 다시 씁니다.
+ *   섹션 스위치를 저장했다고 운영자가 등록해 둔 배너가 사라지면 안 됩니다.
+ */
+export async function saveMainSectionsAction(
+  sections: MainSections
+): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  try {
+    const current = await getDesignSettings();
+    await writeSetting(DESIGN_KEY, normalizeDesign({ ...current, sections }));
+    revalidateTag(SETTINGS_TAG);
+    revalidatePath('/');
+    revalidatePath('/admin/design');
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '섹션 노출을 저장하지 못했습니다.');
   }
 }
 

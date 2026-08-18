@@ -21,7 +21,7 @@ export type Brand = {
   story: string[];
   origin: string;
   since: string;
-  /** 브랜드 페이지 상단에 크게 깔리는 대표 사진. 비어 있으면 /images/brands/{slug}.jpg 를 씁니다. */
+  /** 브랜드 페이지 상단에 크게 깔리는 대표 사진. 관리자 > 브랜드 관리에서 올립니다(R2). 비우면 이미지 없이 나갑니다. */
   imageUrl: string;
   /**
    * 로고 이미지. 상품 목록 필터와 브랜드 페이지 상단에 씁니다.
@@ -58,9 +58,17 @@ export function paragraphsToStory(paragraphs: string[]): string {
   return paragraphs.map((paragraph) => paragraph.trim()).filter(Boolean).join('\n\n');
 }
 
-/** 대표 이미지 경로. 등록된 값이 없으면 규칙 경로를 씁니다. */
+/**
+ * 대표 이미지 주소. 관리자 > 브랜드 관리에서 올린 값(R2)입니다.
+ *
+ * ★ 예전에는 값이 없으면 `/images/brands/{slug}.jpg` 를 대신 돌려주었습니다. (3-K 에서 뺐습니다)
+ *   그런데 public/images/brands 에는 README.txt 뿐이라 그 주소로는 아무것도 나오지 않았습니다.
+ *   없는 파일을 가리키고 있으니 브라우저가 한 번 받아 보고 실패하고,
+ *   SafeImage 가 그제서야 대체 화면을 그리는 낭비가 매번 일어났습니다.
+ *   빈 문자열을 돌려주면 SafeImage 가 곧바로 대체 화면을 그립니다.
+ */
 export function brandImage(brand: Pick<Brand, 'slug' | 'imageUrl'>): string {
-  return brand.imageUrl || `/images/brands/${brand.slug}.jpg`;
+  return brand.imageUrl;
 }
 
 /* ------------------------------------------------------------------

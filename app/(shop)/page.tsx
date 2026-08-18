@@ -83,29 +83,33 @@ export default async function HomePage() {
   // ★ orderSteps 는 3-J 에서 메인에서 뺐습니다. /order 페이지에서만 씁니다.
   const categoryHead = resolveCopy(copy.homeCategory, store)[0] ?? { heading: '', html: '' };
 
-  /** 등록한 배너 중 이미지가 있고 노출 중인 것만 씁니다. */
-  const banners = design.banners.filter((banner) => banner.isVisible && banner.imageUrl);
+  /*
+    등록한 배너 중 이미지가 있고 노출 중인 것만 씁니다.
+    ★ 관리자에서 '메인 배너' 섹션을 끄면 배너가 있어도 그리지 않습니다. (3-K)
+    ★ 예전에는 배너가 없을 때 /images/main/hero.jpg 를 대신 깔았습니다.
+      그런데 그 파일이 없어(README.txt 뿐) 큰 회색 상자만 남았습니다.
+      배너가 없으면 아무것도 그리지 않고 곧바로 브랜드명부터 시작합니다.
+  */
+  const sections = design.sections;
+  const banners = sections.banner
+    ? design.banners.filter((banner) => banner.isVisible && banner.imageUrl)
+    : [];
 
   return (
     <>
-      <section aria-labelledby="hero-title" className="pb-16 pt-8 md:pb-24 md:pt-10">
+      {/*
+        ★ 배너와 히어로는 한 섹션 안에 있지만 관리자에서 따로 켜고 끕니다.
+          둘 다 꺼져 있으면 섹션 태그째 그리지 않습니다. 빈 여백이 남지 않습니다.
+      */}
+      {banners.length > 0 || sections.hero ? (
+        <section aria-labelledby="hero-title" className="pb-16 pt-8 md:pb-24 md:pt-10">
         <div className="shell">
           {banners.length > 0 ? (
             <MainBanner banners={banners} interval={design.interval} />
-          ) : (
-            <div className="aspect-[4/5] w-full overflow-hidden bg-stone md:aspect-[21/9]">
-              <SafeImage
-                src="/images/main/hero.jpg"
-                alt={`${store.name} 시즌 캠페인 컷 — 코트와 토트백을 함께 연출한 이미지`}
-                label={`${store.name} — 메인 이미지`}
-                width={1400}
-                height={600}
-                priority
-              />
-            </div>
-          )}
+          ) : null}
 
-          <div className="mt-10 max-w-[640px] md:mt-14">
+          {sections.hero ? (
+          <div className={`max-w-[640px] ${banners.length > 0 ? 'mt-10 md:mt-14' : ''}`}>
             <h1
               id="hero-title"
               className="font-display text-[38px] font-light leading-none tracking-[0.24em] text-ink md:text-[56px]"
@@ -142,9 +146,12 @@ export default async function HomePage() {
               ) : null}
             </div>
           </div>
+          ) : null}
         </div>
-      </section>
+        </section>
+      ) : null}
 
+      {sections.newArrival ? (
       <section aria-labelledby="new-title" className="section border-t border-stone">
         <div className="shell">
           <div className="flex items-end justify-between gap-6">
@@ -172,7 +179,9 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+      ) : null}
 
+      {sections.selection ? (
       <section aria-labelledby="story-title" className="section border-t border-stone">
         <div className="shell grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,380px)_1fr] lg:gap-24">
           <div>
@@ -199,7 +208,9 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+      ) : null}
 
+      {sections.category ? (
       <section aria-label="카테고리" className="section border-t border-stone">
         <div className="shell">
           {/*
@@ -231,15 +242,27 @@ export default async function HomePage() {
               return (
                 <li key={category.slug}>
                   <Link href={`/category/${category.slug}`} className="group block">
-                    <div className="aspect-[3/4] w-full overflow-hidden bg-stone">
-                      <SafeImage
-                        src={`/images/category/${category.slug}.jpg`}
-                        alt={`${category.nameKo} 카테고리 대표 이미지 — ${store.name}`}
-                        label={category.nameKo}
-                        width={400}
-                        height={533}
-                      />
-                    </div>
+                    {/*
+                      ★ 대표 이미지는 관리자 > 분류 관리에서 올립니다. (3-K)
+                        예전에는 public/images/category/{slug}.jpg 를 보고 있었는데
+                        그 파일이 없어 네 칸이 전부 회색 빈 상자였습니다.
+                      ★ 올리지 않은 분류는 이미지 자리를 아예 만들지 않고 위에 얇은
+                        구분선만 둡니다. 큰 회색 상자가 자리를 차지하는 것보다 낫습니다.
+                        올리면 저절로 원래 카드 모양(3:4 사진)이 됩니다.
+                    */}
+                    {category.imageUrl ? (
+                      <div className="aspect-[3/4] w-full overflow-hidden bg-stone">
+                        <SafeImage
+                          src={category.imageUrl}
+                          alt={`${category.nameKo} 카테고리 대표 이미지 — ${store.name}`}
+                          label={category.nameKo}
+                          width={400}
+                          height={533}
+                        />
+                      </div>
+                    ) : (
+                      <div className="border-t border-stone pt-1" aria-hidden="true" />
+                    )}
                     <h3 className="mt-4 font-serif text-[19px] text-ink">
                       {category.nameKo}
                     </h3>
@@ -268,6 +291,7 @@ export default async function HomePage() {
           </ul>
         </div>
       </section>
+      ) : null}
 
       {/*
         취급 브랜드 (3-H C-3)
@@ -275,7 +299,9 @@ export default async function HomePage() {
           3-H 에서 HOW TO ORDER 자리로 끌어올렸고, 3-J 에서 그 HOW TO ORDER 를
           아예 뺐습니다. 지금은 메인의 마지막 섹션입니다.
       */}
-      <BrandStrip brands={homeBrands} className="section border-t border-stone" />
+      {sections.brands ? (
+        <BrandStrip brands={homeBrands} className="section border-t border-stone" />
+      ) : null}
 
       {/*
         ★ HOW TO ORDER 섹션은 3-J 에서 메인에서 뺐습니다.
