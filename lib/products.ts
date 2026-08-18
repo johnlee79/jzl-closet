@@ -6,6 +6,7 @@ import {
   buildCombinationKeys,
   cleanOptionValue,
   fromCombinationKey,
+  isProductSoldOut,
   rebuildCombinations,
 } from '@/lib/product-utils';
 import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
@@ -496,29 +497,77 @@ export async function getNewProducts(count = 4): Promise<Product[]> {
   return [...news, ...rest].slice(0, count);
 }
 
-/** 같은 소분류 → 같은 대분류 → 나머지 순으로 채웁니다. */
-export async function getRelated(product: Product, count = 4): Promise<Product[]> {
-  const products = await getProducts();
-  const pool = products.filter((item) => item.id !== product.id);
-  const sameSub = pool.filter(
-    (item) =>
-      item.categorySlug === product.categorySlug &&
-      item.subCategorySlug === product.subCategorySlug
-  );
-  const sameCategory = pool.filter(
-    (item) =>
-      item.categorySlug === product.categorySlug &&
-      item.subCategorySlug !== product.subCategorySlug
-  );
-  const others = pool.filter((item) => item.categorySlug !== product.categorySlug);
-  return [...sameSub, ...sameCategory, ...others].slice(0, count);
-}
+/**
+ * ============================================================
+ * 상품 상세 하단에 함께 나가는 이웃 상품들 (3-H C-2)
+ * ============================================================
+ *
+ * ★ DB 조회는 딱 한 번입니다.
+ *   예전에는 getRelated 와 getBrandRelated 가 각자 getProducts 를 불러
+ *   상품 하나를 그릴 때마다 두 번씩 읽었습니다. 두 목록 모두 "노출 중인 상품"
+ *   이라는 같은 모집단에서 골라내는 일이라, 한 번 읽어 코드로 나누면 충분합니다.
+ *   상세는 ISR 로 구워 두는 페이지라 이 한 번도 굽는 시점에만 일어납니다.
+ *
+ * ★ light 로 읽습니다. 카드에 쓰는 컬럼만 가져오면 되고,
+ *   상세 본문(detail_blocks)·실측표는 카드에 나오지 않습니다.
+ *   상품 하나에 이미지·문단이 수십 개씩 들어 있어 전송량 차이가 큽니다.
+ *
+ * ★ 추천 순서 — 무작위가 아닙니다. 가까운 것부터 채웁니다.
+ *     1. 같은 브랜드 + 같은 소분류   (가장 닮은 것)
+ *     2. 같은 브랜드
+ *     3. 같은 소분류
+ *     4. 같은 대분류
+ *   여기까지에서도 못 채우면 그냥 모자란 채로 둡니다.
+ *   대분류까지 다른 상품을 억지로 끼워 넣으면 추천이 아니라 아무 상품 나열입니다.
+ *
+ * ★ 품절은 추천에서 뺍니다. 눌러 봐야 살 수 없는 상품을 권하는 셈입니다.
+ *   다만 '이 브랜드의 다른 상품' 은 품절도 그대로 둡니다. 그쪽은 추천이 아니라
+ *   브랜드가 무엇을 다루는지 보여 주는 자리라, 품절 딱지가 붙은 채로도 뜻이 있습니다.
+ */
+export async function getProductNeighbours(
+  product: Product,
+  options: { related?: number; brand?: number } = {}
+): Promise<{ related: Product[]; brandRelated: Product[] }> {
+  const relatedCount = options.related ?? 8;
+  const brandCount = options.brand ?? 4;
 
-/** 상품 상세 하단의 "이 브랜드의 다른 상품" */
-export async function getBrandRelated(product: Product, count = 4): Promise<Product[]> {
-  if (!product.brandSlug) return [];
-  const products = await getProducts({ brandSlug: product.brandSlug });
-  return products.filter((item) => item.id !== product.id).slice(0, count);
+  // ── 여기 한 번이 전부입니다 ─────────────────────────────
+  const pool = (await getProducts({ light: true })).filter(
+    (item) => item.id !== product.id
+  );
+
+  const brandRelated = product.brandSlug
+    ? pool.filter((item) => item.brandSlug === product.brandSlug).slice(0, brandCount)
+    : [];
+
+  const sameBrand = (item: Product) =>
+    Boolean(product.brandSlug) && item.brandSlug === product.brandSlug;
+  // 소분류가 없는 상품은 "같은 소분류" 가 성립하지 않습니다. null 끼리 묶지 않습니다.
+  const sameSub = (item: Product) =>
+    Boolean(product.subCategorySlug) && item.subCategorySlug === product.subCategorySlug;
+  const sameCategory = (item: Product) => item.categorySlug === product.categorySlug;
+
+  const candidates = pool.filter((item) => !isProductSoldOut(item));
+  const tiers = [
+    candidates.filter((item) => sameBrand(item) && sameSub(item)),
+    candidates.filter((item) => sameBrand(item) && !sameSub(item)),
+    candidates.filter((item) => !sameBrand(item) && sameSub(item)),
+    candidates.filter((item) => !sameBrand(item) && !sameSub(item) && sameCategory(item)),
+  ];
+
+  // 앞 단계에서 이미 담은 상품이 뒤 단계에 또 나오지 않도록 걸러 가며 채웁니다.
+  const picked: Product[] = [];
+  const seen = new Set<string>();
+  for (const tier of tiers) {
+    for (const item of tier) {
+      if (picked.length >= relatedCount) break;
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      picked.push(item);
+    }
+  }
+
+  return { related: picked, brandRelated };
 }
 
 /** generateStaticParams · sitemap 용 */

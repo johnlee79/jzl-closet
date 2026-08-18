@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import CopyOrderButton from '@/components/CopyOrderButton';
 import KakaoChatButton from '@/components/KakaoChatButton';
+import RecentlyViewed from '@/components/RecentlyViewed';
 import SignupPointBadge from '@/components/SignupPointBadge';
 import SafeImage from '@/components/SafeImage';
 import { useSite } from '@/components/SiteProvider';
@@ -88,6 +89,14 @@ export default function CartPanel() {
         <Link href="/products" className="btn-primary mt-8">
           전체 상품 보기
         </Link>
+
+        {/*
+          ★ 빈 장바구니에서 그냥 나가 버리는 걸 막습니다. (3-H C-1)
+            "전체 상품 보기" 는 처음부터 다시 고르라는 말이라 손이 잘 안 갑니다.
+            아까 보던 것을 그 자리에 다시 꺼내 주면 이어서 고를 수 있습니다.
+          ★ 최근 본 기록이 없으면 이 자리는 아예 나오지 않습니다.
+        */}
+        <RecentlyViewed className="mt-16 border-t border-stone pt-12" />
       </div>
     );
   }

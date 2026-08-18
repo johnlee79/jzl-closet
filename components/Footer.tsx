@@ -11,21 +11,23 @@ type FooterLink = { href: string; label: string; strong?: boolean };
 /**
  * INFORMATION — 손님이 '무엇을 사고 어디까지 왔는지' 보는 곳.
  *
- * ★ '브랜드 소개' 와 '브랜드 목록' 은 서로 다른 곳입니다. (3-G 에서 정리했습니다)
- *     브랜드 소개 — 우리 자체 브랜드 페이지 (/brand/jzl-closet)
- *     브랜드 목록 — 취급하는 브랜드 전체 목록 (/brands)
- *   예전에는 소개가 /about, 목록이 /brand 로 가 있었습니다.
- *   브랜드 소개 주소는 DB 에 그 브랜드가 있어야 열리므로 레이아웃이 계산해 넘겨 줍니다.
+ * ★ 첫 줄은 '편집숍 소개 → /about' 입니다. (3-H)
+ *   3-G 에서는 '브랜드 소개 → /brand/jzl-closet' 이었는데 어긋나 있었습니다.
+ *   손님은 "JZL 이 어떤 곳인가" 를 기대하고 누르는데 개별 브랜드 페이지가 나왔습니다.
+ *   JZL CLOSET 은 자체 제작이 아니라 병행수입 편집숍이라 네 곳의 성격이 다 다릅니다.
+ *     /about            편집숍 자체 소개        ← 이 링크가 가는 곳
+ *     /brands           취급 브랜드 목록
+ *     /brand/{slug}     개별 브랜드 소개 (GANNI 등)
+ *     /brand/jzl-closet 자체 기획 라인 (상품이 생기면)
+ *   /about 과 /brand/jzl-closet 을 하나로 합치지 마세요. 성격이 다른 페이지입니다.
  */
-function informationLinks(brandIntroHref: string): FooterLink[] {
-  return [
-    { href: brandIntroHref, label: '브랜드 소개' },
-    { href: '/brands', label: '브랜드 목록' },
-    { href: '/order', label: '장바구니' },
-    { href: '/order-lookup', label: '주문 조회' },
-    { href: '/inquiry/new', label: '1:1 문의' },
-  ];
-}
+const INFORMATION_LINKS: FooterLink[] = [
+  { href: '/about', label: '편집숍 소개' },
+  { href: '/brands', label: '브랜드 목록' },
+  { href: '/order', label: '장바구니' },
+  { href: '/order-lookup', label: '주문 조회' },
+  { href: '/inquiry/new', label: '1:1 문의' },
+];
 
 /**
  * CUSTOMER — 공지와 약관처럼 '읽어 두어야 하는' 것들.
@@ -85,23 +87,28 @@ export default function Footer({
   store,
   sns,
   escrow,
-  brandIntroHref,
 }: {
   categories: Category[];
   store: StoreSettings;
   sns: SnsSettings;
   escrow?: EscrowNotice;
-  /** '브랜드 소개' 가 갈 곳. 자체 브랜드 페이지가 없으면 /about 로 옵니다. */
-  brandIntroHref: string;
 }) {
-  /** CATEGORY 열 — DB 분류 뒤에 '전체 상품' 을 한 줄 덧붙입니다. */
-  const categoryLinks: FooterLink[] = [
-    ...visibleCategories(categories).map((category) => ({
-      href: `/category/${category.slug}`,
-      label: category.nameKo,
-    })),
-    { href: '/products', label: '전체 상품' },
-  ];
+  /*
+    CATEGORY 열 — DB 분류를 그대로 씁니다.
+
+    ★ 예전에는 뒤에 '전체 상품 → /products' 를 한 줄 덧붙였습니다. (3-H 에서 뺐습니다)
+      DB 에 이미 '전체' 분류가 있고, 그 분류는 matchType 'all' 이라
+      /category/all 도 전체 상품을 보여 줍니다. 같은 목록으로 가는 줄이 둘이었습니다.
+      손님에게는 서로 다른 곳처럼 보이는데 열어 보면 같은 화면이 나옵니다.
+    ★ 남긴 쪽은 DB 분류입니다. 관리자가 분류를 켜고 끄면 푸터가 따라가야 하는데,
+      코드에 박아 둔 줄은 그 관리 밖에 있습니다.
+      /products 는 상세 안내 문구와 canonical 을 가진 별도 페이지로 그대로 두고,
+      소개·404·주문완료 등 여러 곳에서 계속 링크합니다.
+  */
+  const categoryLinks: FooterLink[] = visibleCategories(categories).map((category) => ({
+    href: `/category/${category.slug}`,
+    label: category.nameKo,
+  }));
 
   /** 사업자 정보 — 표시 순서를 여기 한 줄로 정합니다. */
   const businessRows = [
@@ -163,7 +170,7 @@ export default function Footer({
         <FooterNav
           title="INFORMATION"
           ariaLabel="이용 안내"
-          links={informationLinks(brandIntroHref)}
+          links={INFORMATION_LINKS}
         />
         <FooterNav title="CUSTOMER" ariaLabel="고객 안내" links={CUSTOMER_LINKS} />
       </div>

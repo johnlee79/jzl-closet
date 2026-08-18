@@ -1,13 +1,16 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import BrandStrip from '@/components/BrandStrip';
 import MainBanner from '@/components/MainBanner';
 import ProductCard from '@/components/ProductCard';
+import RecentlyViewed from '@/components/RecentlyViewed';
 import SafeImage from '@/components/SafeImage';
+import { visibleBrands } from '@/lib/brands';
 import { hasVisibleChildren, visibleCategories, visibleSubCategories } from '@/lib/categories';
 import { resolveCopy } from '@/lib/copy';
 import { getProducts } from '@/lib/products';
 import { getCachedCopy, getCachedDesign, getCachedStore } from '@/lib/settings';
-import { getCachedCategories } from '@/lib/taxonomy';
+import { getTaxonomy } from '@/lib/taxonomy';
 
 /** ISR — 60초마다 다시 굽고, 관리자가 저장하면 revalidatePath 로 즉시 갱신됩니다. */
 export const revalidate = 60;
@@ -27,9 +30,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const [allProducts, categories, store, copy, design] = await Promise.all([
+  // ★ 분류와 브랜드는 getTaxonomy 가 한 번에 돌려줍니다. 브랜드를 따로 읽지 않습니다.
+  const [allProducts, { categories, brands }, store, copy, design] = await Promise.all([
     getProducts(),
-    getCachedCategories(),
+    getTaxonomy(),
     getCachedStore(),
     getCachedCopy(),
     getCachedDesign(),
@@ -46,6 +50,24 @@ export default async function HomePage() {
     acc[product.categorySlug] = (acc[product.categorySlug] ?? 0) + 1;
     return acc;
   }, {});
+
+  /*
+   * 메인에 늘어놓을 브랜드. (3-H C-3)
+   *
+   * ★ 노출을 켠 브랜드만, 관리자가 정한 순서대로입니다.
+   *   visibleBrands 가 이미 order 오름차순으로 돌려주므로 여기서 다시 정렬하지 않습니다.
+   * ★ 상품이 하나도 없는 브랜드는 뺍니다. 눌러서 빈 페이지가 나오면
+   *   "취급 브랜드" 라고 써 둔 말이 거짓이 됩니다.
+   *   자체 기획 라인(jzl-closet)도 상품이 생기기 전까지는 이 규칙으로 저절로 빠집니다.
+   * ★ 이 때문에 DB 조회가 늘지는 않습니다. 위에서 이미 읽은 allProducts 를 셉니다.
+   */
+  const productCountByBrand = allProducts.reduce<Record<string, number>>((acc, product) => {
+    if (product.brandSlug) acc[product.brandSlug] = (acc[product.brandSlug] ?? 0) + 1;
+    return acc;
+  }, {});
+  const homeBrands = visibleBrands(brands).filter(
+    (brand) => (productCountByBrand[brand.slug] ?? 0) > 0
+  );
 
   const hero = resolveCopy(copy.homeHero, store)[0];
   const story = resolveCopy(copy.homeStory, store);
@@ -136,8 +158,9 @@ export default async function HomePage() {
             >
               {story[0]?.heading || '오래 쓰는 쪽을 택합니다'}
             </h2>
+            {/* ★ /about 은 편집숍 자체 소개입니다. 헤더·푸터와 이름을 맞춥니다. (3-H A-1) */}
             <Link href="/about" className="btn-secondary mt-8">
-              브랜드 소개
+              편집숍 소개
             </Link>
           </div>
           <div className="flex flex-col gap-7">
@@ -206,6 +229,14 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/*
+        취급 브랜드 (3-H C-3)
+        ★ HOW TO ORDER 가 있던 자리입니다. 주문 방법은 아래로 내렸습니다.
+          편집숍에서 첫 방문자가 가장 궁금해하는 것은 "어떤 브랜드를 다루는가" 이고,
+          주문 방법은 살 마음을 먹은 뒤에야 읽습니다. 순서를 바꿔 둡니다.
+      */}
+      <BrandStrip brands={homeBrands} className="section border-t border-stone" />
+
       <section aria-labelledby="order-title" className="section border-t border-stone">
         <div className="shell">
           <p className="label-xs">HOW TO ORDER</p>
@@ -241,6 +272,15 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/*
+        최근 본 상품 (3-H C-1) — 기록이 있을 때만 나옵니다.
+        ★ 브라우저에 남은 기록으로 그리므로 첫 방문자에게는 이 자리가 없습니다.
+          메인은 ISR 로 구워 두는 페이지지만 이 부분만 브라우저에서 따로 그립니다.
+      */}
+      <div className="shell">
+        <RecentlyViewed className="section border-t border-stone" />
+      </div>
     </>
   );
 }

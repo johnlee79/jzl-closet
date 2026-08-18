@@ -86,7 +86,7 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
         </p>
         <p className="mt-5 text-[16px] leading-[1.9] text-ink md:text-[17px]">
           아래 계좌로 <strong>{payment.depositHours}시간</strong> 이내에 입금해 주시면
-          확인 후 발송을 시작합니다. 입금이 확인되면 문자로 알려드립니다.
+          확인 후 발송을 시작합니다. 입금이 확인되면 알려드립니다.
         </p>
       </header>
 

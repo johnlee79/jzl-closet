@@ -10,6 +10,8 @@ import ShareButton from '@/components/ShareButton';
 import ProductQna from '@/components/ProductQna';
 import ProductReviews from '@/components/ProductReviews';
 import ProductTabs from '@/components/ProductTabs';
+import RecentlyViewed from '@/components/RecentlyViewed';
+import RecentlyViewedRecorder from '@/components/RecentlyViewedRecorder';
 import SalesInfo from '@/components/SalesInfo';
 import StarRating from '@/components/StarRating';
 import ViewItemTracker from '@/components/ViewItemTracker';
@@ -20,9 +22,8 @@ import { findCategory, findSubCategory } from '@/lib/categories';
 import { formatPrice, getDiscountRate, isProductSoldOut } from '@/lib/product-utils';
 import {
   getAllProductSlugs,
-  getBrandRelated,
   getProductBySlug,
-  getRelated,
+  getProductNeighbours,
 } from '@/lib/products';
 import {
   getCachedEvent,
@@ -105,8 +106,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
   }
 
   const [
-    related,
-    brandRelated,
+    neighbours,
     categories,
     brands,
     store,
@@ -117,8 +117,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
     inquiries,
     reviews,
   ] = await Promise.all([
-    getRelated(product, 4),
-    getBrandRelated(product, 4),
+    // ★ DB 조회 한 번으로 '함께 보면 좋은 상품' 과 '이 브랜드의 다른 상품' 을 함께 얻습니다.
+    getProductNeighbours(product, { related: 8, brand: 4 }),
     getCachedCategories(),
     getCachedBrands(),
     getCachedStore(),
@@ -131,6 +131,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
     // 노출 중인 리뷰만 내려옵니다. 작성자명은 서버에서 가립니다.
     getProductReviews(product.id),
   ]);
+
+  const { related, brandRelated } = neighbours;
 
   const reviewSummary = summarize(reviews);
 
@@ -257,6 +259,9 @@ export default async function ProductDetailPage({ params }: PageProps) {
           price: product.price,
         }}
       />
+
+      {/* 최근 본 상품 기록 — 브라우저에만 남깁니다. 화면에는 아무것도 그리지 않습니다. */}
+      <RecentlyViewedRecorder product={product} />
 
       <nav aria-label="현재 위치" className="text-[13px] tracking-[0.14em] text-muted">
         <ol className="flex flex-wrap items-center gap-2">
@@ -516,9 +521,16 @@ export default async function ProductDetailPage({ params }: PageProps) {
         </section>
       ) : null}
 
+      {/*
+        함께 보면 좋은 상품 (3-H C-2)
+        ★ 같은 브랜드+같은 소분류 → 같은 브랜드 → 같은 소분류 → 같은 대분류 순으로
+          최대 8개입니다. 순서는 lib/products.ts 의 getProductNeighbours 가 정합니다.
+        ★ 추천할 게 하나도 없으면 이 자리 자체가 사라집니다.
+          "추천 상품이 없습니다" 를 띄우면 없다는 사실만 크게 알리는 셈입니다.
+      */}
       {related.length > 0 ? (
         <section aria-labelledby="related-title" className="section border-t border-stone">
-          <p className="label-xs">RELATED</p>
+          <p className="label-xs">YOU MAY ALSO LIKE</p>
           <h2
             id="related-title"
             className="mt-3 font-serif text-[22px] leading-snug text-ink md:text-[28px]"
@@ -532,6 +544,15 @@ export default async function ProductDetailPage({ params }: PageProps) {
           </div>
         </section>
       ) : null}
+
+      {/*
+        최근 본 상품 (3-H C-1) — 브라우저에 남은 기록으로 그립니다. DB 를 보지 않습니다.
+        ★ 지금 보고 있는 상품은 빼고 보여 줍니다. 제 페이지에서 자기를 또 권할 이유가 없습니다.
+      */}
+      <RecentlyViewed
+        excludeSlug={product.slug}
+        className="section border-t border-stone"
+      />
     </article>
   );
 }

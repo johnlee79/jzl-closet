@@ -255,5 +255,5 @@ on conflict (slug) do update set
 -- ── 문구 템플릿 예시 ──────────────────────────────────────
 insert into public.templates (title, body) select '소재 관리법 (가죽)', '<p>사용하지 않을 때는 종이나 천을 채워 형태를 유지한 채 더스트백에 보관하세요. 오염이 생기면 마른 천으로 가볍게 닦고, 3~6개월에 한 번 가죽 전용 크림을 얇게 발라 주시면 건조로 인한 잔주름을 줄일 수 있습니다.</p>' where not exists (select 1 from public.templates where title = '소재 관리법 (가죽)');
 insert into public.templates (title, body) select '소재 관리법 (울·니트)', '<p>걸어서 보관하면 어깨와 밑단이 늘어납니다. 반드시 접어서 눕혀 두세요. 드라이클리닝을 권하며, 보풀은 제거기를 원단에서 살짝 띄워 사용해 주세요.</p>' where not exists (select 1 from public.templates where title = '소재 관리법 (울·니트)');
-insert into public.templates (title, body) select '배송 안내', '<p>주문 확인 후 1~3영업일 이내에 출고됩니다. 도서·산간 지역은 하루에서 이틀이 더 걸릴 수 있습니다. 배송이 지연될 경우 문자로 미리 안내드립니다.</p>' where not exists (select 1 from public.templates where title = '배송 안내');
+insert into public.templates (title, body) select '배송 안내', '<p>주문 확인 후 1~3영업일 이내에 출고됩니다. 도서·산간 지역은 하루에서 이틀이 더 걸릴 수 있습니다. 배송이 지연될 경우 미리 안내드립니다.</p>' where not exists (select 1 from public.templates where title = '배송 안내');
 insert into public.templates (title, body) select '교환·반품 안내', '<p>상품 수령일로부터 7일 이내에 고객센터로 연락 주시면 접수해 드립니다. 착용 흔적이 있거나 택을 제거한 경우에는 교환과 반품이 어렵습니다.</p>' where not exists (select 1 from public.templates where title = '교환·반품 안내');

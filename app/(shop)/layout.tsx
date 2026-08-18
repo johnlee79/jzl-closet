@@ -18,7 +18,6 @@ import {
   getEscrowNotice,
 } from '@/lib/settings';
 import { isRibbonActive } from '@/lib/site-config';
-import { OWN_BRAND_SLUG } from '@/lib/brands';
 import { SITE_URL } from '@/lib/store';
 import { getActivePopups } from '@/lib/popups';
 import { getTaxonomy } from '@/lib/taxonomy';
@@ -60,15 +59,12 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
   ]);
 
   /*
-   * 푸터의 '브랜드 소개' 가 갈 곳.
-   * ★ 자체 브랜드 페이지를 아직 만들지 않았으면 /about 으로 보냅니다.
-   *   푸터는 전 페이지에 실리므로 여기에 404 링크를 둘 수 없습니다.
-   *   (관리자에서 jzl-closet 브랜드를 만들고 노출을 켜면 저절로 그쪽으로 바뀝니다)
+   * ★ 3-H 에서 푸터 첫 줄을 '편집숍 소개 → /about' 으로 고정했습니다.
+   *   그래서 자체 브랜드(jzl-closet)가 노출 중인지 여기서 볼 일이 없어졌습니다.
+   *   /about 은 편집숍 자체 소개, /brand/jzl-closet 은 자체 기획 라인으로
+   *   성격이 다른 페이지입니다. 둘을 하나로 합치지 마세요.
+   *   자체 기획 상품이 생기면 브랜드 목록(/brands)에서 자연히 드러납니다.
    */
-  const ownBrand = brands.find(
-    (brand) => brand.slug === OWN_BRAND_SLUG && brand.isVisible
-  );
-  const brandIntroHref = ownBrand ? `/brand/${OWN_BRAND_SLUG}` : '/about';
 
   // 띠배너 노출 기간은 한국시간 날짜로 판단합니다.
   const todayKst = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -128,7 +124,6 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
             store={store}
             sns={sns}
             escrow={escrow}
-            brandIntroHref={brandIntroHref}
           />
           {/* 팝업 — 노출 화면(메인만/전체) 판단은 컴포넌트가 주소를 보고 합니다. */}
           <PopupLayer popups={popups} />

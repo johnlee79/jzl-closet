@@ -12,8 +12,15 @@ import {
   type Category,
 } from '@/lib/categories';
 
+/*
+ * ★ 첫 줄은 '편집숍 소개' 입니다. (3-H A-1 과 같은 이유)
+ *   가는 곳(/about)은 예전부터 편집숍 자체 소개였는데 이름만 '브랜드 소개' 였습니다.
+ *   푸터를 '편집숍 소개' 로 고치면서 상단만 다른 이름으로 두면
+ *   같은 페이지가 사이트 안에서 두 이름으로 불리게 됩니다.
+ *   개별 브랜드 소개는 /brand/{slug} 이고 그쪽 문구는 그대로 '브랜드 소개' 입니다.
+ */
 const mainLinks = [
-  { href: '/about', label: '브랜드 소개' },
+  { href: '/about', label: '편집숍 소개' },
   { href: '/guide', label: '배송·교환 안내' },
   { href: '/order', label: '장바구니 · 주문' },
 ];
