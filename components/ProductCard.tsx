@@ -20,7 +20,9 @@ type ProductCardProps = {
 export default function ProductCard({ product, priority = false }: ProductCardProps) {
   const { brands, points, event } = useSite();
   const first = product.thumbnails[0] ?? '';
-  const second = product.thumbnails[1] ?? first;
+  const second = product.thumbnails[1] ?? '';
+  /** 두 번째 컷이 실제로 있는지. 없으면 겹쳐 두지 않고 확대만 합니다. */
+  const hasSecond = Boolean(second);
   const brandName = product.brandSlug ? findBrandName(brands, product.brandSlug) : '';
   const brandLabel = product.brandSlug ? findBrandLabel(brands, product.brandSlug) : '';
   const soldOut = isProductSoldOut(product);
@@ -32,8 +34,23 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
   return (
     <article className="group">
       <Link href={`/products/${product.slug}`} className="block">
+        {/*
+          ★ 이미지가 두 장 이상이면 마우스를 올렸을 때 두 번째 컷으로 넘어갑니다.
+            한 장뿐이면 살짝 확대만 합니다. (3-J)
+            예전에는 한 장짜리 상품도 같은 이미지를 두 번 겹쳐 두고 크로스페이드를
+            걸어 두었습니다. 눈에는 아무 일도 일어나지 않으면서 같은 이미지를
+            두 번 내려받게 만드는 낭비였습니다.
+          ★ 전부 [@media(hover:hover)] 안에서만 돕니다. 손가락으로 눌렀을 때
+            이미지가 바뀌면 무엇을 눌렀는지 헷갈립니다.
+          ★ 틀(aspect-[3/4] + overflow-hidden)은 그대로라 카드 높이가 변하지 않습니다.
+            목록 전체가 흔들리지 않습니다.
+        */}
         <div className="relative aspect-[3/4] w-full overflow-hidden bg-stone">
-          <div className="absolute inset-0">
+          <div
+            className={`absolute inset-0 transition-transform duration-300 ease-out motion-reduce:transition-none ${
+              hasSecond ? '' : '[@media(hover:hover)]:group-hover:scale-[1.04]'
+            }`}
+          >
             <SafeImage
               src={first}
               alt={`${brandName} ${product.name} 정면 컷`}
@@ -43,13 +60,15 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
               priority={priority}
             />
           </div>
-          {/* 시그니처: 데스크탑에서만 두 번째 이미지로 0.6초 크로스페이드 */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 opacity-0 transition-opacity duration-[600ms] ease-out motion-reduce:transition-none [@media(hover:hover)]:group-hover:opacity-100"
-          >
-            <SafeImage src={second} alt="" label={product.name} width={600} height={800} />
-          </div>
+          {hasSecond ? (
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 opacity-0 transition-opacity duration-300 ease-out motion-reduce:transition-none [@media(hover:hover)]:group-hover:opacity-100"
+            >
+              {/* ★ SafeImage 는 priority 가 아니면 loading="lazy" 입니다. 미리 다 받지 않습니다. */}
+              <SafeImage src={second} alt="" label={product.name} width={600} height={800} />
+            </div>
+          ) : null}
 
           <div className="absolute left-0 top-0 flex flex-col items-start">
             {soldOut ? (

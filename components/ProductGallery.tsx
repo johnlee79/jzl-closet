@@ -8,6 +8,7 @@ import {
   useState,
   type TouchEvent as ReactTouchEvent,
 } from 'react';
+import ImageViewer from '@/components/ImageViewer';
 import SafeImage from '@/components/SafeImage';
 
 /* ------------------------------------------------------------------
@@ -51,6 +52,8 @@ export default function ProductGallery({
   const [reduced, setReduced] = useState(false);
   /** 실제로 <img> 를 걸어 둔 인덱스. 다음 장을 미리 걸어 두는 것이 곧 preload 입니다. */
   const [mounted, setMounted] = useState<number[]>([0]);
+  /** 전체화면 뷰어 (3-J). 열었을 때만 큰 이미지를 받습니다. */
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   const canAuto = list.length > 1 && !reduced;
   const running = canAuto && playing && visible && !hovered;
@@ -148,7 +151,7 @@ export default function ProductGallery({
   };
 
   const arrowClass =
-    'absolute top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center bg-paper/85 text-ink opacity-0 transition-opacity duration-200 hover:bg-paper focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:flex';
+    'absolute top-1/2 z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center bg-paper/85 text-ink opacity-0 transition-opacity duration-200 hover:bg-paper focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:flex';
 
   return (
     /*
@@ -225,6 +228,20 @@ export default function ProductGallery({
           ) : null
         )}
 
+        {/*
+          ★ 눌러서 전체화면으로 보는 버튼 (3-J).
+            이미지 전체를 덮는 투명한 버튼입니다. 이미지 자체를 button 으로 감싸면
+            자동 전환·스와이프를 처리하는 바깥 div 와 이벤트가 얽힙니다.
+          ★ 이미지들 다음, 좌우 화살표(z-10) 앞에 둡니다. 그래야 이미지 위에서는
+            눌러지고, 화살표·자동보기 버튼을 눌렀을 때는 뷰어가 함께 열리지 않습니다.
+        */}
+        <button
+          type="button"
+          onClick={() => setViewerOpen(true)}
+          aria-label={`${productName} 이미지 크게 보기`}
+          className="absolute inset-0 z-0 cursor-zoom-in"
+        />
+
         {list.length > 1 ? (
           <>
             <button
@@ -248,7 +265,7 @@ export default function ProductGallery({
               </svg>
             </button>
 
-            <span className="absolute bottom-3 left-3 bg-paper/85 px-2.5 py-1 text-[12px] tabular-nums tracking-[0.1em] text-ink">
+            <span className="absolute bottom-3 left-3 z-10 bg-paper/85 px-2.5 py-1 text-[12px] tabular-nums tracking-[0.1em] text-ink">
               {active + 1} / {list.length}
             </span>
 
@@ -257,7 +274,7 @@ export default function ProductGallery({
               <button
                 type="button"
                 onClick={startAuto}
-                className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 bg-paper/90 px-3 py-1.5 text-[12px] tracking-[0.1em] text-ink transition-colors hover:bg-paper"
+                className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-1.5 bg-paper/90 px-3 py-1.5 text-[12px] tracking-[0.1em] text-ink transition-colors hover:bg-paper"
               >
                 <svg width="8" height="10" viewBox="0 0 8 10" fill="currentColor" aria-hidden="true">
                   <path d="M0 0l8 5-8 5z" />
@@ -268,6 +285,17 @@ export default function ProductGallery({
           </>
         ) : null}
       </div>
+
+      {/* 전체화면 뷰어 — 열었을 때만 큰 이미지를 받습니다. */}
+      {viewerOpen ? (
+        <ImageViewer
+          images={list.filter(Boolean)}
+          startIndex={active}
+          productName={productName}
+          brand={brand}
+          onClose={() => setViewerOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }

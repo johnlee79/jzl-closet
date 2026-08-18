@@ -2,7 +2,13 @@ import Link from 'next/link';
 import BannerManager from '@/components/admin/BannerManager';
 import AboutImageForm from '@/components/admin/AboutImageForm';
 import CopyManager from '@/components/admin/CopyManager';
-import { getAboutPageSettings, getCopySettings, getDesignSettings } from '@/lib/settings';
+import HeroButtonsForm from '@/components/admin/HeroButtonsForm';
+import {
+  getAboutPageSettings,
+  getCopySettings,
+  getDesignSettings,
+  getHeroButtons,
+} from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,10 +31,11 @@ export default async function AdminDesignPage({
   searchParams: { tab?: string };
 }) {
   const tab: TabKey = isTab(searchParams.tab) ? searchParams.tab : 'banner';
-  const [design, copy, aboutPage] = await Promise.all([
+  const [design, copy, aboutPage, heroButtons] = await Promise.all([
     getDesignSettings(),
     getCopySettings(),
     getAboutPageSettings(),
+    getHeroButtons(),
   ]);
 
   return (
@@ -72,6 +79,7 @@ export default async function AdminDesignPage({
             <CopyManager
               copy={copy}
               aboutImage={<AboutImageForm imageUrl={aboutPage.imageUrl} />}
+              heroButtons={<HeroButtonsForm initial={heroButtons} />}
             />
           </>
         ) : null}

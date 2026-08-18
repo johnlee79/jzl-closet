@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { DEFAULT_OG_IMAGE } from '@/lib/store';
 import CopyBlocks from '@/components/CopyBlocks';
 import { resolveCopy } from '@/lib/copy';
 import { getCachedCopy, getCachedStore } from '@/lib/settings';
@@ -16,6 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: `이용약관 | ${store.name}`,
       description: '서비스 이용 조건과 주문·환불에 관한 약관입니다.',
       url: '/terms',
+      images: [DEFAULT_OG_IMAGE],
     },
   };
 }

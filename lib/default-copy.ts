@@ -42,6 +42,20 @@ const homeStory: CopySection = [
   },
 ];
 
+/*
+ * 메인 CATEGORY 섹션 머리말 — 기본값이 비어 있습니다. (3-J)
+ * ★ 예전에는 '무엇을 찾고 계신가요' 가 적혀 있었습니다. 바로 아래에 분류 네 칸이
+ *   이어지는데 굳이 물어볼 이유가 없고, 아무 정보도 주지 않는 문장이라 뺐습니다.
+ * ★ 항목 자체는 남겨 둡니다. 운영자가 여기에 적으면 다시 나옵니다.
+ *   비어 있으면 제목도 설명도 그리지 않습니다. (app/(shop)/page.tsx)
+ */
+const homeCategory: CopySection = [
+  {
+    heading: '',
+    body: '',
+  },
+];
+
 const orderSteps: CopySection = [
   {
     heading: '장바구니에 담기',
@@ -471,6 +485,7 @@ const notFound: CopySection = [
 export const DEFAULT_COPY: CopySettings = {
   homeHero,
   homeStory,
+  homeCategory,
   orderSteps,
   aboutHero,
   aboutChoose,

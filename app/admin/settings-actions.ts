@@ -9,6 +9,7 @@ import {
   BRANDING_KEY,
   ABOUT_PAGE_KEY,
   COPY_KEY,
+  HERO_BUTTONS_KEY,
   DESIGN_KEY,
   EVENT_KEY,
   PAYMENT_KEY,
@@ -35,6 +36,7 @@ import {
 } from '@/lib/settings';
 import {
   COPY_META,
+  DEFAULT_HERO_BUTTONS,
   GA4_ID_PATTERN,
   SNS_ITEMS,
   type AnalyticsSettings,
@@ -42,6 +44,7 @@ import {
   type CopySection,
   type DesignSettings,
   type EventSettings,
+  type HeroButtonsSettings,
   type PaymentSettings,
   type PointSettings,
   type ReviewSettings,
@@ -376,6 +379,44 @@ export async function saveCopyAction(
     return { ok: true, data: undefined };
   } catch (error) {
     return fail(error, '문구를 저장하지 못했습니다.');
+  }
+}
+
+/* ── 5-4. 메인 히어로 버튼 (3-J) ──────────────────────────── */
+
+/**
+ * 메인 첫 화면 버튼 두 개의 문구와 링크.
+ * ★ 두 번째 문구는 빈 값을 허용합니다. 비우면 버튼이 사라져야 하기 때문입니다.
+ * ★ 링크는 비워 두면 저장하지 않습니다. 빈 주소를 걸어 두면 눌렀을 때 아무 데도 못 갑니다.
+ */
+export async function saveHeroButtonsAction(
+  input: HeroButtonsSettings
+): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  if (!input.primaryLabel.trim()) {
+    return { ok: false, error: '첫 번째 버튼 문구를 입력해 주세요.' };
+  }
+  if (!input.primaryHref.trim()) {
+    return { ok: false, error: '첫 번째 버튼 링크를 입력해 주세요.' };
+  }
+  if (input.secondaryLabel.trim() && !input.secondaryHref.trim()) {
+    return { ok: false, error: '두 번째 버튼 링크를 입력해 주세요. (문구를 비우면 버튼이 사라집니다)' };
+  }
+
+  try {
+    await writeSetting(HERO_BUTTONS_KEY, {
+      primaryLabel: input.primaryLabel.trim(),
+      primaryHref: input.primaryHref.trim(),
+      secondaryLabel: input.secondaryLabel.trim(),
+      secondaryHref: input.secondaryHref.trim() || DEFAULT_HERO_BUTTONS.secondaryHref,
+    });
+    revalidateTag(SETTINGS_TAG);
+    revalidatePath('/');
+    revalidatePath('/admin/design');
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '버튼 설정을 저장하지 못했습니다.');
   }
 }
 

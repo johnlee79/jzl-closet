@@ -6,7 +6,7 @@ import SnsLinks from '@/components/SnsLinks';
 import { brandImage, visibleBrands, type Brand } from '@/lib/brands';
 import { getProducts } from '@/lib/products';
 import { getCachedSns, getCachedStore } from '@/lib/settings';
-import { SITE_URL } from '@/lib/store';
+import { DEFAULT_OG_IMAGE, SITE_URL } from '@/lib/store';
 import { getCachedBrands } from '@/lib/taxonomy';
 
 /**
@@ -40,6 +40,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: `브랜드 목록 | ${store.name}`,
       description,
       url: '/brands',
+      images: [DEFAULT_OG_IMAGE],
     },
   };
 }

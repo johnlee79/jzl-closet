@@ -10,7 +10,7 @@ import {
 } from '@/lib/categories';
 import { getProductsByCategory } from '@/lib/products';
 import { getCachedStore } from '@/lib/settings';
-import { SITE_URL } from '@/lib/store';
+import { DEFAULT_OG_IMAGE, SITE_URL } from '@/lib/store';
 import { getCachedCategories } from '@/lib/taxonomy';
 
 type PageProps = { params: { slug: string; sub: string } };
@@ -47,6 +47,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title: `${sub.nameKo} | ${store.name}`,
       description,
       url: `/category/${category.slug}/${sub.slug}`,
+      images: [DEFAULT_OG_IMAGE],
     },
   };
 }

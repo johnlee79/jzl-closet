@@ -10,6 +10,7 @@ import {
   DEFAULT_PAYMENT,
   DEFAULT_POINTS,
   DEFAULT_EVENT,
+  DEFAULT_HERO_BUTTONS,
   DEFAULT_IMPORT,
   DEFAULT_REFERRAL,
   DEFAULT_REMOTE_AREA_RULES,
@@ -32,6 +33,7 @@ import {
   type CopySettings,
   type DesignSettings,
   type EventSettings,
+  type HeroButtonsSettings,
   type ImportBlock,
   type ImportSettings,
   type ImportTemplate,
@@ -192,6 +194,38 @@ export async function getBranding(): Promise<Branding> {
  * 파비콘을 바꾸면 revalidateTag(SETTINGS_TAG) 로 즉시 갈아 끼웁니다.
  */
 export const getCachedBranding = unstable_cache(getBranding, ['branding'], {
+  tags: [SETTINGS_TAG],
+  revalidate: 3600,
+});
+
+/* ── 메인 히어로 버튼 (3-J) ───────────────────────────────── */
+
+export const HERO_BUTTONS_KEY = 'heroButtons';
+
+// text() 도우미는 이 파일 아래쪽에 이미 있습니다. (함수 선언이라 위에서도 쓸 수 있습니다)
+
+export function normalizeHeroButtons(value: unknown): HeroButtonsSettings {
+  const raw = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
+  return {
+    primaryLabel: text(raw.primaryLabel, DEFAULT_HERO_BUTTONS.primaryLabel),
+    primaryHref: text(raw.primaryHref, DEFAULT_HERO_BUTTONS.primaryHref),
+    /*
+      ★ 두 번째 버튼 문구만 빈 값을 그대로 허용합니다.
+        비우면 버튼 자체가 사라져야 하는데, 여기서 기본값으로 되돌려 버리면
+        운영자가 뺄 방법이 없어집니다.
+    */
+    secondaryLabel: typeof raw.secondaryLabel === 'string' ? raw.secondaryLabel.trim() : DEFAULT_HERO_BUTTONS.secondaryLabel,
+    secondaryHref: text(raw.secondaryHref, DEFAULT_HERO_BUTTONS.secondaryHref),
+  };
+}
+
+/** 관리자 화면용 — 항상 DB 를 직접 봅니다. */
+export async function getHeroButtons(): Promise<HeroButtonsSettings> {
+  return normalizeHeroButtons(await readSetting(HERO_BUTTONS_KEY));
+}
+
+/** 고객 화면용 — 메인이 ISR 이라 캐시해 둡니다. 저장하면 태그로 즉시 갈립니다. */
+export const getCachedHeroButtons = unstable_cache(getHeroButtons, ['hero-buttons'], {
   tags: [SETTINGS_TAG],
   revalidate: 3600,
 });

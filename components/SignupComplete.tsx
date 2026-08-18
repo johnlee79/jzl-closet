@@ -1,9 +1,12 @@
-'use client';
-
 import ResendVerification, { MailboxButton } from '@/components/ResendVerification';
 
 /**
  * 가입 직후 안내.
+ *
+ * ★ 3-J 에서 'use client' 를 뗐습니다. 이 파일 자체에는 상태도 이벤트도 없고,
+ *   아래 두 컴포넌트(MailboxButton · ResendVerification)가 각자 클라이언트입니다.
+ *   서버 컴포넌트가 클라이언트 컴포넌트를 품는 것은 아무 문제가 없고,
+ *   이 파일만큼의 코드가 브라우저로 내려가지 않습니다.
  * 메일이 스팸함으로 가는 일이 잦아 눈에 띄게 알려 줍니다.
  */
 export default function SignupComplete({ email }: { email: string }) {

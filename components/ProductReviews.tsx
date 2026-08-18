@@ -302,7 +302,7 @@ export default function ProductReviews({
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={media.url}
-                          alt=""
+                          alt="구매 후기 사진"
                           loading="lazy"
                           className="h-full w-full object-cover transition-opacity group-hover:opacity-90"
                         />
@@ -471,7 +471,7 @@ export default function ProductReviews({
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
                                   src={url}
-                                  alt=""
+                                  alt="구매 후기 사진"
                                   loading="lazy"
                                   className="h-full w-full object-cover transition-opacity hover:opacity-80"
                                 />

@@ -12,3 +12,20 @@ export const SITE_URL = 'https://jzl-closet.vercel.app';
  *   (서버 컴포넌트는 lib/settings.ts 의 getCachedStore() 를 쓰세요)
  */
 export const store = DEFAULT_STORE;
+
+/**
+ * 공유 카드 기본 이미지 (3-J)
+ *
+ * ★ app/opengraph-image.tsx 가 그려 주는 1200×630 이미지입니다.
+ *   파일 기반 메타데이터는 페이지가 openGraph 를 직접 정의하면 덮이지 않고
+ *   통째로 사라집니다. (Next 는 openGraph 객체를 통째로 갈아 끼웁니다)
+ *   그래서 대표 이미지가 따로 없는 페이지에는 이 값을 명시적으로 넣습니다.
+ * ★ 상품·브랜드·편집숍 소개처럼 제 이미지가 있는 페이지는 그대로 두세요.
+ *   여기 값을 넣으면 오히려 자기 사진이 가려집니다.
+ */
+export const DEFAULT_OG_IMAGE = {
+  url: '/opengraph-image',
+  width: 1200,
+  height: 630,
+  alt: 'JZL CLOSET',
+};

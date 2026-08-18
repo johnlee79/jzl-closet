@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { DEFAULT_OG_IMAGE } from '@/lib/store';
 import Link from 'next/link';
 import CopyBlocks from '@/components/CopyBlocks';
 import { resolveCopy } from '@/lib/copy';
@@ -17,6 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: `배송·교환·반품 안내 | ${store.name}`,
       description: '배송 일정과 교환·반품 절차를 안내드립니다.',
       url: '/guide',
+      images: [DEFAULT_OG_IMAGE],
     },
   };
 }

@@ -186,6 +186,21 @@
     transition-delay: 0s;
   }
 
+  /*
+    ★ 전체화면 이미지 뷰어가 열려 있는 동안에는 화면에 고정된 것들을 감춥니다. (3-J)
+      뷰어는 이미지를 보라고 여는 화면인데 그 위에 구매 바와 맨 위로 버튼이
+      떠 있으면 정작 봐야 할 곳을 가립니다.
+    ★ 표시는 html 의 data-viewer-open 하나뿐입니다. (components/ImageViewer.tsx)
+      컴포넌트끼리 서로를 알 필요가 없고, 나중에 고정 요소가 더 늘어도
+      여기에 선택자 한 줄만 보태면 됩니다.
+  */
+  html[data-viewer-open] .buy-bar,
+  html[data-viewer-open] .to-top {
+    opacity: 0;
+    visibility: hidden;
+    transition-delay: 0s;
+  }
+
   /* ============================================================
      맨 위로 버튼 (components/ScrollToTop.tsx)
      ============================================================

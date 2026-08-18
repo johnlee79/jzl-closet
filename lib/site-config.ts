@@ -712,6 +712,31 @@ export const DEFAULT_ANALYTICS: AnalyticsSettings = { ga4Id: '' };
 
 export const GA4_ID_PATTERN = /^G-[A-Z0-9]{6,12}$/;
 
+/* ── 메인 히어로 버튼 (3-J) ───────────────────────────────── */
+
+/**
+ * 메인 첫 화면의 버튼 두 개.
+ *
+ * ★ 문구와 링크를 함께 다뤄야 해서 사이트 문구(copy)에 넣지 못했습니다.
+ *   copy 는 소제목+본문 두 칸이라 링크를 넣을 자리가 마땅치 않고,
+ *   본문 칸은 편집기가 만드는 HTML 이라 주소를 그대로 담기에 맞지 않습니다.
+ * ★ 두 번째 버튼은 문구를 비우면 화면에서 사라집니다.
+ *   운영자가 원할 때 뺄 수 있어야 합니다.
+ */
+export type HeroButtonsSettings = {
+  primaryLabel: string;
+  primaryHref: string;
+  secondaryLabel: string;
+  secondaryHref: string;
+};
+
+export const DEFAULT_HERO_BUTTONS: HeroButtonsSettings = {
+  primaryLabel: '컬렉션 보기',
+  primaryHref: '/products',
+  secondaryLabel: '편집숍 소개',
+  secondaryHref: '/about',
+};
+
 /* ── 편집숍 소개 (/about) 대표 이미지 (3-I) ───────────────── */
 
 /**
@@ -757,6 +782,7 @@ export const COPY_KEYS = [
   // 메인 화면
   'homeHero',
   'homeStory',
+  'homeCategory',
   'orderSteps',
   // 편집숍 소개 (/about) — 3-I 에서 항목으로 쪼갰습니다
   'aboutHero',
@@ -855,11 +881,18 @@ export const COPY_META: Record<
    *   운영자가 그 문구를 고치려고 관리자에서 한참 찾지 못한 일이 있었습니다.
    *   화면에 보이는 말과 관리자 항목 이름이 같아야 찾습니다.
    */
+  homeCategory: {
+    group: 'home',
+    title: '메인 · CATEGORY 섹션 머리말',
+    hint: '메인의 CATEGORY 네 칸 위에 나오는 제목과 설명입니다. ★ 기본값은 비어 있습니다. 바로 아래에 분류 네 칸이 이어져 굳이 물어볼 말이 없다고 보고 3-J 에서 뺐습니다. 여기에 적으면 다시 나옵니다. (영문 라벨 CATEGORY 는 항상 나옵니다)',
+    path: '/',
+    blockLabel: '머리말',
+  },
   orderSteps: {
     group: 'home',
     title: 'HOW TO ORDER — 주문 방법 3단계',
-    hint: '메인 화면 아래쪽과 /order 페이지에 함께 나옵니다. 블록 하나가 한 단계이며 01·02·03 번호는 자동으로 붙습니다. 소제목이 단계 제목, 본문이 그 아래 설명입니다.',
-    path: '/',
+    hint: '★ 3-J 에서 메인 화면에서는 뺐습니다. 지금은 /order(장바구니·주문) 페이지의 「주문 절차」에만 나옵니다. 메인을 아무리 고쳐도 바뀌지 않습니다. 블록 하나가 한 단계이며 01·02·03 번호는 자동으로 붙습니다.',
+    path: '/order',
     blockLabel: '단계',
   },
   aboutHero: {

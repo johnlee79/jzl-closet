@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { DEFAULT_OG_IMAGE } from '@/lib/store';
 import Link from 'next/link';
 import BrandStrip from '@/components/BrandStrip';
 import MainBanner from '@/components/MainBanner';
@@ -9,7 +10,12 @@ import { visibleBrands } from '@/lib/brands';
 import { hasVisibleChildren, visibleCategories, visibleSubCategories } from '@/lib/categories';
 import { resolveCopy } from '@/lib/copy';
 import { getProducts } from '@/lib/products';
-import { getCachedCopy, getCachedDesign, getCachedStore } from '@/lib/settings';
+import {
+  getCachedCopy,
+  getCachedDesign,
+  getCachedHeroButtons,
+  getCachedStore,
+} from '@/lib/settings';
 import { getTaxonomy } from '@/lib/taxonomy';
 
 /** ISR — 60초마다 다시 굽고, 관리자가 저장하면 revalidatePath 로 즉시 갱신됩니다. */
@@ -25,19 +31,22 @@ export async function generateMetadata(): Promise<Metadata> {
       title: `${store.name} — ${store.slogan}`,
       description: store.intro,
       url: '/',
+      images: [DEFAULT_OG_IMAGE],
     },
   };
 }
 
 export default async function HomePage() {
   // ★ 분류와 브랜드는 getTaxonomy 가 한 번에 돌려줍니다. 브랜드를 따로 읽지 않습니다.
-  const [allProducts, { categories, brands }, store, copy, design] = await Promise.all([
-    getProducts(),
-    getTaxonomy(),
-    getCachedStore(),
-    getCachedCopy(),
-    getCachedDesign(),
-  ]);
+  const [allProducts, { categories, brands }, store, copy, design, heroButtons] =
+    await Promise.all([
+      getProducts(),
+      getTaxonomy(),
+      getCachedStore(),
+      getCachedCopy(),
+      getCachedDesign(),
+      getCachedHeroButtons(),
+    ]);
 
   const newProducts = [
     ...allProducts.filter((product) => product.isNew),
@@ -71,7 +80,8 @@ export default async function HomePage() {
 
   const hero = resolveCopy(copy.homeHero, store)[0];
   const story = resolveCopy(copy.homeStory, store);
-  const steps = resolveCopy(copy.orderSteps, store);
+  // ★ orderSteps 는 3-J 에서 메인에서 뺐습니다. /order 페이지에서만 씁니다.
+  const categoryHead = resolveCopy(copy.homeCategory, store)[0] ?? { heading: '', html: '' };
 
   /** 등록한 배너 중 이미지가 있고 노출 중인 것만 씁니다. */
   const banners = design.banners.filter((banner) => banner.isVisible && banner.imageUrl);
@@ -113,9 +123,24 @@ export default async function HomePage() {
                 dangerouslySetInnerHTML={{ __html: hero.html }}
               />
             ) : null}
-            <Link href="/products" className="btn-primary mt-9">
-              컬렉션 보기
-            </Link>
+            {/*
+              히어로 버튼 (3-J)
+              ★ .btn-row 를 씁니다. 두 버튼의 높이·좌우 여백·글자 크기가 한 규칙에서
+                나오므로 나란히 놓았을 때 어긋나지 않고, 좁은 화면에서는 폭을 반씩
+                나눠 가지며 글자와 여백이 함께 줄어듭니다. (3-H 에서 만든 규칙)
+              ★ 두 번째 버튼은 문구를 비우면 사라집니다. 그때 .btn-row 의
+                :only-child 규칙이 첫 버튼을 제 폭으로 되돌립니다.
+            */}
+            <div className="btn-row mt-9 max-w-[420px]">
+              <Link href={heroButtons.primaryHref} className="btn-primary">
+                {heroButtons.primaryLabel}
+              </Link>
+              {heroButtons.secondaryLabel ? (
+                <Link href={heroButtons.secondaryHref} className="btn-secondary">
+                  {heroButtons.secondaryLabel}
+                </Link>
+              ) : null}
+            </div>
           </div>
         </div>
       </section>
@@ -175,17 +200,32 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section aria-labelledby="category-title" className="section border-t border-stone">
+      <section aria-label="카테고리" className="section border-t border-stone">
         <div className="shell">
+          {/*
+            ★ 제목과 설명은 관리자 문구에서 옵니다. 기본값은 비어 있어 아무것도 안 나옵니다. (3-J)
+              예전에는 '무엇을 찾고 계신가요' 가 적혀 있었는데, 바로 아래에 분류 네 칸이
+              이어지는 자리라 굳이 물어볼 이유가 없고 아무 정보도 주지 않는 문장이었습니다.
+              운영자가 관리자에 적으면 다시 나옵니다.
+            ★ 영문 라벨 CATEGORY 는 그대로 둡니다. 섹션을 구분하는 표지입니다.
+          */}
           <p className="label-xs">CATEGORY</p>
-          <h2
-            id="category-title"
-            className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[30px]"
-          >
-            무엇을 찾고 계신가요
-          </h2>
+          {categoryHead.heading ? (
+            <h2
+              id="category-title"
+              className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[30px]"
+            >
+              {categoryHead.heading}
+            </h2>
+          ) : null}
+          {categoryHead.html ? (
+            <div
+              className="detail-body mt-4 max-w-[640px] text-[16px] leading-[1.9] text-ink"
+              dangerouslySetInnerHTML={{ __html: categoryHead.html }}
+            />
+          ) : null}
 
-          <ul className="mt-12 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 lg:gap-x-6">
+          <ul className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 lg:gap-x-6">
             {entryCategories.map((category) => {
               const count = countByCategory[category.slug] ?? 0;
               return (
@@ -231,47 +271,19 @@ export default async function HomePage() {
 
       {/*
         취급 브랜드 (3-H C-3)
-        ★ HOW TO ORDER 가 있던 자리입니다. 주문 방법은 아래로 내렸습니다.
-          편집숍에서 첫 방문자가 가장 궁금해하는 것은 "어떤 브랜드를 다루는가" 이고,
-          주문 방법은 살 마음을 먹은 뒤에야 읽습니다. 순서를 바꿔 둡니다.
+        ★ 편집숍에서 첫 방문자가 가장 궁금해하는 것은 "어떤 브랜드를 다루는가" 입니다.
+          3-H 에서 HOW TO ORDER 자리로 끌어올렸고, 3-J 에서 그 HOW TO ORDER 를
+          아예 뺐습니다. 지금은 메인의 마지막 섹션입니다.
       */}
       <BrandStrip brands={homeBrands} className="section border-t border-stone" />
 
-      <section aria-labelledby="order-title" className="section border-t border-stone">
-        <div className="shell">
-          <p className="label-xs">HOW TO ORDER</p>
-          <h2
-            id="order-title"
-            className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[30px]"
-          >
-            주문은 세 단계로 끝납니다
-          </h2>
-
-          <ol className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-6">
-            {steps.map((step, index) => (
-              <li key={index} className="border-t border-stone pt-6">
-                <p className="font-display text-[34px] font-light tracking-[0.1em] text-ink">
-                  {String(index + 1).padStart(2, '0')}
-                </p>
-                <h3 className="mt-3 font-serif text-[19px] text-ink">{step.heading}</h3>
-                <div
-                  className="detail-body mt-3 text-[15px] leading-[1.9] text-ink"
-                  dangerouslySetInnerHTML={{ __html: step.html }}
-                />
-              </li>
-            ))}
-          </ol>
-
-          <div className="btn-row mt-12">
-            <Link href="/order" className="btn-primary">
-              장바구니 확인
-            </Link>
-            <Link href="/guide" className="btn-secondary">
-              배송·교환 안내
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/*
+        ★ HOW TO ORDER 섹션은 3-J 에서 메인에서 뺐습니다.
+          곧 PG 카드결제가 붙습니다. 카드로 즉시 결제되는 구조에서 '주문 방법 3단계' 를
+          메인에 크게 설명할 이유가 없습니다. 누구나 아는 흐름이고 자리만 차지했습니다.
+        ★ 문구 항목(copy.orderSteps)은 지우지 않았습니다. /order 페이지의 「주문 절차」에
+          그대로 쓰이고, 되돌리기 기본값도 남아 있어 다시 쓰기로 하면 되살릴 수 있습니다.
+      */}
 
       {/*
         최근 본 상품 (3-H C-1) — 기록이 있을 때만 나옵니다.

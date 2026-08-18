@@ -213,13 +213,16 @@ function CopyEditor({
 export default function CopyManager({
   copy,
   aboutImage,
+  heroButtons,
 }: {
   copy: CopySettings;
   /** 편집숍 소개 그룹에 끼워 넣을 대표 이미지 업로드 화면 */
   aboutImage?: React.ReactNode;
+  /** 메인 화면 그룹에 끼워 넣을 히어로 버튼 설정 화면 (3-J) */
+  heroButtons?: React.ReactNode;
 }) {
-  /** 열려 있는 항목. 이미지 칸은 'about-image' 라는 이름으로 함께 다룹니다. */
-  const [open, setOpen] = useState<CopyKey | 'about-image' | null>(null);
+  /** 열려 있는 항목. 문구가 아닌 칸도 이름을 붙여 함께 다룹니다. */
+  const [open, setOpen] = useState<CopyKey | 'about-image' | 'hero-buttons' | null>(null);
 
   return (
     <div className="flex flex-col gap-6">
@@ -229,6 +232,8 @@ export default function CopyManager({
 
         const showImage = group.key === 'about' && aboutImage;
         const imageOpen = open === 'about-image';
+        const showButtons = group.key === 'home' && heroButtons;
+        const buttonsOpen = open === 'hero-buttons';
 
         return (
           <section key={group.key} aria-labelledby={`copy-group-${group.key}`}>
@@ -263,6 +268,31 @@ export default function CopyManager({
                       </span>
                     </button>
                     {imageOpen ? aboutImage : null}
+                  </li>
+                ) : null}
+
+                {showButtons ? (
+                  <li className="border-b border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setOpen(buttonsOpen ? null : 'hero-buttons')}
+                      aria-expanded={buttonsOpen}
+                      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50"
+                    >
+                      <span>
+                        <span className="text-[14px] font-medium text-slate-900">
+                          메인 히어로 버튼 (문구·링크)
+                        </span>
+                        <span className="ml-2 text-[12px] text-slate-500">/</span>
+                        <span className="block text-[12px] text-slate-500">
+                          첫 화면 버튼 두 개 · 두 번째는 비우면 숨김
+                        </span>
+                      </span>
+                      <span aria-hidden="true" className="text-[13px] text-slate-500">
+                        {buttonsOpen ? '접기 ▲' : '펼치기 ▼'}
+                      </span>
+                    </button>
+                    {buttonsOpen ? heroButtons : null}
                   </li>
                 ) : null}
 
