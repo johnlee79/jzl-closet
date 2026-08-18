@@ -31,7 +31,7 @@ export default async function NotFound() {
         />
       ))}
 
-      <div className="mt-10 flex flex-wrap gap-4">
+      <div className="btn-row mt-10">
         <Link href="/" className="btn-primary">
           홈으로
         </Link>

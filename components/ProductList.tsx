@@ -253,7 +253,7 @@ export default function ProductList({
           <p className="mt-2 text-[15px] leading-relaxed text-ink">
             선택하신 조건을 지우면 다시 전체 상품을 보실 수 있습니다.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="btn-row mt-8">
             <button type="button" onClick={resetFilters} className="btn-secondary">
               필터 초기화
             </button>

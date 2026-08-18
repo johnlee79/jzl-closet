@@ -86,7 +86,7 @@ export default async function OrderPage() {
 
           {/* ★ 전화 걸기 버튼을 카카오톡 실시간 문의로 바꿨습니다.
               고객센터 번호는 푸터의 사업자 정보에 그대로 있습니다. */}
-          <div className="mt-8 flex flex-wrap gap-4">
+          <div className="btn-row mt-8">
             <KakaoChatButton />
             <Link href="/guide" className="btn-secondary">
               배송·교환·반품 안내

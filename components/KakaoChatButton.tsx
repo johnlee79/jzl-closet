@@ -13,6 +13,8 @@ import { useSite } from '@/components/SiteProvider';
  *   버튼이 사라졌을 때 안내만 남아 떠 버립니다.
  * ★ 말풍선은 외부 이미지가 아니라 SVG 로 직접 그립니다. (이모지·외부 링크 금지)
  * ★ 그림자를 쓰지 않습니다.
+ * ★ 모양은 app/globals.css 의 .btn-kakao 에 있습니다. 여기에 px-8 같은 유틸리티를
+ *   직접 달면 .btn-row 가 좁은 화면에서 여백을 줄이지 못합니다. (레이어 순서)
  */
 
 /** 카카오 상징색 — 브랜드 가이드에서 정한 값이라 우리 토큰을 쓰지 않습니다. */
@@ -60,7 +62,7 @@ export default function KakaoChatButton({
       target="_blank"
       rel="noopener noreferrer"
       style={{ backgroundColor: KAKAO_YELLOW, color: KAKAO_INK }}
-      className={`inline-flex min-h-[52px] items-center justify-center gap-2 rounded-sm px-8 py-4 text-[15px] tracking-[0.14em] transition-opacity duration-200 hover:opacity-90 ${className}`}
+      className={`btn-kakao ${className}`}
     >
       <SpeechBubble />
       {LABEL}

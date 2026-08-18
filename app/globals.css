@@ -96,6 +96,63 @@
     @apply inline-flex min-h-[52px] items-center justify-center rounded-sm border border-ink bg-transparent px-10 py-4 text-[15px] tracking-[0.14em] text-ink transition-colors duration-200 hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:opacity-30;
   }
 
+  /*
+    카카오톡 문의 버튼 (components/KakaoChatButton.tsx)
+    ★ 노란 바탕과 글자색만 컴포넌트가 style 로 직접 넣습니다. 카카오 브랜드
+      가이드에서 정한 값이라 우리 팔레트에 넣지 않았습니다.
+    ★ 모양을 여기로 옮긴 이유 — 이 버튼도 .btn-row 안에 들어갑니다.
+      컴포넌트에서 px-8 같은 유틸리티를 직접 달고 있으면 유틸리티 레이어가
+      컴포넌트 레이어를 이겨서, .btn-row 가 좁은 화면에서 여백을 못 줄입니다.
+  */
+  .btn-kakao {
+    @apply inline-flex min-h-[52px] items-center justify-center gap-2 rounded-sm px-8 py-4 text-[15px] tracking-[0.14em] transition-opacity duration-200 hover:opacity-90;
+  }
+
+  /* ============================================================
+     버튼 두 개를 한 줄에 나란히 놓는 자리
+     ============================================================
+
+     ★ 왜 flex-wrap 을 버렸나
+       예전에는 flex flex-wrap gap-4 였습니다. 넘치면 아래로 떨어지라는 뜻인데,
+       버튼이 둘뿐이라 떨어지는 순간 한 개짜리 줄이 두 개 생깁니다.
+       px-10(좌우 80px) 에 tracking 까지 붙은 버튼 둘은 400px 가까이 먹어서
+       실제 휴대폰(360~390px)에서는 거의 늘 떨어졌습니다.
+       PC 개발자도구에서 멀쩡해 보였던 건 대개 그보다 넓은 폭으로 보고 있어서입니다.
+
+     ★ flex-1 + min-w-0 으로 폭을 반씩 나눠 갖습니다.
+       min-w-0 이 없으면 flex 항목이 제 글자 폭 아래로 안 줄어들어
+       flex-1 을 줘도 넘칩니다. 이게 빠지면 이 규칙 전체가 무의미해집니다.
+
+     ★ 좁아지면 글자와 좌우 여백을 같이 줄입니다. (px-10 → px-3, 15px → 13px)
+       .btn-primary 뒤에 와야 덮어씁니다. 순서를 바꾸지 마세요.
+
+     ★ 그래도 안 들어가면 버튼 안에서 두 줄로 접힙니다. 자르지 않습니다.
+       320px 에서 "배송·교환·반품 안내" 같은 긴 이름이 여기 걸립니다.
+       items-stretch 라 옆 버튼도 같은 높이로 따라와 짝이 맞습니다.
+       break-keep 이라 "배송·교환·반품 / 안내" 처럼 낱말 단위로만 끊깁니다.
+
+     ★ break-words 는 마지막 안전장치입니다. (overflow-wrap: break-word)
+       띄어쓰기 없는 이름 하나가 버튼 폭보다 길면 keep-all 만으로는 끊을 데가 없어
+       글자가 버튼 밖으로 삐져나갑니다. 그때만 낱말 안에서라도 끊습니다.
+       평소에는 아무 일도 하지 않습니다 — 끊을 데가 있으면 keep-all 이 먼저 이깁니다.
+       덕분에 앞으로 어떤 긴 이름을 넣어도 가로로 넘치는 일은 생기지 않습니다.
+
+     ★ 버튼이 하나만 남는 경우가 있습니다. (ProductList 의 두 번째 버튼은 조건부)
+       그때는 flex-1 을 풀어 제 폭으로 둡니다. 혼자 남아 화면 끝까지 늘어나면
+       눌러 달라고 조르는 것처럼 보입니다.
+     ============================================================ */
+  .btn-row {
+    @apply flex items-stretch gap-3 sm:gap-4;
+  }
+
+  .btn-row > * {
+    @apply min-w-0 flex-1 break-words break-keep px-3 text-center text-[13px] leading-snug tracking-normal sm:px-6 sm:text-[14px] sm:tracking-[0.1em] md:px-8 md:text-[15px] md:tracking-[0.14em];
+  }
+
+  .btn-row > *:only-child {
+    @apply flex-none;
+  }
+
   /* 텍스트 링크·아이콘 버튼의 터치 영역 */
   .tap-target {
     @apply inline-flex min-h-[44px] items-center;

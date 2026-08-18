@@ -129,7 +129,7 @@ export default async function MypageHomePage() {
         {recent.length === 0 ? (
           <div className="py-14">
             <p className="text-[16px] leading-relaxed text-ink">아직 주문 내역이 없습니다.</p>
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="btn-row mt-6">
               <Link href="/products" className="btn-primary">
                 상품 둘러보기
               </Link>

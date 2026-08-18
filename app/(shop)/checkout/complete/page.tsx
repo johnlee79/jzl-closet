@@ -41,7 +41,7 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
           주문 완료 화면은 주문 직후에만 열립니다. 이미 지난 주문은 아래에서 주문번호와
           연락처로 조회해 주세요.
         </p>
-        <div className="mt-8 flex flex-wrap gap-4">
+        <div className="btn-row mt-8">
           <Link href="/order-lookup" className="btn-primary">
             주문 조회하기
           </Link>
@@ -162,7 +162,7 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
         </aside>
       </div>
 
-      <div className="mt-14 flex flex-wrap gap-4 border-t border-stone pt-10">
+      <div className="btn-row mt-14 border-t border-stone pt-10">
         <Link href="/products" className="btn-secondary">
           쇼핑 계속하기
         </Link>

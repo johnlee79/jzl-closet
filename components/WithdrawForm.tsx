@@ -172,7 +172,7 @@ export default function WithdrawForm({
           </p>
         ) : null}
 
-        <div className="mt-8 flex flex-wrap gap-3">
+        <div className="btn-row mt-8">
           <button
             type="submit"
             disabled={pending || !ready}

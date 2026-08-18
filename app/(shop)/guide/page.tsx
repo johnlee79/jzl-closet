@@ -94,7 +94,7 @@ export default async function GuidePage() {
       </div>
 
       <section className="section border-t border-stone">
-        <div className="flex flex-wrap gap-4">
+        <div className="btn-row">
           <Link href="/order" className="btn-primary">
             주문 문의하기
           </Link>

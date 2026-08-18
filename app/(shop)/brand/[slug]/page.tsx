@@ -199,7 +199,7 @@ export default async function BrandDetailPage({ params }: PageProps) {
               <p className="text-[16px] leading-relaxed text-ink">
                 준비 중인 브랜드입니다. 입고 소식은 카카오톡으로 문의해 주세요.
               </p>
-              <div className="mt-8 flex flex-wrap gap-4">
+              <div className="btn-row mt-8">
                 <Link href="/products" className="btn-primary">
                   전체 상품 보기
                 </Link>

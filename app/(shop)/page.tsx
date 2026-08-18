@@ -231,7 +231,7 @@ export default async function HomePage() {
             ))}
           </ol>
 
-          <div className="mt-12 flex flex-wrap items-center gap-4">
+          <div className="btn-row mt-12">
             <Link href="/order" className="btn-primary">
               장바구니 확인
             </Link>

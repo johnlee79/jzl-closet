@@ -152,7 +152,7 @@ export default function ReviewForm({
             ? `${formatPrice(done.earned)}원 포인트를 적립해 드렸습니다. 감사합니다.`
             : '소중한 후기 감사합니다.'}
         </p>
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="btn-row mt-6">
           <Link href={`/products/${product.slug}`} className="btn-primary">
             상품 페이지에서 보기
           </Link>

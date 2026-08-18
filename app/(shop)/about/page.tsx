@@ -158,7 +158,7 @@ export default async function AboutPage() {
           {store.phone}
         </p>
         <p className="mt-2 text-[14px] leading-relaxed text-muted">{store.hours}</p>
-        <div className="mt-8 flex flex-wrap gap-4">
+        <div className="btn-row mt-8">
           <Link href="/products" className="btn-primary">
             전체 상품 보기
           </Link>

@@ -125,7 +125,7 @@ export default function InquiryForm({
             ? ' 답변이 등록되면 마이페이지 > 문의 내역에서 확인하실 수 있습니다.'
             : ' 문의번호와 조회용 비밀번호를 적어 두세요. 답변 확인에 필요합니다.'}
         </p>
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="btn-row mt-6">
           {done.isMember ? (
             <Link href="/mypage/inquiries" className="btn-primary">
               문의 내역 보기
