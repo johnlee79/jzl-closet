@@ -8,6 +8,7 @@ import PaymentForm from '@/components/admin/PaymentForm';
 import RewardForm from '@/components/admin/RewardForm';
 import SalesInfoForm from '@/components/admin/SalesInfoForm';
 import ShippingForm from '@/components/admin/ShippingForm';
+import SnsForm from '@/components/admin/SnsForm';
 import StoreSettingsForm from '@/components/admin/StoreSettingsForm';
 import {
   getAnalyticsSettings,
@@ -19,6 +20,7 @@ import {
   getReviewSettings,
   getSalesSettings,
   getShippingSettings,
+  getSnsSettings,
   getStoreSettings,
 } from '@/lib/settings';
 import { isTelegramConfigured } from '@/lib/telegram';
@@ -36,6 +38,7 @@ const TABS = [
   { key: 'reward', label: '리뷰·포인트' },
   { key: 'sales', label: '판매정보' },
   { key: 'event', label: '문구·이벤트' },
+  { key: 'sns', label: 'SNS' },
   { key: 'import', label: '가져오기' },
   { key: 'export', label: '데이터 내보내기' },
   { key: 'analytics', label: '분석 (GA4)' },
@@ -54,7 +57,7 @@ export default async function AdminSettingsPage({
 }) {
   const tab: TabKey = isTab(searchParams.tab) ? searchParams.tab : 'store';
 
-  const [store, branding, shipping, analytics, payment, points, review, sales, event, importSettings] =
+  const [store, branding, shipping, analytics, payment, points, review, sales, event, importSettings, sns] =
     await Promise.all([
       getStoreSettings(),
       getBranding(),
@@ -66,6 +69,7 @@ export default async function AdminSettingsPage({
       getSalesSettings(),
       getEventSettings(),
       getImportSettings(),
+      getSnsSettings(),
     ]);
 
   return (
@@ -130,6 +134,8 @@ export default async function AdminSettingsPage({
         {tab === 'event' ? <EventForm initial={event} points={points} /> : null}
 
         {tab === 'import' ? <ImportSettingsForm initial={importSettings} /> : null}
+
+        {tab === 'sns' ? <SnsForm initial={sns} /> : null}
 
         {tab === 'payment' ? (
           <PaymentForm initial={payment} telegramConfigured={isTelegramConfigured()} />

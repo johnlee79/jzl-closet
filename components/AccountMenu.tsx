@@ -141,11 +141,12 @@ export default function AccountMenu({ variant = 'desktop' }: { variant?: Variant
     );
   }
 
-  /* ── 모바일 헤더 ──────────────────────────────────── */
+  /* ── 모바일·태블릿 헤더 ───────────────────────────── */
   if (variant === 'mobile') {
-    // 자리를 미리 잡아 로고가 흔들리지 않게 합니다.
+    // 자리를 미리 잡아 오른쪽 묶음이 흔들리지 않게 합니다.
+    // ★ 로고는 절대 위치로 정중앙에 고정되어 있어 이 폭에 영향받지 않습니다.
     if (!ready) {
-      return <span aria-hidden="true" className="block h-[36px] w-[56px]" />;
+      return <span aria-hidden="true" className="hidden h-[36px] w-[56px] md:block" />;
     }
 
     if (name) {
@@ -160,12 +161,19 @@ export default function AccountMenu({ variant = 'desktop' }: { variant?: Variant
       );
     }
 
-    // ★ 좁은 화면이라 회원가입 버튼은 넣지 않습니다.
-    //   로그인 화면 안의 회원가입 링크로 넘어가면 됩니다.
+    /*
+     * 비로그인 — 로그인 버튼.
+     *
+     * ★ 모바일(md 미만)에서는 그리지 않습니다.
+     *   햄버거 메뉴 맨 위에 로그인·회원가입 버튼이 이미 크게 들어 있어,
+     *   상단바에까지 두면 같은 버튼이 한 화면에 두 번 나옵니다.
+     *   빠진 자리는 로고가 정중앙으로 오는 데 쓰입니다.
+     * ★ 태블릿(md~lg)에는 햄버거가 없어 메뉴 안쪽 버튼도 없습니다. 여기서는 남깁니다.
+     */
     return (
       <Link
         href="/login"
-        className="inline-flex h-[36px] min-h-[36px] items-center justify-center rounded-sm border border-ink px-3.5 text-[13px] tracking-[0.06em] text-ink"
+        className="hidden h-[36px] min-h-[36px] items-center justify-center rounded-sm border border-ink px-3.5 text-[13px] tracking-[0.06em] text-ink md:inline-flex"
       >
         로그인
       </Link>

@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { createHash } from 'node:crypto';
+import { unstable_cache } from 'next/cache';
 import { assertWritten } from '@/lib/db-write';
 import { maskName } from '@/lib/mask-name';
 import { kstToday } from '@/lib/orders';
@@ -27,6 +28,12 @@ const LINKS = 'referral_links';
 const GIFTS = 'referral_gifts';
 const GOALS = 'referral_goals';
 const ACHIEVEMENTS = 'referral_achievements';
+
+/**
+ * 목표를 고치면 이 태그를 비웁니다. (hasRunningGoal 캐시)
+ * ★ 관리자 액션에서 revalidateTag 로 부르세요. 안 부르면 최대 5분 늦게 반영됩니다.
+ */
+export const REFERRAL_GOALS_TAG = 'referral-goals';
 
 /** 테이블·컬럼이 아직 없을 때 오는 코드들 */
 const NOT_READY = new Set(['42P01', 'PGRST205', 'PGRST202', '42703']);
@@ -620,6 +627,28 @@ export async function getGoals(includeInactive = false): Promise<Goal[]> {
   if (error || !data) return [];
   return (data as GoalRow[]).map(toGoal);
 }
+
+/**
+ * 지금 진행 중인 목표 이벤트가 하나라도 있는지.
+ *
+ * ★ 상품 상세의 공유 안내(3-G)가 이 값 하나로 갈립니다.
+ *   상품 페이지마다 목표 표를 새로 읽으면 상세 조회가 통째로 한 번 더 늘어납니다.
+ *   그래서 결과(true/false)만 캐시에 담아 둡니다. 담기는 건 불리언 하나입니다.
+ *
+ * ★ 5분마다 다시 봅니다.
+ *   판단 기준이 "오늘 날짜" 라 무한정 들고 있으면 이벤트 시작·종료일이 지나도
+ *   한동안 예전 답이 나갑니다. 목표를 고치면 관리자 액션이 태그로 즉시 비웁니다.
+ */
+export const hasRunningGoal = unstable_cache(
+  async (): Promise<boolean> => {
+    // is_active = true 인 것만 가져오고, 기간은 여기서 한 번 더 봅니다.
+    const goals = await getGoals();
+    const today = kstToday();
+    return goals.some((goal) => isGoalRunning(goal, today));
+  },
+  ['referral-running-goal'],
+  { tags: [REFERRAL_GOALS_TAG], revalidate: 300 }
+);
 
 export type GoalInput = Omit<Goal, 'id' | 'gift'>;
 

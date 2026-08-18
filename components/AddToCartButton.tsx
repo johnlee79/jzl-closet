@@ -245,7 +245,7 @@ export default function AddToCartButton({ product }: { product: Product }) {
         {/* ★ 전화번호 버튼을 카카오톡 문의로 바꿨습니다.
             전화번호는 판매정보 탭의 판매자 정보와 푸터에 그대로 있습니다.
             설정에 채팅방 주소가 없으면 이 버튼은 나오지 않습니다. */}
-        <KakaoChatButton />
+        <KakaoChatButton className="w-full" />
       </div>
 
       {/* 가입 유도 — 설정에서 가입 축하 포인트를 껐거나 0이면 나오지 않습니다. */}

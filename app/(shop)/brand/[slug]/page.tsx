@@ -3,10 +3,12 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ProductList from '@/components/ProductList';
 import BrandMark from '@/components/BrandMark';
+import KakaoChatButton from '@/components/KakaoChatButton';
 import SafeImage from '@/components/SafeImage';
+import SnsLinks from '@/components/SnsLinks';
 import { brandImage, visibleBrands } from '@/lib/brands';
 import { getProductsByBrand } from '@/lib/products';
-import { getCachedStore } from '@/lib/settings';
+import { getCachedSns, getCachedStore } from '@/lib/settings';
 import { SITE_URL } from '@/lib/store';
 import { getCachedBrands } from '@/lib/taxonomy';
 
@@ -73,9 +75,11 @@ export default async function BrandDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const [items, store] = await Promise.all([
+  // ★ store 는 더 읽지 않습니다. 품절 안내에 있던 고객센터 번호를 카카오톡으로 바꿔
+  //   이 화면에서 쓸 일이 없어졌습니다. (메타데이터에서는 그대로 씁니다)
+  const [items, sns] = await Promise.all([
     getProductsByBrand(brand.slug),
-    getCachedStore(),
+    getCachedSns(),
   ]);
 
   const brandJsonLd = {
@@ -109,7 +113,7 @@ export default async function BrandDetailPage({ params }: PageProps) {
           </li>
           <li aria-hidden="true">/</li>
           <li>
-            <Link href="/brand" className="hover:text-ink">
+            <Link href="/brands" className="hover:text-ink">
               브랜드
             </Link>
           </li>
@@ -193,18 +197,23 @@ export default async function BrandDetailPage({ params }: PageProps) {
           {items.length === 0 ? (
             <div className="border-t border-stone py-16">
               <p className="text-[16px] leading-relaxed text-ink">
-                준비 중인 브랜드입니다. 입고 소식은 고객센터 {store.phone}으로 문의해
-                주세요.
+                준비 중인 브랜드입니다. 입고 소식은 카카오톡으로 문의해 주세요.
               </p>
-              <Link href="/products" className="btn-primary mt-8">
-                전체 상품 보기
-              </Link>
+              <div className="mt-8 flex flex-wrap gap-4">
+                <Link href="/products" className="btn-primary">
+                  전체 상품 보기
+                </Link>
+                <KakaoChatButton />
+              </div>
             </div>
           ) : (
             <ProductList products={items} showBrandFilter={false} />
           )}
         </div>
       </section>
+
+      {/* 푸터와 같은 SNS 줄. 채운 항목이 없으면 그리지 않습니다. */}
+      <SnsLinks sns={sns} className="mt-14 border-t border-stone pt-8" />
     </div>
   );
 }

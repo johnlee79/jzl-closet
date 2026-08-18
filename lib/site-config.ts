@@ -552,6 +552,17 @@ export type ReferralSettings = {
   inviteNotice: string;
   /** 공유할 때 따라붙는 한 줄. {store} 자리에 스토어 이름이 들어갑니다. */
   shareLine: string;
+  /**
+   * 상품 상세 공유 버튼 아래 안내 — 진행 중인 목표 이벤트가 있을 때 (로그인 회원).
+   * ★ 이벤트가 없으면 회원에게는 아무 문구도 보여 주지 않습니다.
+   *   받을 것이 없는데 "받아가세요" 라고 적으면 그다음부터 아무도 안 믿습니다.
+   */
+  shareNoticeEvent: string;
+  /**
+   * 상품 상세 공유 버튼 아래 안내 — 비회원.
+   * 비회원에게는 추천 코드가 없어 공유해도 실적이 쌓이지 않습니다. 그래서 로그인을 권합니다.
+   */
+  shareNoticeGuest: string;
 };
 
 export const DEFAULT_REFERRAL: ReferralSettings = {
@@ -560,7 +571,54 @@ export const DEFAULT_REFERRAL: ReferralSettings = {
   inviteNotice:
     '친구에게 링크를 보내 주세요. 친구가 가입하거나 첫 주문을 마치면 아래 목표가 채워집니다.',
   shareLine: '{store}에서 확인해 보세요',
+  shareNoticeEvent: '이벤트 중! 친구를 초대하고 포인트와 사은품을 받아가세요',
+  shareNoticeGuest: '로그인하면 친구 초대 혜택을 받으실 수 있어요',
 };
+
+/* ── SNS (3-G) ────────────────────────────────────────────── */
+
+/**
+ * 푸터·브랜드 페이지에 나가는 SNS 항목.
+ *
+ * ★ 나중에 유튜브·페이스북을 붙이려면 세 곳만 고치면 됩니다.
+ *     1) SnsKey 에 key 추가
+ *     2) SNS_ITEMS 에 한 줄 추가 (관리자 입력칸이 저절로 생깁니다)
+ *     3) components/SnsIcons.tsx 의 SNS_ICONS 에 아이콘 추가
+ *   화면과 관리자 폼은 모두 SNS_ITEMS 를 돌면서 그리므로 손댈 필요가 없습니다.
+ *
+ * ★ 위챗은 여기에 없습니다. 링크가 아니라 QR 이미지라 동작이 달라
+ *   wechatQrUrl 로 따로 둡니다. (눌러도 사이트 밖으로 나가지 않습니다)
+ */
+export type SnsKey = 'instagram' | 'threads' | 'tiktok';
+
+export const SNS_ITEMS: {
+  key: SnsKey;
+  label: string;
+  placeholder: string;
+}[] = [
+  { key: 'instagram', label: '인스타그램', placeholder: 'https://www.instagram.com/계정명' },
+  { key: 'threads', label: '스레드', placeholder: 'https://www.threads.net/@계정명' },
+  { key: 'tiktok', label: '틱톡', placeholder: 'https://www.tiktok.com/@계정명' },
+];
+
+export type SnsSettings = {
+  /** key 하나에 주소 하나. 비워 두면 화면에서 그 아이콘만 빠집니다. */
+  links: Record<SnsKey, string>;
+  /** 위챗 QR 이미지 주소. 비워 두면 위챗 아이콘이 나오지 않습니다. */
+  wechatQrUrl: string;
+};
+
+export const DEFAULT_SNS: SnsSettings = {
+  links: { instagram: '', threads: '', tiktok: '' },
+  wechatQrUrl: '',
+};
+
+/** 지금 그릴 아이콘이 하나라도 있는지. 없으면 SNS 줄 자체를 그리지 않습니다. */
+export function hasAnySns(sns: SnsSettings): boolean {
+  return (
+    SNS_ITEMS.some((item) => sns.links[item.key].trim()) || Boolean(sns.wechatQrUrl.trim())
+  );
+}
 
 export const RIBBON_TONES = [
   { key: 'ink', label: '먹색 (기본)' },

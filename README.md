@@ -61,6 +61,11 @@ Supabase 대시보드 > SQL Editor 에 아래 순서로 한 번씩 실행합니�
    - `3e` 브랜드 로고
    - `3f` 추천 코드 — 회원 코드 발급, 방문·추천 관계, 목표·사은품·달성 기록
 
+   > **3-G 에는 새 SQL 이 없습니다.** (카카오 로그인 · 모바일 상단바 · 카카오 문의 전환 ·
+   > 푸터 SNS · `/brands` · 공유 안내 문구) 새로 생긴 설정은 전부 `site_settings` 의
+   > JSON 값(`sns` 키, `referral` 키의 문구 두 개)이라 표를 건드리지 않습니다.
+   > 위 목록까지만 실행하시면 됩니다.
+
    각 파일 맨 위 주석에 그 파일이 하는 일과 전체 순서가 적혀 있습니다.
    여러 번 실행해도 안전하며, 이미 실행한 파일을 다시 돌려도 데이터가 바뀌지 않습니다.
    **RLS 파일이 반드시 마지막입니다.**
@@ -95,6 +100,7 @@ npm run check:schema
 |---|---|---|
 | 이메일 인증 요구 | Authentication → Sign In / Providers → Email → **Confirm email** | 켜 두면 `/signup/complete` 안내 화면을 거칩니다 |
 | 구글 로그인 | Authentication → Sign In / Providers → **Google** | 활성화 + 클라이언트 ID/Secret 등록 |
+| 카카오 로그인 | Authentication → Sign In / Providers → **Kakao** | 활성화 + REST API 키/Client Secret 등록 |
 | 사이트 주소 | Authentication → URL Configuration → **Site URL** | 배포 주소 |
 | 허용 리다이렉트 | 같은 화면 → **Redirect URLs** | `{주소}/auth/callback` 추가 |
 | 메일 템플릿 | Authentication → Emails → Templates | 한국어로 다듬기 (선택) |
@@ -111,7 +117,21 @@ npm run check:schema
 | 돌아온 뒤 로그인 안 됨 | Supabase → URL Configuration → **Redirect URLs** 에 `{배포주소}/auth/callback` 이 있는지 |
 | `?error=profile` 로 돌아옴 | `supabase/schema-2b.sql` 을 실행했는지 (profiles 테이블) |
 
-구글 계정은 연락처를 주지 않습니다. `profiles.phone` 이 비어 있으면 헤더 아래와
+### 카카오 로그인이 안 될 때
+
+| 증상 | 확인할 곳 |
+|---|---|
+| `KOE205` · "서비스 설정에 오류가 있어 이용할 수 없습니다" | 카카오 개발자 콘솔 → 카카오 로그인 → **동의항목** 에 **프로필 사진**이 켜져 있는지 |
+| `KOE006` · redirect_uri 불일치 | 카카오 콘솔 → 카카오 로그인 → **Redirect URI** 에 `https://<프로젝트>.supabase.co/auth/v1/callback` 이 있는지 |
+| 돌아온 뒤 로그인 안 됨 | Supabase → URL Configuration → **Redirect URLs** 에 `{배포주소}/auth/callback` 이 있는지 |
+
+> **프로필 사진 동의항목이 왜 필요한가** — 우리가 쓰는 값은 닉네임과 이메일뿐입니다.
+> 그런데 Supabase 는 카카오에 늘 `account_email profile_image profile_nickname` 을 요청합니다.
+> 코드에서 `scopes` 를 넘겨도 그것으로 **바뀌지 않고 뒤에 덧붙기만** 해서 사진 요청을 뺄 수 없습니다.
+> 카카오는 콘솔에 없는 동의항목을 요청받으면 동의 화면 대신 KOE205 를 돌려줍니다.
+> 그래서 콘솔에서 프로필 사진을 켜 두어야 합니다. (받아 온 사진은 저장하지 않습니다)
+
+소셜 계정은 연락처를 주지 않습니다. `profiles.phone` 이 비어 있으면 헤더 아래와
 마이페이지 상단에 연락처 입력 안내가 뜹니다. (닫아도 연락처를 넣을 때까지 다시 나타납니다)
 
 ## 무엇을 어디서 고치나
@@ -133,6 +153,9 @@ npm run check:schema
 | 브랜드명 · 고객센터 · 사업자 정보 | 관리자 > 설정 > 스토어 정보 |
 | 파비콘 · 로고 | 관리자 > 설정 > 브랜딩 |
 | 배송비 · 무료배송 기준 · 반품 주소 | 관리자 > 설정 > 배송·반품 |
+| 카카오톡 채널(오픈채팅) 링크 | 관리자 > 설정 > 스토어 정보 |
+| 인스타·스레드·틱톡 주소 · 위챗 QR | 관리자 > 설정 > **SNS** |
+| 공유 버튼 아래 안내 문구 | 관리자 > 추천 관리 > 설정 |
 | 상품 전체 CSV 내려받기 | 관리자 > 설정 > 데이터 내보내기 |
 | GA4 측정 ID | 관리자 > 설정 > 분석(GA4) |
 | 색상 (ink/paper/stone/muted/wine) | `tailwind.config.ts` + `app/globals.css` |

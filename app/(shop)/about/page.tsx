@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import KakaoChatButton from '@/components/KakaoChatButton';
 import SafeImage from '@/components/SafeImage';
 import { hasVisibleChildren, visibleCategories } from '@/lib/categories';
 import { resolveCopy } from '@/lib/copy';
@@ -131,7 +132,7 @@ export default async function AboutPage() {
           ))}
         </ul>
         <div className="mt-10">
-          <Link href="/brand" className="btn-secondary">
+          <Link href="/brands" className="btn-secondary">
             브랜드 목록 보기
           </Link>
         </div>
@@ -146,15 +147,16 @@ export default async function AboutPage() {
           문의
         </h2>
         <p className="mt-6 max-w-[560px] text-[16px] leading-[1.9] text-ink md:text-[17px]">
-          상품 문의와 재입고 요청, 주문 접수는 모두 고객센터에서 받고 있습니다. 통화가
-          어려우실 때는 문자로 남겨 주시면 순서대로 답변드립니다.
+          상품 문의와 재입고 요청, 주문 접수는 카카오톡으로 받고 있습니다. 남겨 주시면
+          순서대로 답변드립니다.
         </p>
-        <a
-          href={`tel:${store.phone}`}
-          className="mt-6 block font-display text-[32px] tracking-[0.1em] text-ink"
-        >
+        {/* ★ 전화 걸기 버튼은 뺐습니다. 번호는 정보로만 남깁니다. */}
+        <div className="mt-6">
+          <KakaoChatButton />
+        </div>
+        <p className="mt-6 font-display text-[32px] tracking-[0.1em] text-ink">
           {store.phone}
-        </a>
+        </p>
         <p className="mt-2 text-[14px] leading-relaxed text-muted">{store.hours}</p>
         <div className="mt-8 flex flex-wrap gap-4">
           <Link href="/products" className="btn-primary">

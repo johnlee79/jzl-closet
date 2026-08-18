@@ -26,7 +26,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, lastModified, changeFrequency: 'weekly', priority: 1 },
     { url: `${SITE_URL}/products`, lastModified, changeFrequency: 'weekly', priority: 0.9 },
-    { url: `${SITE_URL}/brand`, lastModified, changeFrequency: 'monthly', priority: 0.7 },
+    // ★ 목록은 /brands 입니다. 예전 /brand 는 308 로 넘어가므로 넣지 않습니다.
+    { url: `${SITE_URL}/brands`, lastModified, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${SITE_URL}/about`, lastModified, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/notice`, lastModified, changeFrequency: 'weekly', priority: 0.5 },
     { url: `${SITE_URL}/guide`, lastModified, changeFrequency: 'yearly', priority: 0.4 },

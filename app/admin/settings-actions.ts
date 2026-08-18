@@ -16,6 +16,7 @@ import {
   SALES_KEY,
   SETTINGS_TAG,
   SHIPPING_KEY,
+  SNS_KEY,
   STORE_KEY,
   getBranding,
   getCopySettings,
@@ -27,12 +28,14 @@ import {
   normalizeReview,
   normalizeSales,
   normalizeShipping,
+  normalizeSns,
   normalizeStore,
   writeSetting,
 } from '@/lib/settings';
 import {
   COPY_META,
   GA4_ID_PATTERN,
+  SNS_ITEMS,
   type AnalyticsSettings,
   type CopyKey,
   type CopySection,
@@ -43,6 +46,7 @@ import {
   type ReviewSettings,
   type SalesSettings,
   type ShippingSettings,
+  type SnsSettings,
   type StoreSettings,
 } from '@/lib/site-config';
 
@@ -255,6 +259,44 @@ export async function saveEventAction(input: EventSettings): Promise<ActionResul
     return { ok: true, data: undefined };
   } catch (error) {
     return fail(error, '문구를 저장하지 못했습니다.');
+  }
+}
+
+/* ── 3-G. SNS ─────────────────────────────────────────────── */
+
+export async function saveSnsAction(input: SnsSettings): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  /*
+   * ★ 주소는 http(s) 만 받습니다.
+   *   푸터는 사이트 전 페이지에 실리는 자리라, 여기 들어간 값은 어디에나 나갑니다.
+   *   javascript: 같은 주소가 저장되면 링크가 그대로 실행 통로가 됩니다.
+   *   normalizeSns 가 읽을 때도 한 번 더 거르지만, 저장 단계에서 이유를 알려 줍니다.
+   */
+  const bad = [
+    ...SNS_ITEMS.map((item) => ({
+      label: item.label,
+      value: input.links[item.key] ?? '',
+    })),
+    { label: '위챗 QR 이미지', value: input.wechatQrUrl },
+  ].find((entry) => entry.value.trim() && !/^https?:\/\//i.test(entry.value.trim()));
+
+  if (bad) {
+    return {
+      ok: false,
+      error: `${bad.label} 주소는 http:// 또는 https:// 로 시작해야 합니다. (지금 값: ${bad.value.trim()})`,
+    };
+  }
+
+  try {
+    await writeSetting(SNS_KEY, normalizeSns(input));
+    revalidateTag(SETTINGS_TAG);
+    // 푸터에 실리므로 전 페이지를 다시 굽습니다.
+    revalidatePath('/', 'layout');
+    revalidatePath('/admin/settings');
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, 'SNS 설정을 저장하지 못했습니다.');
   }
 }
 

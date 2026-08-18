@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import CartPanel from '@/components/CartPanel';
 import CopyBlocks from '@/components/CopyBlocks';
+import KakaoChatButton from '@/components/KakaoChatButton';
 import { resolveCopy } from '@/lib/copy';
 import { getCachedCopy, getCachedStore } from '@/lib/settings';
 
@@ -11,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const store = await getCachedStore();
   return {
     title: '장바구니 · 주문 문의',
-    description: `${store.name} 장바구니와 주문 문의 안내입니다. 담은 상품을 복사해 고객센터 ${store.phone}으로 보내주시면 접수됩니다.`,
+    description: `${store.name} 장바구니와 주문 문의 안내입니다. 담은 상품을 복사해 카카오톡으로 보내주시면 접수됩니다.`,
     alternates: { canonical: '/order' },
     robots: { index: false, follow: true },
     openGraph: {
@@ -83,10 +84,10 @@ export default async function OrderPage() {
             className="flex flex-col gap-8"
           />
 
+          {/* ★ 전화 걸기 버튼을 카카오톡 실시간 문의로 바꿨습니다.
+              고객센터 번호는 푸터의 사업자 정보에 그대로 있습니다. */}
           <div className="mt-8 flex flex-wrap gap-4">
-            <a href={`tel:${store.phone}`} className="btn-primary">
-              고객센터 {store.phone}
-            </a>
+            <KakaoChatButton />
             <Link href="/guide" className="btn-secondary">
               배송·교환·반품 안내
             </Link>

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import InquiryForm, { type OrderOption } from '@/components/InquiryForm';
+import KakaoChatButton from '@/components/KakaoChatButton';
 import { getCurrentProfile, getCurrentUser } from '@/lib/auth';
 import { formatDate } from '@/lib/format';
 import { getOrdersOfUser } from '@/lib/orders';
@@ -58,9 +59,14 @@ export default async function NewInquiryPage({ searchParams }: PageProps) {
           1:1 문의
         </h1>
         <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
-          궁금한 점을 남겨 주시면 영업일 기준 1~2일 안에 답변드립니다. 급하신 문의는
-          고객센터 {store.phone}으로 전화 주세요.
+          궁금한 점을 남겨 주시면 영업일 기준 1~2일 안에 답변드립니다.
+          {store.kakao.trim() ? ' 급하신 문의는 카카오톡으로 보내 주세요.' : ''}
         </p>
+        {store.kakao.trim() ? (
+          <div className="mt-5">
+            <KakaoChatButton />
+          </div>
+        ) : null}
         {!isMember ? (
           <p className="mt-3 text-[15px] text-ink">
             <Link href="/login?next=/inquiry/new" className="link-wine">

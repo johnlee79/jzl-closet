@@ -107,6 +107,54 @@ export default function ReferralSettingsForm({
         />
       </div>
 
+      {/* ── 상품 상세 공유 버튼 아래 안내 (3-G) ─────────────── */}
+      <div className="rounded-md border border-slate-200 p-4">
+        <h3 className="text-[14px] font-semibold text-slate-900">
+          상품 상세 · 공유 버튼 아래 안내
+        </h3>
+        <p className="mt-1 text-[12px] leading-relaxed text-slate-500">
+          [친구에게 공유하기] 버튼 아래에 상황에 맞게 한 줄이 붙습니다.{' '}
+          <strong>비워 두면 그 상황에서는 아무 문구도 나가지 않습니다.</strong>
+        </p>
+
+        <div className="mt-3 flex flex-col gap-3">
+          <div>
+            <label htmlFor="shareNoticeEvent" className="admin-label">
+              진행 중인 목표 이벤트가 있을 때 (로그인 회원)
+            </label>
+            <input
+              id="shareNoticeEvent"
+              type="text"
+              value={form.shareNoticeEvent}
+              onChange={(event) => set('shareNoticeEvent', event.target.value)}
+              className="admin-input"
+            />
+            <p className="mt-1 text-[12px] leading-relaxed text-slate-500">
+              진행 여부는 <strong>목표·사은품 화면에 만들어 둔 목표</strong>가 오늘
+              기준으로 살아 있는지로 자동 판단합니다. 따로 켜고 끌 필요가 없습니다.
+              이벤트가 없으면 회원에게는 아무 문구도 나가지 않습니다.
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="shareNoticeGuest" className="admin-label">
+              비회원일 때
+            </label>
+            <input
+              id="shareNoticeGuest"
+              type="text"
+              value={form.shareNoticeGuest}
+              onChange={(event) => set('shareNoticeGuest', event.target.value)}
+              className="admin-input"
+            />
+            <p className="mt-1 text-[12px] leading-relaxed text-slate-500">
+              비회원은 추천 코드가 없어 공유해도 실적이 쌓이지 않습니다. 그래서
+              이벤트와 상관없이 로그인을 권하는 문구를 보여 줍니다.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="flex items-center gap-3">
         <button
           type="button"

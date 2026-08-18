@@ -73,7 +73,7 @@ export default function Header({
   return (
     <header className="sticky top-0 z-40 border-b border-stone bg-paper">
       {/* 좁은 화면에서는 간격을 줄여 로고와 버튼이 겹치지 않게 합니다. */}
-      <div className="shell flex h-16 items-center justify-between gap-2 sm:gap-4 md:h-20 md:gap-6">
+      <div className="shell relative flex h-16 items-center justify-between gap-2 sm:gap-4 md:h-20 md:gap-6">
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -86,7 +86,19 @@ export default function Header({
           </svg>
         </button>
 
-        <Link href="/" className="shrink-0" aria-label={`${storeName} 홈으로`}>
+        {/*
+          로고.
+          ★ 모바일에서는 절대 위치로 정중앙에 둡니다.
+            왼쪽은 햄버거 하나(40px)뿐인데 오른쪽은 마이페이지+장바구니라 폭이 다릅니다.
+            흐름 안에 두고 가운데 정렬하면 오른쪽이 무거운 만큼 로고가 왼쪽으로 밀립니다.
+            (로그인 여부에 따라 오른쪽 폭이 바뀌므로 고정 여백으로도 맞출 수 없습니다)
+          ★ md 이상에서는 static 으로 돌려 기존 PC 배치를 그대로 둡니다.
+        */}
+        <Link
+          href="/"
+          className="absolute left-1/2 -translate-x-1/2 md:static md:left-auto md:translate-x-0 md:shrink-0"
+          aria-label={`${storeName} 홈으로`}
+        >
           {logo}
         </Link>
 
@@ -122,9 +134,11 @@ export default function Header({
           </ul>
         </nav>
 
-        {/* 오른쪽 — 로그인/회원가입 버튼과 장바구니.
-            장바구니는 세로 구분선으로 버튼과 나눠 둡니다. */}
-        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        {/* 오른쪽 — 계정 영역과 장바구니.
+            장바구니는 세로 구분선으로 버튼과 나눠 둡니다.
+            ★ 모바일 비로그인 상태에서는 계정 영역이 통째로 비고 장바구니만 남습니다.
+              (로그인·회원가입은 햄버거 메뉴 맨 위에 그대로 있습니다) */}
+        <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3 md:ml-0">
           {/* 데스크탑: 버튼 두 개 */}
           <AccountMenu />
           {/* 모바일·태블릿: 버튼 하나 (또는 사람 아이콘) */}
@@ -132,9 +146,10 @@ export default function Header({
             <AccountMenu variant="mobile" />
           </span>
 
+          {/* 구분선은 왼쪽에 버튼이 있을 때만 의미가 있습니다. 모바일에서는 뺍니다. */}
           <span
             aria-hidden="true"
-            className="hidden h-4 w-px bg-stone sm:block"
+            className="hidden h-4 w-px bg-stone md:block"
           />
           <CartBadge />
         </div>
@@ -199,7 +214,7 @@ export default function Header({
                 </Link>
               </li>
               <li className="border-b border-stone">
-                <Link href="/brand" className="block py-4 text-[16px] text-ink">
+                <Link href="/brands" className="block py-4 text-[16px] text-ink">
                   브랜드 목록
                 </Link>
               </li>

@@ -42,7 +42,8 @@ function fail(error: unknown, fallback: string): { ok: false; error: string } {
 async function revalidateStorefront(products: (Product | null)[]): Promise<void> {
   revalidatePath('/');
   revalidatePath('/products');
-  revalidatePath('/brand');
+  // 브랜드 목록은 상품 수를 함께 보여 주므로 상품이 바뀌면 같이 다시 굽습니다.
+  revalidatePath('/brands');
   revalidatePath('/sitemap.xml');
 
   for (const product of products) {

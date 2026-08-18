@@ -45,17 +45,27 @@ export default function ShareButton({
   const [code, setCode] = useState('');
   const [shareLine, setShareLine] = useState('');
   const [done, setDone] = useState('');
+  /**
+   * 버튼 아래 안내 문구. 서버가 상황을 보고 정해서 내려 줍니다.
+   * ★ 여기서 판단하지 않습니다. 이벤트 진행 여부는 브라우저가 알 수 없고,
+   *   문구도 관리자가 고치는 값입니다. 화면은 받은 대로 그리기만 합니다.
+   * ★ 회원인데 진행 중인 이벤트가 없으면 빈 문자열이 옵니다. 그때는 아무것도 안 그립니다.
+   */
+  const [notice, setNotice] = useState('');
 
   useEffect(() => {
     let alive = true;
     // 로그인하지 않았으면 빈 코드가 옵니다. 그대로 코드 없이 공유합니다.
     fetch('/api/referral/me')
       .then((response) => (response.ok ? response.json() : null))
-      .then((data: { code?: string; shareLine?: string } | null) => {
-        if (!alive || !data) return;
-        if (data.code && isReferralCode(data.code)) setCode(data.code);
-        if (data.shareLine) setShareLine(data.shareLine);
-      })
+      .then(
+        (data: { code?: string; shareLine?: string; notice?: string } | null) => {
+          if (!alive || !data) return;
+          if (data.code && isReferralCode(data.code)) setCode(data.code);
+          if (data.shareLine) setShareLine(data.shareLine);
+          if (data.notice) setNotice(data.notice);
+        }
+      )
       .catch(() => undefined);
     return () => {
       alive = false;
@@ -100,6 +110,12 @@ export default function ShareButton({
         <ShareIcon />
         {label}
       </button>
+
+      {/* 왜 공유하는지 — 상황에 맞는 한 줄. 없으면 버튼만 나갑니다. */}
+      {notice ? (
+        <span className="pl-6 text-[13px] leading-relaxed text-muted">{notice}</span>
+      ) : null}
+
       {/* aria-live 를 두어야 화면을 못 보는 손님에게도 결과가 읽힙니다. */}
       <span aria-live="polite" className="text-[12px] text-muted">
         {done}

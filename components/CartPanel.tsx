@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import CopyOrderButton from '@/components/CopyOrderButton';
+import KakaoChatButton from '@/components/KakaoChatButton';
 import SignupPointBadge from '@/components/SignupPointBadge';
 import SafeImage from '@/components/SafeImage';
 import { useSite } from '@/components/SiteProvider';
@@ -252,11 +253,12 @@ export default function CartPanel() {
 
           <div className="mt-6 border-t border-stone pt-6">
             <CopyOrderButton text={orderText} />
-            <a href={`tel:${store.phone}`} className="btn-secondary mt-3 w-full">
-              전화로 문의 {store.phone}
-            </a>
+            {/* ★ 전화 걸기 버튼을 카카오톡 실시간 문의로 바꿨습니다.
+                설정에 채팅방 주소가 없으면 버튼이 나오지 않으므로,
+                아래 안내는 버튼을 가리키지 않고 혼자서도 말이 되게 적습니다. */}
+            <KakaoChatButton className="mt-3 w-full" />
             <p className="mt-3 text-[13px] leading-relaxed text-muted">
-              온라인 주문이 어려우시면 위 내용을 복사해 보내주시거나 전화 주세요.
+              온라인 주문이 어려우시면 위 내용을 복사해 카카오톡으로 보내주세요.
             </p>
           </div>
         </div>

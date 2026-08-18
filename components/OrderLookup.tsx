@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import AuthCard, { authButtonClass, authInputClass } from '@/components/AuthCard';
 import CopyOrderButton from '@/components/CopyOrderButton';
+import KakaoChatButton from '@/components/KakaoChatButton';
 import OrderReceipt, { orderToText } from '@/components/OrderReceipt';
 import { lookupOrderAction, requestCancelAction } from '@/app/(shop)/checkout/actions';
 import { canRequestCancel } from '@/lib/order-status';
@@ -13,14 +14,11 @@ import type { Order } from '@/lib/types';
  * 비회원 주문 조회.
  * 주문번호 + 연락처가 모두 맞아야 열립니다.
  * 연속 시도는 서버에서 같은 IP 분당 10회로 제한합니다. (lib/rate-limit.ts)
+ *
+ * ★ storePhone 을 더 받지 않습니다. 취소 불가 안내에 걸려 있던 전화 걸기 링크를
+ *   카카오톡 문의로 바꾸면서 쓸 곳이 없어졌습니다. (3-G)
  */
-export default function OrderLookup({
-  storeName,
-  storePhone,
-}: {
-  storeName: string;
-  storePhone: string;
-}) {
+export default function OrderLookup({ storeName }: { storeName: string }) {
   const [pending, startTransition] = useTransition();
   const [orderNo, setOrderNo] = useState('');
   const [phone, setPhone] = useState('');
@@ -222,14 +220,17 @@ export default function OrderLookup({
                     )}
                   </div>
                 ) : (
+                  /* ★ 전화 걸기 링크를 카카오톡·1:1 문의로 바꿨습니다. */
                   <div className="mt-6 border-t border-stone pt-6">
                     <p className="text-[13px] leading-relaxed text-muted">
-                      이미 상품 준비가 시작되어 이 화면에서는 취소할 수 없습니다. 고객센터{' '}
-                      <a href={`tel:${storePhone}`} className="link-wine">
-                        {storePhone}
-                      </a>
-                      로 문의해 주세요.
+                      이미 상품 준비가 시작되어 이 화면에서는 취소할 수 없습니다.
+                      카카오톡이나{' '}
+                      <Link href="/inquiry/new" className="link-wine">
+                        1:1 문의
+                      </Link>
+                      로 알려 주시면 확인 후 처리해 드립니다.
                     </p>
+                    <KakaoChatButton className="mt-3 w-full" />
                   </div>
                 )}
 

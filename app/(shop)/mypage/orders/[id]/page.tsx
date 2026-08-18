@@ -21,7 +21,5 @@ export default async function MypageOrderDetailPage({
   ]);
   if (!order) notFound();
 
-  return (
-    <MemberOrderDetail order={order} storeName={store.name} storePhone={store.phone} />
-  );
+  return <MemberOrderDetail order={order} storeName={store.name} />;
 }

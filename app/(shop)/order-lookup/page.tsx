@@ -17,5 +17,5 @@ export const metadata: Metadata = {
 export default async function OrderLookupPage() {
   const store = await getCachedStore();
 
-  return <OrderLookup storeName={store.name} storePhone={store.phone} />;
+  return <OrderLookup storeName={store.name} />;
 }

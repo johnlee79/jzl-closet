@@ -14,6 +14,7 @@ import {
   markShipped,
   refreshCounts,
   setAchievementStatus,
+  REFERRAL_GOALS_TAG,
   updateGift,
   updateGoal,
   updateShipping,
@@ -21,7 +22,12 @@ import {
   type GoalInput,
   type ShippingInput,
 } from '@/lib/referrals';
-import { SETTINGS_TAG, writeSetting, REFERRAL_KEY } from '@/lib/settings';
+import {
+  SETTINGS_TAG,
+  normalizeReferral,
+  writeSetting,
+  REFERRAL_KEY,
+} from '@/lib/settings';
 import { notifyReferralReward } from '@/lib/telegram';
 import type { ReferralSettings } from '@/lib/site-config';
 
@@ -54,6 +60,9 @@ function refresh(): void {
   revalidatePath('/admin/referrals/review');
   // 회원이 보는 초대 화면도 다시 그려야 목표가 바로 반영됩니다.
   revalidatePath('/mypage/invite');
+  // ★ 상품 상세 공유 안내가 "이벤트 진행 중인지" 를 캐시로 들고 있습니다. (3-G)
+  //   목표를 켜고 끄면 여기서 비워 줘야 바로 문구가 바뀝니다.
+  revalidateTag(REFERRAL_GOALS_TAG);
 }
 
 /* ── 사은품 ──────────────────────────────────────────────── */
@@ -241,7 +250,8 @@ export async function saveReferralSettingsAction(
   }
 
   try {
-    await writeSetting(REFERRAL_KEY, input);
+    // ★ 정규화해서 저장합니다. 화면에서 넘어온 값을 그대로 믿지 않습니다.
+    await writeSetting(REFERRAL_KEY, normalizeReferral(input));
     revalidateTag(SETTINGS_TAG);
     refresh();
     return { ok: true, data: undefined };

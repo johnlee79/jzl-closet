@@ -34,6 +34,16 @@ export type Brand = {
   isFeatured: boolean;
 };
 
+/**
+ * 우리 자체 브랜드의 slug.
+ *
+ * ★ 푸터의 '브랜드 소개' 가 여기로 갑니다. (3-G)
+ *   관리자 > 브랜드 관리에 이 slug 로 브랜드를 하나 만들고 노출을 켜 두어야 합니다.
+ *   없으면 /brand/{slug} 는 404 이므로, 없을 때는 /about 으로 보냅니다.
+ *   (푸터는 전 페이지에 실리는 자리라 죽은 링크를 둘 수 없습니다)
+ */
+export const OWN_BRAND_SLUG = 'jzl-closet';
+
 /** DB 의 story(text) → 문단 배열. 빈 줄이 문단 구분입니다. */
 export function storyToParagraphs(story: string | null | undefined): string[] {
   if (!story) return [];

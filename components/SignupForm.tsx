@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { normalizeReferralCode } from '@/lib/referral-code';
 import { authButtonClass, authInputClass } from '@/components/AuthCard';
-import GoogleButton, { OrDivider } from '@/components/GoogleButton';
+import SocialAuthButtons, { OrDivider } from '@/components/SocialAuth';
 import PostcodeSearch from '@/components/PostcodeSearch';
 import { useSite } from '@/components/SiteProvider';
 import { checkEmailAction, signupAction } from '@/app/(shop)/auth-actions';
@@ -147,8 +147,8 @@ export default function SignupForm() {
 
   return (
     <div>
-      {/* ── 0. 구글 간편로그인 — 폼 맨 위 ───────────────── */}
-      <GoogleButton next="/mypage" />
+      {/* ── 0. 간편가입 (구글 · 카카오) — 폼 맨 위 ─────── */}
+      <SocialAuthButtons next="/mypage" />
 
       <OrDivider label="또는 이메일로 가입" />
 

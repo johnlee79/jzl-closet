@@ -9,12 +9,18 @@ import { useSite } from '@/components/SiteProvider';
  *   코드에 주소를 박아 두지 않습니다. 채팅방을 새로 파도 설정만 고치면 됩니다.
  * ★ 설정이 비어 있으면 버튼 자체를 그리지 않습니다.
  *   "준비중" 을 눌러 보게 만드는 것보다 아예 없는 편이 낫습니다.
+ *   그래서 이 버튼 옆에 "아래 버튼으로 문의하세요" 같은 안내를 붙이면 안 됩니다.
+ *   버튼이 사라졌을 때 안내만 남아 떠 버립니다.
  * ★ 말풍선은 외부 이미지가 아니라 SVG 로 직접 그립니다. (이모지·외부 링크 금지)
+ * ★ 그림자를 쓰지 않습니다.
  */
 
 /** 카카오 상징색 — 브랜드 가이드에서 정한 값이라 우리 토큰을 쓰지 않습니다. */
 const KAKAO_YELLOW = '#FEE500';
 const KAKAO_INK = '#191919';
+
+/** 3-G 에서 문구를 통일했습니다. 사이트 어디서나 같은 말이 나가야 합니다. */
+const LABEL = '카카오톡 실시간 문의';
 
 function SpeechBubble() {
   return (
@@ -35,6 +41,10 @@ function SpeechBubble() {
 }
 
 export default function KakaoChatButton({
+  /**
+   * 폭·바깥 여백은 쓰는 쪽이 정합니다.
+   * ★ 예전에는 여기서 w-full 을 박아 두어, 다른 버튼과 나란히 놓을 수가 없었습니다.
+   */
   className = '',
 }: {
   className?: string;
@@ -50,10 +60,10 @@ export default function KakaoChatButton({
       target="_blank"
       rel="noopener noreferrer"
       style={{ backgroundColor: KAKAO_YELLOW, color: KAKAO_INK }}
-      className={`inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-sm px-10 py-4 text-[15px] tracking-[0.14em] transition-opacity duration-200 hover:opacity-90 ${className}`}
+      className={`inline-flex min-h-[52px] items-center justify-center gap-2 rounded-sm px-8 py-4 text-[15px] tracking-[0.14em] transition-opacity duration-200 hover:opacity-90 ${className}`}
     >
       <SpeechBubble />
-      카카오톡으로 문의하기
+      {LABEL}
     </a>
   );
 }

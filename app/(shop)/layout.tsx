@@ -13,10 +13,12 @@ import {
   getCachedEvent,
   getCachedPoints,
   getCachedShipping,
+  getCachedSns,
   getCachedStore,
   getEscrowNotice,
 } from '@/lib/settings';
 import { isRibbonActive } from '@/lib/site-config';
+import { OWN_BRAND_SLUG } from '@/lib/brands';
 import { SITE_URL } from '@/lib/store';
 import { getActivePopups } from '@/lib/popups';
 import { getTaxonomy } from '@/lib/taxonomy';
@@ -33,19 +35,40 @@ import { getTaxonomy } from '@/lib/taxonomy';
  * Organization JSON-LD 는 프론트 전 페이지에만 실립니다.
  */
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
-  const [{ categories, brands }, store, shipping, branding, escrow, popups, event, points] =
-    await Promise.all([
-      getTaxonomy(),
-      getCachedStore(),
-      getCachedShipping(),
-      getCachedBranding(),
-      // ★ 계좌번호가 아니라 구매안전 표시 정보만 뽑아 옵니다.
-      getEscrowNotice(),
-      // 노출 기간에 든 팝업만 내려옵니다.
-      getActivePopups(),
-      getCachedEvent(),
-      getCachedPoints(),
-    ]);
+  const [
+    { categories, brands },
+    store,
+    shipping,
+    branding,
+    escrow,
+    popups,
+    event,
+    points,
+    sns,
+  ] = await Promise.all([
+    getTaxonomy(),
+    getCachedStore(),
+    getCachedShipping(),
+    getCachedBranding(),
+    // ★ 계좌번호가 아니라 구매안전 표시 정보만 뽑아 옵니다.
+    getEscrowNotice(),
+    // 노출 기간에 든 팝업만 내려옵니다.
+    getActivePopups(),
+    getCachedEvent(),
+    getCachedPoints(),
+    getCachedSns(),
+  ]);
+
+  /*
+   * 푸터의 '브랜드 소개' 가 갈 곳.
+   * ★ 자체 브랜드 페이지를 아직 만들지 않았으면 /about 으로 보냅니다.
+   *   푸터는 전 페이지에 실리므로 여기에 404 링크를 둘 수 없습니다.
+   *   (관리자에서 jzl-closet 브랜드를 만들고 노출을 켜면 저절로 그쪽으로 바뀝니다)
+   */
+  const ownBrand = brands.find(
+    (brand) => brand.slug === OWN_BRAND_SLUG && brand.isVisible
+  );
+  const brandIntroHref = ownBrand ? `/brand/${OWN_BRAND_SLUG}` : '/about';
 
   // 띠배너 노출 기간은 한국시간 날짜로 판단합니다.
   const todayKst = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -100,7 +123,13 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
           {/* 연락처 미입력 같은 안내 줄. 로그인 상태는 브라우저에서 확인합니다. */}
           <SiteNotices />
           <main id="main">{children}</main>
-          <Footer categories={categories} store={store} escrow={escrow} />
+          <Footer
+            categories={categories}
+            store={store}
+            sns={sns}
+            escrow={escrow}
+            brandIntroHref={brandIntroHref}
+          />
           {/* 팝업 — 노출 화면(메인만/전체) 판단은 컴포넌트가 주소를 보고 합니다. */}
           <PopupLayer popups={popups} />
           {/* 보유 포인트 안내. 공지 팝업이 떠 있으면 이번에는 뜨지 않습니다. */}

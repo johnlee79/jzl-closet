@@ -17,8 +17,10 @@ import {
   DEFAULT_REVIEW_TAGS,
   DEFAULT_SALES,
   DEFAULT_SHIPPING,
+  DEFAULT_SNS,
   DEFAULT_STORE,
   MAX_BANNERS,
+  SNS_ITEMS,
   MAX_BANNER_INTERVAL,
   MIN_BANNER_INTERVAL,
   type AnalyticsSettings,
@@ -40,6 +42,8 @@ import {
   type RibbonSettings,
   type SalesSettings,
   type ShippingSettings,
+  type SnsKey,
+  type SnsSettings,
   type StoreSettings,
 } from '@/lib/site-config';
 import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
@@ -84,6 +88,8 @@ export const SALES_KEY = 'sales';
 export const EVENT_KEY = 'event';
 export const IMPORT_KEY = 'import';
 export const REFERRAL_KEY = 'referral';
+/* ── 3-G ─────────────────────────────────────────────────── */
+export const SNS_KEY = 'sns';
 
 /** 테이블이 아직 없을 때 PostgREST 가 돌려주는 코드들 */
 const MISSING_TABLE_CODES = new Set(['42P01', 'PGRST205', 'PGRST202']);
@@ -648,6 +654,15 @@ export function normalizeReferral(value: unknown): ReferralSettings {
     monthlyPointCap: count(raw.monthlyPointCap, DEFAULT_REFERRAL.monthlyPointCap),
     inviteNotice: optionalText(raw.inviteNotice, DEFAULT_REFERRAL.inviteNotice),
     shareLine: text(raw.shareLine, DEFAULT_REFERRAL.shareLine),
+    // ★ 비워 두면 그 상황에서는 아무 문구도 나가지 않습니다. 기본값으로 되돌리지 않습니다.
+    shareNoticeEvent: optionalText(
+      raw.shareNoticeEvent,
+      DEFAULT_REFERRAL.shareNoticeEvent
+    ),
+    shareNoticeGuest: optionalText(
+      raw.shareNoticeGuest,
+      DEFAULT_REFERRAL.shareNoticeGuest
+    ),
   };
 }
 
@@ -656,6 +671,42 @@ export async function getReferralSettings(): Promise<ReferralSettings> {
 }
 
 export const getCachedReferral = unstable_cache(getReferralSettings, ['referral'], {
+  tags: [SETTINGS_TAG],
+  revalidate: 3600,
+});
+
+/* ── SNS (3-G) ────────────────────────────────────────────── */
+
+/**
+ * 주소는 http(s) 만 받습니다.
+ *
+ * ★ javascript: 나 data: 가 들어오면 푸터 링크가 그대로 실행 통로가 됩니다.
+ *   관리자만 입력하는 값이지만, 관리자 계정이 털리면 전 페이지에 실리는 자리입니다.
+ *   저장할 때도 막고(saveSnsAction) 읽을 때도 막습니다.
+ */
+function webUrl(value: unknown): string {
+  const url = typeof value === 'string' ? value.trim() : '';
+  return /^https?:\/\//i.test(url) ? url : '';
+}
+
+export function normalizeSns(value: unknown): SnsSettings {
+  if (!value || typeof value !== 'object') return DEFAULT_SNS;
+  const raw = value as Record<string, unknown>;
+  const rawLinks = (raw.links ?? {}) as Record<string, unknown>;
+
+  const links = {} as Record<SnsKey, string>;
+  for (const item of SNS_ITEMS) {
+    links[item.key] = webUrl(rawLinks[item.key]);
+  }
+
+  return { links, wechatQrUrl: webUrl(raw.wechatQrUrl) };
+}
+
+export async function getSnsSettings(): Promise<SnsSettings> {
+  return normalizeSns(await readSetting(SNS_KEY));
+}
+
+export const getCachedSns = unstable_cache(getSnsSettings, ['sns'], {
   tags: [SETTINGS_TAG],
   revalidate: 3600,
 });

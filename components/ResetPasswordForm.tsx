@@ -8,15 +8,9 @@ import {
   requestPasswordResetAction,
   updatePasswordAction,
 } from '@/app/(shop)/auth-actions';
+import { providerLabel } from '@/lib/auth-provider';
 
 const inputClass = authInputClass;
-
-/** 화면에 그대로 쓰는 소셜 이름 */
-const SOCIAL_LABEL: Record<string, string> = {
-  google: 'Google',
-  kakao: '카카오',
-  naver: '네이버',
-};
 
 /** 1단계 — 메일 보내기 */
 export function RequestResetForm() {
@@ -48,13 +42,13 @@ export function RequestResetForm() {
     return (
       <div className="text-left">
         <div className="border border-stone bg-paper px-5 py-4 text-[15px] leading-relaxed text-ink">
-          <p className="font-medium">이 계정은 {SOCIAL_LABEL[social] ?? social} 계정으로 가입하셨습니다.</p>
+          <p className="font-medium">이 계정은 {providerLabel(social)} 계정으로 가입하셨습니다.</p>
           <p className="mt-1.5">
-            로그인 화면에서 &lsquo;{SOCIAL_LABEL[social] ?? social}로 계속하기&rsquo;를 눌러 주세요.
+            로그인 화면에서 &lsquo;{providerLabel(social)}로 계속하기&rsquo;를 눌러 주세요.
           </p>
         </div>
         <p className="mt-4 text-[13px] leading-relaxed text-muted">
-          소셜 계정의 비밀번호는 {SOCIAL_LABEL[social] ?? social}에서 관리합니다. JZL CLOSET 에는
+          소셜 계정의 비밀번호는 {providerLabel(social)}에서 관리합니다. JZL CLOSET 에는
           따로 저장된 비밀번호가 없습니다.
         </p>
         <Link href="/login" className={`${authButtonClass} mt-6`}>

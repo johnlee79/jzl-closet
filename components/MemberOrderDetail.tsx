@@ -4,20 +4,24 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import CopyOrderButton from '@/components/CopyOrderButton';
+import KakaoChatButton from '@/components/KakaoChatButton';
 import OrderReceipt, { orderToText } from '@/components/OrderReceipt';
 import { memberCancelRequestAction } from '@/app/(shop)/mypage/actions';
 import { canRequestCancel } from '@/lib/order-status';
 import type { Order } from '@/lib/types';
 
-/** 마이페이지 주문 상세 — 비회원 주문 조회와 같은 정보를 보여 줍니다. */
+/**
+ * 마이페이지 주문 상세 — 비회원 주문 조회와 같은 정보를 보여 줍니다.
+ *
+ * ★ storePhone 을 더 받지 않습니다. 취소 불가 안내에 걸려 있던 전화 걸기 링크를
+ *   카카오톡 문의로 바꾸면서 쓸 곳이 없어졌습니다. (3-G)
+ */
 export default function MemberOrderDetail({
   order,
   storeName,
-  storePhone,
 }: {
   order: Order;
   storeName: string;
-  storePhone: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -129,13 +133,15 @@ export default function MemberOrderDetail({
                 )}
               </div>
             ) : (
-              <p className="mt-6 border-t border-stone pt-6 text-[13px] leading-relaxed text-muted">
-                이미 상품 준비가 시작되어 이 화면에서는 취소할 수 없습니다. 고객센터{' '}
-                <a href={`tel:${storePhone}`} className="link-wine">
-                  {storePhone}
-                </a>
-                로 문의해 주세요.
-              </p>
+              /* ★ 전화 걸기 링크를 카카오톡·1:1 문의로 바꿨습니다. */
+              <div className="mt-6 border-t border-stone pt-6">
+                {/* 1:1 문의 링크는 바로 아래 문단에 있어 여기서는 겹쳐 걸지 않습니다. */}
+                <p className="text-[13px] leading-relaxed text-muted">
+                  이미 상품 준비가 시작되어 이 화면에서는 취소할 수 없습니다. 카카오톡
+                  또는 1:1 문의로 알려 주시면 확인 후 처리해 드립니다.
+                </p>
+                <KakaoChatButton className="mt-3 w-full" />
+              </div>
             )}
 
             <p className="mt-6 border-t border-stone pt-5 text-[13px] leading-relaxed text-muted">

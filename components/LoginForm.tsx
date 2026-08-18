@@ -5,17 +5,22 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { authButtonClass, authInputClass } from '@/components/AuthCard';
 import SignupPointBadge from '@/components/SignupPointBadge';
-import GoogleButton, { OrDivider } from '@/components/GoogleButton';
+import SocialAuthButtons, { OrDivider } from '@/components/SocialAuth';
 import ResendVerification from '@/components/ResendVerification';
 import { loginAction } from '@/app/(shop)/auth-actions';
 
-/** 콜백이 붙여 보내는 안내 (링크 만료·구글 취소 등) */
+/**
+ * 콜백이 붙여 보내는 안내 (링크 만료·간편로그인 취소 등)
+ *
+ * ★ cancelled·oauth 는 어느 소셜인지 적지 않습니다.
+ *   콜백에는 provider 가 실려 오지 않아, 카카오로 취소해도 "구글" 이라고 나갔습니다.
+ */
 const LINK_MESSAGES: Record<string, string> = {
   expired: '링크가 만료되었습니다. 다시 시도해 주세요.',
   link: '잘못된 링크입니다. 메일의 주소를 다시 확인해 주세요.',
   auth: '로그인 기능이 아직 설정되지 않았습니다.',
-  cancelled: '구글 로그인을 취소하셨습니다.',
-  oauth: '구글 로그인 중 문제가 생겼습니다. 잠시 후 다시 시도해 주세요.',
+  cancelled: '간편로그인을 취소하셨습니다.',
+  oauth: '간편로그인 중 문제가 생겼습니다. 잠시 후 다시 시도해 주세요.',
   profile: '회원 정보를 준비하지 못했습니다. 잠시 후 다시 시도해 주세요.',
   withdrawn: '탈퇴한 계정입니다. 새로 가입해 주시거나 고객센터로 문의해 주세요.',
   inactive: '이용이 제한된 계정입니다. 고객센터로 문의해 주세요.',
@@ -74,8 +79,8 @@ export default function LoginForm({
 
   return (
     <div>
-      {/* ── 1. 구글 간편로그인 ─────────────────────────── */}
-      <GoogleButton next={safeNext} />
+      {/* ── 1. 간편로그인 (구글 · 카카오) ──────────────── */}
+      <SocialAuthButtons next={safeNext} />
 
       <OrDivider />
 

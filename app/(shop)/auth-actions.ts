@@ -25,9 +25,11 @@ import { createAuthClient } from '@/lib/supabase/auth-server';
 /**
  * 회원가입 · 로그인 · 비밀번호 재설정.
  *
- * 인증은 Supabase Auth(이메일 + 비밀번호)를 씁니다.
- * 소셜 로그인(카카오 등)은 이번 범위가 아닙니다. 나중에 붙일 때는
- * signInWithOAuth 를 부르는 액션을 여기에 하나 더 만들면 됩니다.
+ * 인증은 Supabase Auth 를 씁니다.
+ *   · 이메일 + 비밀번호
+ *   · 간편로그인 — 구글 · 카카오 (아래 startOAuth)
+ *
+ * 네이버는 Supabase 가 지원하지 않아 아직 없습니다. 직접 붙여야 합니다.
  */
 
 export type ActionResult<T = undefined> =
@@ -244,11 +246,14 @@ export async function signupAction(
  * ------------------------------------------------------------------ */
 
 /* ------------------------------------------------------------------
- * 구글 간편로그인
+ * 소셜 간편로그인 (구글 · 카카오)
  *
  * 클라이언트 ID / Secret 은 Supabase 대시보드에만 있습니다. 코드에 넣지 않습니다.
- * 여기서는 구글 동의 화면 주소만 받아 돌려주고, 실제 이동은 브라우저가 합니다.
+ * 여기서는 동의 화면 주소만 받아 돌려주고, 실제 이동은 브라우저가 합니다.
  * (이 액션이 응답하면서 PKCE 검증용 쿠키가 함께 심어집니다)
+ *
+ * ★ 두 provider 의 흐름이 완전히 같습니다. 갈라지는 것은 provider 값뿐이라
+ *   아래 startOAuth 하나로 모으고 액션은 얇게 둡니다. 한쪽만 고쳐지는 일을 막습니다.
  * ------------------------------------------------------------------ */
 
 /** 사이트 안쪽 주소만 허용합니다. 열린 리다이렉트를 막습니다. */
@@ -257,34 +262,69 @@ function safeNext(value: string): string {
   return value;
 }
 
-export async function signInWithGoogleAction(
-  next: string
+async function startOAuth(
+  provider: 'google' | 'kakao',
+  label: string,
+  next: string,
+  options?: {
+    /** 동의 화면에 덧붙일 값. 없으면 넘기지 않습니다. */
+    queryParams?: Record<string, string>;
+  }
 ): Promise<ActionResult<{ url: string }>> {
   const supabase = createAuthClient();
   if (!supabase) return noAuth();
 
   const target = safeNext(next);
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
+    provider,
     options: {
       redirectTo: `${SITE_URL}/auth/callback?next=${encodeURIComponent(target)}`,
-      queryParams: {
-        // 계정을 고를 수 있게 합니다. (기기를 함께 쓰는 경우를 위해)
-        prompt: 'select_account',
-      },
+      ...(options?.queryParams ? { queryParams: options.queryParams } : {}),
     },
   });
 
   if (error || !data?.url) {
-    console.error('[auth] 구글 로그인 시작 실패:', error?.message);
+    console.error(`[auth] ${label} 로그인 시작 실패:`, error?.message);
     return {
       ok: false,
-      error:
-        '구글 로그인을 시작하지 못했습니다. 잠시 후 다시 시도해 주시거나 이메일로 로그인해 주세요.',
+      error: `${label} 로그인을 시작하지 못했습니다. 잠시 후 다시 시도해 주시거나 이메일로 로그인해 주세요.`,
     };
   }
 
   return { ok: true, data: { url: data.url } };
+}
+
+export async function signInWithGoogleAction(
+  next: string
+): Promise<ActionResult<{ url: string }>> {
+  // 계정을 고를 수 있게 합니다. (기기를 함께 쓰는 경우를 위해)
+  return startOAuth('google', '구글', next, {
+    queryParams: { prompt: 'select_account' },
+  });
+}
+
+/**
+ * 카카오 간편로그인.
+ *
+ * ★ 돌아온 뒤 처리는 구글과 같습니다. app/auth/callback/route.ts 가
+ *   app_metadata.provider 를 읽어 profiles.provider 에 'kakao' 로 남깁니다.
+ *   그 값 하나로 비밀번호 항목 숨김·비밀번호 찾기 안내·탈퇴 문구 입력이 모두 갈립니다.
+ *
+ * ★ scope 를 넘기지 않습니다. 넘겨도 소용이 없습니다.
+ *   Supabase 는 카카오에 늘 `account_email profile_image profile_nickname` 을 보냅니다.
+ *   options.scopes 를 주면 그것을 대신 쓰는 게 아니라 뒤에 이어 붙이기만 합니다.
+ *   (실제로 확인함: scope=account_email+profile_image+profile_nickname+profile_nickname+account_email)
+ *
+ *   ⚠ 그래서 카카오 개발자 콘솔의 동의항목에 **프로필 사진**이 반드시 켜져 있어야 합니다.
+ *     닉네임·이메일만 켜 두면 카카오가 동의 화면을 띄우지 않고
+ *     KOE205 "잘못된 요청 — 서비스 설정에 오류가 있어 이용할 수 없습니다" 로 되돌립니다.
+ *     우리 코드에서는 고칠 수 없는 부분입니다. 콘솔에서 켜 주세요.
+ *     (받아 온 사진은 쓰지 않습니다. callback 은 닉네임과 이메일만 읽습니다)
+ */
+export async function signInWithKakaoAction(
+  next: string
+): Promise<ActionResult<{ url: string }>> {
+  return startOAuth('kakao', '카카오', next);
 }
 
 /* ------------------------------------------------------------------
