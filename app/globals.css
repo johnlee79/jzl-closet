@@ -153,6 +153,113 @@
     @apply flex-none;
   }
 
+  /* ============================================================
+     맨 위로 버튼 (components/ScrollToTop.tsx)
+     ============================================================
+
+     ★ 자리 — 오른쪽 아래 고정입니다.
+       카카오톡 문의 버튼은 글 흐름 안에 있는 버튼이라 겹치지 않습니다.
+       (예전에 w-full 로 화면에 붙어 있던 적이 있는데 3-G 에서 걷어냈습니다)
+     ★ 아래 여백에 env(safe-area-inset-bottom) 을 더합니다.
+       아이폰 홈 인디케이터 위로 띄우려는 것입니다. 그 값이 없는 기기에서는
+       0px 이 들어가 원래 여백만 남습니다. 그래서 안드로이드·PC 도 안전합니다.
+     ★ z-30 입니다. 헤더(z-40)·팝업(z-40)·모달(z-50 이상)보다 아래입니다.
+       팝업이 떠 있을 때 이 버튼이 그 위로 올라오면 안 됩니다.
+     ★ 그림자를 쓰지 않습니다. 종이색 바탕에 stone 테두리로만 구분합니다.
+     ★ 나타나고 사라지는 전환은 transition 입니다.
+       움직임 줄이기 설정은 이 파일 맨 아래 전역 규칙이 잡아 즉시 바뀝니다.
+       (스크롤이 굴러가는 부분은 CSS 로 못 막습니다. 컴포넌트가 직접 물어봅니다)
+     ============================================================ */
+  .to-top {
+    @apply fixed right-5 z-30 flex h-11 w-11 items-center justify-center rounded-full border md:right-8 md:h-12 md:w-12;
+    bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+    border-color: var(--stone);
+    background-color: var(--paper);
+    color: var(--ink);
+    /*
+      ★ 숨길 때 opacity 만 0 으로 두지 않고 visibility 까지 끕니다.
+        투명하기만 하면 눈에 안 보이는 채로 탭 순서에 남아,
+        키보드로 넘기다 보이지 않는 버튼에 초점이 멈춥니다.
+
+      ★ 다만 visibility 를 '전환 대상' 에 넣으면 안 됩니다.
+        opacity 와 함께 애니메이션시켰더니 크롬에서 전환이 시작된 채로 멈춰,
+        클래스가 붙어 있는데도 계산된 opacity 가 0 에 머무는 일이 있었습니다.
+        (transition: none 을 걸면 즉시 1 로 돌아왔습니다)
+
+        그래서 visibility 는 duration 0 에 지연만 줍니다.
+          숨길 때 — 0.3초 뒤에 끕니다. 그동안 opacity 가 사라지는 게 보입니다.
+          보일 때 — .to-top-on 이 지연을 0 으로 되돌려 곧바로 켭니다.
+        이게 이 문제의 통상적인 처리 방법입니다.
+    */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(0.5rem);
+    transition:
+      opacity 300ms cubic-bezier(0.4, 0, 0.2, 1),
+      transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+      background-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+      color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+      visibility 0s linear 300ms;
+  }
+
+  @media (min-width: 768px) {
+    .to-top {
+      bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  .to-top-on {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    /* 나타날 때는 지연 없이 곧바로 보이게 합니다. (위 visibility 지연을 되돌립니다) */
+    transition-delay: 0s;
+  }
+
+  /*
+    ★ 색 반전은 진짜 마우스가 있는 기기에서만 겁니다.
+      터치 화면에서는 한 번 누르면 그 색이 손을 떼도 남습니다. (.sns-icon 과 같은 이유)
+  */
+  @media (hover: hover) and (pointer: fine) {
+    .to-top:hover {
+      border-color: var(--ink);
+      background-color: var(--ink);
+      color: var(--paper);
+    }
+  }
+
+  .to-top:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  /* 관리자 — 팔레트가 다르고 다크모드가 있어 색을 변수로 받습니다. */
+  .to-top-admin {
+    border-color: var(--admin-border-strong);
+    background-color: var(--admin-card);
+    color: var(--admin-text);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .to-top-admin:hover {
+      border-color: var(--admin-border-strong);
+      background-color: var(--admin-hover);
+      color: var(--admin-text);
+    }
+  }
+
+  .to-top-admin:focus-visible {
+    outline-color: var(--admin-text);
+  }
+
+  /* 인쇄할 때는 화면 장치를 남기지 않습니다. (관리자 주문서 인쇄) */
+  @media print {
+    .to-top {
+      display: none;
+    }
+  }
+
   /* 텍스트 링크·아이콘 버튼의 터치 영역 */
   .tap-target {
     @apply inline-flex min-h-[44px] items-center;

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import ThemeToggle from '@/components/admin/ThemeToggle';
+import ScrollToTop from '@/components/ScrollToTop';
 
 /**
  * 관리자 사이드바.
@@ -422,6 +423,12 @@ export default function AdminShell({
 
         <main className="min-w-0 flex-1 p-4 md:p-6 print:p-0">{children}</main>
       </div>
+
+      {/*
+        맨 위로 — 관리자도 상품·주문 목록이 길어 아래까지 내려가는 일이 잦습니다.
+        ★ 인쇄할 때는 나오지 않습니다. (globals.css 의 @media print)
+      */}
+      <ScrollToTop variant="admin" />
     </div>
   );
 }

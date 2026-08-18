@@ -3,6 +3,7 @@ import Header from '@/components/Header';
 import PointPopup from '@/components/PointPopup';
 import PopupLayer from '@/components/PopupLayer';
 import ReferralCapture from '@/components/ReferralCapture';
+import ScrollToTop from '@/components/ScrollToTop';
 import SiteNotices from '@/components/SiteNotices';
 import { Suspense } from 'react';
 import SiteProvider from '@/components/SiteProvider';
@@ -125,6 +126,8 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
             sns={sns}
             escrow={escrow}
           />
+          {/* 맨 위로 — 고객 화면 전체에 실립니다. 두 화면 높이만큼 내려가야 나타납니다. */}
+          <ScrollToTop />
           {/* 팝업 — 노출 화면(메인만/전체) 판단은 컴포넌트가 주소를 보고 합니다. */}
           <PopupLayer popups={popups} />
           {/* 보유 포인트 안내. 공지 팝업이 떠 있으면 이번에는 뜨지 않습니다. */}
