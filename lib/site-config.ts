@@ -712,6 +712,26 @@ export const DEFAULT_ANALYTICS: AnalyticsSettings = { ga4Id: '' };
 
 export const GA4_ID_PATTERN = /^G-[A-Z0-9]{6,12}$/;
 
+/* ── 편집숍 소개 (/about) 대표 이미지 (3-I) ───────────────── */
+
+/**
+ * /about 맨 위 대표 이미지.
+ *
+ * ★ 문구가 아니라 이미지라 사이트 문구(copy)에 넣지 못했습니다.
+ *   copy 는 소제목+본문 두 칸짜리 구조라 이미지 주소를 넣을 자리가 없습니다.
+ *   그래서 site_settings 에 key 하나(aboutPage)를 따로 둡니다.
+ * ★ 비워 두면 /about 은 이미지 영역 자체를 건너뛰고 제목부터 시작합니다.
+ *   회색 네모를 띄우는 것보다 없는 편이 낫습니다.
+ */
+export type AboutPageSettings = {
+  imageUrl: string;
+};
+
+export const DEFAULT_ABOUT_PAGE: AboutPageSettings = { imageUrl: '' };
+
+/** 권장 이미지 크기 — 관리자 화면에 그대로 표시합니다. (가로로 넓은 배너 비율) */
+export const ABOUT_IMAGE_SIZE = '1600 × 700';
+
 /* ── 사이트 문구 ──────────────────────────────────────────── */
 
 /**
@@ -725,16 +745,31 @@ export type CopyBlock = {
 
 export type CopySection = CopyBlock[];
 
-/** 관리자에서 고칠 수 있는 문구 항목 */
+/**
+ * 관리자에서 고칠 수 있는 문구 항목.
+ *
+ * ★ 여기 적힌 순서대로 관리자 화면에 나옵니다. 아래 COPY_GROUPS 로 묶이므로
+ *   같은 그룹끼리 붙여 두세요. 그룹이 화면에서 갈라져 보입니다.
+ * ★ 이름(키)은 DB 에 그대로 저장됩니다. 이미 저장한 문구가 있으면
+ *   이름을 바꾸는 순간 그 문구를 잃습니다. 순서는 바꿔도 안전합니다.
+ */
 export const COPY_KEYS = [
+  // 메인 화면
   'homeHero',
   'homeStory',
   'orderSteps',
+  // 편집숍 소개 (/about) — 3-I 에서 항목으로 쪼갰습니다
+  'aboutHero',
+  'aboutChoose',
+  'about',
+  'aboutBrands',
+  'aboutContact',
+  // 주문·배송 안내
+  'order',
   'guide',
+  // 약관·기타
   'terms',
   'privacy',
-  'about',
-  'order',
   'notFound',
 ] as const;
 
@@ -781,60 +816,117 @@ export const STORE_TOKENS: { token: string; label: string }[] = [
   { token: '{{address}}', label: '주소' },
 ];
 
+/**
+ * 문구 항목을 묶는 그룹. 관리자 화면에서 소제목으로 나옵니다.
+ * ★ 항목이 열네 개가 되면서 평면 나열로는 찾기 어려워졌습니다.
+ *   운영자가 항목을 못 찾으면 없는 기능과 같습니다.
+ */
+export const COPY_GROUPS = [
+  { key: 'home', label: '메인 화면' },
+  { key: 'about', label: '편집숍 소개' },
+  { key: 'order', label: '주문·배송 안내' },
+  { key: 'legal', label: '약관·기타' },
+] as const;
+
+export type CopyGroupKey = (typeof COPY_GROUPS)[number]['key'];
+
 /** 문구 항목 안내 — 관리자 화면에 그대로 씁니다. */
 export const COPY_META: Record<
   CopyKey,
-  { title: string; hint: string; path: string; blockLabel: string }
+  { title: string; hint: string; path: string; blockLabel: string; group: CopyGroupKey }
 > = {
   homeHero: {
+    group: 'home',
     title: '메인 히어로 문구',
     hint: '첫 화면 큰 이미지 아래에 나오는 문구입니다. 소제목이 명조 한 줄, 본문이 그 아래 설명입니다.',
     path: '/',
     blockLabel: '문단',
   },
   homeStory: {
+    group: 'home',
     title: '메인 · 브랜드 스토리 섹션',
     hint: '첫 화면 가운데 OUR STORY 섹션입니다. 첫 소제목이 섹션 제목으로 쓰입니다.',
     path: '/',
     blockLabel: '문단',
   },
+  /*
+   * ★ 제목에 'HOW TO ORDER' 를 넣어 둡니다.
+   *   화면에는 영문 라벨로 나오는데 관리자 항목 이름은 '주문 방법 3스텝 안내' 뿐이라,
+   *   운영자가 그 문구를 고치려고 관리자에서 한참 찾지 못한 일이 있었습니다.
+   *   화면에 보이는 말과 관리자 항목 이름이 같아야 찾습니다.
+   */
   orderSteps: {
-    title: '주문 방법 3스텝 안내',
-    hint: '메인과 주문 페이지에 함께 나옵니다. 블록 하나가 한 단계이며 번호는 자동으로 붙습니다.',
-    path: '/order',
+    group: 'home',
+    title: 'HOW TO ORDER — 주문 방법 3단계',
+    hint: '메인 화면 아래쪽과 /order 페이지에 함께 나옵니다. 블록 하나가 한 단계이며 01·02·03 번호는 자동으로 붙습니다. 소제목이 단계 제목, 본문이 그 아래 설명입니다.',
+    path: '/',
     blockLabel: '단계',
   },
+  aboutHero: {
+    group: 'about',
+    title: '편집숍 소개 · 제목과 부제',
+    hint: '/about 맨 위 제목입니다. 소제목이 큰 제목, 본문이 그 아래 부제 한 줄입니다. 블록 하나만 씁니다.',
+    path: '/about',
+    blockLabel: '제목',
+  },
+  aboutChoose: {
+    group: 'about',
+    title: '편집숍 소개 · 고르는 기준 (섹션 제목)',
+    hint: '/about 의 고르는 기준 섹션 머리말입니다. 소제목이 섹션 제목, 본문이 그 아래 안내 한 줄(비우면 안 나옵니다)입니다. 항목 자체는 아래 “고르는 기준 항목” 에서 고칩니다.',
+    path: '/about',
+    blockLabel: '머리말',
+  },
+  aboutBrands: {
+    group: 'about',
+    title: '편집숍 소개 · 취급 브랜드 (섹션 제목)',
+    hint: '/about 의 취급 브랜드 섹션 머리말입니다. 브랜드 목록 자체는 브랜드 관리에서 노출을 켠 브랜드가 자동으로 나옵니다. 본문(안내문)은 비우면 나오지 않습니다.',
+    path: '/about',
+    blockLabel: '머리말',
+  },
+  aboutContact: {
+    group: 'about',
+    title: '편집숍 소개 · 문의 안내',
+    hint: '/about 맨 아래 문의 섹션입니다. 소제목이 섹션 제목, 본문이 안내 문단입니다. 카카오톡 문의 버튼과 고객센터 번호는 설정 > 스토어 정보의 값을 그대로 씁니다.',
+    path: '/about',
+    blockLabel: '문단',
+  },
   guide: {
+    group: 'order',
     title: '배송·교환·반품 안내',
     hint: '/guide 페이지 본문입니다. 소제목이 h2 로 나갑니다.',
     path: '/guide',
     blockLabel: '항목',
   },
   terms: {
+    group: 'legal',
     title: '이용약관',
     hint: '/terms 페이지 본문입니다. 소제목에 조문 제목(제1조 …)을 적으세요.',
     path: '/terms',
     blockLabel: '조문',
   },
   privacy: {
+    group: 'legal',
     title: '개인정보처리방침',
     hint: '/privacy 페이지 본문입니다.',
     path: '/privacy',
     blockLabel: '항목',
   },
   about: {
-    title: '브랜드 소개',
-    hint: '/about 페이지의 “고르는 기준” 부분입니다. 브랜드 스토리는 스토어 정보에서 고칩니다.',
+    group: 'about',
+    title: '편집숍 소개 · 고르는 기준 항목',
+    hint: '/about 의 고르는 기준에 번호가 붙어 나열되는 항목들입니다. 번호는 자동으로 붙습니다. 섹션 제목은 위 “고르는 기준 (섹션 제목)” 에서 고칩니다. 소개 본문(브랜드 스토리 3문장)은 설정 > 스토어 정보에서 고칩니다.',
     path: '/about',
     blockLabel: '항목',
   },
   order: {
+    group: 'order',
     title: '장바구니·주문 안내 문구',
     hint: '/order 페이지 아래쪽 결제 안내입니다.',
     path: '/order',
     blockLabel: '항목',
   },
   notFound: {
+    group: 'legal',
     title: '404 페이지 문구',
     hint: '없는 주소로 들어왔을 때 보이는 문구입니다.',
     path: '/',

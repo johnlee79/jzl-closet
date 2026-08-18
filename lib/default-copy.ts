@@ -367,6 +367,52 @@ const privacy: CopySection = [
   },
 ];
 
+/*
+ * ============================================================
+ * 편집숍 소개 (/about) — 3-I 에서 항목으로 쪼갰습니다
+ * ============================================================
+ *
+ * ★ 문구를 새로 지어내지 않았습니다. 3-I 이전 /about 화면에 있던 글을
+ *   그대로 옮겼습니다. 운영자가 아직 아무것도 저장하지 않은 상태에서
+ *   페이지를 열면 예전과 같은 글이 나와야 합니다.
+ *
+ * ★ 소개 본문(브랜드 스토리 3문장)은 여기 없습니다.
+ *   설정 > 스토어 정보의 store.story 를 그대로 씁니다. 한 글을 두 곳에서
+ *   고치게 만들지 않으려는 것입니다. (자세한 이유는 app/(shop)/about/page.tsx)
+ */
+const aboutHero: CopySection = [
+  {
+    heading: '{{name}}',
+    body: p('{{slogan}}'),
+  },
+];
+
+const aboutChoose: CopySection = [
+  {
+    heading: '고르는 기준',
+    body: p(''),
+  },
+];
+
+const aboutBrands: CopySection = [
+  {
+    heading: '취급 브랜드',
+    body: p(
+      '의류와 가방·지갑, 슈즈, 액세서리까지 직접 골라 들여옵니다. 브랜드를 누르면 소개와 취급 상품을 함께 보실 수 있습니다.'
+    ),
+  },
+];
+
+const aboutContact: CopySection = [
+  {
+    heading: '문의',
+    body: p(
+      '상품 문의와 재입고 요청, 주문 접수는 카카오톡으로 받고 있습니다. 남겨 주시면 순서대로 답변드립니다.'
+    ),
+  },
+];
+
+/** /about 의 “고르는 기준” 에 번호가 붙어 나열되는 항목들입니다. */
 const about: CopySection = [
   {
     heading: '무게를 먼저 잽니다',
@@ -426,11 +472,15 @@ export const DEFAULT_COPY: CopySettings = {
   homeHero,
   homeStory,
   orderSteps,
+  aboutHero,
+  aboutChoose,
+  about,
+  aboutBrands,
+  aboutContact,
+  order,
   guide,
   terms,
   privacy,
-  about,
-  order,
   notFound,
 };
 

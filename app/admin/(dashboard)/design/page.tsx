@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import BannerManager from '@/components/admin/BannerManager';
+import AboutImageForm from '@/components/admin/AboutImageForm';
 import CopyManager from '@/components/admin/CopyManager';
-import { getCopySettings, getDesignSettings } from '@/lib/settings';
+import { getAboutPageSettings, getCopySettings, getDesignSettings } from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +25,11 @@ export default async function AdminDesignPage({
   searchParams: { tab?: string };
 }) {
   const tab: TabKey = isTab(searchParams.tab) ? searchParams.tab : 'banner';
-  const [design, copy] = await Promise.all([getDesignSettings(), getCopySettings()]);
+  const [design, copy, aboutPage] = await Promise.all([
+    getDesignSettings(),
+    getCopySettings(),
+    getAboutPageSettings(),
+  ]);
 
   return (
     <div className="mx-auto w-full max-w-[1000px]">
@@ -64,7 +69,10 @@ export default async function AdminDesignPage({
               항목을 펼쳐 문단을 고치고 저장하면 해당 페이지가 바로 갱신됩니다. 잘못
               지웠다면 [기본값으로 되돌리기] 로 원래 문구를 되살릴 수 있습니다.
             </p>
-            <CopyManager copy={copy} />
+            <CopyManager
+              copy={copy}
+              aboutImage={<AboutImageForm imageUrl={aboutPage.imageUrl} />}
+            />
           </>
         ) : null}
       </div>

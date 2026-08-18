@@ -23,6 +23,7 @@ import {
   SNS_ITEMS,
   MAX_BANNER_INTERVAL,
   MIN_BANNER_INTERVAL,
+  type AboutPageSettings,
   type AnalyticsSettings,
   type Banner,
   type CopyBlock,
@@ -191,6 +192,28 @@ export async function getBranding(): Promise<Branding> {
  * 파비콘을 바꾸면 revalidateTag(SETTINGS_TAG) 로 즉시 갈아 끼웁니다.
  */
 export const getCachedBranding = unstable_cache(getBranding, ['branding'], {
+  tags: [SETTINGS_TAG],
+  revalidate: 3600,
+});
+
+/* ── 편집숍 소개 (/about) 대표 이미지 (3-I) ───────────────── */
+
+export const ABOUT_PAGE_KEY = 'aboutPage';
+
+export function normalizeAboutPage(value: unknown): AboutPageSettings {
+  const raw = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
+  return {
+    imageUrl: typeof raw.imageUrl === 'string' ? raw.imageUrl.trim() : '',
+  };
+}
+
+/** 관리자 화면용 — 항상 DB 를 직접 봅니다. */
+export async function getAboutPageSettings(): Promise<AboutPageSettings> {
+  return normalizeAboutPage(await readSetting(ABOUT_PAGE_KEY));
+}
+
+/** 고객 화면용 — /about 이 ISR 이라 캐시해 둡니다. 저장하면 태그로 즉시 갈립니다. */
+export const getCachedAboutPage = unstable_cache(getAboutPageSettings, ['about-page'], {
   tags: [SETTINGS_TAG],
   revalidate: 3600,
 });

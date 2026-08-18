@@ -7,6 +7,7 @@ import { defaultCopyFor } from '@/lib/default-copy';
 import {
   ANALYTICS_KEY,
   BRANDING_KEY,
+  ABOUT_PAGE_KEY,
   COPY_KEY,
   DESIGN_KEY,
   EVENT_KEY,
@@ -375,6 +376,27 @@ export async function saveCopyAction(
     return { ok: true, data: undefined };
   } catch (error) {
     return fail(error, '문구를 저장하지 못했습니다.');
+  }
+}
+
+/* ── 5-3. 편집숍 소개 대표 이미지 (3-I) ───────────────────── */
+
+/**
+ * /about 대표 이미지 주소를 저장합니다. 업로드 자체는 기존 파이프라인
+ * (/api/upload → R2)이 이미 끝낸 뒤라, 여기서는 주소만 받아 둡니다.
+ * ★ 빈 문자열도 정상입니다. 비우면 /about 이 이미지 영역을 통째로 건너뜁니다.
+ */
+export async function saveAboutImageAction(imageUrl: string): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  try {
+    await writeSetting(ABOUT_PAGE_KEY, { imageUrl: imageUrl.trim() });
+    revalidateTag(SETTINGS_TAG);
+    revalidatePath('/about');
+    revalidatePath('/admin/design');
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '대표 이미지를 저장하지 못했습니다.');
   }
 }
 

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import OptionSelector from '@/components/OptionSelector';
 import KakaoChatButton from '@/components/KakaoChatButton';
 import SignupPointBadge from '@/components/SignupPointBadge';
@@ -21,6 +21,28 @@ import {
 import type { Product } from '@/lib/types';
 
 const MAX_QUANTITY = 99;
+
+/**
+ * ============================================================
+ * 모바일 하단 고정 구매 바 (3-I)
+ * ============================================================
+ *
+ * ★ 모바일에서만 나옵니다. 데스크톱은 손대지 않았습니다.
+ *   오른쪽 구매 영역이 1338px 로 뷰포트(911px)보다 길어 sticky 를 걸면
+ *   아래쪽 버튼이 화면 밖에 영구히 남습니다. (3-H 에서 실측했습니다)
+ *
+ * ★ 원래 구매 버튼이 화면에서 벗어나면 나타납니다.
+ *   스크롤 이벤트로 위치를 계산하지 않고 IntersectionObserver 로 봅니다.
+ *   손가락 한 번에 수십 번 오는 이벤트마다 좌표를 재는 것보다 싸고 정확합니다.
+ *
+ * ★ 버튼 동작은 위쪽 버튼과 같은 핸들러를 그대로 씁니다.
+ *   따로 만들면 금액 계산과 옵션 판정이 두 벌이 되어 반드시 어긋납니다.
+ *
+ * ★ 맨 위로 버튼과 자리가 겹칩니다. 바가 떠 있는 동안 --buy-bar-h 를 심어
+ *   ScrollToTop 이 그만큼 위로 올라가게 합니다. (app/globals.css 의 .to-top)
+ *   높이를 코드에 박지 않고 실제로 재서 넘깁니다.
+ */
+const BUY_BAR_VAR = '--buy-bar-h';
 
 export default function AddToCartButton({ product }: { product: Product }) {
   const router = useRouter();
@@ -127,15 +149,120 @@ export default function AddToCartButton({ product }: { product: Product }) {
     router.push('/checkout');
   };
 
-  if (isProductSoldOut(product)) {
+  const soldOut = isProductSoldOut(product);
+
+  /* ── 모바일 하단 구매 바 (3-I) ─────────────────────────── */
+
+  /** 위쪽 버튼 묶음. 이게 화면에서 사라지면 바를 띄웁니다. */
+  const buttonsRef = useRef<HTMLDivElement>(null);
+  /** 옵션 영역. 옵션을 안 고르고 바를 눌렀을 때 여기로 올려 보냅니다. */
+  const optionsRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  const [barShown, setBarShown] = useState(false);
+  /** 옵션을 안 고르고 눌렀을 때 잠깐 띄우는 안내 */
+  const [needOption, setNeedOption] = useState(false);
+
+  useEffect(() => {
+    const target = buttonsRef.current;
+    if (!target || typeof IntersectionObserver === 'undefined') return undefined;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setBarShown(!entry.isIntersecting),
+      // 조금이라도 보이면 바를 내립니다. 둘이 동시에 보이면 어느 쪽을 눌러야 할지 헷갈립니다.
+      { threshold: 0 }
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
+
+  /*
+    바 높이를 재서 문서에 심습니다. 맨 위로 버튼이 이 값만큼 올라갑니다.
+    ★ 바가 내려가면 0px 로 되돌립니다. 상품 상세를 떠날 때도 정리해야
+      다른 페이지의 맨 위로 버튼이 이유 없이 떠 있게 되지 않습니다.
+  */
+  useEffect(() => {
+    const root = document.documentElement;
+    const height = barShown ? (barRef.current?.offsetHeight ?? 0) : 0;
+    root.style.setProperty(BUY_BAR_VAR, `${height}px`);
+    return () => root.style.setProperty(BUY_BAR_VAR, '0px');
+  }, [barShown]);
+
+  /** 옵션을 안 골랐으면 실패시키지 않고 옵션 자리로 데려갑니다. */
+  const guardOption = useCallback((): boolean => {
+    if (canAdd) return true;
+    setNeedOption(true);
+    optionsRef.current?.scrollIntoView({
+      block: 'center',
+      behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+        ? 'auto'
+        : 'smooth',
+    });
+    return false;
+  }, [canAdd]);
+
+  // 옵션을 고르고 나면 안내를 내립니다.
+  useEffect(() => {
+    if (canAdd) setNeedOption(false);
+  }, [canAdd]);
+
+  /** 하단 바 — 품절이든 아니든 같은 모양으로 나갑니다. */
+  const buyBar = (
+    <div
+      ref={barRef}
+      className={`buy-bar md:hidden ${barShown ? 'buy-bar-on' : ''}`}
+      aria-hidden={!barShown}
+    >
+      <div className="flex items-center gap-3 px-5 py-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[12px] text-muted">{product.name}</p>
+          <p className="text-[17px] font-medium tabular-nums text-ink">
+            {formatPrice(soldOut ? product.price : unitPrice * quantity)}원
+          </p>
+        </div>
+        {soldOut ? (
+          <button type="button" disabled className="btn-primary min-h-[46px] shrink-0 px-6">
+            품절
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                if (guardOption()) handleAdd();
+              }}
+              tabIndex={barShown ? 0 : -1}
+              className="btn-secondary min-h-[46px] shrink-0 px-4 text-[14px] tracking-normal"
+            >
+              장바구니
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (guardOption()) handleBuyNow();
+              }}
+              tabIndex={barShown ? 0 : -1}
+              className="btn-primary min-h-[46px] shrink-0 px-4 text-[14px] tracking-normal"
+            >
+              바로구매
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
+  if (soldOut) {
     return (
       <div className="mt-8 border-t border-stone pt-8">
         <p className="text-[15px] leading-relaxed text-ink">
           현재 품절된 상품입니다. 재입고 일정은 고객센터 {store.phone}으로 문의해 주세요.
         </p>
-        <button type="button" className="btn-primary mt-6 w-full" disabled>
-          품절
-        </button>
+        <div ref={buttonsRef}>
+          <button type="button" className="btn-primary mt-6 w-full" disabled>
+            품절
+          </button>
+        </div>
+        {buyBar}
       </div>
     );
   }
@@ -143,14 +270,21 @@ export default function AddToCartButton({ product }: { product: Product }) {
   return (
     <div className="mt-8 border-t border-stone pt-8">
       {hasOptions ? (
-        <OptionSelector
-          groups={product.optionGroups}
-          selected={selected}
-          onChange={handleChange}
-          isSelectable={(groupIndex, value) =>
-            isValueSelectable(product, groupIndex, value, selected)
-          }
-        />
+        <div ref={optionsRef}>
+          <OptionSelector
+            groups={product.optionGroups}
+            selected={selected}
+            onChange={handleChange}
+            isSelectable={(groupIndex, value) =>
+              isValueSelectable(product, groupIndex, value, selected)
+            }
+          />
+          {needOption ? (
+            <p role="status" className="mt-3 text-[13px] leading-relaxed text-wine">
+              옵션을 먼저 선택해 주세요.
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       <div
@@ -224,7 +358,8 @@ export default function AddToCartButton({ product }: { product: Product }) {
         </p>
       ) : null}
 
-      <div className="mt-4 flex flex-col gap-3">
+      {/* ★ ref 는 이 묶음에 겁니다. 이게 화면 밖으로 나가면 하단 바가 올라옵니다. */}
+      <div ref={buttonsRef} className="mt-4 flex flex-col gap-3">
         <button
           type="button"
           onClick={() => handleAdd()}
@@ -263,6 +398,8 @@ export default function AddToCartButton({ product }: { product: Product }) {
           </Link>
         </p>
       ) : null}
+
+      {buyBar}
     </div>
   );
 }

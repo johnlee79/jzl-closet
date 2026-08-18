@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import RichTextEditor from '@/components/admin/RichTextEditor';
 import { resetCopyAction, saveCopyAction } from '@/app/admin/settings-actions';
 import {
+  COPY_GROUPS,
   COPY_KEYS,
   COPY_META,
   STORE_TOKENS,
@@ -200,45 +201,110 @@ function CopyEditor({
  * 항목 목록
  * ------------------------------------------------------------------ */
 
-export default function CopyManager({ copy }: { copy: CopySettings }) {
-  const [open, setOpen] = useState<CopyKey | null>(null);
+/**
+ * ★ 3-I 에서 그룹으로 묶었습니다.
+ *   항목이 열네 개가 되면서 평면 나열로는 원하는 문구를 찾기 어려워졌습니다.
+ *   실제로 운영자가 메인의 HOW TO ORDER 문구를 고치려다 항목을 찾지 못했습니다.
+ *   관리자가 항목을 못 찾으면 없는 기능과 같습니다.
+ *
+ * ★ '편집숍 소개' 그룹 맨 앞에는 문구가 아니라 대표 이미지 업로드가 옵니다.
+ *   페이지 맨 위에 오는 것이 이미지라 화면 순서와 맞춰 둡니다.
+ */
+export default function CopyManager({
+  copy,
+  aboutImage,
+}: {
+  copy: CopySettings;
+  /** 편집숍 소개 그룹에 끼워 넣을 대표 이미지 업로드 화면 */
+  aboutImage?: React.ReactNode;
+}) {
+  /** 열려 있는 항목. 이미지 칸은 'about-image' 라는 이름으로 함께 다룹니다. */
+  const [open, setOpen] = useState<CopyKey | 'about-image' | null>(null);
 
   return (
-    <div className="admin-card overflow-hidden">
-      <ul>
-        {COPY_KEYS.map((key) => {
-          const meta = COPY_META[key];
-          const expanded = open === key;
-          return (
-            <li key={key} className="border-b border-slate-200 last:border-b-0">
-              <button
-                type="button"
-                onClick={() => setOpen(expanded ? null : key)}
-                aria-expanded={expanded}
-                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50"
-              >
-                <span>
-                  <span className="text-[14px] font-medium text-slate-900">
-                    {meta.title}
-                  </span>
-                  <span className="ml-2 text-[12px] text-slate-500">{meta.path}</span>
-                  <span className="block text-[12px] text-slate-500">
-                    {copy[key].length}개 {meta.blockLabel}
-                  </span>
-                </span>
-                <span aria-hidden="true" className="text-[13px] text-slate-500">
-                  {expanded ? '접기 ▲' : '펼치기 ▼'}
-                </span>
-              </button>
+    <div className="flex flex-col gap-6">
+      {COPY_GROUPS.map((group) => {
+        const keys = COPY_KEYS.filter((key) => COPY_META[key].group === group.key);
+        if (keys.length === 0) return null;
 
-              {expanded ? (
-                // key 를 붙여 항목을 바꿔 열 때 편집 상태가 섞이지 않게 합니다.
-                <CopyEditor key={key} copyKey={key} initial={copy[key]} />
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
+        const showImage = group.key === 'about' && aboutImage;
+        const imageOpen = open === 'about-image';
+
+        return (
+          <section key={group.key} aria-labelledby={`copy-group-${group.key}`}>
+            <h2
+              id={`copy-group-${group.key}`}
+              className="mb-2 text-[14px] font-semibold text-slate-900"
+            >
+              {group.label}
+            </h2>
+
+            <div className="admin-card overflow-hidden">
+              <ul>
+                {showImage ? (
+                  <li className="border-b border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setOpen(imageOpen ? null : 'about-image')}
+                      aria-expanded={imageOpen}
+                      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50"
+                    >
+                      <span>
+                        <span className="text-[14px] font-medium text-slate-900">
+                          편집숍 소개 · 대표 이미지
+                        </span>
+                        <span className="ml-2 text-[12px] text-slate-500">/about</span>
+                        <span className="block text-[12px] text-slate-500">
+                          맨 위 배너 이미지 (비우면 나오지 않습니다)
+                        </span>
+                      </span>
+                      <span aria-hidden="true" className="text-[13px] text-slate-500">
+                        {imageOpen ? '접기 ▲' : '펼치기 ▼'}
+                      </span>
+                    </button>
+                    {imageOpen ? aboutImage : null}
+                  </li>
+                ) : null}
+
+                {keys.map((key) => {
+                  const meta = COPY_META[key];
+                  const expanded = open === key;
+                  return (
+                    <li key={key} className="border-b border-slate-200 last:border-b-0">
+                      <button
+                        type="button"
+                        onClick={() => setOpen(expanded ? null : key)}
+                        aria-expanded={expanded}
+                        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50"
+                      >
+                        <span>
+                          <span className="text-[14px] font-medium text-slate-900">
+                            {meta.title}
+                          </span>
+                          <span className="ml-2 text-[12px] text-slate-500">
+                            {meta.path}
+                          </span>
+                          <span className="block text-[12px] text-slate-500">
+                            {copy[key].length}개 {meta.blockLabel}
+                          </span>
+                        </span>
+                        <span aria-hidden="true" className="text-[13px] text-slate-500">
+                          {expanded ? '접기 ▲' : '펼치기 ▼'}
+                        </span>
+                      </button>
+
+                      {expanded ? (
+                        // key 를 붙여 항목을 바꿔 열 때 편집 상태가 섞이지 않게 합니다.
+                        <CopyEditor key={key} copyKey={key} initial={copy[key]} />
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
