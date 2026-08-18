@@ -180,70 +180,81 @@ export default function Footer({
           ★ 모바일은 세로로 쌓고 아이콘만 가운데로 옵니다. 폭이 좁아 옆에 못 서는데,
             왼끝에 붙여 두면 사업자 정보 마지막 줄에 딸린 것처럼 보입니다.
         */}
-        <div className="shell flex flex-col gap-10 py-10 md:flex-row md:items-center md:justify-between md:gap-12">
-          <div className="w-full md:flex-1">
-            <h2 className="label-xs">사업자 정보</h2>
-            {/*
-              한 줄에 한 항목씩, 라벨과 값을 두 칸으로 맞춥니다.
-
-              ★ 라벨 칸을 auto 로 두어 가장 긴 라벨(통신판매업신고번호)에 폭을 맞춥니다.
-                고정폭을 주면 라벨을 하나 더 넣을 때마다 그 숫자를 다시 재야 합니다.
-              ★ 라벨은 줄바꿈하지 않고(whitespace-nowrap), 값만 접힙니다.
-                라벨이 두 줄로 접히면 값과 첫 줄이 어긋나 표로 안 보입니다.
-              ★ 값에는 break-keep 을 씁니다. 한국어 낱말 중간에서 끊기지 않아
-                좁은 화면에서 "인천광역 / 시 부평구" 처럼 갈라지지 않습니다.
-              ★ 폭을 제한합니다. 넓은 화면에서 값이 화면 끝까지 늘어나면
-                라벨과 값 사이가 벌어져 읽는 눈이 짝을 잃습니다.
-                이 여백이 지금 오른쪽 SNS 아이콘이 서 있는 자리이기도 합니다.
-            */}
-            <dl className="mt-4 grid max-w-[520px] grid-cols-[auto_1fr] gap-x-5 gap-y-2 text-[13px] leading-relaxed">
-              {businessRows.map((row) => (
-                <Fragment key={row.label}>
-                  <dt className="whitespace-nowrap text-muted">{row.label}</dt>
-                  <dd className="break-keep text-ink">{row.value}</dd>
-                </Fragment>
-              ))}
-            </dl>
-            {/* 구매안전서비스 — 무통장입금 선결제는 표시가 필요합니다. */}
-            {escrow && (escrow.notice || escrow.imageUrl) ? (
-              <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-stone pt-6">
-                {escrow.imageUrl ? (
-                  <a
-                    href={escrow.linkUrl || undefined}
-                    target={escrow.linkUrl ? '_blank' : undefined}
-                    rel="noreferrer"
-                    className="shrink-0"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={escrow.imageUrl}
-                      alt="구매안전서비스 가입 확인"
-                      className="h-auto max-w-[120px]"
-                    />
-                  </a>
-                ) : null}
-                {escrow.notice ? (
-                  <p className="max-w-[640px] text-[13px] leading-relaxed text-muted">
-                    {escrow.notice}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-
-            <p className="mt-6 text-[13px] tracking-[0.1em] text-muted">
-              © {store.name} ALL RIGHTS RESERVED.
-            </p>
-          </div>
-
+        <div className="shell py-10">
           {/*
-            채운 항목이 하나도 없으면 SnsLinks 가 스스로 아무것도 그리지 않습니다.
-            그때는 사업자 정보만 남고 이 자리가 사라집니다.
+            ★ 이 줄만 880px 로 묶습니다. 아이콘을 화면 오른쪽 끝까지 밀지 않으려는 것입니다.
+              푸터 전체 폭(1400px)에 justify-between 을 걸면 사업자 정보는 왼쪽 끝,
+              아이콘은 오른쪽 끝에 서서 가운데가 텅 빕니다. 한 화면에 있는 두 덩어리로
+              안 보이고 서로 남남처럼 떨어져 보입니다.
+              880 = 사업자 정보 표(520) + 사이(약 96) + 아이콘 넉 줄(264) 입니다.
+              더 당기거나 밀고 싶으면 이 숫자 하나만 만지면 됩니다.
+            ★ 폭 제한을 .shell 에 직접 걸면 안 됩니다. .shell 은 mx-auto 라
+              880 으로 줄이는 순간 가운데로 모여 위쪽 사업자 정보·저작권과 왼끝이 어긋납니다.
+              그래서 shell 안에 한 겹 더 두고 거기에만 겁니다.
+            ★ 좁은 화면(880 미만)에서는 이 값이 아무 일도 하지 않습니다.
+              그때는 화면 폭이 이미 제한이라 아이콘이 알아서 붙어 옵니다.
           */}
-          <SnsLinks
-            sns={sns}
-            size="lg"
-            className="justify-center md:shrink-0 md:justify-end"
-          />
+          <div className="flex flex-col gap-10 md:max-w-[880px] md:flex-row md:items-center md:justify-between md:gap-12">
+            <div className="w-full md:min-w-0 md:flex-1">
+              <h2 className="label-xs">사업자 정보</h2>
+              {/*
+                한 줄에 한 항목씩, 라벨과 값을 두 칸으로 맞춥니다.
+
+                ★ 라벨 칸을 auto 로 두어 가장 긴 라벨(통신판매업신고번호)에 폭을 맞춥니다.
+                  고정폭을 주면 라벨을 하나 더 넣을 때마다 그 숫자를 다시 재야 합니다.
+                ★ 라벨은 줄바꿈하지 않고(whitespace-nowrap), 값만 접힙니다.
+                  라벨이 두 줄로 접히면 값과 첫 줄이 어긋나 표로 안 보입니다.
+                ★ 값에는 break-keep 을 씁니다. 한국어 낱말 중간에서 끊기지 않아
+                  좁은 화면에서 "인천광역 / 시 부평구" 처럼 갈라지지 않습니다.
+                ★ 폭을 제한합니다. 넓은 화면에서 값이 화면 끝까지 늘어나면
+                  라벨과 값 사이가 벌어져 읽는 눈이 짝을 잃습니다.
+                  이 여백이 지금 오른쪽 SNS 아이콘이 서 있는 자리이기도 합니다.
+              */}
+              <dl className="mt-4 grid max-w-[520px] grid-cols-[auto_1fr] gap-x-5 gap-y-2 text-[13px] leading-relaxed">
+                {businessRows.map((row) => (
+                  <Fragment key={row.label}>
+                    <dt className="whitespace-nowrap text-muted">{row.label}</dt>
+                    <dd className="break-keep text-ink">{row.value}</dd>
+                  </Fragment>
+                ))}
+              </dl>
+              {/* 구매안전서비스 — 무통장입금 선결제는 표시가 필요합니다. */}
+              {escrow && (escrow.notice || escrow.imageUrl) ? (
+                <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-stone pt-6">
+                  {escrow.imageUrl ? (
+                    <a
+                      href={escrow.linkUrl || undefined}
+                      target={escrow.linkUrl ? '_blank' : undefined}
+                      rel="noreferrer"
+                      className="shrink-0"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={escrow.imageUrl}
+                        alt="구매안전서비스 가입 확인"
+                        className="h-auto max-w-[120px]"
+                      />
+                    </a>
+                  ) : null}
+                  {escrow.notice ? (
+                    <p className="max-w-[640px] text-[13px] leading-relaxed text-muted">
+                      {escrow.notice}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <p className="mt-6 text-[13px] tracking-[0.1em] text-muted">
+                © {store.name} ALL RIGHTS RESERVED.
+              </p>
+            </div>
+
+            {/*
+              채운 항목이 하나도 없으면 SnsLinks 가 스스로 아무것도 그리지 않습니다.
+              그때는 사업자 정보만 남고 이 자리가 사라집니다.
+            */}
+            <SnsLinks sns={sns} size="lg" className="justify-center md:shrink-0" />
+          </div>
         </div>
       </div>
     </footer>
