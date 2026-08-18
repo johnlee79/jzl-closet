@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import Link from 'next/link';
 import KakaoChatButton from '@/components/KakaoChatButton';
 import SnsLinks from '@/components/SnsLinks';
@@ -51,6 +52,16 @@ export default function Footer({
 }) {
   const menu = visibleCategories(categories);
   const links = infoLinks(brandIntroHref);
+
+  /** 사업자 정보 — 표시 순서를 여기 한 줄로 정합니다. */
+  const businessRows = [
+    { label: '상호', value: store.business.company },
+    { label: '대표자', value: store.business.ceo },
+    { label: '사업자등록번호', value: store.business.regNumber },
+    { label: '통신판매업신고번호', value: store.business.mailOrder },
+    { label: '주소', value: store.business.address },
+    { label: '고객센터', value: store.phone },
+  ];
 
   return (
     <footer className="mt-20 border-t border-stone md:mt-32">
@@ -140,31 +151,25 @@ export default function Footer({
       <div className="border-t border-stone">
         <div className="shell py-10">
           <h2 className="label-xs">사업자 정보</h2>
-          <dl className="mt-4 flex flex-col gap-2 text-[13px] leading-relaxed text-muted md:flex-row md:flex-wrap md:gap-x-8">
-            <div className="flex gap-2">
-              <dt>상호</dt>
-              <dd className="text-ink">{store.business.company}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt>대표자</dt>
-              <dd className="text-ink">{store.business.ceo}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt>사업자등록번호</dt>
-              <dd className="text-ink">{store.business.regNumber}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt>통신판매업신고번호</dt>
-              <dd className="text-ink">{store.business.mailOrder}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt>주소</dt>
-              <dd className="text-ink">{store.business.address}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt>고객센터</dt>
-              <dd className="text-ink">{store.phone}</dd>
-            </div>
+          {/*
+            한 줄에 한 항목씩, 라벨과 값을 두 칸으로 맞춥니다.
+
+            ★ 라벨 칸을 auto 로 두어 가장 긴 라벨(통신판매업신고번호)에 폭을 맞춥니다.
+              고정폭을 주면 라벨을 하나 더 넣을 때마다 그 숫자를 다시 재야 합니다.
+            ★ 라벨은 줄바꿈하지 않고(whitespace-nowrap), 값만 접힙니다.
+              라벨이 두 줄로 접히면 값과 첫 줄이 어긋나 표로 안 보입니다.
+            ★ 값에는 break-keep 을 씁니다. 한국어 낱말 중간에서 끊기지 않아
+              좁은 화면에서 "인천광역 / 시 부평구" 처럼 갈라지지 않습니다.
+            ★ 폭을 제한합니다. 넓은 화면에서 값이 화면 끝까지 늘어나면
+              라벨과 값 사이가 벌어져 읽는 눈이 짝을 잃습니다.
+          */}
+          <dl className="mt-4 grid max-w-[520px] grid-cols-[auto_1fr] gap-x-5 gap-y-2 text-[13px] leading-relaxed">
+            {businessRows.map((row) => (
+              <Fragment key={row.label}>
+                <dt className="whitespace-nowrap text-muted">{row.label}</dt>
+                <dd className="break-keep text-ink">{row.value}</dd>
+              </Fragment>
+            ))}
           </dl>
           {/* 구매안전서비스 — 무통장입금 선결제는 표시가 필요합니다. */}
           {escrow && (escrow.notice || escrow.imageUrl) ? (
