@@ -8,6 +8,12 @@ import ImageUploader from '@/components/admin/ImageUploader';
 import SellstarResync from '@/components/admin/SellstarResync';
 import OptionEditor from '@/components/admin/OptionEditor';
 import {
+  ManufacturerField,
+  OriginField,
+  SummaryField,
+  brandOrigin,
+} from '@/components/admin/ProductInfoFields';
+import {
   createTemplateAction,
   deleteTemplateAction,
   saveProductAction,
@@ -112,6 +118,35 @@ export default function ProductForm({
     setForm((prev) => ({ ...prev, [key]: value }));
     setDirty(true);
   }, []);
+
+  /**
+   * 원산지가 방금 브랜드에서 자동으로 들어왔는지.
+   *
+   * ★ 화면에 "확인 후 수정하세요" 를 띄우기 위한 표시일 뿐 저장되지 않습니다.
+   *   손으로 한 글자라도 고치면 꺼집니다. 그때부터는 사람이 확인한 값입니다.
+   */
+  const [originFromBrand, setOriginFromBrand] = useState(false);
+
+  /**
+   * 브랜드 선택 — 브랜드에 적힌 원산지를 원산지 칸에 옮겨 담습니다.
+   *
+   * ★ 사람이 적은 값은 덮지 않습니다. 브랜드를 바꿔 가며 고르는 동안
+   *   손으로 적어 둔 원산지가 소리 없이 사라지면 안 됩니다.
+   * ★ 다만 앞서 브랜드에서 자동으로 들어온 값이면 새 브랜드 값으로 갈아 끼웁니다.
+   *   A 브랜드를 골랐다가 B 로 바꿨는데 A 의 원산지가 남아 있으면,
+   *   아무도 확인한 적 없는 값이 그대로 저장됩니다. 그게 더 위험합니다.
+   * ★ 브랜드를 "선택 안 함" 으로 되돌려도 원산지는 지우지 않습니다.
+   *   비우는 건 사람이 정할 일입니다.
+   */
+  const chooseBrand = (slug: string | null) => {
+    set('brandSlug', slug);
+    const fromBrand = brandOrigin(brands, slug);
+    const canFill = !(form.origin ?? '').trim() || originFromBrand;
+    if (fromBrand && canFill) {
+      set('origin', fromBrand);
+      setOriginFromBrand(true);
+    }
+  };
 
   // 저장하지 않고 페이지를 벗어나면 경고합니다.
   useEffect(() => {
@@ -348,7 +383,7 @@ export default function ProductForm({
               <select
                 id="brand"
                 value={form.brandSlug ?? ''}
-                onChange={(event) => set('brandSlug', event.target.value || null)}
+                onChange={(event) => chooseBrand(event.target.value || null)}
                 className="admin-input"
               >
                 <option value="">선택 안 함</option>
@@ -454,45 +489,34 @@ export default function ProductForm({
             </div>
 
             <div className="md:col-span-2">
-              <label className="admin-label" htmlFor="summary">
-                한줄 설명
-              </label>
-              <input
+              <SummaryField
                 id="summary"
-                type="text"
                 value={form.summary}
-                onChange={(event) => set('summary', event.target.value)}
-                className="admin-input"
-                placeholder="목록과 검색 결과에 보이는 짧은 설명"
+                onChange={(value) => set('summary', value)}
               />
             </div>
 
-            <div>
-              <label className="admin-label" htmlFor="origin">
-                원산지
-              </label>
-              <input
-                id="origin"
-                type="text"
-                value={form.origin ?? ''}
-                onChange={(event) => set('origin', event.target.value || null)}
-                className="admin-input"
-                placeholder="예: 대한민국"
-              />
-            </div>
+            <OriginField
+              id="origin"
+              value={form.origin ?? ''}
+              onChange={(value) => {
+                set('origin', value || null);
+                setOriginFromBrand(false); // 사람이 손을 댔으면 안내를 내립니다
+              }}
+              fromBrand={originFromBrand}
+            />
 
-            <div>
-              <label className="admin-label" htmlFor="manufacturer">
-                제조사
-              </label>
-              <input
-                id="manufacturer"
-                type="text"
-                value={form.manufacturer ?? ''}
-                onChange={(event) => set('manufacturer', event.target.value || null)}
-                className="admin-input"
-              />
-            </div>
+            <ManufacturerField
+              id="manufacturer"
+              value={form.manufacturer ?? ''}
+              onChange={(value) => set('manufacturer', value || null)}
+              originFilled={Boolean((form.origin ?? '').trim())}
+              onMoveToOrigin={(country) => {
+                set('origin', country);
+                set('manufacturer', null);
+                setOriginFromBrand(false); // 사람이 눌러서 옮긴 값입니다
+              }}
+            />
 
             <div>
               <label className="admin-label" htmlFor="season">

@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
 import { createProduct, getProductBySlug } from '@/lib/products';
+import { splitOriginAndManufacturer } from '@/lib/origin';
 import { slugify } from '@/lib/product-utils';
 import {
   SellstarError,
@@ -113,8 +114,17 @@ export async function importProductAction(
       price: payload.price,
       originalPrice: payload.originalPrice,
       summary: payload.summary.trim(),
-      origin: payload.origin,
-      manufacturer: payload.manufacturer,
+      // ★ 원산지와 제조사를 제자리에 놓습니다.
+      //   제조사 칸에 나라 이름만 들어 있으면 원산지로 옮기고 제조사는 비웁니다.
+      //   화면에서도 같은 정리를 하지만, 저장 직전에 한 번 더 거릅니다.
+      //   (가져오기 payload 는 서버 액션이라 화면을 거치지 않고도 들어올 수 있습니다)
+      ...(() => {
+        const placed = splitOriginAndManufacturer({
+          origin: payload.origin,
+          manufacturer: payload.manufacturer,
+        });
+        return { origin: placed.origin, manufacturer: placed.manufacturer };
+      })(),
       gender: 'women',
       season: null,
       thumbnails: payload.thumbnails,

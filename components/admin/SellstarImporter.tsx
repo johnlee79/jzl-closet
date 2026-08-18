@@ -6,11 +6,18 @@ import { useMemo, useRef, useState, useTransition } from 'react';
 import BulkImageUpload from '@/components/admin/BulkImageUpload';
 import RichTextEditor from '@/components/admin/RichTextEditor';
 import {
+  ManufacturerField,
+  OriginField,
+  SummaryField,
+  brandOrigin,
+} from '@/components/admin/ProductInfoFields';
+import {
   fetchSellstarAction,
   importProductAction,
   type ImportPayload,
 } from '@/app/admin/import-actions';
 import { formatPrice, slugify } from '@/lib/product-utils';
+import { splitOriginAndManufacturer } from '@/lib/origin';
 import { fillTemplate, type ImportSettings } from '@/lib/site-config';
 import type { Brand } from '@/lib/brands';
 import type { Category } from '@/lib/categories';
@@ -88,6 +95,9 @@ export default function SellstarImporter({
   const [categorySlug, setCategorySlug] = useState('');
   const [subCategorySlug, setSubCategorySlug] = useState('');
   const [brandSlug, setBrandSlug] = useState('');
+  const [origin, setOrigin] = useState('');
+  const [manufacturer, setManufacturer] = useState('');
+  const [originFromBrand, setOriginFromBrand] = useState(false);
   const [freeShipping, setFreeShipping] = useState(false);
   const [useOwnShipping, setUseOwnShipping] = useState(false);
   const [shippingNote, setShippingNote] = useState('');
@@ -110,6 +120,21 @@ export default function SellstarImporter({
     () => allCategories.find((item) => item.slug === categorySlug)?.children ?? [],
     [allCategories, categorySlug]
   );
+
+  /**
+   * 브랜드 선택 — 브랜드에 적힌 원산지를 원산지 칸에 옮겨 담습니다.
+   * 규칙은 상품 등록 화면과 같습니다. 이미 값이 있으면 덮지 않습니다.
+   */
+  const chooseBrand = (slug: string) => {
+    setBrandSlug(slug);
+    const fromBrand = brandOrigin(allBrands, slug || null);
+    // 사람이 적은 값은 덮지 않고, 앞서 브랜드에서 들어온 값만 갈아 끼웁니다.
+    const canFill = !origin.trim() || originFromBrand;
+    if (fromBrand && canFill) {
+      setOrigin(fromBrand);
+      setOriginFromBrand(true);
+    }
+  };
 
   /* ── 1) 불러오기 ─────────────────────────────────────── */
 
@@ -415,6 +440,15 @@ export default function SellstarImporter({
         });
       }
 
+      /*
+        원산지와 제조사를 제자리에 놓고 보냅니다.
+        ★ 제조사 칸에 나라 이름만 적혀 있으면 원산지로 옮기고 제조사는 비웁니다.
+          영문으로 적혀 있으면 한글로 바꿉니다. (CHINA → 중국)
+          서버(import-actions)에서도 같은 정리를 한 번 더 합니다. 여기는 화면용,
+          거기는 마지막 관문입니다. 둘 다 lib/origin.ts 의 같은 함수를 씁니다.
+      */
+      const placed = splitOriginAndManufacturer({ origin, manufacturer });
+
       const payload: ImportPayload = {
         sellstarId,
         sellstarPrice,
@@ -427,8 +461,8 @@ export default function SellstarImporter({
         categorySlug,
         subCategorySlug: subCategorySlug || null,
         brandSlug: brandSlug || null,
-        origin: null,
-        manufacturer: null,
+        origin: placed.origin,
+        manufacturer: placed.manufacturer,
         thumbnails,
         detail,
         optionGroups: groups,
@@ -550,15 +584,7 @@ export default function SellstarImporter({
               </div>
 
               <div className="md:col-span-2">
-                <label className="admin-label" htmlFor="im-summary">한 줄 소개</label>
-                <input
-                  id="im-summary"
-                  type="text"
-                  value={summary}
-                  onChange={(event) => setSummary(event.target.value)}
-                  placeholder="목록과 검색 결과에 나옵니다"
-                  className={inputClass}
-                />
+                <SummaryField id="im-summary" value={summary} onChange={setSummary} />
               </div>
 
               {/* 셀스타 가격은 참고용입니다. */}
@@ -661,7 +687,7 @@ export default function SellstarImporter({
                 <select
                   id="im-brand"
                   value={brandSlug}
-                  onChange={(event) => setBrandSlug(event.target.value)}
+                  onChange={(event) => chooseBrand(event.target.value)}
                   className={inputClass}
                 >
                   <option value="">선택 안 함</option>
@@ -683,6 +709,34 @@ export default function SellstarImporter({
                   className={inputClass}
                 />
               </div>
+
+              {/*
+                ★ 셀스타는 원산지·제조사를 주지 않습니다. (응답에 그런 항목이 없습니다)
+                  그래서 여기서 받습니다. 예전에는 칸 자체가 없어 등록을 끝낸 뒤
+                  상품 수정 화면으로 다시 들어가야 했습니다.
+                ★ 브랜드를 고르면 원산지가 자동으로 들어옵니다. 상품 등록 화면과 같습니다.
+              */}
+              <OriginField
+                id="im-origin"
+                value={origin}
+                onChange={(value) => {
+                  setOrigin(value);
+                  setOriginFromBrand(false);
+                }}
+                fromBrand={originFromBrand}
+              />
+
+              <ManufacturerField
+                id="im-manufacturer"
+                value={manufacturer}
+                onChange={setManufacturer}
+                originFilled={Boolean(origin.trim())}
+                onMoveToOrigin={(country) => {
+                  setOrigin(country);
+                  setManufacturer('');
+                  setOriginFromBrand(false);
+                }}
+              />
             </div>
           </section>
 

@@ -111,10 +111,18 @@ export default function ProductPreview({
                 {[category?.nameKo, sub?.nameKo].filter(Boolean).join(' · ') || '미선택'}
               </dd>
             </div>
+            {/* ★ 값이 없는 줄은 통째로 빼야 손님 화면과 같아집니다.
+                미리보기에 제조사 줄이 없어서, 손님 화면에만 나오는 줄이 있었습니다. */}
             {draft.origin ? (
               <div className="flex gap-4">
                 <dt className="w-20 shrink-0 text-muted">원산지</dt>
                 <dd className="text-ink">{draft.origin}</dd>
+              </div>
+            ) : null}
+            {draft.manufacturer ? (
+              <div className="flex gap-4">
+                <dt className="w-20 shrink-0 text-muted">제조사</dt>
+                <dd className="text-ink">{draft.manufacturer}</dd>
               </div>
             ) : null}
             <div className="flex gap-4">
