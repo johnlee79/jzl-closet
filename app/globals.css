@@ -138,6 +138,29 @@
     color: var(--muted);
   }
 
+  /*
+    그림 크기는 여기서 정합니다. SnsIcons.tsx 의 svg 에도 width/height 가 있지만
+    그건 어디에도 안 감싸였을 때의 기본값일 뿐이고, 이 규칙이 덮습니다.
+    (속성보다 CSS 가 셉니다) 덕분에 아이콘 컴포넌트에 크기 prop 을 뚫지 않아도 됩니다.
+  */
+  .sns-icon svg {
+    @apply h-6 w-6;
+  }
+
+  /*
+    큰 자리 — 푸터처럼 아이콘 줄 하나가 넓은 여백을 혼자 쓰는 곳에 씁니다.
+    ★ .sns-icon 뒤에 와야 h-11 w-11 을 덮습니다. 순서를 바꾸지 마세요.
+    ★ 48px 칸 / 32px 그림 — 양옆에 8px 씩 남습니다.
+      SnsLinks 의 목록이 -mx-2 로 그만큼 당겨 글줄과 끝을 맞춥니다.
+  */
+  .sns-icon-lg {
+    @apply h-12 w-12;
+  }
+
+  .sns-icon-lg svg {
+    @apply h-8 w-8;
+  }
+
   @media (hover: hover) and (pointer: fine) {
     .sns-icon:hover {
       color: var(--sns-brand, var(--ink));
