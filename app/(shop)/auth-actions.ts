@@ -8,6 +8,8 @@ import {
   normalizeReferralCode,
 } from '@/lib/referral-code';
 import { attachReferrer, deviceKeyOf, ipHashOf } from '@/lib/referrals';
+import { authAccountByEmail } from '@/lib/auth-admin';
+import { providerLabel, type AuthProvider } from '@/lib/auth-provider';
 import {
   createProfile,
   emailTaken,
@@ -63,6 +65,19 @@ function noAuth(): { ok: false; error: string } {
   };
 }
 
+/**
+ * 이미 있는 계정이라고 알릴 때 쓰는 문구.
+ *
+ * ★ 구글·카카오로 가입한 계정에 "로그인해 주세요" 라고만 하면
+ *   손님은 비밀번호를 몰라 그 자리에서 막힙니다. 어디로 들어가야 하는지 알려 줍니다.
+ */
+function alreadySignedUpMessage(provider?: AuthProvider): string {
+  if (provider && isSocialProvider(provider)) {
+    return `${providerLabel(provider)} 계정으로 이미 가입된 이메일입니다. ${providerLabel(provider)}(으)로 로그인해 주세요.`;
+  }
+  return '이미 가입된 이메일입니다. 로그인해 주세요.';
+}
+
 /* ------------------------------------------------------------------
  * 이메일 중복 확인
  * ------------------------------------------------------------------ */
@@ -79,7 +94,13 @@ export async function checkEmailAction(
     return { ok: false, error: '확인 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.' };
   }
 
-  return { ok: true, data: { available: !(await emailTaken(email)) } };
+  /*
+    ★ 여기서도 auth.users 를 함께 봅니다.
+      중복확인은 "쓸 수 있는 이메일" 이라고 알려 주는 자리입니다.
+      여기서 쓸 수 있다고 해 놓고 가입 버튼에서 막으면 손님이 두 번 헛걸음합니다.
+  */
+  const taken = (await authAccountByEmail(email)) !== null || (await emailTaken(email));
+  return { ok: true, data: { available: !taken } };
 }
 
 /* ------------------------------------------------------------------
@@ -174,8 +195,17 @@ export async function signupAction(
   }
 
   const email = input.email.trim().toLowerCase();
-  if (await emailTaken(email)) {
-    return { ok: false, error: '이미 가입된 이메일입니다. 로그인해 주세요.' };
+
+  /*
+    ★ profiles 만 보면 안 됩니다. auth.users 도 함께 봅니다.
+      구글 로그인이 중간에 끊기면 auth.users 행만 남고 profiles 행은 없습니다.
+      그 계정을 "가입 안 됨" 으로 보고 가입을 진행하면 Supabase 가
+      가짜 id 를 돌려주고, 그 id 로 profiles 에 넣다가 외래키 위반이 납니다.
+      실제로 그렇게 터진 자리입니다. (아래 identities 검사와 한 쌍입니다)
+  */
+  const existing = await authAccountByEmail(email);
+  if (existing || (await emailTaken(email))) {
+    return { ok: false, error: alreadySignedUpMessage(existing?.provider) };
   }
 
   const supabase = createAuthClient();
@@ -202,6 +232,25 @@ export async function signupAction(
   const userId = data.user?.id;
   if (!userId) {
     return { ok: false, error: '가입 처리에 실패했습니다. 잠시 후 다시 시도해 주세요.' };
+  }
+
+  /*
+    ★ 성공처럼 보이지만 실제로는 계정이 안 만들어진 경우를 걸러 냅니다.
+      이메일 확인이 켜져 있고 그 이메일이 이미 있으면, Supabase 는
+      "이미 가입된 이메일" 이라는 사실을 감추려고 200 으로 답하면서
+      auth.users 에 없는 가짜 id 와 빈 identities 를 돌려줍니다.
+      (남의 이메일을 넣어 보며 가입 여부를 캐내는 것을 막으려는 설계입니다)
+
+      이 검사가 없으면 그 가짜 id 로 profiles 에 넣다가
+      "profiles_id_fkey 외래키 위반" 이 손님 화면에 그대로 뜹니다.
+      실제로 확인했습니다 — 반환된 id 를 관리자 API 로 조회하면 404 입니다.
+
+      빈 배열일 때만 걸러야 합니다. identities 가 아예 없는(undefined) 응답도
+      있는데, 그때까지 막으면 멀쩡한 가입이 막힙니다.
+  */
+  if (Array.isArray(data.user?.identities) && data.user.identities.length === 0) {
+    const known = await authAccountByEmail(email);
+    return { ok: false, error: alreadySignedUpMessage(known?.provider) };
   }
 
   try {
