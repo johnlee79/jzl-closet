@@ -1,7 +1,15 @@
 import { DEFAULT_STORE } from '@/lib/site-config';
 
-/** 배포 주소. 도메인을 바꾸면 여기만 고치면 됩니다. */
-export const SITE_URL = 'https://jzl-closet.vercel.app';
+/**
+ * 배포 주소. 도메인을 바꾸면 여기만 고치면 됩니다.
+ *
+ * ★ 끝에 슬래시(/)를 붙이지 마세요. 쓰는 쪽이 전부 `${SITE_URL}/무엇` 으로
+ *   이어 붙이기 때문에 //products 처럼 슬래시가 겹칩니다.
+ * ★ 여기를 고친 뒤에는 Supabase 대시보드의 Authentication > URL Configuration 도
+ *   같이 고쳐야 합니다. 회원가입·비밀번호 재설정 메일의 돌아오는 주소를
+ *   Supabase 가 허용 목록과 대조해서 막기 때문입니다. (아래 auth-actions.ts 참고)
+ */
+export const SITE_URL = 'https://jzl.kr';
 
 /**
  * 스토어 정보 기본값.
