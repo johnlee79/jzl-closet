@@ -92,12 +92,21 @@ export async function saveCategoryAction(
 
       await createCategory(input);
     } else {
-      await updateCategory(input.slug, {
-        label: input.label,
-        nameKo: input.nameKo,
-        description: input.description,
-        isVisible: input.isVisible,
-      });
+      /*
+        ★ 넘어온 값을 통째로 넘깁니다. 항목을 손으로 하나씩 적지 않습니다.
+          예전에는 { label, nameKo, description, isVisible } 네 개만 적어 두었습니다.
+          3-K 에서 대표 이미지(imageUrl)를 넣었더니, 화면에서는 올라가고 서버까지
+          넘어오는데 여기서 조용히 버려져 저장을 누르면 이미지가 사라졌습니다.
+          오류도 나지 않아 어디서 새는지 보이지 않았습니다.
+        ★ 브랜드 저장(saveBrandAction)은 처음부터 이 방식이라 같은 일이 없었습니다.
+          두 곳의 방식을 맞춰 둡니다. 앞으로 CategoryInput 에 칸을 더해도
+          이 파일을 고칠 필요가 없습니다.
+        ★ slug 와 parentSlug 는 빼냅니다. 등록 후 바꾸지 않는 값입니다. (검색 색인 유지)
+      */
+      const { slug, parentSlug, ...patch } = input;
+      void slug;
+      void parentSlug;
+      await updateCategory(input.slug, patch);
     }
 
     revalidateAll();

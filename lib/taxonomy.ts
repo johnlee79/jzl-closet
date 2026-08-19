@@ -385,6 +385,9 @@ export async function createCategory(input: CategoryInput): Promise<void> {
     parent_slug: input.parentSlug,
     description: input.description || null,
     is_visible: input.isVisible,
+    // ★ 새로 만들 때도 대표 이미지를 함께 넣습니다. (3-K)
+    //   여기 한 줄이 빠져 있으면 "추가" 로 만든 분류만 이미지가 안 붙습니다.
+    image_url: input.imageUrl || null,
     display_order: input.displayOrder ?? (await nextOrder(CATEGORY_TABLE, input.parentSlug)),
   });
   if (error) {
