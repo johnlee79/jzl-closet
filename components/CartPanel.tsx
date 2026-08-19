@@ -9,10 +9,28 @@ import SignupPointBadge from '@/components/SignupPointBadge';
 import SafeImage from '@/components/SafeImage';
 import { useSite } from '@/components/SiteProvider';
 import { useCart } from '@/lib/cart';
+import type { ResolvedBlock } from '@/lib/copy';
 import { formatPrice } from '@/lib/product-utils';
 import { expectedPurchasePoints } from '@/lib/site-config';
 
-export default function CartPanel() {
+/**
+ * ★ 문구는 서버(/order 페이지)가 읽어 넘겨 줍니다. (3-L)
+ *   이 컴포넌트는 클라이언트라 getCachedCopy 를 직접 부를 수 없습니다.
+ *   SiteProvider 에 문구를 통째로 실으면 전 페이지의 첫 로딩에 딸려 가므로,
+ *   이 화면에서만 쓰는 세 덩어리를 props 로 받습니다.
+ */
+export default function CartPanel({
+  emptyNote,
+  payNote,
+  copyNote,
+}: {
+  /** 장바구니가 비었을 때 안내 */
+  emptyNote?: ResolvedBlock;
+  /** 결제 수단 안내 — 사이트에서 이 문구 하나만 결제 수단을 말합니다 */
+  payNote?: ResolvedBlock;
+  /** 주문 내역 복사 안내 */
+  copyNote?: ResolvedBlock;
+}) {
   /**
    * 로그인 여부. 배지를 보여 줄지만 정합니다.
    * ★ 서버에서 쿠키를 읽으면 정적 생성이 깨지므로 브라우저에서 물어봅니다.
@@ -82,10 +100,16 @@ export default function CartPanel() {
   if (items.length === 0) {
     return (
       <div className="border-t border-stone py-16">
-        <p className="text-[16px] leading-relaxed text-ink">장바구니가 비어 있습니다.</p>
-        <p className="mt-2 text-[15px] leading-relaxed text-ink">
-          마음에 드는 상품을 담아두시면 이 브라우저에 저장되어 다음 방문에도 남아 있습니다.
-        </p>
+        {/* 빈 장바구니 안내 — 관리자 문구입니다. (3-L) */}
+        {emptyNote?.heading ? (
+          <p className="text-[16px] leading-relaxed text-ink">{emptyNote.heading}</p>
+        ) : null}
+        {emptyNote?.html ? (
+          <div
+            className="detail-body mt-2 text-[15px] leading-relaxed text-ink"
+            dangerouslySetInnerHTML={{ __html: emptyNote.html }}
+          />
+        ) : null}
         <Link href="/products" className="btn-primary mt-8">
           전체 상품 보기
         </Link>
@@ -255,10 +279,18 @@ export default function CartPanel() {
             주문하기
           </Link>
 
-          <p className="mt-3 text-[13px] leading-relaxed text-muted">
-            무통장입금(계좌이체)으로 결제합니다. 주문 후 안내되는 계좌로 입금하시면 확인
-            후 발송해 드립니다. 도서산간 추가 배송비는 주소를 입력하면 계산됩니다.
-          </p>
+          {/*
+            ★ 결제 수단 안내는 관리자 문구 한 곳(copy.cartPayment)에서만 옵니다. (3-L)
+              예전에는 이 문단이 코드에 박혀 있었고, /order 아래쪽 '결제 안내' 에도
+              같은 말이 또 있었습니다. 한쪽만 고치면 같은 화면에서 서로 다른 말을
+              하게 됩니다. 카드결제를 붙이는 날 반드시 사고가 나는 자리였습니다.
+          */}
+          {payNote?.html ? (
+            <div
+              className="detail-body mt-3 text-[13px] leading-relaxed text-muted"
+              dangerouslySetInnerHTML={{ __html: payNote.html }}
+            />
+          ) : null}
 
           <div className="mt-6 border-t border-stone pt-6">
             <CopyOrderButton text={orderText} />
@@ -266,9 +298,12 @@ export default function CartPanel() {
                 설정에 채팅방 주소가 없으면 버튼이 나오지 않으므로,
                 아래 안내는 버튼을 가리키지 않고 혼자서도 말이 되게 적습니다. */}
             <KakaoChatButton className="mt-3 w-full" />
-            <p className="mt-3 text-[13px] leading-relaxed text-muted">
-              온라인 주문이 어려우시면 위 내용을 복사해 카카오톡으로 보내주세요.
-            </p>
+            {copyNote?.html ? (
+              <div
+                className="detail-body mt-3 text-[13px] leading-relaxed text-muted"
+                dangerouslySetInnerHTML={{ __html: copyNote.html }}
+              />
+            ) : null}
           </div>
         </div>
 

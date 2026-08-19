@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { DEFAULT_OG_IMAGE } from '@/lib/store';
 import Link from 'next/link';
 import BrandStrip from '@/components/BrandStrip';
+import CategoryList from '@/components/CategoryList';
 import MainBanner from '@/components/MainBanner';
 import ProductCard from '@/components/ProductCard';
 import RecentlyViewed from '@/components/RecentlyViewed';
@@ -236,11 +237,24 @@ export default async function HomePage() {
             />
           ) : null}
 
-          <ul className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 lg:gap-x-6">
+          {/*
+            ★ 네 개 이하면 지금처럼 격자, 다섯 개부터 가로로 밀어 보게 바꿉니다. (3-L)
+              격자에 다섯 개가 들어오면 한 줄에 넷, 다음 줄에 하나가 덩그러니 남습니다.
+            ★ 가로로 갈 때는 칸마다 폭을 정해 줍니다. 격자와 달리 스스로 폭을 못 정합니다.
+          */}
+          <CategoryList grid={entryCategories.length <= 4}>
             {entryCategories.map((category) => {
               const count = countByCategory[category.slug] ?? 0;
               return (
-                <li key={category.slug}>
+                <li
+                  key={category.slug}
+                  // 가로로 밀 때만 폭을 못 박습니다. 격자에서는 칸이 폭을 정합니다.
+                  className={
+                    entryCategories.length <= 4
+                      ? ''
+                      : 'w-[46vw] shrink-0 snap-start sm:w-[30vw] md:w-[210px] lg:w-[240px]'
+                  }
+                >
                   <Link href={`/category/${category.slug}`} className="group block">
                     {/*
                       ★ 대표 이미지는 관리자 > 분류 관리에서 올립니다. (3-K)
@@ -288,7 +302,7 @@ export default async function HomePage() {
                 </li>
               );
             })}
-          </ul>
+          </CategoryList>
         </div>
       </section>
       ) : null}

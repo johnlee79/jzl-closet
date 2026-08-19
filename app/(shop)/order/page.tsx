@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { DEFAULT_OG_IMAGE } from '@/lib/store';
 import Link from 'next/link';
 import CartPanel from '@/components/CartPanel';
 import CopyBlocks from '@/components/CopyBlocks';
@@ -8,48 +9,74 @@ import { getCachedCopy, getCachedStore } from '@/lib/settings';
 
 export const revalidate = 60;
 
+/** 문구 첫 블록을 평문으로. 메타데이터에는 태그가 들어가면 안 됩니다. */
+function plain(html: string): string {
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 export async function generateMetadata(): Promise<Metadata> {
-  const store = await getCachedStore();
+  const [store, copy] = await Promise.all([getCachedStore(), getCachedCopy()]);
+
+  /*
+    ★ 제목·설명을 관리자 문구에서 가져옵니다. (3-L)
+      코드에 박아 두면 결제 방식이 바뀔 때 이 자리까지 손이 닿지 않습니다.
+  */
+  const head = resolveCopy(copy.orderHero, store)[0];
+  const title = head?.heading.trim() || '장바구니 · 주문';
+  const description =
+    plain(head?.html ?? '').slice(0, 160) || `${store.name} 장바구니와 주문 안내입니다.`;
+
   return {
-    title: '장바구니 · 주문 문의',
-    description: `${store.name} 장바구니와 주문 문의 안내입니다. 담은 상품을 복사해 카카오톡으로 보내주시면 접수됩니다.`,
+    title,
+    description,
     alternates: { canonical: '/order' },
     robots: { index: false, follow: true },
     openGraph: {
-      title: `장바구니 · 주문 문의 | ${store.name}`,
-      description: '담은 상품을 확인하고 주문 내역을 복사해 문의하실 수 있습니다.',
+      title: `${title} | ${store.name}`,
+      description,
       url: '/order',
+      images: [DEFAULT_OG_IMAGE],
     },
   };
 }
 
 export default async function OrderPage() {
   const [copy, store] = await Promise.all([getCachedCopy(), getCachedStore()]);
+  const head = resolveCopy(copy.orderHero, store)[0];
   const steps = resolveCopy(copy.orderSteps, store);
   const notes = resolveCopy(copy.order, store);
 
   return (
     <div className="shell py-14 md:py-20">
+      {/*
+        ★ 제목과 안내 문단을 관리자 문구로 옮겼습니다. (3-L)
+          곧 카드결제가 붙는데 "무통장입금" 이 코드에 박혀 있으면 그날 손님에게
+          거짓말이 됩니다. 코드를 고치지 않고 관리자에서 바꿀 수 있어야 합니다.
+        ★ 영문 라벨 CART & ORDER 는 그대로 둡니다. 섹션을 구분하는 표지입니다.
+        ★ '주문 조회' 링크는 문구 본문 안의 <a> 로 들어 있습니다.
+          편집기가 링크를 허용하므로 운영자가 주소까지 고칠 수 있습니다.
+      */}
       <header className="max-w-[680px]">
         <p className="label-xs">CART &amp; ORDER</p>
-        <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
-          장바구니 · 주문 문의
-        </h1>
-        <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
-          담으신 상품을 확인하고 주문서를 작성해 주세요. 회원가입 없이 주문하실 수 있으며,
-          결제는 무통장입금(계좌이체)으로 진행합니다.
-        </p>
-        <p className="mt-3 text-[15px] text-ink">
-          이미 주문하셨다면{' '}
-          <Link href="/order-lookup" className="link-wine">
-            주문 조회
-          </Link>
-          에서 진행 상황을 확인하실 수 있습니다.
-        </p>
+        {head?.heading ? (
+          <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
+            {head.heading}
+          </h1>
+        ) : null}
+        {head?.html ? (
+          <div
+            className="detail-body mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]"
+            dangerouslySetInnerHTML={{ __html: head.html }}
+          />
+        ) : null}
       </header>
 
       <section aria-label="장바구니" className="mt-12">
-        <CartPanel />
+        <CartPanel
+          emptyNote={resolveCopy(copy.cartEmpty, store)[0]}
+          payNote={resolveCopy(copy.cartPayment, store)[0]}
+          copyNote={resolveCopy(copy.cartCopyNote, store)[0]}
+        />
       </section>
 
       <section aria-labelledby="step-heading" className="section border-t border-stone">

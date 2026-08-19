@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import BrandMark from '@/components/BrandMark';
+import HScroll from '@/components/HScroll';
 import type { Brand } from '@/lib/brands';
 
 /**
@@ -36,6 +37,19 @@ export default function BrandStrip({
   // 보여 줄 브랜드가 없으면 제목만 남는 빈 칸이 되므로 자리 자체를 만들지 않습니다.
   if (brands.length === 0) return null;
 
+  /** 다섯 개부터 가로로 밀어 봅니다. 넷 이하는 격자가 더 자연스럽습니다. (3-L) */
+  const scroll = brands.length > 4;
+
+  /** 격자든 가로든 칸 안의 모양은 같습니다. 한 곳에서 그립니다. */
+  const mark = (brand: Brand) => (
+    <Link
+      href={`/brand/${brand.slug}`}
+      className="group inline-flex h-11 items-center break-keep text-ink transition-colors duration-200 hover:text-wine"
+    >
+      <BrandMark brand={brand} className="underline-offset-[6px] group-hover:underline" />
+    </Link>
+  );
+
   // 머리말이 없으면 바깥에 이미 섹션이 있다는 뜻이라 shell 도 씌우지 않습니다.
   const Wrapper = headless ? 'div' : 'section';
 
@@ -66,28 +80,41 @@ export default function BrandStrip({
         )}
 
         {/*
-          ★ 격자로 늘어놓되 칸을 넉넉히 벌립니다. 하이엔드 편집숍의 나열은
-            빽빽함이 아니라 여백이 만듭니다. 네모 버튼으로 채우지 않습니다.
-          ★ 모바일 2열 · 태블릿 3열 · 데스크톱 4열입니다.
+          ★ 넷 이하면 격자, 다섯부터 가로로 밀어 보게 바꿉니다. (3-L)
+            지금 브랜드는 14개라 격자로 두면 네 줄로 길게 늘어집니다.
+            반대로 브랜드가 몇 개 안 될 때 가로 스크롤을 쓰면 왼쪽에 몰려
+            허전해 보이므로, 그때는 격자가 낫습니다.
+          ★ 격자 — 모바일 2열 · 태블릿 3열 · 데스크톱 4열입니다.
             브랜드명이 긴 편이라(COMME des GARÇONS) 모바일에서 3열은 너무 좁습니다.
-          ★ 줄 높이를 items-center 로 맞춥니다. 로고를 올린 브랜드와 글자만 있는
-            브랜드가 한 줄에 섞여도 눈높이가 어긋나지 않습니다.
+          ★ 칸을 넉넉히 벌립니다. 하이엔드 편집숍의 나열은 빽빽함이 아니라 여백이
+            만듭니다. 네모 버튼으로 채우지 않습니다.
+          ★ 높이를 h-11 로 못 박습니다. 로고를 올린 브랜드와 글자만 있는 브랜드가
+            섞여도 줄이 들쭉날쭉해지지 않습니다.
         */}
-        <ul className={`grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-3 md:gap-x-10 md:gap-y-12 lg:grid-cols-4 ${headless ? '' : 'mt-12 md:mt-16'}`}>
-          {brands.map((brand) => (
-            <li key={brand.slug} className="flex items-center">
-              <Link
-                href={`/brand/${brand.slug}`}
-                className="group inline-flex min-h-[44px] items-center break-keep text-ink transition-colors duration-200 hover:text-wine"
+        {scroll ? (
+          <HScroll label="브랜드" className={headless ? '' : 'mt-12 md:mt-16'}>
+            {brands.map((brand) => (
+              <li
+                key={brand.slug}
+                className="flex w-[42vw] shrink-0 snap-start items-center sm:w-[26vw] md:w-[180px] lg:w-[200px]"
               >
-                <BrandMark
-                  brand={brand}
-                  className="underline-offset-[6px] group-hover:underline"
-                />
-              </Link>
-            </li>
-          ))}
-        </ul>
+                {mark(brand)}
+              </li>
+            ))}
+          </HScroll>
+        ) : (
+          <ul
+            className={`grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-3 md:gap-x-10 md:gap-y-12 lg:grid-cols-4 ${
+              headless ? '' : 'mt-12 md:mt-16'
+            }`}
+          >
+            {brands.map((brand) => (
+              <li key={brand.slug} className="flex items-center">
+                {mark(brand)}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </Wrapper>
   );
