@@ -12,6 +12,26 @@ import { DEFAULT_STORE } from '@/lib/site-config';
 export const SITE_URL = 'https://jzl.kr';
 
 /**
+ * 검색엔진 소유확인 값 (3-M)
+ *
+ * ★ 비밀이 아닙니다. 어차피 모든 페이지의 HTML 에 그대로 실려 나가는 값입니다.
+ *   그래서 환경변수로 빼지 않고 여기에 둡니다. 환경변수로 두면 Vercel 설정을
+ *   따로 손대야 하고, 나중에 태그가 왜 없는지 찾기 어려워집니다.
+ *
+ * ★ 어디에 쓰이나 — app/layout.tsx 의 metadata.verification 으로 들어가
+ *   <meta name="google-site-verification">, <meta name="naver-site-verification">
+ *   두 줄이 됩니다. 이 줄이 사라지면 서치콘솔·웹마스터도구의 소유확인이 풀립니다.
+ *   확인을 마친 뒤에도 지우지 마세요. 검색엔진이 주기적으로 다시 확인합니다.
+ *
+ *   구글  — 서치콘솔 (search.google.com/search-console)
+ *   네이버 — 서치어드바이저 (searchadvisor.naver.com)
+ */
+export const SITE_VERIFICATION = {
+  google: 'oGI1IKtH999GKbaBoI8iDqW7XM_JBZ34UXpwR7vN-Gc',
+  naver: '61c6f3ea756a2dac39a6313e0f0e6baed34c2305',
+} as const;
+
+/**
  * 스토어 정보 기본값.
  *
  * ★ 1-B 부터 실제 값은 site_settings 테이블(key = 'store')에서 읽습니다.

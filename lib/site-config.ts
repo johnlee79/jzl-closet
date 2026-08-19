@@ -782,7 +782,14 @@ export type AnalyticsSettings = {
   ga4Id: string;
 };
 
-export const DEFAULT_ANALYTICS: AnalyticsSettings = { ga4Id: '' };
+/**
+ * ★ 측정 ID 를 기본값으로 박아 둡니다. (3-M)
+ *   비밀이 아니라 어차피 HTML 에 실려 나가는 값이고, 여기 두면 배포하는 순간
+ *   집계가 시작됩니다. 관리자가 굳이 한 번 입력하지 않아도 됩니다.
+ * ★ 관리자 > 설정 > 구글 애널리틱스 에서 저장하면 그 값이 이깁니다.
+ *   측정 ID 를 바꾸거나 잠시 끄고 싶으면(빈 값) 그쪽에서 하세요.
+ */
+export const DEFAULT_ANALYTICS: AnalyticsSettings = { ga4Id: 'G-H0XVMGX03D' };
 
 export const GA4_ID_PATTERN = /^G-[A-Z0-9]{6,12}$/;
 

@@ -6,7 +6,7 @@ import {
   getCachedStore,
   hasCustomFavicon,
 } from '@/lib/settings';
-import { SITE_URL } from '@/lib/store';
+import { SITE_URL, SITE_VERIFICATION } from '@/lib/store';
 import './globals.css';
 
 /**
@@ -69,6 +69,17 @@ export async function generateMetadata(): Promise<Metadata> {
     robots: {
       index: true,
       follow: true,
+    },
+    /*
+      ★ 검색엔진 소유확인 (3-M)
+        하위 페이지는 verification 을 따로 정의하지 않으므로 이 값이 그대로 내려갑니다.
+        3-J 에서 openGraph 가 통째로 갈아 끼워지던 함정이 있어 같은 일이
+        일어나는지 빌드 산출물로 확인했고, verification 은 정상적으로 상속됩니다.
+      ★ 네이버는 Next 가 이름을 아는 항목이 아니라 other 로 넣습니다.
+    */
+    verification: {
+      google: SITE_VERIFICATION.google,
+      other: { 'naver-site-verification': SITE_VERIFICATION.naver },
     },
     icons: {
       icon,
