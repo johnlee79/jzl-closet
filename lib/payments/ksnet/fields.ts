@@ -51,13 +51,32 @@ export type KsnetFormResult = {
   problem: string | null;
 };
 
+/**
+ * 결제 결과를 받을 주소.
+ *
+ * ★★ 주문번호를 반드시 이 주소에 심어야 합니다.
+ *   KSNET 은 결제 결과를 보낼 때 주문번호를 돌려주지 않습니다.
+ *   실제로 들어온 값은 다섯 개뿐이었습니다.
+ *     reCommConId · reCommType · reHash · reEncData · reCnclType
+ *   그래서 주소에 심어 두지 않으면 "어느 주문의 결제인지" 를 알 방법이 없습니다.
+ *   (첫 실제 결제가 이것 때문에 "주문 정보를 찾을 수 없습니다" 로 끝났습니다)
+ *
+ * ★ 경로와 쿼리 두 군데에 넣습니다. 한쪽이 잘리거나 다듬어져도 다른 쪽으로 찾습니다.
+ * ★ 주문번호는 비밀이 아닙니다. 이 값으로 하는 일은 "어느 주문인지" 찾는 것뿐이고,
+ *   금액은 그 주문을 DB 에서 다시 읽어 씁니다. 승인 응답의 ordno 와도 대조합니다.
+ */
+export function ksnetReplyUrl(orderNo: string): string {
+  const encoded = encodeURIComponent(orderNo);
+  return `${SITE_URL}/api/payment/ksnet/return/${encoded}?no=${encoded}`;
+}
+
 export function buildKsnetForm(
   order: Order,
   store: StoreSettings,
   /** ★ User-Agent 로 판단한 값입니다. 화면 폭으로 정하지 마세요. */
   isMobile: boolean,
   /** 결제 결과를 받을 절대경로 */
-  replyUrl = `${SITE_URL}/api/payment/ksnet/return`
+  replyUrl = ksnetReplyUrl(order.orderNo)
 ): KsnetFormResult {
   const action = isMobile ? KSPAY_MOBILE_ACTION : KSPAY_PC_ACTION;
 
