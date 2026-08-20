@@ -69,7 +69,7 @@ export default function RichTextEditor({
   };
 
   const toolButton =
-    'rounded border border-slate-300 bg-white px-2.5 py-1.5 text-[14px] text-slate-700 hover:bg-slate-50';
+    'rounded border border-slate-300 bg-white px-2.5 py-1.5 text-[15px] text-slate-700 hover:bg-slate-50';
 
   return (
     <div className="rounded-md border border-slate-300 bg-white">
@@ -139,7 +139,7 @@ export default function RichTextEditor({
         }}
         onKeyUp={rememberSelection}
         onMouseUp={rememberSelection}
-        className="min-h-[140px] p-3 text-[15px] leading-[1.9] text-slate-900 outline-none empty:before:text-slate-400 empty:before:content-[attr(data-placeholder)]"
+        className="min-h-[140px] p-3 text-[16px] leading-[1.9] text-slate-900 outline-none empty:before:text-slate-400 empty:before:content-[attr(data-placeholder)]"
       />
     </div>
   );

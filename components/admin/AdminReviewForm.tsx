@@ -140,7 +140,7 @@ export default function AdminReviewForm({
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
       {error ? (
-        <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-[15px] text-red-700">
+        <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-[16px] text-red-700">
           {error}
         </p>
       ) : null}
@@ -211,7 +211,7 @@ export default function AdminReviewForm({
               className="admin-input max-w-[130px]"
             />
           </div>
-          <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+          <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
             비워 두면 지금 시각으로 들어갑니다. 미래 날짜는 고를 수 없습니다. 시간을 비우면
             그날 낮 12시로 저장됩니다.
           </p>
@@ -248,7 +248,7 @@ export default function AdminReviewForm({
                     type="button"
                     onClick={() => toggleTag(tag)}
                     aria-pressed={on}
-                    className={`rounded-md border px-3 py-1.5 text-[14px] transition-colors ${
+                    className={`rounded-md border px-3 py-1.5 text-[15px] transition-colors ${
                       on
                         ? 'border-blue-700 bg-blue-700 text-white'
                         : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
@@ -269,7 +269,7 @@ export default function AdminReviewForm({
             내용 *
           </label>
           <span
-            className={`text-[13px] ${
+            className={`text-[14px] ${
               content.length > MAX_REVIEW_LENGTH ? 'text-red-700' : 'text-slate-500'
             }`}
           >
@@ -307,7 +307,7 @@ export default function AdminReviewForm({
             onChange={(event) => void handleFiles(event.target.files)}
             className="hidden"
           />
-          <span className="text-[14px] text-slate-500">
+          <span className="text-[15px] text-slate-500">
             {attachments.length}/{MAX_REVIEW_ATTACHMENTS}
           </span>
         </div>
@@ -326,7 +326,7 @@ export default function AdminReviewForm({
                   type="button"
                   onClick={() => removeAttachment(url)}
                   aria-label="사진 삭제"
-                  className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-[14px] leading-none text-white"
+                  className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-[15px] leading-none text-white"
                 >
                   ×
                 </button>
@@ -342,7 +342,7 @@ export default function AdminReviewForm({
           isSponsored ? 'border-amber-300 bg-amber-50' : 'border-red-300 bg-red-50'
         }`}
       >
-        <label className="flex cursor-pointer items-start gap-3 text-[15px] text-slate-900">
+        <label className="flex cursor-pointer items-start gap-3 text-[16px] text-slate-900">
           <input
             type="checkbox"
             checked={isSponsored}
@@ -351,7 +351,7 @@ export default function AdminReviewForm({
           />
           <span>
             <strong>체험단·무상제공 후기</strong>
-            <span className="mt-1 block text-[14px] leading-relaxed">
+            <span className="mt-1 block text-[15px] leading-relaxed">
               {isSponsored ? (
                 <>
                   상품 페이지의 이 후기 아래에 <strong>{SPONSORED_NOTICE}</strong> 가
@@ -376,7 +376,7 @@ export default function AdminReviewForm({
         >
           {pending ? '등록 중…' : '리뷰 등록'}
         </button>
-        <p className="mt-2 text-[13px] text-slate-500">
+        <p className="mt-2 text-[14px] text-slate-500">
           실제 주문과 연결되지 않습니다. 포인트도 적립되지 않고 텔레그램 알림도 가지
           않습니다.
         </p>

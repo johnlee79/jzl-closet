@@ -36,7 +36,7 @@ function formatDateTime(value: string | null): string {
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex gap-4 py-2 text-[15px]">
+    <div className="flex gap-4 py-2 text-[16px]">
       <dt className="w-[104px] shrink-0 text-slate-500">{label}</dt>
       <dd className="min-w-0 flex-1 break-words text-slate-900">{children}</dd>
     </div>
@@ -105,14 +105,14 @@ export default function OrderDetail({ order }: { order: Order }) {
       <div className="admin-card flex flex-wrap items-center justify-between gap-3 p-4 md:p-5">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-mono text-[22px] font-semibold text-slate-900">
+            <h1 className="font-mono text-[24px] font-semibold text-slate-900">
               {order.orderNo}
             </h1>
             <span className={`admin-badge ${statusBadgeClass(order.status)}`}>
               {statusLabel(order.status)}
             </span>
           </div>
-          <p className="mt-1 text-[14px] text-slate-500">
+          <p className="mt-1 text-[15px] text-slate-500">
             {formatDateTime(order.createdAt)} 접수
           </p>
         </div>
@@ -129,7 +129,7 @@ export default function OrderDetail({ order }: { order: Order }) {
       {message ? (
         <p
           role="status"
-          className={`rounded-md px-3 py-2 text-[15px] ${
+          className={`rounded-md px-3 py-2 text-[16px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >
@@ -141,14 +141,14 @@ export default function OrderDetail({ order }: { order: Order }) {
         <div className="flex flex-col gap-5">
           {/* ── 상품 목록 ──────────────────────────────── */}
           <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[17px] font-semibold text-slate-900">
+            <h2 className="text-[18px] font-semibold text-slate-900">
               주문 상품 {liveItems.length}건
             </h2>
 
             <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[560px] border-collapse text-[15px]">
+              <table className="w-full min-w-[560px] border-collapse text-[16px]">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-left text-[14px] text-slate-600">
+                  <tr className="border-b border-slate-200 bg-slate-50 text-left text-[15px] text-slate-600">
                     <th scope="col" className="px-3 py-2 font-medium">상품</th>
                     <th scope="col" className="px-3 py-2 font-medium">옵션</th>
                     <th scope="col" className="px-3 py-2 text-right font-medium">단가</th>
@@ -176,7 +176,7 @@ export default function OrderDetail({ order }: { order: Order }) {
                             {item.productName}
                           </Link>
                           {item.brandLabel ? (
-                            <span className="block text-[13px] text-slate-500">
+                            <span className="block text-[14px] text-slate-500">
                               {item.brandLabel}
                             </span>
                           ) : null}
@@ -195,7 +195,7 @@ export default function OrderDetail({ order }: { order: Order }) {
                         </td>
                         <td className="px-3 py-2.5">
                           {cancelled ? (
-                            <span className="text-[14px] text-red-600">취소됨</span>
+                            <span className="text-[15px] text-red-600">취소됨</span>
                           ) : (
                             <button
                               type="button"
@@ -214,7 +214,7 @@ export default function OrderDetail({ order }: { order: Order }) {
               </table>
             </div>
 
-            <dl className="mt-4 ml-auto flex w-full max-w-[320px] flex-col gap-2 border-t border-slate-200 pt-4 text-[15px]">
+            <dl className="mt-4 ml-auto flex w-full max-w-[320px] flex-col gap-2 border-t border-slate-200 pt-4 text-[16px]">
               <div className="flex justify-between">
                 <dt className="text-slate-500">상품 합계</dt>
                 <dd className="tabular-nums text-slate-900">
@@ -243,13 +243,13 @@ export default function OrderDetail({ order }: { order: Order }) {
                   </dd>
                 </div>
               ) : null}
-              <div className="flex justify-between border-t border-slate-200 pt-2 text-[17px] font-semibold">
+              <div className="flex justify-between border-t border-slate-200 pt-2 text-[18px] font-semibold">
                 <dt>결제금액</dt>
                 <dd className="tabular-nums">{formatPrice(order.totalAmount)}원</dd>
               </div>
             </dl>
 
-            <p className="mt-3 text-[13px] leading-relaxed text-slate-500">
+            <p className="mt-3 text-[14px] leading-relaxed text-slate-500">
               부분 취소를 하면 총액을 다시 계산하고 재고를 되돌립니다. 실제 환불(계좌
               이체)은 직접 처리해 주세요.
             </p>
@@ -258,7 +258,7 @@ export default function OrderDetail({ order }: { order: Order }) {
           {/* ── 주문자 · 배송지 · 결제 ─────────────────── */}
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <section className="admin-card p-4 md:p-5">
-              <h2 className="text-[17px] font-semibold text-slate-900">주문자</h2>
+              <h2 className="text-[18px] font-semibold text-slate-900">주문자</h2>
               <dl className="mt-3 divide-y divide-slate-100">
                 <Row label="이름">{order.ordererName}</Row>
                 <Row label="연락처">
@@ -271,7 +271,7 @@ export default function OrderDetail({ order }: { order: Order }) {
             </section>
 
             <section className="admin-card p-4 md:p-5">
-              <h2 className="text-[17px] font-semibold text-slate-900">결제</h2>
+              <h2 className="text-[18px] font-semibold text-slate-900">결제</h2>
               <dl className="mt-3 divide-y divide-slate-100">
                 {/* ★ 카드사명까지 — 정산·분쟁 때 어느 카드사인지 바로 알아야 합니다. */}
                 <Row label="수단">
@@ -331,7 +331,7 @@ export default function OrderDetail({ order }: { order: Order }) {
                   }`}
                 >
                   {cancelPending ? (
-                    <p className="text-[14px] font-medium leading-relaxed text-amber-900">
+                    <p className="text-[15px] font-medium leading-relaxed text-amber-900">
                       취소 접수 중입니다. 아래 두 번호를 대행사에 알려 주세요.
                     </p>
                   ) : null}
@@ -345,7 +345,7 @@ export default function OrderDetail({ order }: { order: Order }) {
                 <div className="mt-4 border-t border-slate-200 pt-4">
                   <span className="admin-label">현금영수증</span>
                   {order.cashReceiptType === 'none' ? (
-                    <p className="text-[15px] text-slate-500">신청 안 함</p>
+                    <p className="text-[16px] text-slate-500">신청 안 함</p>
                   ) : (
                     <>
                       <div className="mt-1">
@@ -359,7 +359,7 @@ export default function OrderDetail({ order }: { order: Order }) {
                         />
                       </div>
 
-                      <label className="mt-3 flex cursor-pointer items-start gap-2 text-[15px] text-slate-800">
+                      <label className="mt-3 flex cursor-pointer items-start gap-2 text-[16px] text-slate-800">
                         <input
                           type="checkbox"
                           checked={receiptIssued}
@@ -379,14 +379,14 @@ export default function OrderDetail({ order }: { order: Order }) {
                         <span>
                           홈택스에서 발급을 마쳤습니다
                           {order.cashReceiptIssuedAt ? (
-                            <span className="mt-0.5 block text-[13px] text-slate-500">
+                            <span className="mt-0.5 block text-[14px] text-slate-500">
                               {formatDateTime(order.cashReceiptIssuedAt)} 표시
                             </span>
                           ) : null}
                         </span>
                       </label>
 
-                      <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[13px] leading-relaxed text-slate-600">
+                      <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[14px] leading-relaxed text-slate-600">
                         현금영수증은 PG 에서 자동 발급되지 않습니다. 입금 확인 후 홈택스에서
                         위 정보로 직접 발급한 뒤 체크해 주세요.
                       </p>
@@ -400,7 +400,7 @@ export default function OrderDetail({ order }: { order: Order }) {
           {/* ── 배송지 ─────────────────────────────────── */}
           <section className="admin-card p-4 md:p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-[17px] font-semibold text-slate-900">배송지</h2>
+              <h2 className="text-[18px] font-semibold text-slate-900">배송지</h2>
               {editable ? (
                 <button
                   type="button"
@@ -410,7 +410,7 @@ export default function OrderDetail({ order }: { order: Order }) {
                   {addressOpen ? '닫기' : '배송지 수정'}
                 </button>
               ) : (
-                <span className="text-[13px] text-slate-500">
+                <span className="text-[14px] text-slate-500">
                   출고 후에는 수정할 수 없습니다
                 </span>
               )}
@@ -521,9 +521,9 @@ export default function OrderDetail({ order }: { order: Order }) {
 
           {/* ── 상태 이력 ──────────────────────────────── */}
           <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[17px] font-semibold text-slate-900">처리 이력</h2>
+            <h2 className="text-[18px] font-semibold text-slate-900">처리 이력</h2>
             {order.history.length === 0 ? (
-              <p className="mt-3 text-[14px] text-slate-500">기록이 없습니다.</p>
+              <p className="mt-3 text-[15px] text-slate-500">기록이 없습니다.</p>
             ) : (
               <ol className="mt-4 flex flex-col gap-4 border-l-2 border-slate-200 pl-5">
                 {order.history.map((entry) => (
@@ -532,7 +532,7 @@ export default function OrderDetail({ order }: { order: Order }) {
                       aria-hidden="true"
                       className="absolute -left-[27px] top-1.5 h-3 w-3 rounded-full border-2 border-white bg-slate-300"
                     />
-                    <p className="text-[15px] text-slate-900">
+                    <p className="text-[16px] text-slate-900">
                       {entry.fromStatus && entry.fromStatus !== entry.toStatus ? (
                         <>
                           {statusLabel(entry.fromStatus)} →{' '}
@@ -543,11 +543,11 @@ export default function OrderDetail({ order }: { order: Order }) {
                       )}
                     </p>
                     {entry.memo ? (
-                      <p className="mt-0.5 text-[14px] leading-relaxed text-slate-600">
+                      <p className="mt-0.5 text-[15px] leading-relaxed text-slate-600">
                         {entry.memo}
                       </p>
                     ) : null}
-                    <p className="mt-0.5 text-[13px] text-slate-400">
+                    <p className="mt-0.5 text-[14px] text-slate-400">
                       {formatDateTime(entry.createdAt)}
                     </p>
                   </li>
@@ -560,7 +560,7 @@ export default function OrderDetail({ order }: { order: Order }) {
         {/* ── 오른쪽: 상태 · 송장 · 메모 ─────────────────── */}
         <aside className="flex flex-col gap-5">
           <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[17px] font-semibold text-slate-900">상태 변경</h2>
+            <h2 className="text-[18px] font-semibold text-slate-900">상태 변경</h2>
             <div className="mt-3">
               <label className="admin-label" htmlFor="status-select">상태</label>
               <select
@@ -601,7 +601,7 @@ export default function OrderDetail({ order }: { order: Order }) {
               {pending ? '처리 중…' : '상태 저장'}
             </button>
             {status === 'cancelled' || status === 'returned' ? (
-              <p className="mt-2 text-[13px] leading-relaxed text-slate-500">
+              <p className="mt-2 text-[14px] leading-relaxed text-slate-500">
                 취소·반품으로 바꾸면 남아 있는 상품의 재고가 자동으로 되돌아갑니다.
               </p>
             ) : null}
@@ -609,7 +609,7 @@ export default function OrderDetail({ order }: { order: Order }) {
 
           {/* ── 취소 처리 (4-A) ─────────────────────────── */}
           <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[17px] font-semibold text-slate-900">취소 처리</h2>
+            <h2 className="text-[18px] font-semibold text-slate-900">취소 처리</h2>
 
             {/*
               ★★ 여기 버튼으로는 실제 환불이 되지 않습니다.
@@ -618,7 +618,7 @@ export default function OrderDetail({ order }: { order: Order }) {
                 이 안내를 지우면 "취소 눌렀는데 왜 돈이 안 들어오냐" 는
                 분쟁이 반드시 납니다.
             */}
-            <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-[13px] leading-relaxed text-amber-900">
+            <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-[14px] leading-relaxed text-amber-900">
               <strong>이 버튼으로 실제 환불이 되지 않습니다.</strong> KSNET 은 가맹점에
               취소 권한을 주지 않아, 취소는 대행사를 통해 사람이 처리하고 영업일 기준
               며칠이 걸립니다. 접수 → 대행사 연락 → 환불 확인 → [취소 완료] 순서로
@@ -640,11 +640,11 @@ export default function OrderDetail({ order }: { order: Order }) {
             </div>
 
             {order.status === 'cancelled' ? (
-              <p className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-[14px] leading-relaxed text-slate-700">
+              <p className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-[15px] leading-relaxed text-slate-700">
                 취소가 완료된 주문입니다.
                 {order.cancelDoneAt ? ` (${formatDateTime(order.cancelDoneAt)})` : ''}
                 {order.cancelMemo ? (
-                  <span className="mt-1 block text-[13px] text-slate-500">
+                  <span className="mt-1 block text-[14px] text-slate-500">
                     메모: {order.cancelMemo}
                   </span>
                 ) : null}
@@ -696,15 +696,15 @@ export default function OrderDetail({ order }: { order: Order }) {
             )}
 
             {order.cancelRequestedAt ? (
-              <p className="mt-2 text-[13px] text-slate-500">
+              <p className="mt-2 text-[14px] text-slate-500">
                 취소 요청 접수 {formatDateTime(order.cancelRequestedAt)}
               </p>
             ) : null}
           </section>
 
           <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[17px] font-semibold text-slate-900">송장 등록</h2>
-            <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+            <h2 className="text-[18px] font-semibold text-slate-900">송장 등록</h2>
+            <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
               송장을 저장하면 상태가 자동으로 <strong>배송중</strong>으로 바뀌고, 손님의
               주문 조회 화면에 배송 조회 링크가 생깁니다.
             </p>
@@ -763,8 +763,8 @@ export default function OrderDetail({ order }: { order: Order }) {
 
           {/* ── 자동취소 제외 ───────────────────────────── */}
           <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[17px] font-semibold text-slate-900">미입금 자동취소</h2>
-            <label className="mt-3 flex cursor-pointer items-start gap-2 text-[15px] text-slate-800">
+            <h2 className="text-[18px] font-semibold text-slate-900">미입금 자동취소</h2>
+            <label className="mt-3 flex cursor-pointer items-start gap-2 text-[16px] text-slate-800">
               <input
                 type="checkbox"
                 checked={autoCancelExcluded}
@@ -783,7 +783,7 @@ export default function OrderDetail({ order }: { order: Order }) {
               />
               <span>
                 이 주문은 자동취소하지 않기
-                <span className="mt-1 block text-[13px] leading-relaxed text-slate-500">
+                <span className="mt-1 block text-[14px] leading-relaxed text-slate-500">
                   공급처에 이미 발송 요청을 넘긴 주문에 체크하세요. 송장번호가 들어간
                   주문은 체크하지 않아도 자동으로 제외됩니다.
                 </span>
@@ -791,15 +791,15 @@ export default function OrderDetail({ order }: { order: Order }) {
             </label>
 
             {order.trackingNo ? (
-              <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[13px] leading-relaxed text-slate-600">
+              <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[14px] leading-relaxed text-slate-600">
                 송장번호가 있어 이미 자동취소 대상에서 빠져 있습니다.
               </p>
             ) : null}
           </section>
 
           <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[17px] font-semibold text-slate-900">관리자 메모</h2>
-            <p className="mt-1 text-[13px] text-slate-500">손님에게는 보이지 않습니다.</p>
+            <h2 className="text-[18px] font-semibold text-slate-900">관리자 메모</h2>
+            <p className="mt-1 text-[14px] text-slate-500">손님에게는 보이지 않습니다.</p>
             <textarea
               value={memo}
               onChange={(event) => setMemo(event.target.value)}

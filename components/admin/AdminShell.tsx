@@ -269,7 +269,7 @@ export default function AdminShell({
               key={group.key}
               href={group.href}
               aria-current={active ? 'page' : undefined}
-              className={`flex items-center gap-2 rounded-md px-3 py-2.5 text-[15px] font-medium transition-colors ${
+              className={`flex items-center gap-2 rounded-md px-3 py-2.5 text-[16px] font-medium transition-colors ${
                 active ? 'bg-blue-700 text-white' : 'text-slate-700 hover:bg-slate-100'
               }`}
             >
@@ -292,7 +292,7 @@ export default function AdminShell({
               type="button"
               onClick={() => toggleGroup(group.key)}
               aria-expanded={isOpen}
-              className={`flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-[15px] font-medium transition-colors ${
+              className={`flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-[16px] font-medium transition-colors ${
                 active && !isOpen
                   ? 'bg-slate-100 text-slate-900'
                   : 'text-slate-700 hover:bg-slate-100'
@@ -375,7 +375,7 @@ export default function AdminShell({
           </svg>
           메뉴
         </button>
-        <span className="text-[16px] font-semibold">JZL CLOSET 관리자</span>
+        <span className="text-[17px] font-semibold">JZL CLOSET 관리자</span>
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <button type="button" onClick={handleLogout} className="admin-btn">
@@ -393,8 +393,8 @@ export default function AdminShell({
         >
           <div className="mb-6 hidden items-start justify-between gap-2 lg:flex">
             <div>
-              <p className="text-[16px] font-semibold text-slate-900">JZL CLOSET</p>
-              <p className="text-[13px] text-slate-500">관리자</p>
+              <p className="text-[17px] font-semibold text-slate-900">JZL CLOSET</p>
+              <p className="text-[14px] text-slate-500">관리자</p>
             </div>
             <ThemeToggle />
           </div>
@@ -406,7 +406,7 @@ export default function AdminShell({
               href="/"
               target="_blank"
               rel="noreferrer"
-              className="rounded-md px-3 py-2 text-[14px] text-slate-600 hover:bg-slate-100"
+              className="rounded-md px-3 py-2 text-[15px] text-slate-600 hover:bg-slate-100"
             >
               쇼핑몰 보기 ↗
             </a>
@@ -414,7 +414,7 @@ export default function AdminShell({
               type="button"
               onClick={handleLogout}
               disabled={loggingOut}
-              className="hidden rounded-md px-3 py-2 text-left text-[14px] text-slate-600 hover:bg-slate-100 lg:block"
+              className="hidden rounded-md px-3 py-2 text-left text-[15px] text-slate-600 hover:bg-slate-100 lg:block"
             >
               {loggingOut ? '로그아웃 중…' : '로그아웃'}
             </button>

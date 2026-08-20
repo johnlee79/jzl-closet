@@ -90,8 +90,8 @@ export default function FaviconUploader({ initial }: { initial: Branding }) {
     <div className="flex flex-col gap-5">
       {/* ── 현재 적용된 파비콘 ─────────────────────────── */}
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">현재 적용된 파비콘</h2>
-        <p className="mt-1 text-[14px] text-slate-500">
+        <h2 className="text-[18px] font-semibold text-slate-900">현재 적용된 파비콘</h2>
+        <p className="mt-1 text-[15px] text-slate-500">
           {custom
             ? '올린 이미지가 사이트 전체에 적용되어 있습니다.'
             : '아직 올린 이미지가 없어 기본 파비콘을 쓰고 있습니다.'}
@@ -112,7 +112,7 @@ export default function FaviconUploader({ initial }: { initial: Branding }) {
                   className="h-4 w-4 shrink-0 object-contain"
                 />
               ) : null}
-              <span className="truncate text-[14px] text-slate-700">{store.name}</span>
+              <span className="truncate text-[15px] text-slate-700">{store.name}</span>
             </div>
           </div>
 
@@ -150,7 +150,7 @@ export default function FaviconUploader({ initial }: { initial: Branding }) {
         </div>
 
         {branding.source ? (
-          <p className="mt-4 break-all text-[13px] text-slate-500">
+          <p className="mt-4 break-all text-[14px] text-slate-500">
             원본 파일: {branding.source.name || '(이름 없음)'}
             {branding.updatedAt
               ? ` · ${new Date(branding.updatedAt).toLocaleString('ko-KR')} 적용`
@@ -172,7 +172,7 @@ export default function FaviconUploader({ initial }: { initial: Branding }) {
 
       {/* ── 새 파비콘 올리기 ───────────────────────────── */}
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">새 파비콘 올리기</h2>
+        <h2 className="text-[18px] font-semibold text-slate-900">새 파비콘 올리기</h2>
 
         <div
           onDragOver={(event) => {
@@ -189,7 +189,7 @@ export default function FaviconUploader({ initial }: { initial: Branding }) {
             dragOver ? 'border-blue-600 bg-blue-50' : 'border-slate-300 bg-slate-50'
           }`}
         >
-          <p className="text-[15px] text-slate-600">
+          <p className="text-[16px] text-slate-600">
             이미지를 끌어다 놓거나 클릭해서 선택하세요
           </p>
           <button
@@ -207,7 +207,7 @@ export default function FaviconUploader({ initial }: { initial: Branding }) {
             onChange={(event) => void handleFiles(event.target.files)}
             className="hidden"
           />
-          <p className="mt-3 text-[13px] leading-relaxed text-slate-500">
+          <p className="mt-3 text-[14px] leading-relaxed text-slate-500">
             png · ico · svg / 5MB까지. 올리면 32×32 와 180×180 두 벌을 자동으로 만듭니다.
             <br />
             정사각형에 여백이 조금 있는 단순한 도형이 작은 크기에서 잘 보입니다.
@@ -217,7 +217,7 @@ export default function FaviconUploader({ initial }: { initial: Branding }) {
         {message ? (
           <p
             role="status"
-            className={`mt-4 rounded-md px-3 py-2 text-[15px] leading-relaxed ${
+            className={`mt-4 rounded-md px-3 py-2 text-[16px] leading-relaxed ${
               message.tone === 'ok'
                 ? 'bg-green-50 text-green-800'
                 : message.tone === 'info'

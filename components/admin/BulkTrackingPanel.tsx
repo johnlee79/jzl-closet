@@ -127,8 +127,8 @@ export default function BulkTrackingPanel({
     <section className="admin-card mb-4 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-[16px] font-semibold text-slate-900">송장 일괄등록</h2>
-          <p className="mt-1 text-[14px] text-slate-500">
+          <h2 className="text-[17px] font-semibold text-slate-900">송장 일괄등록</h2>
+          <p className="mt-1 text-[15px] text-slate-500">
             공급처가 회신한 송장 목록을 붙여넣거나 CSV 로 올리면 한 번에 등록합니다.
           </p>
         </div>
@@ -157,7 +157,7 @@ export default function BulkTrackingPanel({
             rows={7}
             spellCheck={false}
             placeholder={SAMPLE}
-            className="admin-input font-mono text-[14px] leading-relaxed"
+            className="admin-input font-mono text-[15px] leading-relaxed"
           />
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -200,7 +200,7 @@ export default function BulkTrackingPanel({
           </div>
 
           {/* ── 택배사 별칭 안내 ──────────────────────── */}
-          <details className="mt-4 rounded-md bg-slate-50 p-3 text-[14px] leading-relaxed text-slate-700">
+          <details className="mt-4 rounded-md bg-slate-50 p-3 text-[15px] leading-relaxed text-slate-700">
             <summary className="cursor-pointer font-medium text-slate-900">
               이렇게 적어도 알아봅니다 (택배사 이름)
             </summary>
@@ -221,7 +221,7 @@ export default function BulkTrackingPanel({
           {message ? (
             <p
               role="status"
-              className={`mt-4 rounded-md px-3 py-2 text-[15px] leading-relaxed ${
+              className={`mt-4 rounded-md px-3 py-2 text-[16px] leading-relaxed ${
                 message.tone === 'ok'
                   ? 'bg-green-50 text-green-800'
                   : 'bg-red-50 text-red-700'
@@ -235,7 +235,7 @@ export default function BulkTrackingPanel({
           {rows ? (
             <div className="mt-5">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <p className="text-[15px] font-medium text-slate-900">
+                <p className="text-[16px] font-medium text-slate-900">
                   읽은 줄 {rows.length}건
                 </p>
                 <span className={`admin-badge ${MATCH_BADGE.ok}`}>
@@ -259,7 +259,7 @@ export default function BulkTrackingPanel({
               </div>
 
               <div className="mt-3 max-h-[420px] overflow-auto rounded-md border border-slate-200">
-                <table className="w-full min-w-[860px] border-collapse text-[14px]">
+                <table className="w-full min-w-[860px] border-collapse text-[15px]">
                   <thead className="sticky top-0 bg-slate-50">
                     <tr className="border-b border-slate-200 text-left text-slate-600">
                       <th scope="col" className="w-10 px-3 py-2 font-medium">줄</th>
@@ -300,7 +300,7 @@ export default function BulkTrackingPanel({
                             {MATCH_LABEL[row.status]}
                           </span>
                           {row.message ? (
-                            <span className="mt-0.5 block text-[13px] text-slate-500">
+                            <span className="mt-0.5 block text-[14px] text-slate-500">
                               {row.message}
                             </span>
                           ) : null}
@@ -312,7 +312,7 @@ export default function BulkTrackingPanel({
               </div>
 
               {counts.already > 0 ? (
-                <label className="mt-3 flex items-center gap-2 text-[15px] text-slate-800">
+                <label className="mt-3 flex items-center gap-2 text-[16px] text-slate-800">
                   <input
                     type="checkbox"
                     checked={overwrite}
@@ -332,7 +332,7 @@ export default function BulkTrackingPanel({
                 >
                   {pending ? '등록 중…' : `${targets.length}건 등록하기`}
                 </button>
-                <p className="text-[14px] text-slate-500">
+                <p className="text-[15px] text-slate-500">
                   등록하면 해당 주문의 상태가 자동으로 <strong>배송중</strong>으로 바뀌고,
                   손님의 주문 조회 화면에 배송 조회 링크가 생깁니다.
                 </p>

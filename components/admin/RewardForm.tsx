@@ -35,7 +35,7 @@ function RuleRow({
 }) {
   return (
     <div className="flex flex-wrap items-start gap-4 border-b border-slate-100 py-4 last:border-b-0">
-      <label className="flex w-[220px] shrink-0 items-center gap-2 text-[15px] text-slate-800">
+      <label className="flex w-[220px] shrink-0 items-center gap-2 text-[16px] text-slate-800">
         <input
           type="checkbox"
           checked={rule.enabled}
@@ -60,10 +60,10 @@ function RuleRow({
           aria-label={`${label} 적립 ${unit === '%' ? '비율' : '금액'}`}
           className="admin-input tabular-nums"
         />
-        <span className="shrink-0 text-[15px] text-slate-600">{unit}</span>
+        <span className="shrink-0 text-[16px] text-slate-600">{unit}</span>
       </div>
 
-      <p className="flex-1 pt-2 text-[13px] leading-relaxed text-slate-500">
+      <p className="flex-1 pt-2 text-[14px] leading-relaxed text-slate-500">
         {hint}
         {rule.amount === 0 ? (
           <span className="mt-0.5 block text-amber-700">
@@ -118,8 +118,8 @@ export default function RewardForm({
     <form onSubmit={submit} className="flex flex-col gap-5">
       {/* ── 적립 ──────────────────────────────────────── */}
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">포인트 적립</h2>
-        <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+        <h2 className="text-[18px] font-semibold text-slate-900">포인트 적립</h2>
+        <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
           체크를 끄거나 금액을 0으로 두면 적립하지 않습니다.
         </p>
 
@@ -164,7 +164,7 @@ export default function RewardForm({
           />
         </div>
 
-        <p className="mt-4 rounded-md bg-slate-50 px-3 py-2 text-[14px] leading-relaxed text-slate-700">
+        <p className="mt-4 rounded-md bg-slate-50 px-3 py-2 text-[15px] leading-relaxed text-slate-700">
           예) 59,000원짜리 상품을 사면 {formatPrice(Math.floor((59000 * points.purchase.amount) / 100))}
           P 가 배송완료 시점에 적립됩니다.
         </p>
@@ -172,7 +172,7 @@ export default function RewardForm({
 
       {/* ── 사용 ──────────────────────────────────────── */}
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">포인트 사용</h2>
+        <h2 className="text-[18px] font-semibold text-slate-900">포인트 사용</h2>
 
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
           <div>
@@ -193,7 +193,7 @@ export default function RewardForm({
               }
               className="admin-input tabular-nums"
             />
-            <p className="mt-1 text-[13px] text-slate-500">
+            <p className="mt-1 text-[14px] text-slate-500">
               이 금액 이상부터 쓸 수 있습니다. 0이면 제한 없음.
             </p>
           </div>
@@ -216,7 +216,7 @@ export default function RewardForm({
               }
               className="admin-input tabular-nums"
             />
-            <p className="mt-1 text-[13px] text-slate-500">
+            <p className="mt-1 text-[14px] text-slate-500">
               상품금액 대비 최대 비율입니다. 100이면 상품금액 전액까지.
             </p>
           </div>
@@ -241,13 +241,13 @@ export default function RewardForm({
             }
             className="admin-input tabular-nums md:max-w-[220px]"
           />
-          <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+          <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
             적립일 기준입니다. 0으로 두면 소멸하지 않습니다. 사용할 때는 먼저 만료되는
             포인트부터 빠져나갑니다.
           </p>
         </div>
 
-        <p className="mt-4 rounded-md bg-slate-50 px-3 py-2 text-[14px] leading-relaxed text-slate-700">
+        <p className="mt-4 rounded-md bg-slate-50 px-3 py-2 text-[15px] leading-relaxed text-slate-700">
           예) 상품금액 50,000원 주문에서 {points.maxUseRate}% 까지 쓸 수 있으므로 최대{' '}
           {formatPrice(Math.floor((50000 * points.maxUseRate) / 100))}원까지 사용 가능합니다.
         </p>
@@ -255,13 +255,13 @@ export default function RewardForm({
 
       {/* ── 보유 포인트 알림 팝업 ─────────────────────── */}
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">보유 포인트 알림 팝업</h2>
-        <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+        <h2 className="text-[18px] font-semibold text-slate-900">보유 포인트 알림 팝업</h2>
+        <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
           로그인한 회원이 들어오면 보유 포인트를 알려 줍니다. 포인트를 주는 것이 아니라
           안내만 합니다. 잔액이 0이면 뜨지 않고, 공지·이벤트 팝업이 있으면 그쪽이 먼저입니다.
         </p>
 
-        <label className="mt-4 flex items-center gap-2 text-[15px] text-slate-800">
+        <label className="mt-4 flex items-center gap-2 text-[16px] text-slate-800">
           <input
             type="checkbox"
             checked={points.popupEnabled}
@@ -295,7 +295,7 @@ export default function RewardForm({
             }
             className="admin-input tabular-nums"
           />
-          <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+          <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
             마지막으로 본 뒤 이 시간이 지나야 다시 뜹니다.
           </p>
         </div>
@@ -303,8 +303,8 @@ export default function RewardForm({
 
       {/* ── 리뷰 태그 ─────────────────────────────────── */}
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">리뷰 긍정 태그</h2>
-        <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+        <h2 className="text-[18px] font-semibold text-slate-900">리뷰 긍정 태그</h2>
+        <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
           손님이 후기를 쓸 때 고르는 항목입니다. 한 줄에 하나씩 적으세요.
         </p>
 
@@ -323,10 +323,10 @@ export default function RewardForm({
           >
             기본값으로 되돌리기
           </button>
-          <span className="text-[14px] text-slate-500">{tags.length}개</span>
+          <span className="text-[15px] text-slate-500">{tags.length}개</span>
         </div>
 
-        <label className="mt-4 flex items-center gap-2 text-[15px] text-slate-800">
+        <label className="mt-4 flex items-center gap-2 text-[16px] text-slate-800">
           <input
             type="checkbox"
             checked={review.telegramEnabled}
@@ -337,7 +337,7 @@ export default function RewardForm({
           />
           새 리뷰를 텔레그램으로 받기
         </label>
-        <p className="mt-2 text-[13px] leading-relaxed text-slate-500">
+        <p className="mt-2 text-[14px] leading-relaxed text-slate-500">
           별점 3점 이하면 ⚠️ 표시가 붙습니다. 관리자가 직접 등록한 체험단 후기에는 알림이
           가지 않습니다.
           {telegramConfigured
@@ -349,7 +349,7 @@ export default function RewardForm({
       {message ? (
         <p
           role="status"
-          className={`rounded-md px-3 py-2 text-[15px] ${
+          className={`rounded-md px-3 py-2 text-[16px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >

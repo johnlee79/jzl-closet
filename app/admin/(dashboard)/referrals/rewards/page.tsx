@@ -48,27 +48,27 @@ export default async function AdminReferralRewardsPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1000px]">
-      <h1 className="text-[22px] font-semibold text-slate-900">보상 처리</h1>
-      <p className="mt-1 text-[14px] leading-relaxed text-slate-600">
+      <h1 className="text-[24px] font-semibold text-slate-900">보상 처리</h1>
+      <p className="mt-1 text-[15px] leading-relaxed text-slate-600">
         포인트는 달성 즉시 자동으로 나갑니다. 여기 남아 있는 포인트 건은 월 한도를 넘어
         보류된 것들입니다. 사은품은 자동으로 나가지 않으니 이 화면에서 보내 주세요.
       </p>
 
       {!configured ? (
-        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[15px] text-amber-900">
+        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[16px] text-amber-900">
           Supabase 연결 정보가 없습니다. <code>.env.local</code> 을 설정해 주세요.
         </div>
       ) : null}
 
       <section className="admin-card mt-5 p-5">
-        <h2 className="text-[16px] font-semibold text-slate-900">
+        <h2 className="text-[17px] font-semibold text-slate-900">
           처리할 건 ({openItems.length}건)
         </h2>
         <RewardManager items={openItems} />
       </section>
 
       <section className="admin-card mt-5 p-5">
-        <h2 className="text-[16px] font-semibold text-slate-900">
+        <h2 className="text-[17px] font-semibold text-slate-900">
           처리 완료 ({closed.length}건)
         </h2>
         <RewardManager items={closed} />

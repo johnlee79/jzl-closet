@@ -54,7 +54,7 @@ function resolveRange(params: SearchParams): { from: string; to: string; preset:
 function Bar({ label, value, max }: { label: string; value: number; max: number }) {
   const percent = max > 0 ? Math.round((value / max) * 100) : 0;
   return (
-    <li className="flex items-center gap-3 text-[14px]">
+    <li className="flex items-center gap-3 text-[15px]">
       <span className="w-[92px] shrink-0 truncate text-slate-600">{label}</span>
       <span className="h-3 flex-1 overflow-hidden rounded-sm bg-slate-100">
         <span
@@ -83,14 +83,14 @@ function StatCard({
 }) {
   return (
     <div className="admin-card p-4">
-      <p className="text-[14px] text-slate-600">{label}</p>
+      <p className="text-[15px] text-slate-600">{label}</p>
       <p
-        className={`mt-2 text-[24px] font-semibold tabular-nums ${
+        className={`mt-2 text-[26px] font-semibold tabular-nums ${
           tone === 'warn' && value > 0 ? 'text-red-700' : 'text-slate-900'
         }`}
       >
         {formatPrice(value)}
-        <span className="ml-1 text-[15px] font-normal">{suffix}</span>
+        <span className="ml-1 text-[16px] font-normal">{suffix}</span>
       </p>
     </div>
   );
@@ -134,19 +134,19 @@ export default async function AdminStatsPage({
 
   return (
     <div className="mx-auto w-full max-w-[1100px]">
-      <h1 className="text-[22px] font-semibold text-slate-900">통계</h1>
-      <p className="mt-1 text-[14px] text-slate-600">
+      <h1 className="text-[24px] font-semibold text-slate-900">통계</h1>
+      <p className="mt-1 text-[15px] text-slate-600">
         {from} ~ {to} · 취소·반품·결제실패 주문은 매출에서 뺐습니다.
       </p>
 
       {/* ★ 방문자 통계는 GA4 에서 봅니다. */}
       <div className="admin-card mt-5 flex flex-wrap items-center justify-between gap-3 border-blue-200 bg-blue-50 p-4">
-        <p className="text-[15px] leading-relaxed text-blue-900">
+        <p className="text-[16px] leading-relaxed text-blue-900">
           방문자 통계(페이지뷰·체류시간·이탈률)는 Google Analytics에서 확인하세요.
           {analytics.ga4Id ? (
-            <span className="ml-2 font-mono text-[14px]">{analytics.ga4Id}</span>
+            <span className="ml-2 font-mono text-[15px]">{analytics.ga4Id}</span>
           ) : (
-            <span className="ml-2 text-[14px]">
+            <span className="ml-2 text-[15px]">
               (측정 ID 가 아직 등록되지 않았습니다 —{' '}
               <Link href="/admin/settings?tab=analytics" className="underline">
                 설정 &gt; 분석
@@ -166,7 +166,7 @@ export default async function AdminStatsPage({
       </div>
 
       {!configured ? (
-        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[15px] leading-relaxed text-amber-900">
+        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[16px] leading-relaxed text-amber-900">
           Supabase 연결 정보가 없습니다. <code>.env.local</code> 을 설정한 뒤 서버를 다시
           시작해 주세요.
         </div>
@@ -197,9 +197,9 @@ export default async function AdminStatsPage({
 
       {/* ── 일자별 추이 ───────────────────────────────── */}
       <section className="mt-8">
-        <h2 className="text-[17px] font-semibold text-slate-900">일자별 매출</h2>
+        <h2 className="text-[18px] font-semibold text-slate-900">일자별 매출</h2>
         {sales.daily.length === 0 ? (
-          <p className="admin-card mt-3 px-4 py-10 text-center text-[15px] text-slate-500">
+          <p className="admin-card mt-3 px-4 py-10 text-center text-[16px] text-slate-500">
             이 기간에는 주문이 없습니다.
           </p>
         ) : (
@@ -236,7 +236,7 @@ export default async function AdminStatsPage({
                 </span>
               ))}
             </div>
-            <p className="mt-3 text-[13px] text-slate-500">
+            <p className="mt-3 text-[14px] text-slate-500">
               최고 {formatPrice(maxDaily)}원 · 막대에 마우스를 올리면 자세히 보입니다.
             </p>
           </div>
@@ -245,14 +245,14 @@ export default async function AdminStatsPage({
 
       {/* ── 상태별 건수 ───────────────────────────────── */}
       <section className="mt-8">
-        <h2 className="text-[17px] font-semibold text-slate-900">상태별 주문 건수</h2>
+        <h2 className="text-[18px] font-semibold text-slate-900">상태별 주문 건수</h2>
         <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {ORDER_STATUSES.map((status) => (
             <li key={status} className="admin-card p-3">
               <span className={`admin-badge ${statusBadgeClass(status)}`}>
                 {statusLabel(status)}
               </span>
-              <span className="mt-2 block text-[19px] font-semibold tabular-nums text-slate-900">
+              <span className="mt-2 block text-[20px] font-semibold tabular-nums text-slate-900">
                 {sales.byStatus[status] ?? 0}
               </span>
             </li>
@@ -262,16 +262,16 @@ export default async function AdminStatsPage({
 
       {/* ── 상품 통계 ─────────────────────────────────── */}
       <section className="mt-8">
-        <h2 className="text-[17px] font-semibold text-slate-900">판매 수량 상위 20</h2>
+        <h2 className="text-[18px] font-semibold text-slate-900">판매 수량 상위 20</h2>
         <div className="admin-card mt-3 overflow-x-auto">
           {products.top.length === 0 ? (
-            <p className="px-4 py-10 text-center text-[15px] text-slate-500">
+            <p className="px-4 py-10 text-center text-[16px] text-slate-500">
               이 기간에는 판매된 상품이 없습니다.
             </p>
           ) : (
-            <table className="w-full min-w-[560px] border-collapse text-[15px]">
+            <table className="w-full min-w-[560px] border-collapse text-[16px]">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-left text-[14px] text-slate-600">
+                <tr className="border-b border-slate-200 bg-slate-50 text-left text-[15px] text-slate-600">
                   <th scope="col" className="w-10 px-3 py-2 font-medium">#</th>
                   <th scope="col" className="px-3 py-2 font-medium">상품명</th>
                   <th scope="col" className="px-3 py-2 text-right font-medium">판매수량</th>
@@ -307,10 +307,10 @@ export default async function AdminStatsPage({
 
       <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-2">
         <section>
-          <h2 className="text-[17px] font-semibold text-slate-900">카테고리별 매출</h2>
+          <h2 className="text-[18px] font-semibold text-slate-900">카테고리별 매출</h2>
           <div className="admin-card mt-3 p-4">
             {products.byCategory.length === 0 ? (
-              <p className="py-6 text-center text-[15px] text-slate-500">자료가 없습니다.</p>
+              <p className="py-6 text-center text-[16px] text-slate-500">자료가 없습니다.</p>
             ) : (
               <ul className="flex flex-col gap-2">
                 {products.byCategory.map((entry) => (
@@ -327,10 +327,10 @@ export default async function AdminStatsPage({
         </section>
 
         <section>
-          <h2 className="text-[17px] font-semibold text-slate-900">브랜드별 매출</h2>
+          <h2 className="text-[18px] font-semibold text-slate-900">브랜드별 매출</h2>
           <div className="admin-card mt-3 p-4">
             {products.byBrand.length === 0 ? (
-              <p className="py-6 text-center text-[15px] text-slate-500">자료가 없습니다.</p>
+              <p className="py-6 text-center text-[16px] text-slate-500">자료가 없습니다.</p>
             ) : (
               <ul className="flex flex-col gap-2">
                 {products.byBrand.map((entry) => (
@@ -350,10 +350,10 @@ export default async function AdminStatsPage({
       {/* ── 리뷰 ──────────────────────────────────────── */}
       <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-2">
         <section>
-          <h2 className="text-[17px] font-semibold text-slate-900">리뷰가 많은 상품</h2>
+          <h2 className="text-[18px] font-semibold text-slate-900">리뷰가 많은 상품</h2>
           <div className="admin-card mt-3">
             {mostReviewed.length === 0 ? (
-              <p className="py-6 text-center text-[15px] text-slate-500">
+              <p className="py-6 text-center text-[16px] text-slate-500">
                 아직 리뷰가 없습니다.
               </p>
             ) : (
@@ -361,7 +361,7 @@ export default async function AdminStatsPage({
                 {mostReviewed.map((entry) => (
                   <li
                     key={entry.productSlug}
-                    className="flex items-center justify-between gap-3 px-4 py-2.5 text-[15px]"
+                    className="flex items-center justify-between gap-3 px-4 py-2.5 text-[16px]"
                   >
                     <Link
                       href={`/products/${entry.productSlug}`}
@@ -381,10 +381,10 @@ export default async function AdminStatsPage({
         </section>
 
         <section>
-          <h2 className="text-[17px] font-semibold text-slate-900">별점이 낮은 상품</h2>
+          <h2 className="text-[18px] font-semibold text-slate-900">별점이 낮은 상품</h2>
           <div className="admin-card mt-3">
             {lowestRated.length === 0 ? (
-              <p className="py-6 text-center text-[15px] text-slate-500">
+              <p className="py-6 text-center text-[16px] text-slate-500">
                 리뷰가 2건 이상인 상품이 아직 없습니다.
               </p>
             ) : (
@@ -392,7 +392,7 @@ export default async function AdminStatsPage({
                 {lowestRated.map((entry) => (
                   <li
                     key={entry.productSlug}
-                    className="flex items-center justify-between gap-3 px-4 py-2.5 text-[15px]"
+                    className="flex items-center justify-between gap-3 px-4 py-2.5 text-[16px]"
                   >
                     <Link
                       href={`/products/${entry.productSlug}`}
@@ -413,7 +413,7 @@ export default async function AdminStatsPage({
               </ul>
             )}
           </div>
-          <p className="mt-2 text-[13px] text-slate-500">
+          <p className="mt-2 text-[14px] text-slate-500">
             흔들림을 줄이려고 리뷰가 2건 이상인 상품만 보여 줍니다.
           </p>
         </section>

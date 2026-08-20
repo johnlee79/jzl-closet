@@ -51,8 +51,8 @@ export default function SnsForm({ initial }: { initial: SnsSettings }) {
   return (
     <div className="flex flex-col gap-5">
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">SNS 주소</h2>
-        <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+        <h2 className="text-[18px] font-semibold text-slate-900">SNS 주소</h2>
+        <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
           푸터와 브랜드 페이지 아래쪽에 아이콘으로 나갑니다.{' '}
           <strong>비워 두면 그 아이콘은 나오지 않습니다.</strong> 주소는 http:// 또는
           https:// 로 시작해야 합니다.
@@ -79,8 +79,8 @@ export default function SnsForm({ initial }: { initial: SnsSettings }) {
       </section>
 
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">위챗 QR 이미지</h2>
-        <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+        <h2 className="text-[18px] font-semibold text-slate-900">위챗 QR 이미지</h2>
+        <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
           위챗은 링크로 열 수 없어 QR 이미지를 씁니다. 손님이 아이콘을 누르면 사이트를
           벗어나지 않고 이 이미지가 창으로 뜹니다. 정사각형 이미지를 권장합니다.
         </p>
@@ -98,15 +98,15 @@ export default function SnsForm({ initial }: { initial: SnsSettings }) {
       </section>
 
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">미리보기</h2>
-        <p className="mt-1 text-[14px] text-slate-500">
+        <h2 className="text-[18px] font-semibold text-slate-900">미리보기</h2>
+        <p className="mt-1 text-[15px] text-slate-500">
           손님 화면에 나갈 모습입니다. (저장 전에도 지금 입력한 값으로 보여 줍니다)
         </p>
         <div className="mt-3 rounded-md border border-slate-200 bg-[#F6F5F2] px-3 py-2">
           {hasAnySns(form) ? (
             <SnsLinks sns={form} />
           ) : (
-            <p className="py-3 text-[14px] text-slate-500">
+            <p className="py-3 text-[15px] text-slate-500">
               아직 채운 항목이 없어 푸터에 SNS 줄이 나오지 않습니다.
             </p>
           )}
@@ -116,7 +116,7 @@ export default function SnsForm({ initial }: { initial: SnsSettings }) {
       {message ? (
         <p
           role="status"
-          className={`rounded-md px-3 py-2 text-[15px] ${
+          className={`rounded-md px-3 py-2 text-[16px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >

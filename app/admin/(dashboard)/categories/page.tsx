@@ -24,26 +24,26 @@ export default async function AdminCategoriesPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1200px]">
-      <h1 className="text-[22px] font-semibold text-slate-900">분류 관리</h1>
-      <p className="mt-1 text-[14px] text-slate-600">
+      <h1 className="text-[24px] font-semibold text-slate-900">분류 관리</h1>
+      <p className="mt-1 text-[15px] text-slate-600">
         대분류 {categories.length}개 · 소분류{' '}
         {categories.reduce((sum, item) => sum + item.children.length, 0)}개
       </p>
 
       {!configured ? (
-        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[15px] leading-relaxed text-amber-900">
+        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[16px] leading-relaxed text-amber-900">
           Supabase 연결 정보가 없습니다. <code>.env.local</code> 을 설정한 뒤 서버를 다시
           시작해 주세요.
         </div>
       ) : !ready ? (
-        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[15px] leading-relaxed text-amber-900">
+        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[16px] leading-relaxed text-amber-900">
           categories 테이블이 아직 없습니다. Supabase SQL Editor 에서{' '}
           <code>supabase/schema-1b.sql</code> 을 실행한 뒤{' '}
           <code>supabase/seed-1b.sql</code> 을 이어서 실행해 주세요. 그 전까지는 아래 목록이
           코드에 들어 있는 기본값(읽기 전용)입니다.
         </div>
       ) : !seeded ? (
-        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[15px] leading-relaxed text-amber-900">
+        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[16px] leading-relaxed text-amber-900">
           categories 테이블이 비어 있어 기본값을 보여 주고 있습니다.{' '}
           <code>supabase/seed-1b.sql</code> 을 실행하면 아래 목록이 DB 로 옮겨집니다.
         </div>
@@ -53,7 +53,7 @@ export default async function AdminCategoriesPage() {
         <CategoryManager categories={sortedCategories(categories)} counts={counts} />
       </div>
 
-      <p className="mt-6 text-[13px] leading-relaxed text-slate-500">
+      <p className="mt-6 text-[14px] leading-relaxed text-slate-500">
         slug 는 주소(/category/clothing)에 쓰입니다. 등록 후에 바꾸면 검색 색인이
         초기화되므로 수정할 수 없게 막아 두었습니다.
         <br />

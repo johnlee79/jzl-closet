@@ -96,7 +96,7 @@ function GiftForm({
           placeholder="/products/item-abc 또는 https://…"
           className="admin-input"
         />
-        <p className="mt-1 text-[13px] text-slate-500">
+        <p className="mt-1 text-[14px] text-slate-500">
           상품 페이지나 소개 페이지로 연결합니다. 비워 두면 링크를 걸지 않습니다.
         </p>
       </div>
@@ -115,7 +115,7 @@ function GiftForm({
         />
       </div>
 
-      <label className="mt-4 flex items-center gap-2 text-[15px] text-slate-800">
+      <label className="mt-4 flex items-center gap-2 text-[16px] text-slate-800">
         <input
           type="checkbox"
           checked={draft.isVisible}
@@ -185,7 +185,7 @@ export default function GiftManager({ gifts }: { gifts: Gift[] }) {
       {message ? (
         <p
           role="status"
-          className={`text-[14px] ${
+          className={`text-[15px] ${
             message.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'
           }`}
         >
@@ -194,7 +194,7 @@ export default function GiftManager({ gifts }: { gifts: Gift[] }) {
       ) : null}
 
       {gifts.length === 0 && editing !== 'new' ? (
-        <p className="text-[15px] text-slate-600">
+        <p className="text-[16px] text-slate-600">
           아직 등록한 사은품이 없습니다. 포인트 보상만 쓰신다면 등록하지 않으셔도 됩니다.
         </p>
       ) : null}
@@ -228,14 +228,14 @@ export default function GiftManager({ gifts }: { gifts: Gift[] }) {
                     loading="lazy"
                   />
                 ) : (
-                  <div className="flex h-[64px] w-[86px] shrink-0 items-center justify-center bg-slate-100 text-[13px] text-slate-400">
+                  <div className="flex h-[64px] w-[86px] shrink-0 items-center justify-center bg-slate-100 text-[14px] text-slate-400">
                     이미지 없음
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="text-[16px] text-slate-900">{gift.name}</p>
+                  <p className="text-[17px] text-slate-900">{gift.name}</p>
                   {gift.description ? (
-                    <p className="mt-1 text-[14px] text-slate-600">{gift.description}</p>
+                    <p className="mt-1 text-[15px] text-slate-600">{gift.description}</p>
                   ) : null}
                   {!gift.isVisible ? (
                     <span className="admin-badge mt-1 inline-block">숨김</span>

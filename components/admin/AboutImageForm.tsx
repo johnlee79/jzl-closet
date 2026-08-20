@@ -41,7 +41,7 @@ export default function AboutImageForm({ imageUrl }: { imageUrl: string }) {
 
   return (
     <div className="border-t border-slate-200 bg-slate-50 p-4">
-      <p className="text-[14px] leading-relaxed text-slate-600">
+      <p className="text-[15px] leading-relaxed text-slate-600">
         /about 맨 위에 깔리는 가로로 넓은 이미지입니다. 권장 크기 {ABOUT_IMAGE_SIZE}.
         비워 두면 이미지 없이 제목부터 시작합니다.
       </p>
@@ -66,7 +66,7 @@ export default function AboutImageForm({ imageUrl }: { imageUrl: string }) {
       {message ? (
         <p
           role="status"
-          className={`mt-4 rounded-md px-3 py-2 text-[15px] ${
+          className={`mt-4 rounded-md px-3 py-2 text-[16px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >
@@ -78,7 +78,7 @@ export default function AboutImageForm({ imageUrl }: { imageUrl: string }) {
         <a href="/about" target="_blank" rel="noreferrer" className="admin-btn">
           페이지 보기 ↗
         </a>
-        {pending ? <span className="self-center text-[14px] text-slate-500">저장 중…</span> : null}
+        {pending ? <span className="self-center text-[15px] text-slate-500">저장 중…</span> : null}
       </div>
     </div>
   );

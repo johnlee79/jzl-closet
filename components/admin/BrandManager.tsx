@@ -96,7 +96,7 @@ function BrandForm({
       }}
       className="rounded-md border border-blue-200 bg-blue-50/50 p-4"
     >
-      <h3 className="text-[15px] font-semibold text-slate-900">
+      <h3 className="text-[16px] font-semibold text-slate-900">
         {isNew ? '브랜드 추가' : `${initial.label} 수정`}
       </h3>
 
@@ -131,7 +131,7 @@ function BrandForm({
               </button>
             ) : null}
           </div>
-          <p className="mt-1 text-[13px] text-slate-500">
+          <p className="mt-1 text-[14px] text-slate-500">
             {isNew
               ? '/brand/nord-blanc 의 뒷부분입니다. 등록 후에는 바꿀 수 없습니다.'
               : '주소에 쓰이므로 변경할 수 없습니다.'}
@@ -210,7 +210,7 @@ function BrandForm({
             placeholder={'첫 문단을 적습니다.\n\n빈 줄을 하나 넣으면 다음 문단이 됩니다.'}
             className="admin-input leading-relaxed"
           />
-          <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+          <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
             빈 줄 하나가 문단 구분입니다. 이 글은 <code>/brand/{draft.slug || 'slug'}</code>{' '}
             페이지에 실제 텍스트로 출력되어 “{draft.label || '브랜드'} 브랜드” 같은 검색
             유입 경로가 됩니다. 두세 문단으로 충분히 적어 주세요.
@@ -246,7 +246,7 @@ function BrandForm({
 
         <div className="md:col-span-2">
           <span className="admin-label">대표 이미지</span>
-          <p className="mb-2 text-[13px] leading-relaxed text-slate-500">
+          <p className="mb-2 text-[14px] leading-relaxed text-slate-500">
             <code>/brand/{draft.slug || '{slug}'}</code> 페이지 맨 위에 가로로 넓게 깔립니다.{' '}
             <strong>올린 비율 그대로 나오며 잘리지 않습니다.</strong> 가로로 넓은 사진을
             권합니다. (21:9 또는 16:9) 세로로 긴 사진을 올리면 화면을 크게 차지합니다.
@@ -263,7 +263,7 @@ function BrandForm({
 
         <div className="md:col-span-2">
           <span className="admin-label">로고 (선택)</span>
-          <p className="mb-2 text-[13px] leading-relaxed text-slate-500">
+          <p className="mb-2 text-[14px] leading-relaxed text-slate-500">
             ★ 상품 목록 필터와 브랜드 페이지에 씁니다. <strong>비워 두면 브랜드명이
             글자로 나옵니다.</strong> 로고는 각 브랜드사의 등록상표라, 쓸 수 있는 것만
             올려 주세요. 배경이 없는 PNG 를 권합니다. (가로로 긴 형태, 높이는 자동으로
@@ -280,7 +280,7 @@ function BrandForm({
         </div>
 
         <div className="flex flex-wrap gap-5 md:col-span-2">
-          <label className="flex items-center gap-2 text-[15px] text-slate-800">
+          <label className="flex items-center gap-2 text-[16px] text-slate-800">
             <input
               type="checkbox"
               checked={draft.isVisible}
@@ -289,7 +289,7 @@ function BrandForm({
             />
             노출
           </label>
-          <label className="flex items-center gap-2 text-[15px] text-slate-800">
+          <label className="flex items-center gap-2 text-[16px] text-slate-800">
             <input
               type="checkbox"
               checked={draft.isFeatured}
@@ -411,7 +411,7 @@ export default function BrandManager({
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[14px] text-slate-600">
+        <p className="text-[15px] text-slate-600">
           왼쪽 손잡이(≡)를 끌어 순서를 바꿉니다.
         </p>
         <button
@@ -429,7 +429,7 @@ export default function BrandManager({
       {message ? (
         <p
           role="status"
-          className={`mt-4 rounded-md px-3 py-2 text-[15px] ${
+          className={`mt-4 rounded-md px-3 py-2 text-[16px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >
@@ -450,7 +450,7 @@ export default function BrandManager({
       ) : null}
 
       <div className="admin-card mt-4 overflow-hidden">
-        <div className="hidden border-b border-slate-200 bg-slate-50 px-4 py-2 text-[14px] font-medium text-slate-600 md:flex">
+        <div className="hidden border-b border-slate-200 bg-slate-50 px-4 py-2 text-[15px] font-medium text-slate-600 md:flex">
           <span className="w-10">순서</span>
           <span className="w-[64px]">이미지</span>
           <span className="flex-1">라벨</span>
@@ -477,9 +477,9 @@ export default function BrandManager({
                     dragSlug.current = brand.slug;
                   }}
                   title="끌어서 순서 변경"
-                  className="w-10 cursor-move select-none text-[17px] text-slate-400"
+                  className="w-10 cursor-move select-none text-[18px] text-slate-400"
                 >
-                  ≡ <span className="text-[13px] tabular-nums">{index + 1}</span>
+                  ≡ <span className="text-[14px] tabular-nums">{index + 1}</span>
                 </span>
 
                 <span className="w-[64px]">
@@ -492,17 +492,17 @@ export default function BrandManager({
                 </span>
 
                 <span className="flex-1">
-                  <span className="text-[15px] font-medium text-slate-900">
+                  <span className="text-[16px] font-medium text-slate-900">
                     {brand.label}
                   </span>
-                  <span className="ml-2 text-[13px] text-slate-500">/{brand.slug}</span>
+                  <span className="ml-2 text-[14px] text-slate-500">/{brand.slug}</span>
                   {brand.tagline ? (
-                    <span className="block text-[13px] text-slate-500">{brand.tagline}</span>
+                    <span className="block text-[14px] text-slate-500">{brand.tagline}</span>
                   ) : null}
                 </span>
 
-                <span className="w-[150px] text-[14px] text-slate-700">{brand.name}</span>
-                <span className="w-[70px] text-[14px] text-slate-600">
+                <span className="w-[150px] text-[15px] text-slate-700">{brand.name}</span>
+                <span className="w-[70px] text-[15px] text-slate-600">
                   {counts[brand.slug] ?? 0}개
                 </span>
 

@@ -16,8 +16,8 @@ export default function AdminBulkTrackingPage() {
     <div className="mx-auto w-full max-w-[1000px]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-semibold text-slate-900">송장 일괄등록</h1>
-          <p className="mt-1 text-[14px] text-slate-600">
+          <h1 className="text-[24px] font-semibold text-slate-900">송장 일괄등록</h1>
+          <p className="mt-1 text-[15px] text-slate-600">
             공급처가 회신한 송장을 붙여넣으면 주문번호로 찾아 한 번에 넣습니다.
           </p>
         </div>

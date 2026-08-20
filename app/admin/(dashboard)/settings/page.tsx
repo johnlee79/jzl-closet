@@ -76,8 +76,8 @@ export default async function AdminSettingsPage({
 
   return (
     <div className="mx-auto w-full max-w-[900px]">
-      <h1 className="text-[22px] font-semibold text-slate-900">설정</h1>
-      <p className="mt-1 text-[14px] text-slate-600">
+      <h1 className="text-[24px] font-semibold text-slate-900">설정</h1>
+      <p className="mt-1 text-[15px] text-slate-600">
         여기서 고친 값은 푸터·법정 페이지·메타데이터에 바로 반영됩니다.
       </p>
 
@@ -90,7 +90,7 @@ export default async function AdminSettingsPage({
                 <Link
                   href={`/admin/settings?tab=${item.key}`}
                   aria-current={active ? 'page' : undefined}
-                  className={`inline-flex min-h-[40px] items-center border-b-2 px-3 py-2 text-[15px] transition-colors ${
+                  className={`inline-flex min-h-[40px] items-center border-b-2 px-3 py-2 text-[16px] transition-colors ${
                     active
                       ? 'border-blue-700 font-semibold text-blue-700'
                       : 'border-transparent text-slate-600 hover:text-slate-900'
@@ -111,7 +111,7 @@ export default async function AdminSettingsPage({
           <div className="flex flex-col gap-5">
             <FaviconUploader initial={branding} />
             <LogoUploader initialUrl={branding.logo?.url ?? ''} storeName={store.name} />
-            <p className="text-[13px] leading-relaxed text-slate-500">
+            <p className="text-[14px] leading-relaxed text-slate-500">
               설정은 site_settings 테이블에 저장됩니다. 테이블이 없다는 안내가 나오면{' '}
               <code className="rounded bg-slate-100 px-1 py-0.5">supabase/settings.sql</code>{' '}
               을 Supabase SQL Editor 에서 한 번 실행해 주세요.
@@ -154,8 +154,8 @@ export default async function AdminSettingsPage({
 
         {tab === 'export' ? (
           <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[17px] font-semibold text-slate-900">상품 전체 내려받기</h2>
-            <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+            <h2 className="text-[18px] font-semibold text-slate-900">상품 전체 내려받기</h2>
+            <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
               숨김 상품을 포함한 전체 상품을 CSV 파일로 받습니다. 엑셀에서 바로 열 수 있도록
               UTF-8 BOM 을 넣어 한글이 깨지지 않습니다.
             </p>
@@ -168,7 +168,7 @@ export default async function AdminSettingsPage({
               상품 CSV 내려받기
             </a>
 
-            <div className="mt-5 rounded-md bg-slate-50 p-4 text-[14px] leading-relaxed text-slate-700">
+            <div className="mt-5 rounded-md bg-slate-50 p-4 text-[15px] leading-relaxed text-slate-700">
               <p className="font-semibold text-slate-900">들어 있는 항목</p>
               <p className="mt-1">
                 slug · 상품명 · 브랜드 · 대분류 · 소분류 · 판매가 · 정상가 · 성별 · 시즌 ·

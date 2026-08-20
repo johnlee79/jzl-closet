@@ -74,7 +74,7 @@ export default function OrderFilters({
                   type="button"
                   onClick={() => apply({ status: tab.key === 'all' ? '' : tab.key })}
                   aria-current={active ? 'page' : undefined}
-                  className={`inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-[15px] transition-colors ${
+                  className={`inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-[16px] transition-colors ${
                     active
                       ? 'border-blue-700 font-semibold text-blue-700'
                       : 'border-transparent text-slate-600 hover:text-slate-900'
@@ -104,7 +104,7 @@ export default function OrderFilters({
           이 필터가 없으면 주문을 한 건씩 열어 보며 찾아야 합니다.
       */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[14px] text-slate-500">빠른 보기</span>
+        <span className="text-[15px] text-slate-500">빠른 보기</span>
         {(
           [
             { key: '', label: '전체' },
@@ -119,7 +119,7 @@ export default function OrderFilters({
               type="button"
               onClick={() => apply({ receipt: item.key })}
               aria-pressed={active}
-              className={`min-h-[36px] rounded-md border px-3 py-1.5 text-[14px] transition-colors ${
+              className={`min-h-[36px] rounded-md border px-3 py-1.5 text-[15px] transition-colors ${
                 active
                   ? 'border-blue-700 bg-blue-50 font-semibold text-blue-700'
                   : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
@@ -130,7 +130,7 @@ export default function OrderFilters({
           );
         })}
 
-        <label className="ml-2 flex items-center gap-2 text-[14px] text-slate-500">
+        <label className="ml-2 flex items-center gap-2 text-[15px] text-slate-500">
           결제수단
           <select
             value={method}

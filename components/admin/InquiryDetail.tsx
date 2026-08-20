@@ -81,7 +81,7 @@ export default function InquiryDetail({
       <div className="admin-card flex flex-wrap items-center justify-between gap-3 p-4 md:p-5">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-mono text-[19px] font-semibold text-slate-900">
+            <h1 className="font-mono text-[20px] font-semibold text-slate-900">
               {inquiry.inquiryNo}
             </h1>
             <span className={`admin-badge ${inquiryBadgeClass(inquiry.status)}`}>
@@ -91,7 +91,7 @@ export default function InquiryDetail({
               <span className="admin-badge bg-slate-100 text-slate-600">비밀글</span>
             ) : null}
           </div>
-          <p className="mt-1 text-[14px] text-slate-500">
+          <p className="mt-1 text-[15px] text-slate-500">
             {inquiryCategoryLabel(inquiry.category)} ·{' '}
             {formatDateTime(inquiry.createdAt)}
           </p>
@@ -104,7 +104,7 @@ export default function InquiryDetail({
       {message ? (
         <p
           role="status"
-          className={`rounded-md px-3 py-2 text-[15px] ${
+          className={`rounded-md px-3 py-2 text-[16px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >
@@ -116,8 +116,8 @@ export default function InquiryDetail({
         <div className="flex flex-col gap-5">
           {/* ── 문의 내용 ──────────────────────────────── */}
           <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[17px] font-semibold text-slate-900">{inquiry.title}</h2>
-            <div className="mt-4 whitespace-pre-line text-[15px] leading-[1.9] text-slate-800">
+            <h2 className="text-[18px] font-semibold text-slate-900">{inquiry.title}</h2>
+            <div className="mt-4 whitespace-pre-line text-[16px] leading-[1.9] text-slate-800">
               {inquiry.content}
             </div>
 
@@ -142,9 +142,9 @@ export default function InquiryDetail({
           {/* ── 답변 ───────────────────────────────────── */}
           <section className="admin-card p-4 md:p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-[17px] font-semibold text-slate-900">답변</h2>
+              <h2 className="text-[18px] font-semibold text-slate-900">답변</h2>
               {inquiry.answeredAt ? (
-                <span className="text-[13px] text-slate-500">
+                <span className="text-[14px] text-slate-500">
                   마지막 등록 {formatDateTime(inquiry.answeredAt)}
                 </span>
               ) : null}
@@ -174,7 +174,7 @@ export default function InquiryDetail({
                     </li>
                   ))}
                 </ul>
-                <p className="mt-2 text-[13px] text-slate-500">
+                <p className="mt-2 text-[14px] text-slate-500">
                   상품 상세 편집기에서 저장한 문구 템플릿을 그대로 씁니다.
                 </p>
               </div>
@@ -188,7 +188,7 @@ export default function InquiryDetail({
             >
               {pending ? '저장 중…' : '답변 저장'}
             </button>
-            <p className="mt-2 text-[13px] leading-relaxed text-slate-500">
+            <p className="mt-2 text-[14px] leading-relaxed text-slate-500">
               답변을 저장하면 상태가 자동으로 <strong>답변완료</strong>가 되고, 손님의
               마이페이지·문의 조회 화면에 바로 나타납니다.
             </p>
@@ -198,8 +198,8 @@ export default function InquiryDetail({
         {/* ── 오른쪽 ─────────────────────────────────── */}
         <aside className="flex flex-col gap-5">
           <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[17px] font-semibold text-slate-900">작성자</h2>
-            <dl className="mt-3 flex flex-col gap-2 text-[14px]">
+            <h2 className="text-[18px] font-semibold text-slate-900">작성자</h2>
+            <dl className="mt-3 flex flex-col gap-2 text-[15px]">
               <div className="flex justify-between gap-3">
                 <dt className="text-slate-500">이름</dt>
                 <dd className="text-slate-900">{inquiry.writerName}</dd>
@@ -241,8 +241,8 @@ export default function InquiryDetail({
 
           {order ? (
             <section className="admin-card p-4 md:p-5">
-              <h2 className="text-[17px] font-semibold text-slate-900">관련 주문</h2>
-              <dl className="mt-3 flex flex-col gap-2 text-[14px]">
+              <h2 className="text-[18px] font-semibold text-slate-900">관련 주문</h2>
+              <dl className="mt-3 flex flex-col gap-2 text-[15px]">
                 <div className="flex justify-between gap-3">
                   <dt className="text-slate-500">주문번호</dt>
                   <dd className="font-mono text-slate-900">{order.orderNo}</dd>
@@ -263,7 +263,7 @@ export default function InquiryDetail({
                 </div>
               </dl>
 
-              <ul className="mt-3 border-t border-slate-200 pt-3 text-[14px] text-slate-700">
+              <ul className="mt-3 border-t border-slate-200 pt-3 text-[15px] text-slate-700">
                 {order.items
                   .filter((item) => item.itemStatus === 'normal')
                   .map((item) => (
@@ -281,7 +281,7 @@ export default function InquiryDetail({
           ) : null}
 
           <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[17px] font-semibold text-slate-900">상태</h2>
+            <h2 className="text-[18px] font-semibold text-slate-900">상태</h2>
             <div className="mt-3 flex flex-col gap-2">
               {INQUIRY_STATUSES.map((value) => (
                 <button
@@ -289,7 +289,7 @@ export default function InquiryDetail({
                   type="button"
                   disabled={pending}
                   onClick={() => changeStatus(value)}
-                  className={`rounded-md border px-3 py-2 text-left text-[15px] transition-colors ${
+                  className={`rounded-md border px-3 py-2 text-left text-[16px] transition-colors ${
                     status === value
                       ? 'border-blue-700 bg-blue-700 font-semibold text-white'
                       : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'

@@ -113,7 +113,7 @@ export default function ProductTable({
             조건 때문이라면 지우는 버튼을 바로 옆에 놓아, 검색창까지
             올라가서 하나씩 되돌리지 않아도 되게 합니다.
         */}
-        <p className="text-[16px] text-slate-700">
+        <p className="text-[17px] text-slate-700">
           {hasFilter ? '조건에 맞는 상품이 없습니다.' : '아직 등록된 상품이 없습니다.'}
         </p>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
@@ -135,7 +135,7 @@ export default function ProductTable({
       {message ? (
         <p
           role="status"
-          className={`mb-3 rounded-md px-3 py-2 text-[14px] ${
+          className={`mb-3 rounded-md px-3 py-2 text-[15px] ${
             message.tone === 'ok'
               ? 'bg-green-50 text-green-800'
               : 'bg-red-50 text-red-700'
@@ -146,9 +146,9 @@ export default function ProductTable({
       ) : null}
 
       <div className="admin-card overflow-x-auto">
-        <table className="w-full min-w-[900px] border-collapse text-left text-[15px]">
+        <table className="w-full min-w-[900px] border-collapse text-left text-[16px]">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-50 text-[14px] text-slate-600">
+            <tr className="border-b border-slate-200 bg-slate-50 text-[15px] text-slate-600">
               <th scope="col" className="px-3 py-2.5 font-medium">
                 썸네일
               </th>
@@ -205,7 +205,7 @@ export default function ProductTable({
                     >
                       {product.name}
                     </Link>
-                    <p className="text-[13px] text-slate-500">/{product.slug}</p>
+                    <p className="text-[14px] text-slate-500">/{product.slug}</p>
                   </td>
 
                   <td className="px-3 py-2.5 text-slate-700">
@@ -257,7 +257,7 @@ export default function ProductTable({
 
                   <td className="px-3 py-2.5">
                     <div className="flex flex-col gap-1.5">
-                      <label className="flex items-center gap-1.5 text-[14px] text-slate-700">
+                      <label className="flex items-center gap-1.5 text-[15px] text-slate-700">
                         <input
                           type="checkbox"
                           checked={product.isVisible}
@@ -268,7 +268,7 @@ export default function ProductTable({
                         />
                         노출
                       </label>
-                      <label className="flex items-center gap-1.5 text-[14px] text-slate-700">
+                      <label className="flex items-center gap-1.5 text-[15px] text-slate-700">
                         <input
                           type="checkbox"
                           checked={product.isSoldOut}
@@ -315,7 +315,7 @@ export default function ProductTable({
         </table>
       </div>
 
-      <p className="mt-3 text-[14px] text-slate-500">
+      <p className="mt-3 text-[15px] text-slate-500">
         가격·진열순서는 칸을 고친 뒤 다른 곳을 누르면 바로 저장됩니다. 노출·품절 체크는
         누르는 즉시 저장되고 쇼핑몰에 반영됩니다.
       </p>

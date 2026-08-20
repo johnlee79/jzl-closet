@@ -73,8 +73,8 @@ export default function EventForm({
     <form onSubmit={submit} className="flex flex-col gap-5">
       {/* ── 가입 문구 ─────────────────────────────────── */}
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">가입 환영 문구</h2>
-        <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+        <h2 className="text-[18px] font-semibold text-slate-900">가입 환영 문구</h2>
+        <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
           <code className="rounded bg-slate-100 px-1 py-0.5">{'{points}'}</code> 자리에
           지급된 포인트가 자동으로 들어갑니다. 지금 설정은{' '}
           <strong>{formatPrice(signupPoints)}P</strong> 입니다.
@@ -92,7 +92,7 @@ export default function EventForm({
               onChange={(event) => set('signupComplete', event.target.value)}
               className="admin-input leading-relaxed"
             />
-            <p className="mt-1 rounded-md bg-slate-50 px-3 py-2 text-[14px] leading-relaxed text-slate-700">
+            <p className="mt-1 rounded-md bg-slate-50 px-3 py-2 text-[15px] leading-relaxed text-slate-700">
               미리보기 —{' '}
               {fillTokens(form.signupComplete, { points: formatPrice(signupPoints) })}
             </p>
@@ -115,8 +115,8 @@ export default function EventForm({
 
       {/* ── 적립 안내 문구 ────────────────────────────── */}
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">적립 안내 문구</h2>
-        <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+        <h2 className="text-[18px] font-semibold text-slate-900">적립 안내 문구</h2>
+        <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
           상품 목록과 상세에 붙는 한 줄입니다.{' '}
           <code className="rounded bg-slate-100 px-1 py-0.5">{'{points}'}</code> 자리에
           적립률 × 판매가가 자동으로 계산되어 들어갑니다. (DB 조회 없이 화면에서 계산합니다)
@@ -129,7 +129,7 @@ export default function EventForm({
           aria-label="적립 안내 문구"
           className="admin-input mt-3"
         />
-        <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[14px] leading-relaxed text-slate-700">
+        <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[15px] leading-relaxed text-slate-700">
           미리보기 (59,000원 상품, 적립률 {points.purchase.amount}%) —{' '}
           {fillTokens(form.earnNotice, { points: samplePoints })}
         </p>
@@ -137,12 +137,12 @@ export default function EventForm({
 
       {/* ── 상단 띠배너 ───────────────────────────────── */}
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">상단 띠배너</h2>
-        <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+        <h2 className="text-[18px] font-semibold text-slate-900">상단 띠배너</h2>
+        <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
           화면 맨 위에 한 줄로 걸립니다. 손님이 닫으면 그 브라우저에서는 다시 뜨지 않습니다.
         </p>
 
-        <label className="mt-4 flex items-center gap-2 text-[15px] text-slate-800">
+        <label className="mt-4 flex items-center gap-2 text-[16px] text-slate-800">
           <input
             type="checkbox"
             checked={form.ribbon.enabled}
@@ -228,7 +228,7 @@ export default function EventForm({
           <div className="mt-4">
             <p className="admin-label">미리보기</p>
             <div
-              className={`flex min-h-[38px] items-center justify-center px-4 text-[14px] tracking-[0.06em] ${
+              className={`flex min-h-[38px] items-center justify-center px-4 text-[15px] tracking-[0.06em] ${
                 TONE_CLASS[form.ribbon.tone] ?? TONE_CLASS.ink
               }`}
             >
@@ -238,7 +238,7 @@ export default function EventForm({
         ) : null}
       </section>
 
-      <p className="rounded-md bg-slate-50 px-4 py-3 text-[14px] leading-relaxed text-slate-700">
+      <p className="rounded-md bg-slate-50 px-4 py-3 text-[15px] leading-relaxed text-slate-700">
         이벤트 공지와 팝업은{' '}
         <Link href="/admin/notices" className="text-blue-700 underline">
           공지 관리
@@ -253,7 +253,7 @@ export default function EventForm({
       {message ? (
         <p
           role="status"
-          className={`rounded-md px-3 py-2 text-[15px] ${
+          className={`rounded-md px-3 py-2 text-[16px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >

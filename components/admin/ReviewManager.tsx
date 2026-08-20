@@ -90,8 +90,8 @@ export default function ReviewManager({
       <section className="admin-card mb-4 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-[16px] font-semibold text-slate-900">리뷰 직접 등록</h2>
-            <p className="mt-1 text-[14px] text-slate-500">
+            <h2 className="text-[17px] font-semibold text-slate-900">리뷰 직접 등록</h2>
+            <p className="mt-1 text-[15px] text-slate-500">
               체험단·서포터즈가 실제로 받아 쓴 후기를 대신 입력합니다. 주문과 연결되지
               않고 포인트도 적립되지 않습니다.
             </p>
@@ -234,7 +234,7 @@ export default function ReviewManager({
       {message ? (
         <p
           role="status"
-          className={`mt-4 rounded-md px-3 py-2 text-[15px] ${
+          className={`mt-4 rounded-md px-3 py-2 text-[16px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >
@@ -245,7 +245,7 @@ export default function ReviewManager({
       {/* ── 목록 ──────────────────────────────────────── */}
       <div className="admin-card mt-4">
         {reviews.length === 0 ? (
-          <p className="px-4 py-16 text-center text-[15px] text-slate-500">
+          <p className="px-4 py-16 text-center text-[16px] text-slate-500">
             조건에 맞는 리뷰가 없습니다.
           </p>
         ) : (
@@ -261,7 +261,7 @@ export default function ReviewManager({
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <StarRating value={review.rating} size={14} />
-                      <span className="text-[15px] font-medium text-slate-900">
+                      <span className="text-[16px] font-medium text-slate-900">
                         {review.writerName}
                       </span>
                       {review.isSponsored ? (
@@ -284,7 +284,7 @@ export default function ReviewManager({
                       ) : null}
                     </div>
 
-                    <p className="mt-1 text-[13px] text-slate-500">
+                    <p className="mt-1 text-[14px] text-slate-500">
                       <Link
                         href={`/products/${review.productSlug}`}
                         target="_blank"
@@ -350,7 +350,7 @@ export default function ReviewManager({
                     {review.tags.map((tag) => (
                       <li
                         key={tag}
-                        className="rounded bg-slate-100 px-2 py-0.5 text-[13px] text-slate-700"
+                        className="rounded bg-slate-100 px-2 py-0.5 text-[14px] text-slate-700"
                       >
                         {tag}
                       </li>
@@ -358,7 +358,7 @@ export default function ReviewManager({
                   </ul>
                 ) : null}
 
-                <p className="mt-2 whitespace-pre-line text-[15px] leading-relaxed text-slate-800">
+                <p className="mt-2 whitespace-pre-line text-[16px] leading-relaxed text-slate-800">
                   {review.content}
                 </p>
 
@@ -381,8 +381,8 @@ export default function ReviewManager({
 
                 {review.adminReply && replying !== review.id ? (
                   <div className="mt-3 rounded-md bg-slate-50 p-3">
-                    <p className="text-[13px] font-medium text-slate-600">판매자 답변</p>
-                    <p className="mt-1 whitespace-pre-line text-[14px] leading-relaxed text-slate-800">
+                    <p className="text-[14px] font-medium text-slate-600">판매자 답변</p>
+                    <p className="mt-1 whitespace-pre-line text-[15px] leading-relaxed text-slate-800">
                       {review.adminReply}
                     </p>
                   </div>
@@ -422,7 +422,7 @@ export default function ReviewManager({
         )}
       </div>
 
-      <p className="mt-4 text-[14px] text-slate-500">전체 {total}건</p>
+      <p className="mt-4 text-[15px] text-slate-500">전체 {total}건</p>
     </div>
   );
 }

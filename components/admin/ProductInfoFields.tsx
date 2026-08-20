@@ -56,12 +56,12 @@ export function SummaryField({
         aria-describedby={`${id}-help`}
       />
       <div className="mt-1 flex items-start justify-between gap-3">
-        <p id={`${id}-help`} className="text-[13px] leading-relaxed text-slate-500">
+        <p id={`${id}-help`} className="text-[14px] leading-relaxed text-slate-500">
           목록과 검색 결과에 노출됩니다. 상품명에 없는 정보를 {SUMMARY_MIN}~{SUMMARY_MAX}자로
           (소재·핏·어울리는 상황 등)
         </p>
         <span
-          className={`shrink-0 text-[13px] tabular-nums ${
+          className={`shrink-0 text-[14px] tabular-nums ${
             length === 0 ? 'text-slate-400' : inRange ? 'text-green-700' : 'text-amber-700'
           }`}
         >
@@ -118,7 +118,7 @@ export function OriginField({
         aria-describedby={fromBrand ? `${id}-auto` : undefined}
       />
       {fromBrand ? (
-        <p id={`${id}-auto`} className="mt-1 text-[13px] leading-relaxed text-amber-700">
+        <p id={`${id}-auto`} className="mt-1 text-[14px] leading-relaxed text-amber-700">
           브랜드에서 가져옴 · 확인 후 수정하세요
         </p>
       ) : null}
@@ -169,7 +169,7 @@ export function ManufacturerField({
       {country ? (
         <div
           id={`${id}-warn`}
-          className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] leading-relaxed text-amber-700"
+          className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px] leading-relaxed text-amber-700"
         >
           <span>
             &lsquo;{value.trim()}&rsquo; 은 나라 이름입니다. 제조사는 회사명 칸입니다.
@@ -177,7 +177,7 @@ export function ManufacturerField({
           <button
             type="button"
             onClick={() => onMoveToOrigin(country)}
-            className="admin-btn min-h-0 px-2 py-0.5 text-[13px]"
+            className="admin-btn min-h-0 px-2 py-0.5 text-[14px]"
           >
             {originFilled ? `원산지를 '${country}' 로 바꾸기` : `원산지로 옮기기`}
           </button>

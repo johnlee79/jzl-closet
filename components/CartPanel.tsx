@@ -197,7 +197,7 @@ export default function CartPanel({
                   </div>
 
                   <div className="flex items-center gap-4">
-                    <span className="text-[17px] font-medium text-ink">
+                    <span className="price text-[17px]">
                       {formatPrice(item.price * item.quantity)}원
                     </span>
                     <button
@@ -233,7 +233,7 @@ export default function CartPanel({
             </div>
             <div className="flex justify-between">
               <dt className="text-muted">상품 합계</dt>
-              <dd className="text-ink">{formatPrice(total)}원</dd>
+              <dd className="price">{formatPrice(total)}원</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted">배송비</dt>
@@ -259,9 +259,9 @@ export default function CartPanel({
 
           <div className="mt-6 flex items-baseline justify-between border-t border-stone pt-6">
             <span className="text-[14px] tracking-[0.14em] text-muted">합계</span>
-            <span className="text-[30px] font-semibold tabular-nums tracking-tight text-ink">
+            <span className="price text-[30px]">
               {formatPrice(total + shippingFee)}
-              <span className="ml-1 font-sans text-[16px]">원</span>
+              <span className="ml-1 font-sans text-[16px] font-medium">원</span>
             </span>
           </div>
 

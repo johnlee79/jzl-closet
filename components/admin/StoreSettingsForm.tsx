@@ -44,7 +44,7 @@ export default function StoreSettingsForm({ initial }: { initial: StoreSettings 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">기본 정보</h2>
+        <h2 className="text-[18px] font-semibold text-slate-900">기본 정보</h2>
 
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
           <div>
@@ -99,8 +99,8 @@ export default function StoreSettingsForm({ initial }: { initial: StoreSettings 
       </section>
 
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">브랜드 소개 (3문장)</h2>
-        <p className="mt-1 text-[14px] text-slate-500">
+        <h2 className="text-[18px] font-semibold text-slate-900">브랜드 소개 (3문장)</h2>
+        <p className="mt-1 text-[15px] text-slate-500">
           메인 화면과 /about 의 “브랜드 스토리” 에 그대로 나옵니다.
         </p>
 
@@ -123,7 +123,7 @@ export default function StoreSettingsForm({ initial }: { initial: StoreSettings 
       </section>
 
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">고객 응대</h2>
+        <h2 className="text-[18px] font-semibold text-slate-900">고객 응대</h2>
 
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
           <div>
@@ -163,7 +163,7 @@ export default function StoreSettingsForm({ initial }: { initial: StoreSettings 
               placeholder="http://pf.kakao.com/_xxxxxxx"
               className="admin-input"
             />
-            <p className="mt-1 text-[13px] text-slate-500">
+            <p className="mt-1 text-[14px] text-slate-500">
               비워 두면 푸터의 카카오톡 버튼이 “준비중” 으로 표시됩니다.
             </p>
           </div>
@@ -183,8 +183,8 @@ export default function StoreSettingsForm({ initial }: { initial: StoreSettings 
       </section>
 
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">사업자 정보</h2>
-        <p className="mt-1 text-[14px] text-slate-500">
+        <h2 className="text-[18px] font-semibold text-slate-900">사업자 정보</h2>
+        <p className="mt-1 text-[15px] text-slate-500">
           푸터와 이용약관·개인정보처리방침에 바로 반영됩니다.
         </p>
 
@@ -255,7 +255,7 @@ export default function StoreSettingsForm({ initial }: { initial: StoreSettings 
       {message ? (
         <p
           role="status"
-          className={`rounded-md px-3 py-2 text-[15px] ${
+          className={`rounded-md px-3 py-2 text-[16px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >

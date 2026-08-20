@@ -383,9 +383,9 @@ export default async function ProductDetailPage({ params }: PageProps) {
           ) : null}
 
           <div className="mt-8 flex flex-wrap items-baseline gap-3">
-            <span className="text-[34px] font-semibold tabular-nums tracking-tight text-ink md:text-[40px]">
+            <span className="price text-[34px] md:text-[40px]">
               {formatPrice(product.price)}
-              <span className="ml-1 font-sans text-[17px]">원</span>
+              <span className="ml-1 font-sans text-[17px] font-medium">원</span>
             </span>
             {product.originalPrice ? (
               <span className="text-[17px] text-muted line-through">

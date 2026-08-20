@@ -133,7 +133,7 @@ export default function ImageUploader({
           dragOver ? 'border-blue-600 bg-blue-50' : 'border-slate-300 bg-slate-50'
         }`}
       >
-        <p className="text-[15px] text-slate-600">{label}</p>
+        <p className="text-[16px] text-slate-600">{label}</p>
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
@@ -150,7 +150,7 @@ export default function ImageUploader({
           onChange={(event) => void handleFiles(event.target.files)}
           className="hidden"
         />
-        <p className="mt-2 text-[13px] text-slate-500">
+        <p className="mt-2 text-[14px] text-slate-500">
           jpg · png · webp · gif / 한 장당 20MB까지. 올리면 자동으로 webp 로 최적화됩니다.
         </p>
 
@@ -168,14 +168,14 @@ export default function ImageUploader({
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="mt-1 text-[13px] text-slate-600">
+            <p className="mt-1 text-[14px] text-slate-600">
               {progress}% {progress === 100 ? '— 이미지 변환 중…' : ''}
             </p>
           </div>
         ) : null}
 
         {error ? (
-          <p role="alert" className="mt-2 text-[14px] text-red-700">
+          <p role="alert" className="mt-2 text-[15px] text-red-700">
             {error}
           </p>
         ) : null}
@@ -233,7 +233,7 @@ export default function ImageUploader({
                         className="h-full w-full object-cover"
                       />
                     </div>
-                    <span className="absolute inset-x-0 bottom-0 bg-slate-900/70 py-0.5 text-center text-[12px] text-white">
+                    <span className="absolute inset-x-0 bottom-0 bg-slate-900/70 py-0.5 text-center text-[13px] text-white">
                       고객 화면
                     </span>
                   </div>
@@ -247,14 +247,14 @@ export default function ImageUploader({
                         className="max-h-full max-w-full object-contain"
                       />
                     </div>
-                    <span className="absolute inset-x-0 bottom-0 bg-slate-900/70 py-0.5 text-center text-[12px] text-white">
+                    <span className="absolute inset-x-0 bottom-0 bg-slate-900/70 py-0.5 text-center text-[13px] text-white">
                       원본 전체
                     </span>
                   </div>
                 </div>
                 )}
 
-                <p className="flex items-center justify-between gap-2 px-2 py-1.5 text-[12px] tabular-nums text-slate-500">
+                <p className="flex items-center justify-between gap-2 px-2 py-1.5 text-[13px] tabular-nums text-slate-500">
                   <span>
                     {info?.width
                       ? `${info.width} × ${info.height}px`
@@ -274,7 +274,7 @@ export default function ImageUploader({
                   type="button"
                   onClick={() => removeAt(index)}
                   aria-label={`${index + 1}번째 이미지 삭제`}
-                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-[15px] leading-none text-white transition-opacity hover:bg-black/80"
+                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-[16px] leading-none text-white transition-opacity hover:bg-black/80"
                 >
                   ×
                 </button>
@@ -285,7 +285,7 @@ export default function ImageUploader({
       ) : null}
 
       {images.length > 0 ? (
-        <p className="mt-2 text-[13px] leading-relaxed text-slate-500">
+        <p className="mt-2 text-[14px] leading-relaxed text-slate-500">
           {frame === 'full'
             ? '고객 화면에서도 자르지 않고 원본 비율 그대로 나갑니다. 세로로 긴 이미지는 여기서 스크롤해 전체를 확인하세요.'
             : '왼쪽이 고객 화면에서 실제로 보이는 범위입니다. 오른쪽 원본과 비교해 잘리면 안 되는 부분이 있는지 확인하세요.'}

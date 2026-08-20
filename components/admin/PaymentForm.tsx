@@ -78,8 +78,8 @@ export default function PaymentForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       {/* ── 결제수단 켜고 끄기 (4-A) ──────────────────── */}
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">결제수단</h2>
-        <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+        <h2 className="text-[18px] font-semibold text-slate-900">결제수단</h2>
+        <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
           꺼진 결제수단은 주문서에 나오지 않습니다. 화면에서만 감추는 것이 아니라
           서버도 그 수단의 주문을 받지 않습니다.
         </p>
@@ -91,7 +91,7 @@ export default function PaymentForm({
             const lastOne = on && onCount <= 1;
             return (
               <li key={method.key} className="border-b border-slate-100 pb-3 last:border-b-0">
-                <label className="flex items-start gap-2 text-[15px] text-slate-800">
+                <label className="flex items-start gap-2 text-[16px] text-slate-800">
                   <input
                     type="checkbox"
                     checked={on}
@@ -101,11 +101,11 @@ export default function PaymentForm({
                   />
                   <span>
                     <strong className="font-medium">{method.label}</strong>
-                    <span className="mt-1 block text-[13px] leading-relaxed text-slate-500">
+                    <span className="mt-1 block text-[14px] leading-relaxed text-slate-500">
                       {PAYMENT_METHOD_HINTS[method.key]}
                     </span>
                     {lastOne ? (
-                      <span className="mt-1 block text-[13px] leading-relaxed text-amber-800">
+                      <span className="mt-1 block text-[14px] leading-relaxed text-amber-800">
                         마지막으로 남은 결제수단입니다. 이것까지 끄면 주문을 받을 수 없어
                         끌 수 없게 해 두었습니다.
                       </span>
@@ -117,7 +117,7 @@ export default function PaymentForm({
           })}
         </ul>
 
-        <p className="mt-4 rounded-md bg-slate-50 px-3 py-2 text-[14px] leading-relaxed text-slate-700">
+        <p className="mt-4 rounded-md bg-slate-50 px-3 py-2 text-[15px] leading-relaxed text-slate-700">
           지금 켜져 있는 수단 {onCount}개. 무통장입금만 켜 둔 경우에는 아래 입금 계좌를
           반드시 채워야 주문을 받을 수 있습니다.
         </p>
@@ -125,15 +125,15 @@ export default function PaymentForm({
 
       {/* ── KSNET 연결 상태 (4-A) ─────────────────────── */}
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">KSNET 카드결제</h2>
-        <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+        <h2 className="text-[18px] font-semibold text-slate-900">KSNET 카드결제</h2>
+        <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
           상점아이디와 모드는 환경변수(Vercel 프로젝트 설정)에서만 바꿉니다. 여기서는
           지금 어떤 값으로 동작하는지 확인만 합니다.
         </p>
 
-        <dl className="mt-4 grid grid-cols-1 gap-3 text-[15px] md:grid-cols-2">
+        <dl className="mt-4 grid grid-cols-1 gap-3 text-[16px] md:grid-cols-2">
           <div className="rounded-md bg-slate-50 px-3 py-2">
-            <dt className="text-[13px] text-slate-500">모드 (KSNET_MODE)</dt>
+            <dt className="text-[14px] text-slate-500">모드 (KSNET_MODE)</dt>
             <dd
               className={`mt-0.5 font-semibold ${
                 ksnet.mode === 'live' ? 'text-red-700' : 'text-slate-900'
@@ -144,19 +144,19 @@ export default function PaymentForm({
             </dd>
           </div>
           <div className="rounded-md bg-slate-50 px-3 py-2">
-            <dt className="text-[13px] text-slate-500">상점아이디 (KSNET_MID)</dt>
+            <dt className="text-[14px] text-slate-500">상점아이디 (KSNET_MID)</dt>
             <dd className="mt-0.5 font-mono font-semibold text-slate-900">{ksnet.mid}</dd>
           </div>
         </dl>
 
         {ksnet.problem ? (
-          <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-[14px] leading-relaxed text-red-700">
+          <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-[15px] leading-relaxed text-red-700">
             {ksnet.problem}
           </p>
         ) : null}
 
         {ksnet.mode !== 'live' ? (
-          <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-[14px] leading-relaxed text-amber-900">
+          <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-[15px] leading-relaxed text-amber-900">
             지금은 <strong>테스트 상점아이디</strong>로 동작합니다. 테스트 결제는 수 초 뒤
             자동으로 취소되며, 국민카드와 계좌이체는 테스트할 수 없습니다. 운영으로
             바꾸려면 Vercel 환경변수에 <code className="rounded bg-white px-1">KSNET_MID</code>
@@ -167,7 +167,7 @@ export default function PaymentForm({
 
         {/* ── 노티 자동 완료 ─────────────────────────── */}
         <div className="mt-5 border-t border-slate-200 pt-5">
-          <label className="flex items-start gap-2 text-[15px] text-slate-800">
+          <label className="flex items-start gap-2 text-[16px] text-slate-800">
             <input
               type="checkbox"
               checked={form.ksnetNotifyAutoComplete}
@@ -176,12 +176,12 @@ export default function PaymentForm({
             />
             <span>
               KSNET 노티로 주문을 자동 완료 처리하기
-              <span className="mt-1 block text-[13px] leading-relaxed text-slate-500">
+              <span className="mt-1 block text-[14px] leading-relaxed text-slate-500">
                 노티(거래내역통보)는 KSNET 이 결제 결과를 우리 서버로 알려 주는 기능입니다.
                 꺼 두어도 결제는 정상 동작합니다. 노티는 항상 원문 그대로 저장되고
                 텔레그램으로 알려 드립니다.
               </span>
-              <span className="mt-1 block text-[13px] leading-relaxed text-red-700">
+              <span className="mt-1 block text-[14px] leading-relaxed text-red-700">
                 ★ 노티에는 인증이 없습니다. 주소만 알면 누구나 보낼 수 있습니다.
                 주문번호와 금액을 맞춘 가짜 노티로 입금하지 않은 주문이 결제완료가 될 수
                 있습니다. KSNET 에서 노티 규격과 발신 IP 를 확인받은 뒤에만 켜세요.
@@ -190,7 +190,7 @@ export default function PaymentForm({
           </label>
         </div>
 
-        <details className="mt-3 rounded-md bg-slate-50 p-3 text-[14px] leading-relaxed text-slate-700">
+        <details className="mt-3 rounded-md bg-slate-50 p-3 text-[15px] leading-relaxed text-slate-700">
           <summary className="cursor-pointer font-medium text-slate-900">
             거래 확인 · 취소는 어떻게 하나요
           </summary>
@@ -223,8 +223,8 @@ export default function PaymentForm({
 
       {/* ── 입금 계좌 ─────────────────────────────────── */}
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">입금 계좌</h2>
-        <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+        <h2 className="text-[18px] font-semibold text-slate-900">입금 계좌</h2>
+        <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
           무통장입금 주문을 받으려면 반드시 채워야 합니다. 비어 있으면 손님이 주문서를
           열 수 없습니다.
         </p>
@@ -278,14 +278,14 @@ export default function PaymentForm({
             }
             className="admin-input tabular-nums"
           />
-          <p className="mt-1 text-[13px] text-slate-500">
+          <p className="mt-1 text-[14px] text-slate-500">
             주문 완료 화면에 “언제까지”로 환산해 보여 주고, 자동취소 기준으로도 씁니다.
           </p>
         </div>
 
         {/* ── 미입금 자동취소 ───────────────────────────── */}
         <div className="mt-5 border-t border-slate-200 pt-5">
-          <label className="flex items-start gap-2 text-[15px] text-slate-800">
+          <label className="flex items-start gap-2 text-[16px] text-slate-800">
             <input
               type="checkbox"
               checked={form.autoCancelEnabled}
@@ -294,11 +294,11 @@ export default function PaymentForm({
             />
             <span>
               입금 기한이 지난 주문을 자동으로 취소하기
-              <span className="mt-1 block text-[13px] leading-relaxed text-slate-500">
+              <span className="mt-1 block text-[14px] leading-relaxed text-slate-500">
                 위 <strong>입금 기한 {form.depositHours}시간</strong>이 지난 입금대기 주문을
                 취소하고, 재고와 사용 포인트를 되돌립니다. 취소되면 텔레그램으로 알려 드립니다.
               </span>
-              <span className="mt-1 block text-[13px] leading-relaxed text-amber-800">
+              <span className="mt-1 block text-[14px] leading-relaxed text-amber-800">
                 ★ 송장번호가 들어갔거나 주문 상세에서 <strong>자동취소 제외</strong>를 켜 둔
                 주문은 건드리지 않습니다. 공급처에 발송 요청을 넘긴 건은 꼭 체크해 두세요.
               </span>
@@ -306,7 +306,7 @@ export default function PaymentForm({
           </label>
         </div>
 
-        <p className="mt-4 rounded-md bg-amber-50 px-3 py-2 text-[14px] leading-relaxed text-amber-900">
+        <p className="mt-4 rounded-md bg-amber-50 px-3 py-2 text-[15px] leading-relaxed text-amber-900">
           계좌 정보는 주문 완료 화면과 주문 조회 화면에서만 보입니다. 상품 페이지나 푸터에는
           노출되지 않습니다.
         </p>
@@ -314,8 +314,8 @@ export default function PaymentForm({
 
       {/* ── 도서산간 ──────────────────────────────────── */}
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">도서산간 우편번호 규칙</h2>
-        <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+        <h2 className="text-[18px] font-semibold text-slate-900">도서산간 우편번호 규칙</h2>
+        <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
           여기에 해당하는 주소면 설정 &gt; 배송·반품의 <strong>제주·도서산간 추가배송비</strong>
           가 더해집니다. 한 줄에 하나씩 적으세요.
         </p>
@@ -325,7 +325,7 @@ export default function PaymentForm({
           onChange={(event) => setRulesText(event.target.value)}
           rows={8}
           spellCheck={false}
-          className="admin-input mt-3 font-mono text-[14px] leading-relaxed"
+          className="admin-input mt-3 font-mono text-[15px] leading-relaxed"
         />
 
         <div className="mt-3 flex flex-wrap items-end gap-3">
@@ -343,7 +343,7 @@ export default function PaymentForm({
               className="admin-input tabular-nums"
             />
           </div>
-          <p className="pb-2 text-[14px]">
+          <p className="pb-2 text-[15px]">
             {testResult === null ? (
               <span className="text-slate-500">우편번호 5자리를 넣어 보세요.</span>
             ) : testResult ? (
@@ -361,7 +361,7 @@ export default function PaymentForm({
           </button>
         </div>
 
-        <div className="mt-4 rounded-md bg-slate-50 p-3 text-[14px] leading-relaxed text-slate-700">
+        <div className="mt-4 rounded-md bg-slate-50 p-3 text-[15px] leading-relaxed text-slate-700">
           <p className="font-semibold text-slate-900">쓸 수 있는 형식</p>
           <ul className="mt-1 flex flex-col gap-0.5">
             <li>
@@ -379,10 +379,10 @@ export default function PaymentForm({
 
       {/* ── 알림 ──────────────────────────────────────── */}
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">알림 (텔레그램)</h2>
+        <h2 className="text-[18px] font-semibold text-slate-900">알림 (텔레그램)</h2>
 
         <div className="mt-3 flex flex-col gap-2">
-          <label className="flex items-center gap-2 text-[15px] text-slate-800">
+          <label className="flex items-center gap-2 text-[16px] text-slate-800">
             <input
               type="checkbox"
               checked={form.telegramEnabled}
@@ -391,7 +391,7 @@ export default function PaymentForm({
             />
             새 주문과 취소 요청을 텔레그램으로 받기
           </label>
-          <label className="flex items-center gap-2 text-[15px] text-slate-800">
+          <label className="flex items-center gap-2 text-[16px] text-slate-800">
             <input
               type="checkbox"
               checked={form.inquiryTelegramEnabled}
@@ -403,7 +403,7 @@ export default function PaymentForm({
         </div>
 
         <p
-          className={`mt-3 rounded-md px-3 py-2 text-[14px] leading-relaxed ${
+          className={`mt-3 rounded-md px-3 py-2 text-[15px] leading-relaxed ${
             telegramConfigured
               ? 'bg-green-50 text-green-800'
               : 'bg-amber-50 text-amber-900'
@@ -414,7 +414,7 @@ export default function PaymentForm({
             : '아직 봇이 연결되지 않았습니다. 배포 환경의 환경변수에 TELEGRAM_BOT_TOKEN 과 TELEGRAM_CHAT_ID 를 넣어 주세요. 값이 없으면 알림만 건너뛰고 주문은 정상 저장됩니다.'}
         </p>
 
-        <details className="mt-3 rounded-md bg-slate-50 p-3 text-[14px] leading-relaxed text-slate-700">
+        <details className="mt-3 rounded-md bg-slate-50 p-3 text-[15px] leading-relaxed text-slate-700">
           <summary className="cursor-pointer font-medium text-slate-900">
             봇 만드는 법
           </summary>
@@ -440,8 +440,8 @@ export default function PaymentForm({
 
       {/* ── 구매안전서비스 ────────────────────────────── */}
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">구매안전서비스 표시</h2>
-        <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+        <h2 className="text-[18px] font-semibold text-slate-900">구매안전서비스 표시</h2>
+        <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
           무통장입금 선결제는 결제대금예치(에스크로) 또는 소비자피해보상보험 가입 사실을
           표시해야 합니다. 값을 넣으면 푸터와 주문 완료 화면에 나오고, 비워 두면
           아무것도 표시하지 않습니다.
@@ -501,7 +501,7 @@ export default function PaymentForm({
       {message ? (
         <p
           role="status"
-          className={`rounded-md px-3 py-2 text-[15px] ${
+          className={`rounded-md px-3 py-2 text-[16px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >

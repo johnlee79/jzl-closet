@@ -334,9 +334,9 @@ export default function AddToCartButton({ product }: { product: Product }) {
 
       <div className="mt-6 flex items-baseline justify-between border-t border-stone pt-6">
         <span className="text-[14px] tracking-[0.14em] text-muted">합계</span>
-        <span className="text-[28px] font-semibold tabular-nums tracking-tight text-ink">
+        <span className="price text-[28px]">
           {formatPrice(unitPrice * quantity)}
-          <span className="ml-1 font-sans text-[16px]">원</span>
+          <span className="ml-1 font-sans text-[16px] font-medium">원</span>
         </span>
       </div>
 

@@ -82,22 +82,22 @@ export default async function AdminOrdersPage({
     <div className="mx-auto w-full max-w-[1280px]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-semibold text-slate-900">주문 관리</h1>
-          <p className="mt-1 text-[14px] text-slate-600">
+          <h1 className="text-[24px] font-semibold text-slate-900">주문 관리</h1>
+          <p className="mt-1 text-[15px] text-slate-600">
             조건에 맞는 주문 {total}건 · {page}/{totalPages} 페이지
           </p>
         </div>
       </div>
 
       {!configured ? (
-        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[15px] leading-relaxed text-amber-900">
+        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[16px] leading-relaxed text-amber-900">
           Supabase 연결 정보가 없습니다. <code>.env.local</code> 을 설정한 뒤 서버를 다시
           시작해 주세요.
         </div>
       ) : null}
 
       <div className="admin-card mt-5 p-4">
-        <Suspense fallback={<p className="text-[14px] text-slate-500">불러오는 중…</p>}>
+        <Suspense fallback={<p className="text-[15px] text-slate-500">불러오는 중…</p>}>
           <OrderFilters counts={counts} total={allCount} />
         </Suspense>
       </div>
@@ -106,7 +106,7 @@ export default async function AdminOrdersPage({
         {/* 공급처가 회신한 송장을 한 번에 넣는 자리 */}
         <BulkTrackingPanel />
 
-        <Suspense fallback={<p className="text-[14px] text-slate-500">불러오는 중…</p>}>
+        <Suspense fallback={<p className="text-[15px] text-slate-500">불러오는 중…</p>}>
           <OrderTable orders={orders} />
         </Suspense>
       </div>
@@ -118,7 +118,7 @@ export default async function AdminOrdersPage({
               key={number}
               href={pageHref(number)}
               aria-current={number === page ? 'page' : undefined}
-              className={`min-h-[38px] min-w-[38px] rounded-md border px-3 py-2 text-center text-[15px] ${
+              className={`min-h-[38px] min-w-[38px] rounded-md border px-3 py-2 text-center text-[16px] ${
                 number === page
                   ? 'border-blue-700 bg-blue-700 font-semibold text-white'
                   : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
@@ -130,7 +130,7 @@ export default async function AdminOrdersPage({
         </nav>
       ) : null}
 
-      <p className="mt-6 text-[13px] leading-relaxed text-slate-500">
+      <p className="mt-6 text-[14px] leading-relaxed text-slate-500">
         주문 테이블이 없다는 안내가 나오면 Supabase SQL Editor 에서{' '}
         <code>supabase/schema-2a.sql</code> 을 실행한 뒤{' '}
         <code>supabase/rls-2a.sql</code> 을 이어서 실행해 주세요.

@@ -104,6 +104,30 @@
 }
 
 @layer components {
+  /*
+   * 가격 표시 — 명조(Gowun Batang)
+   *
+   * ★ 왜 명조인가
+   *   한때 가격을 Pretendard 로 바꿔 봤는데 너무 무겁게 느껴졌습니다.
+   *   편집숍 분위기에는 세리프 숫자가 더 맞습니다.
+   *
+   * ★ 대신 읽기 힘들지 않게 세 가지를 함께 겁니다
+   *   1) 색은 본문색(ink #14141A). 보조색(muted)을 쓰면 금액이 흐려 보입니다.
+   *   2) 굵기 700. Gowun Batang 은 400 과 700 만 있습니다.
+   *      기본 400 은 획이 얇아 숫자가 흐릿합니다.
+   *   3) tabular-nums. 자릿수가 바뀌어도 숫자 폭이 같아 자리가 흔들리지 않습니다.
+   *
+   * ★ 상품명·설명에는 쓰지 마세요. 그건 Pretendard 가 훨씬 읽기 좋습니다.
+   *   이 클래스는 "금액 숫자" 전용입니다.
+   *
+   * ★ @layer base 의 ".font-serif { font-weight: 400 }" 보다 뒤에 오는
+   *   components 레이어라 굵기 700 이 이깁니다.
+   */
+  .price {
+    @apply font-serif tabular-nums text-ink;
+    font-weight: 700;
+  }
+
   .shell {
     @apply mx-auto w-full max-w-[1400px] px-5 md:px-10;
   }
@@ -458,7 +482,7 @@
        관리자는 업무 도구, 고객 화면은 브랜드 얼굴이라 의도적으로 다르게 갑니다. */
     font-family: 'Pretendard Variable', Pretendard, ui-sans-serif, system-ui,
       'Segoe UI', 'Malgun Gothic', sans-serif;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 400;
     line-height: 1.55;
     letter-spacing: 0;
@@ -487,12 +511,12 @@
   }
 
   .admin-label {
-    @apply mb-1 block text-[14px] font-medium;
+    @apply mb-1 block text-[15px] font-medium;
     color: var(--admin-sub);
   }
 
   .admin-input {
-    @apply w-full rounded-md border px-3 py-2 text-[15px] outline-none transition-colors focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:opacity-60;
+    @apply w-full rounded-md border px-3 py-2 text-[16px] outline-none transition-colors focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:opacity-60;
     border-color: var(--admin-border-strong);
     background-color: var(--admin-card);
     color: var(--admin-text);
@@ -503,7 +527,7 @@
   }
 
   .admin-btn {
-    @apply inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-[15px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-[16px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
     border-color: var(--admin-border-strong);
     background-color: var(--admin-card);
     color: var(--admin-sub);
@@ -514,16 +538,16 @@
   }
 
   .admin-btn-primary {
-    @apply inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md border border-blue-700 bg-blue-700 px-4 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md border border-blue-700 bg-blue-700 px-4 py-2 text-[16px] font-semibold text-white transition-colors hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .admin-btn-danger {
-    @apply inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md border border-red-300 px-3 py-2 text-[15px] font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md border border-red-300 px-3 py-2 text-[16px] font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50;
     background-color: var(--admin-card);
   }
 
   .admin-badge {
-    @apply inline-flex items-center rounded px-2 py-0.5 text-[13px] font-medium;
+    @apply inline-flex items-center rounded px-2 py-0.5 text-[14px] font-medium;
   }
 }
 

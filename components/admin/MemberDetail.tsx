@@ -24,7 +24,7 @@ const STATUS_OPTIONS = [
 
 function Agreement({ label, agreed }: { label: string; agreed: boolean }) {
   return (
-    <li className="flex items-center gap-2 text-[15px]">
+    <li className="flex items-center gap-2 text-[16px]">
       <span className={agreed ? 'text-green-700' : 'text-red-600'}>
         {agreed ? '동의' : '미동의'}
       </span>
@@ -119,8 +119,8 @@ export default function MemberDetail({
     <div className="flex flex-col gap-5">
       <div className="admin-card flex flex-wrap items-center justify-between gap-3 p-4 md:p-5">
         <div>
-          <h1 className="text-[22px] font-semibold text-slate-900">{profile.name}</h1>
-          <p className="mt-1 text-[14px] text-slate-500">
+          <h1 className="text-[24px] font-semibold text-slate-900">{profile.name}</h1>
+          <p className="mt-1 text-[15px] text-slate-500">
             {profile.email || '이메일 없음'} · 가입 {formatDate(profile.createdAt)}
           </p>
         </div>
@@ -132,7 +132,7 @@ export default function MemberDetail({
       {message ? (
         <p
           role="status"
-          className={`rounded-md px-3 py-2 text-[15px] ${
+          className={`rounded-md px-3 py-2 text-[16px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >
@@ -144,7 +144,7 @@ export default function MemberDetail({
         <div className="flex flex-col gap-5">
           {/* ── 기본 정보 ──────────────────────────────── */}
           <form onSubmit={save} className="admin-card p-4 md:p-5">
-            <h2 className="text-[17px] font-semibold text-slate-900">기본 정보</h2>
+            <h2 className="text-[18px] font-semibold text-slate-900">기본 정보</h2>
 
             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
@@ -176,7 +176,7 @@ export default function MemberDetail({
                   onChange={(event) => set('email', event.target.value)}
                   className="admin-input"
                 />
-                <p className="mt-1 text-[13px] text-slate-500">
+                <p className="mt-1 text-[14px] text-slate-500">
                   여기서 바꾸면 회원 목록의 표시만 바뀝니다. 로그인 아이디는 Supabase Auth
                   에서 관리합니다.
                 </p>
@@ -235,7 +235,7 @@ export default function MemberDetail({
                   rows={4}
                   className="admin-input leading-relaxed"
                 />
-                <p className="mt-1 text-[13px] text-slate-500">회원에게는 보이지 않습니다.</p>
+                <p className="mt-1 text-[14px] text-slate-500">회원에게는 보이지 않습니다.</p>
               </div>
             </div>
 
@@ -247,21 +247,21 @@ export default function MemberDetail({
           {/* ── 주문 내역 ──────────────────────────────── */}
           <section className="admin-card p-4 md:p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-[17px] font-semibold text-slate-900">
+              <h2 className="text-[18px] font-semibold text-slate-900">
                 주문 내역 {orders.length}건
               </h2>
-              <p className="text-[14px] text-slate-600">
+              <p className="text-[15px] text-slate-600">
                 총 구매금액 {formatPrice(totalSpent)}원
               </p>
             </div>
 
             {orders.length === 0 ? (
-              <p className="mt-4 text-[14px] text-slate-500">주문 내역이 없습니다.</p>
+              <p className="mt-4 text-[15px] text-slate-500">주문 내역이 없습니다.</p>
             ) : (
               <div className="mt-4 overflow-x-auto">
-                <table className="w-full min-w-[560px] border-collapse text-[15px]">
+                <table className="w-full min-w-[560px] border-collapse text-[16px]">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-left text-[14px] text-slate-600">
+                    <tr className="border-b border-slate-200 bg-slate-50 text-left text-[15px] text-slate-600">
                       <th scope="col" className="px-3 py-2 font-medium">주문번호</th>
                       <th scope="col" className="px-3 py-2 font-medium">주문일</th>
                       <th scope="col" className="px-3 py-2 font-medium">상품</th>
@@ -313,14 +313,14 @@ export default function MemberDetail({
         {/* ── 오른쪽 ─────────────────────────────────── */}
         <aside className="flex flex-col gap-5">
           <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[17px] font-semibold text-slate-900">약관 동의</h2>
+            <h2 className="text-[18px] font-semibold text-slate-900">약관 동의</h2>
             <ul className="mt-3 flex flex-col gap-2">
               <Agreement label="만 14세 이상 (필수)" agreed={profile.agreeAge14} />
               <Agreement label="이용약관 (필수)" agreed={profile.agreeTerms} />
               <Agreement label="개인정보 수집·이용 (필수)" agreed={profile.agreePrivacy} />
               <Agreement label="마케팅 수신 (선택)" agreed={profile.agreeMarketing} />
             </ul>
-            <p className="mt-3 border-t border-slate-200 pt-3 text-[14px] text-slate-600">
+            <p className="mt-3 border-t border-slate-200 pt-3 text-[15px] text-slate-600">
               동의 시각{' '}
               <span className="text-slate-900">
                 {profile.agreedAt ? formatDateTime(profile.agreedAt) : '기록 없음'}
@@ -330,10 +330,10 @@ export default function MemberDetail({
 
           {/* ── 포인트 ─────────────────────────────────── */}
           <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[17px] font-semibold text-slate-900">포인트</h2>
-            <p className="mt-2 text-[24px] font-semibold tabular-nums text-slate-900">
+            <h2 className="text-[18px] font-semibold text-slate-900">포인트</h2>
+            <p className="mt-2 text-[26px] font-semibold tabular-nums text-slate-900">
               {formatPrice(profile.pointBalance)}
-              <span className="ml-1 text-[15px] font-normal">원</span>
+              <span className="ml-1 text-[16px] font-normal">원</span>
             </p>
 
             <div className="mt-4 border-t border-slate-200 pt-4">
@@ -375,7 +375,7 @@ export default function MemberDetail({
               >
                 포인트 조정
               </button>
-              <p className="mt-2 text-[13px] leading-relaxed text-slate-500">
+              <p className="mt-2 text-[14px] leading-relaxed text-slate-500">
                 사유는 회원의 포인트 내역에도 함께 보입니다. 잔액보다 많이 차감할 수는
                 없습니다.
               </p>
@@ -384,7 +384,7 @@ export default function MemberDetail({
             {pointHistory.length > 0 ? (
               <ul className="mt-4 max-h-[220px] divide-y divide-slate-100 overflow-y-auto border-t border-slate-200 pt-2">
                 {pointHistory.map((entry) => (
-                  <li key={entry.id} className="py-2 text-[14px]">
+                  <li key={entry.id} className="py-2 text-[15px]">
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="text-slate-700">
                         {pointReasonLabel(entry.reason)}
@@ -398,7 +398,7 @@ export default function MemberDetail({
                         {formatPrice(Math.abs(entry.amount))}
                       </span>
                     </div>
-                    <div className="flex items-baseline justify-between gap-2 text-[13px] text-slate-500">
+                    <div className="flex items-baseline justify-between gap-2 text-[14px] text-slate-500">
                       <span className="truncate">{entry.memo}</span>
                       <span className="shrink-0">잔액 {formatPrice(entry.balance)}</span>
                     </div>
@@ -409,8 +409,8 @@ export default function MemberDetail({
           </section>
 
           <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[17px] font-semibold text-slate-900">계정</h2>
-            <dl className="mt-3 flex flex-col gap-2 text-[14px]">
+            <h2 className="text-[18px] font-semibold text-slate-900">계정</h2>
+            <dl className="mt-3 flex flex-col gap-2 text-[15px]">
               <div className="flex justify-between gap-3">
                 <dt className="text-slate-500">최근 로그인</dt>
                 <dd className="text-slate-900">
@@ -442,7 +442,7 @@ export default function MemberDetail({
             </dl>
 
             {isSocial ? (
-              <p className="mt-4 rounded-md bg-slate-50 px-3 py-2 text-[13px] leading-relaxed text-slate-600">
+              <p className="mt-4 rounded-md bg-slate-50 px-3 py-2 text-[14px] leading-relaxed text-slate-600">
                 {providerLabel(profile.provider)} 간편가입 회원입니다. JZL CLOSET 에
                 저장된 비밀번호가 없어 재설정 메일을 보낼 수 없습니다. 로그인이 안 된다면
                 {' '}{providerLabel(profile.provider)} 계정 쪽을 확인해 달라고 안내해 주세요.
@@ -457,7 +457,7 @@ export default function MemberDetail({
                 >
                   비밀번호 재설정 메일 보내기
                 </button>
-                <p className="mt-2 text-[13px] leading-relaxed text-slate-500">
+                <p className="mt-2 text-[14px] leading-relaxed text-slate-500">
                   ★ 관리자는 회원 비밀번호를 볼 수도, 직접 바꿀 수도 없습니다. 회원이 메일
                   링크로 직접 정합니다.
                 </p>

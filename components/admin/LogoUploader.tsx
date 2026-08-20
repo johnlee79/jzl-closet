@@ -42,8 +42,8 @@ export default function LogoUploader({
 
   return (
     <section className="admin-card p-4 md:p-5">
-      <h2 className="text-[17px] font-semibold text-slate-900">로고 이미지</h2>
-      <p className="mt-1 text-[14px] text-slate-500">
+      <h2 className="text-[18px] font-semibold text-slate-900">로고 이미지</h2>
+      <p className="mt-1 text-[15px] text-slate-500">
         헤더에 쓰는 로고입니다. 올리지 않으면 텍스트 로고 “{storeName}” 를 씁니다.
       </p>
 
@@ -54,7 +54,7 @@ export default function LogoUploader({
             /* eslint-disable-next-line @next/next/no-img-element */
             <img src={url} alt="로고 미리보기" className="max-h-9 w-auto object-contain" />
           ) : (
-            <span className="font-display text-[22px] font-light tracking-[0.34em] text-slate-900">
+            <span className="font-display text-[24px] font-light tracking-[0.34em] text-slate-900">
               {storeName}
             </span>
           )}
@@ -70,7 +70,7 @@ export default function LogoUploader({
           label="로고 이미지를 끌어다 놓거나 클릭해서 선택하세요"
           frame="full"
         />
-        <p className="mt-2 text-[13px] leading-relaxed text-slate-500">
+        <p className="mt-2 text-[14px] leading-relaxed text-slate-500">
           가로로 긴 이미지(예: 400×80)를 권장합니다. 배경이 없는 png 가 가장 깔끔합니다.
         </p>
       </div>
@@ -89,7 +89,7 @@ export default function LogoUploader({
       {message ? (
         <p
           role="status"
-          className={`mt-4 rounded-md px-3 py-2 text-[15px] ${
+          className={`mt-4 rounded-md px-3 py-2 text-[16px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >

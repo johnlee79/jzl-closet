@@ -41,8 +41,8 @@ export default function MainSectionsForm({ initial }: { initial: MainSections })
 
   return (
     <div className="admin-card p-4 md:p-5">
-      <h2 className="text-[17px] font-semibold text-slate-900">메인 섹션 노출</h2>
-      <p className="mt-1 text-[14px] leading-relaxed text-slate-600">
+      <h2 className="text-[18px] font-semibold text-slate-900">메인 섹션 노출</h2>
+      <p className="mt-1 text-[15px] leading-relaxed text-slate-600">
         끄면 해당 섹션이 메인에서 통째로 사라집니다. 빈 자리도 남지 않습니다. 준비가 덜 된
         섹션을 잠시 감출 때 쓰세요.
       </p>
@@ -58,10 +58,10 @@ export default function MainSectionsForm({ initial }: { initial: MainSections })
                 className="mt-1 h-4 w-4 shrink-0"
               />
               <span className="min-w-0">
-                <span className="block text-[15px] font-medium text-slate-900">
+                <span className="block text-[16px] font-medium text-slate-900">
                   {item.label}
                 </span>
-                <span className="mt-0.5 block text-[13px] leading-relaxed text-slate-500">
+                <span className="mt-0.5 block text-[14px] leading-relaxed text-slate-500">
                   {item.where}
                 </span>
               </span>
@@ -71,7 +71,7 @@ export default function MainSectionsForm({ initial }: { initial: MainSections })
       </ul>
 
       {hiddenCount > 0 ? (
-        <p className="mt-3 text-[14px] text-amber-700">
+        <p className="mt-3 text-[15px] text-amber-700">
           지금 {hiddenCount}개 섹션이 꺼져 있습니다. 저장해야 실제로 반영됩니다.
         </p>
       ) : null}
@@ -79,7 +79,7 @@ export default function MainSectionsForm({ initial }: { initial: MainSections })
       {message ? (
         <p
           role="status"
-          className={`mt-4 rounded-md px-3 py-2 text-[15px] ${
+          className={`mt-4 rounded-md px-3 py-2 text-[16px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >

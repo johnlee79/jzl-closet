@@ -32,24 +32,24 @@ export default async function OrderPrintPage({ params }: { params: { id: string 
         </Link>
       </div>
 
-      <article className="rounded-lg border border-slate-300 bg-white p-8 text-[14px] leading-relaxed text-slate-900 print:rounded-none print:border-0 print:p-0">
+      <article className="rounded-lg border border-slate-300 bg-white p-8 text-[15px] leading-relaxed text-slate-900 print:rounded-none print:border-0 print:p-0">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-slate-900 pb-4">
           <div>
-            <p className="text-[19px] font-semibold tracking-[0.2em]">{store.name}</p>
-            <p className="mt-1 text-[13px] text-slate-600">거래명세 · 주문서</p>
+            <p className="text-[20px] font-semibold tracking-[0.2em]">{store.name}</p>
+            <p className="mt-1 text-[14px] text-slate-600">거래명세 · 주문서</p>
           </div>
           <div className="text-right">
-            <p className="font-mono text-[17px] font-semibold">{order.orderNo}</p>
-            <p className="mt-1 text-[13px] text-slate-600">
+            <p className="font-mono text-[18px] font-semibold">{order.orderNo}</p>
+            <p className="mt-1 text-[14px] text-slate-600">
               {order.createdAt ? new Date(order.createdAt).toLocaleString('ko-KR') : ''}
             </p>
-            <p className="mt-0.5 text-[13px]">{statusLabel(order.status)}</p>
+            <p className="mt-0.5 text-[14px]">{statusLabel(order.status)}</p>
           </div>
         </header>
 
         <div className="mt-6 grid grid-cols-2 gap-6">
           <section>
-            <h2 className="border-b border-slate-300 pb-1 text-[14px] font-semibold">
+            <h2 className="border-b border-slate-300 pb-1 text-[15px] font-semibold">
               주문자
             </h2>
             <p className="mt-2">{order.ordererName}</p>
@@ -58,7 +58,7 @@ export default async function OrderPrintPage({ params }: { params: { id: string 
           </section>
 
           <section>
-            <h2 className="border-b border-slate-300 pb-1 text-[14px] font-semibold">
+            <h2 className="border-b border-slate-300 pb-1 text-[15px] font-semibold">
               받는 분
             </h2>
             <p className="mt-2">{order.receiverName}</p>
@@ -72,7 +72,7 @@ export default async function OrderPrintPage({ params }: { params: { id: string 
           </section>
         </div>
 
-        <table className="mt-6 w-full border-collapse text-[14px]">
+        <table className="mt-6 w-full border-collapse text-[15px]">
           <thead>
             <tr className="border-y border-slate-300 text-left">
               <th scope="col" className="py-2 font-medium">상품</th>
@@ -114,13 +114,13 @@ export default async function OrderPrintPage({ params }: { params: { id: string 
               <dd className="tabular-nums">{formatPrice(order.extraShippingFee)}원</dd>
             </div>
           ) : null}
-          <div className="flex justify-between border-t border-slate-900 pt-1 text-[16px] font-semibold">
+          <div className="flex justify-between border-t border-slate-900 pt-1 text-[17px] font-semibold">
             <dt>합계</dt>
             <dd className="tabular-nums">{formatPrice(order.totalAmount)}원</dd>
           </div>
         </dl>
 
-        <div className="mt-6 border-t border-slate-300 pt-4 text-[13px] text-slate-600">
+        <div className="mt-6 border-t border-slate-300 pt-4 text-[14px] text-slate-600">
           <p>
             결제수단{' '}
             {paymentMethodLabel(order.paymentMethod)}

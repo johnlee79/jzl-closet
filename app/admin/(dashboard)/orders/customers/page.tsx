@@ -23,8 +23,8 @@ export default async function AdminOrderCustomersPage() {
     <div className="mx-auto w-full max-w-[1100px]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-semibold text-slate-900">주문자 목록</h1>
-          <p className="mt-1 text-[14px] leading-relaxed text-slate-600">
+          <h1 className="text-[24px] font-semibold text-slate-900">주문자 목록</h1>
+          <p className="mt-1 text-[15px] leading-relaxed text-slate-600">
             회원·비회원을 모두 묶어 구매금액이 큰 순서로 보여 줍니다. 취소·반품·결제실패
             건은 금액에서 뺐습니다.
           </p>
@@ -36,13 +36,13 @@ export default async function AdminOrderCustomersPage() {
 
       <div className="admin-card mt-5 overflow-x-auto">
         {rows.length === 0 ? (
-          <p className="px-4 py-16 text-center text-[15px] leading-relaxed text-slate-500">
+          <p className="px-4 py-16 text-center text-[16px] leading-relaxed text-slate-500">
             아직 주문이 없습니다.
           </p>
         ) : (
-          <table className="w-full min-w-[760px] border-collapse text-[15px]">
+          <table className="w-full min-w-[760px] border-collapse text-[16px]">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-left text-[14px] text-slate-600">
+              <tr className="border-b border-slate-200 bg-slate-50 text-left text-[15px] text-slate-600">
                 <th scope="col" className="px-3 py-2 font-medium">주문자</th>
                 <th scope="col" className="px-3 py-2 font-medium">연락처</th>
                 <th scope="col" className="px-3 py-2 font-medium">구분</th>
@@ -100,7 +100,7 @@ export default async function AdminOrderCustomersPage() {
         )}
       </div>
 
-      <p className="mt-3 text-[13px] leading-relaxed text-slate-500">
+      <p className="mt-3 text-[14px] leading-relaxed text-slate-500">
         회원 주문은 회원 계정으로, 비회원 주문은 이름과 연락처로 묶었습니다. 같은 분이라도
         연락처를 다르게 넣으면 따로 잡힙니다.
       </p>

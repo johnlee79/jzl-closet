@@ -41,7 +41,7 @@ export default function HeldLinkList({ items }: { items: HeldLink[] }) {
 
   if (items.length === 0) {
     return (
-      <p className="mt-4 text-[15px] text-slate-600">
+      <p className="mt-4 text-[16px] text-slate-600">
         확인이 필요한 건이 없습니다.
       </p>
     );
@@ -52,7 +52,7 @@ export default function HeldLinkList({ items }: { items: HeldLink[] }) {
       {message ? (
         <p
           role="status"
-          className={`text-[14px] ${
+          className={`text-[15px] ${
             message.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'
           }`}
         >
@@ -67,19 +67,19 @@ export default function HeldLinkList({ items }: { items: HeldLink[] }) {
             className="flex flex-wrap items-start justify-between gap-3 border border-amber-300 bg-amber-50 p-4"
           >
             <div className="min-w-0">
-              <p className="text-[16px] text-slate-900">
+              <p className="text-[17px] text-slate-900">
                 {item.referrerName || '이름 없음'}
-                <span className="ml-1 font-mono text-[14px] text-slate-500">
+                <span className="ml-1 font-mono text-[15px] text-slate-500">
                   ({item.referrerCode})
                 </span>
                 <span className="mx-2 text-slate-400">→</span>
                 {item.inviteeName || '이름 없음'}
-                <span className="ml-2 text-[14px] text-slate-500">
+                <span className="ml-2 text-[15px] text-slate-500">
                   {item.inviteeEmail}
                 </span>
               </p>
-              <p className="mt-1 text-[14px] text-amber-800">{item.reason}</p>
-              <p className="mt-1 text-[14px] text-slate-600">
+              <p className="mt-1 text-[15px] text-amber-800">{item.reason}</p>
+              <p className="mt-1 text-[15px] text-slate-600">
                 {item.sameDevice ? '같은 기기' : '다른 기기'} ·{' '}
                 {item.sameIp ? '같은 회선(IP)' : '다른 회선'} ·{' '}
                 {formatDateTime(item.createdAt)}

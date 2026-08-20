@@ -28,7 +28,7 @@ export default function CopyValue({
     return (
       <div>
         <span className="admin-label">{label}</span>
-        <p className="text-[15px] text-slate-400">—</p>
+        <p className="text-[16px] text-slate-400">—</p>
       </div>
     );
   }
@@ -51,7 +51,7 @@ export default function CopyValue({
       <div className="flex flex-wrap items-center gap-2">
         <span
           className={`select-all font-mono tabular-nums text-slate-900 ${
-            large ? 'text-[22px] font-semibold' : 'text-[15px]'
+            large ? 'text-[24px] font-semibold' : 'text-[16px]'
           }`}
         >
           {value}

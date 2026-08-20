@@ -76,7 +76,7 @@ export default function OrderReceipt({
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-muted">결제금액</dt>
-                <dd className="text-ink">{formatPrice(order.totalAmount)}원</dd>
+                <dd className="price">{formatPrice(order.totalAmount)}원</dd>
               </div>
             </dl>
           ) : null}
@@ -118,7 +118,7 @@ export default function OrderReceipt({
           <dl className="mt-6 flex flex-col gap-2.5 border-t border-stone pt-5 text-[17px]">
             <div className="flex justify-between gap-4">
               <dt className="text-muted">입금 금액</dt>
-              <dd className="font-medium text-ink">{formatPrice(order.totalAmount)}원</dd>
+              <dd className="price">{formatPrice(order.totalAmount)}원</dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-muted">입금자명</dt>
@@ -164,7 +164,7 @@ export default function OrderReceipt({
                   {item.optionKey || '옵션 없음'} · {item.quantity}개
                 </p>
               </div>
-              <p className="self-center whitespace-nowrap text-[17px] font-medium tabular-nums text-ink">
+              <p className="price self-center whitespace-nowrap text-[17px]">
                 {formatPrice(item.lineTotal)}원
               </p>
             </li>
@@ -191,7 +191,7 @@ export default function OrderReceipt({
         <dl className="mt-6 flex flex-col gap-3 text-[16px]">
           <div className="flex justify-between">
             <dt className="text-muted">상품 합계</dt>
-            <dd className="text-ink">{formatPrice(order.itemsTotal)}원</dd>
+            <dd className="price">{formatPrice(order.itemsTotal)}원</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-muted">배송비</dt>
@@ -215,9 +215,9 @@ export default function OrderReceipt({
 
         <div className="mt-5 flex items-baseline justify-between border-t border-stone pt-5">
           <span className="text-[14px] tracking-[0.14em] text-muted">총 결제금액</span>
-          <span className="text-[28px] font-semibold tabular-nums tracking-tight text-ink">
+          <span className="price text-[28px]">
             {formatPrice(order.totalAmount)}
-            <span className="ml-1 font-sans text-[16px]">원</span>
+            <span className="ml-1 font-sans text-[16px] font-medium">원</span>
           </span>
         </div>
       </section>

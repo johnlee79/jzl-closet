@@ -52,10 +52,10 @@ function LoginForm() {
       <div className="admin-card p-7 md:p-8">
         {/* 로고 — 프론트와 같은 글자, 관리자 화면에 맞게 크기만 줄였습니다. */}
         <div className="text-center">
-          <p className="font-display text-[24px] font-light tracking-[0.3em] text-slate-900">
+          <p className="font-display text-[26px] font-light tracking-[0.3em] text-slate-900">
             JZL CLOSET
           </p>
-          <p className="mt-1.5 text-[14px] text-slate-500">관리자 로그인</p>
+          <p className="mt-1.5 text-[15px] text-slate-500">관리자 로그인</p>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-7">
@@ -77,7 +77,7 @@ function LoginForm() {
           {error ? (
             <p
               role="alert"
-              className="mt-3 rounded-md bg-red-50 px-3 py-2 text-[14px] leading-relaxed text-red-700"
+              className="mt-3 rounded-md bg-red-50 px-3 py-2 text-[15px] leading-relaxed text-red-700"
             >
               {error}
             </p>
@@ -88,13 +88,13 @@ function LoginForm() {
           </button>
         </form>
 
-        <p className="mt-5 border-t border-slate-200 pt-4 text-center text-[13px] leading-relaxed text-slate-500">
+        <p className="mt-5 border-t border-slate-200 pt-4 text-center text-[14px] leading-relaxed text-slate-500">
           한 번 로그인하면 7일 동안 유지됩니다.
         </p>
       </div>
 
       <p className="mt-5 text-center">
-        <a href="/" className="text-[14px] text-slate-500 underline underline-offset-4">
+        <a href="/" className="text-[15px] text-slate-500 underline underline-offset-4">
           쇼핑몰 화면으로 돌아가기
         </a>
       </p>

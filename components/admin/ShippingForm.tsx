@@ -39,7 +39,7 @@ export default function ShippingForm({ initial }: { initial: ShippingSettings })
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">배송비</h2>
+        <h2 className="text-[18px] font-semibold text-slate-900">배송비</h2>
 
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
           <div>
@@ -69,7 +69,7 @@ export default function ShippingForm({ initial }: { initial: ShippingSettings })
               onChange={(event) => set('freeThreshold', number(event.target.value))}
               className="admin-input tabular-nums"
             />
-            <p className="mt-1 text-[13px] text-slate-500">
+            <p className="mt-1 text-[14px] text-slate-500">
               0을 넣으면 무료배송 기능을 끕니다.
             </p>
           </div>
@@ -89,7 +89,7 @@ export default function ShippingForm({ initial }: { initial: ShippingSettings })
           </div>
         </div>
 
-        <p className="mt-4 rounded-md bg-slate-50 px-3 py-2 text-[14px] leading-relaxed text-slate-700">
+        <p className="mt-4 rounded-md bg-slate-50 px-3 py-2 text-[15px] leading-relaxed text-slate-700">
           지금 설정대로라면 안내 문구는 이렇게 나갑니다.
           <br />
           <span className="text-slate-900">
@@ -105,7 +105,7 @@ export default function ShippingForm({ initial }: { initial: ShippingSettings })
       </section>
 
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[17px] font-semibold text-slate-900">반품·소요일</h2>
+        <h2 className="text-[18px] font-semibold text-slate-900">반품·소요일</h2>
 
         <div className="mt-4 flex flex-col gap-3">
           <div>
@@ -119,7 +119,7 @@ export default function ShippingForm({ initial }: { initial: ShippingSettings })
               onChange={(event) => set('returnAddress', event.target.value)}
               className="admin-input"
             />
-            <p className="mt-1 text-[13px] text-slate-500">
+            <p className="mt-1 text-[14px] text-slate-500">
               사업장 주소와 달라도 됩니다. 반품 안내에 이 주소가 나갑니다.
             </p>
           </div>
@@ -134,7 +134,7 @@ export default function ShippingForm({ initial }: { initial: ShippingSettings })
               rows={2}
               className="admin-input leading-relaxed"
             />
-            <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+            <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
               배송 안내 페이지와 상품 상세의 [판매정보] 탭에 나갑니다. 길게 적으셔도
               됩니다. 상품 상세 구매 영역에는 아래의 짧은 문구가 대신 나갑니다.
             </p>
@@ -153,13 +153,13 @@ export default function ShippingForm({ initial }: { initial: ShippingSettings })
               maxLength={40}
               className="admin-input"
             />
-            <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+            <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
               상품 상세의 구매 영역(값·옵션·장바구니 버튼이 있는 자리) 한 줄에만
               나갑니다. 좁은 자리라 <strong>한 줄을 넘기면 잘립니다.</strong>{' '}
               <strong>비워 두면</strong> 위의 배송비 설정으로 자동으로 만듭니다.
               (무료배송 상품은 이 문구와 상관없이 &ldquo;무료배송&rdquo; 으로 나갑니다)
             </p>
-            <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+            <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
               지금 나갈 문구 —{' '}
               <span className="text-slate-800">
                 {productShippingLine(false, {
@@ -176,7 +176,7 @@ export default function ShippingForm({ initial }: { initial: ShippingSettings })
       {message ? (
         <p
           role="status"
-          className={`rounded-md px-3 py-2 text-[15px] ${
+          className={`rounded-md px-3 py-2 text-[16px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >
