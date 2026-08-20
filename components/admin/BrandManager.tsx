@@ -264,11 +264,24 @@ function BrandForm({
         <div className="md:col-span-2">
           <span className="admin-label">로고 (선택)</span>
           <p className="mb-2 text-[14px] leading-relaxed text-slate-500">
-            ★ 상품 목록 필터와 브랜드 페이지에 씁니다. <strong>비워 두면 브랜드명이
-            글자로 나옵니다.</strong> 로고는 각 브랜드사의 등록상표라, 쓸 수 있는 것만
-            올려 주세요. 배경이 없는 PNG 를 권합니다. (가로로 긴 형태, 높이는 자동으로
-            맞춰집니다)
+            ★ <strong>상품 카드 · 상품 상세 · 상품 목록 필터 · 브랜드 페이지</strong>의
+            브랜드명 자리에 씁니다. <strong>비워 두면 지금처럼 브랜드명이 글자로
+            나옵니다.</strong> 로고는 각 브랜드사의 등록상표라, 쓸 수 있는 것만 올려 주세요.
           </p>
+          <ul className="mb-2 list-disc pl-5 text-[14px] leading-relaxed text-slate-500">
+            <li>
+              <strong>배경이 없는 PNG</strong>를 권합니다. GIF · JPG · WEBP 도 올라가며,
+              투명한 배경은 그대로 유지됩니다.
+            </li>
+            <li>
+              비율은 건드리지 않습니다. <strong>높이만 글자 높이에 맞추고 가로는 비율대로</strong>
+              늘어나므로 정사각형이든 가로로 긴 형태든 찌그러지지 않습니다.
+            </li>
+            <li>
+              글자가 아주 작게 들어간 로고는 상품 카드에서 알아보기 어렵습니다.
+              <strong>심볼이나 워드마크만</strong> 있는 것이 좋습니다.
+            </li>
+          </ul>
           <ImageUploader
             images={draft.logoUrl ? [draft.logoUrl] : []}
             onChange={(next) => set('logoUrl', next[0] ?? '')}

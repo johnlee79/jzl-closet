@@ -37,7 +37,7 @@ export default async function GuidePage() {
 
   return (
     <div className="shell py-14 md:py-20">
-      <header className="max-w-[720px]">
+      <header className="max-w-[720px] md:max-w-[900px]">
         <p className="label-xs">GUIDE</p>
         <h1 className="mt-3 font-serif text-[28px] leading-snug text-ink md:text-[36px]">
           배송·교환·반품 안내

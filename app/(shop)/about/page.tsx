@@ -152,7 +152,7 @@ export default async function AboutPage() {
           페이지를 짧게 만드는 것이 이번 작업의 목적입니다.
       */}
       {store.story.length > 0 ? (
-        <section aria-label="편집숍 소개" className="mt-10 max-w-[760px]">
+        <section aria-label="편집숍 소개" className="mt-10 max-w-[760px] md:max-w-[900px]">
           <div className="flex flex-col gap-6">
             {store.story.map((paragraph, index) => (
               <p key={index} className="text-[17px] leading-[2.1] text-ink md:text-[18px]">

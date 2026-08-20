@@ -174,7 +174,7 @@ export default async function BrandDetailPage({ params }: PageProps) {
           <h2 id="brand-story" className="font-serif text-[24px] text-ink md:text-[28px]">
             {brand.name} 브랜드 소개
           </h2>
-          <div className="mt-6 flex max-w-[760px] flex-col gap-6">
+          <div className="mt-6 flex max-w-[760px] flex-col gap-6 md:max-w-[900px]">
             {brand.story.map((paragraph, index) => (
               <p
                 key={index}

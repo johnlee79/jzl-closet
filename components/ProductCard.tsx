@@ -1,9 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import BrandMark from '@/components/BrandMark';
 import SafeImage from '@/components/SafeImage';
 import { useSite } from '@/components/SiteProvider';
-import { brandLabel as findBrandLabel, brandName as findBrandName } from '@/lib/brands';
+import {
+  brandLabel as findBrandLabel,
+  brandName as findBrandName,
+  findBrand,
+} from '@/lib/brands';
 import { formatPrice, getDiscountRate, isProductSoldOut } from '@/lib/product-utils';
 import { expectedPurchasePoints, fillTokens } from '@/lib/site-config';
 import type { Product } from '@/lib/types';
@@ -25,6 +30,8 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
   const hasSecond = Boolean(second);
   const brandName = product.brandSlug ? findBrandName(brands, product.brandSlug) : '';
   const brandLabel = product.brandSlug ? findBrandLabel(brands, product.brandSlug) : '';
+  /* 로고를 올린 브랜드는 로고로, 아니면 지금처럼 글자로 나갑니다. */
+  const brand = product.brandSlug ? findBrand(brands, product.brandSlug) : undefined;
   const soldOut = isProductSoldOut(product);
   const discount = getDiscountRate(product);
 
@@ -91,7 +98,16 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
 
         <div className="pt-4">
           {brandLabel ? (
-            <p className="text-[14px] tracking-[0.16em] text-muted">{brandLabel}</p>
+            /*
+              ★ min-h-[25px] 인 이유
+                글자일 때 이 줄의 높이가 25px 입니다. 로고(20px)로 바뀌어도 같은
+                높이를 지켜야 상품명이 위아래로 밀리지 않고, 목록에서 카드마다
+                줄이 어긋나지 않습니다. h- 가 아니라 min-h- 인 것은, 좁은 화면에서
+                긴 브랜드명이 두 줄로 접힐 때 잘리지 않게 하기 위해서입니다.
+            */
+            <p className="flex min-h-[25px] items-center text-[14px] tracking-[0.16em] text-muted">
+              <BrandMark brand={brand ?? { label: brandLabel, name: brandName, logoUrl: '' }} size="card" />
+            </p>
           ) : null}
           {/*
             ★ 상품명은 두 줄까지만 보여 줍니다.

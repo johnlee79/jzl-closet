@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import AddToCartButton from '@/components/AddToCartButton';
+import BrandMark from '@/components/BrandMark';
 import DetailBlocks from '@/components/DetailBlocks';
 import MeasurementTable from '@/components/MeasurementTable';
 import ProductCard from '@/components/ProductCard';
@@ -336,11 +337,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
         <section aria-label="상품 정보" className="lg:pt-4">
           {product.brandSlug ? (
+            /* 카드와 같은 자리·같은 역할이라 같은 방식으로 보여 줍니다. */
             <Link
               href={`/brand/${product.brandSlug}`}
-              className="text-[14px] tracking-[0.16em] text-muted underline-offset-4 hover:underline"
+              className="inline-flex min-h-[25px] items-center text-[14px] tracking-[0.16em] text-muted underline-offset-4 hover:underline"
             >
-              {brandLabel}
+              {brand ? <BrandMark brand={brand} size="card" /> : brandLabel}
             </Link>
           ) : null}
           <h1 className="mt-3 text-[28px] font-semibold leading-snug text-ink md:text-[34px]">
