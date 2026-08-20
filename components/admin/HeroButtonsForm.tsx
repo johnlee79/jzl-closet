@@ -65,7 +65,7 @@ export default function HeroButtonsForm({ initial }: { initial: HeroButtonsSetti
 
   return (
     <div className="border-t border-slate-200 bg-slate-50 p-4">
-      <p className="text-[13px] leading-relaxed text-slate-600">
+      <p className="text-[14px] leading-relaxed text-slate-600">
         메인 첫 화면 소개 문단 아래에 나오는 버튼 두 개입니다. 첫 번째는 검정 배경,
         두 번째는 흰 배경에 검정 테두리입니다.{' '}
         <b>두 번째 버튼 문구를 비우면 그 버튼이 화면에서 사라집니다.</b>
@@ -85,7 +85,7 @@ export default function HeroButtonsForm({ initial }: { initial: HeroButtonsSetti
       {message ? (
         <p
           role="status"
-          className={`mt-4 rounded-md px-3 py-2 text-[14px] ${
+          className={`mt-4 rounded-md px-3 py-2 text-[15px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >

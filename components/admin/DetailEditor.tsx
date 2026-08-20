@@ -112,7 +112,7 @@ export default function DetailEditor({
           {templatesOpen ? (
             <div className="absolute left-0 z-20 mt-1 w-[280px] rounded-md border border-slate-200 bg-white p-2 shadow-lg">
               {templates.length === 0 ? (
-                <p className="px-2 py-3 text-[13px] text-slate-500">
+                <p className="px-2 py-3 text-[14px] text-slate-500">
                   저장된 템플릿이 없습니다. 문구 블록 아래의 &ldquo;템플릿으로 저장&rdquo;을
                   눌러 자주 쓰는 문구를 등록해 두세요.
                 </p>
@@ -126,7 +126,7 @@ export default function DetailEditor({
                           add({ type: 'text', heading: '', body: template.body });
                           setTemplatesOpen(false);
                         }}
-                        className="flex-1 rounded px-2 py-2 text-left text-[13px] text-slate-700 hover:bg-slate-100"
+                        className="flex-1 rounded px-2 py-2 text-left text-[14px] text-slate-700 hover:bg-slate-100"
                       >
                         {template.title}
                       </button>
@@ -134,7 +134,7 @@ export default function DetailEditor({
                         type="button"
                         onClick={() => void onDeleteTemplate(template.id)}
                         aria-label={`${template.title} 템플릿 삭제`}
-                        className="rounded px-2 py-2 text-[13px] text-slate-400 hover:bg-red-50 hover:text-red-700"
+                        className="rounded px-2 py-2 text-[14px] text-slate-400 hover:bg-red-50 hover:text-red-700"
                       >
                         ×
                       </button>
@@ -158,7 +158,7 @@ export default function DetailEditor({
       </div>
 
       {blocks.length === 0 ? (
-        <p className="mt-4 rounded-md border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-[14px] text-slate-500">
+        <p className="mt-4 rounded-md border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-[15px] text-slate-500">
           위에서 이미지를 여러 장 올리거나, 이미지·문구·표 블록을 하나씩 추가하세요.
           추가한 순서대로 상세 페이지에 쌓입니다.
         </p>
@@ -191,11 +191,11 @@ export default function DetailEditor({
                     tabIndex={-1}
                     aria-label="드래그해서 순서 변경"
                     title="드래그해서 순서 변경"
-                    className="cursor-grab select-none px-1 text-[16px] leading-none text-slate-400"
+                    className="cursor-grab select-none px-1 text-[17px] leading-none text-slate-400"
                   >
                     ⠿
                   </span>
-                  <span className="text-[13px] font-medium text-slate-700">
+                  <span className="text-[14px] font-medium text-slate-700">
                     {index + 1}. {blockTitle(block)}
                   </span>
                 </div>
@@ -253,7 +253,7 @@ export default function DetailEditor({
                         className="admin-input"
                       />
                       {!block.alt.trim() ? (
-                        <p className="mt-1 text-[12px] text-amber-700">
+                        <p className="mt-1 text-[13px] text-amber-700">
                           alt 가 비어 있습니다. 저장 시 다시 확인합니다.
                         </p>
                       ) : null}
@@ -332,7 +332,7 @@ export default function DetailEditor({
                       <button
                         type="button"
                         onClick={() => setSavingIndex(index)}
-                        className="self-start text-[13px] text-blue-700 underline underline-offset-4"
+                        className="self-start text-[14px] text-blue-700 underline underline-offset-4"
                       >
                         이 문구를 템플릿으로 저장
                       </button>

@@ -50,7 +50,7 @@ export default async function NoticeDetailPage({ params }: PageProps) {
 
   return (
     <div className="shell py-14 md:py-20">
-      <nav aria-label="현재 위치" className="text-[13px] tracking-[0.14em] text-muted">
+      <nav aria-label="현재 위치" className="text-[14px] tracking-[0.14em] text-muted">
         <ol className="flex flex-wrap items-center gap-2">
           <li>
             <Link href="/" className="hover:text-ink">
@@ -69,18 +69,18 @@ export default async function NoticeDetailPage({ params }: PageProps) {
       <article className="mx-auto mt-8 w-full max-w-[820px]">
         <header className="border-b border-stone pb-6">
           {notice.isPinned ? (
-            <span className="inline-block border border-wine px-2 py-0.5 text-[12px] tracking-[0.14em] text-wine">
+            <span className="inline-block border border-wine px-2 py-0.5 text-[13px] tracking-[0.14em] text-wine">
               공지
             </span>
           ) : null}
-          <h1 className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[30px]">
+          <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[32px]">
             {notice.title}
           </h1>
-          <p className="mt-3 text-[13px] text-muted">{formatDate(notice.createdAt)}</p>
+          <p className="mt-3 text-[14px] text-muted">{formatDate(notice.createdAt)}</p>
         </header>
 
         <div
-          className="detail-body mt-10 text-[16px] leading-[2] text-ink md:text-[17px]"
+          className="detail-body mt-10 text-[17px] leading-[2] text-ink md:text-[18px]"
           dangerouslySetInnerHTML={{ __html: sanitizeRichText(notice.content) }}
         />
 

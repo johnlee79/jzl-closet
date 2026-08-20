@@ -10,7 +10,7 @@ export default async function MypageWithdrawPage() {
 
   return (
     <section aria-labelledby="withdraw-heading">
-      <h2 id="withdraw-heading" className="border-b border-stone pb-4 font-serif text-[20px] text-ink">
+      <h2 id="withdraw-heading" className="border-b border-stone pb-4 font-serif text-[22px] text-ink">
         회원 탈퇴
       </h2>
       <div className="mt-8">

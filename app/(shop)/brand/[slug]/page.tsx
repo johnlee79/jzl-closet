@@ -104,7 +104,7 @@ export default async function BrandDetailPage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(brandJsonLd) }}
       />
 
-      <nav aria-label="현재 위치" className="text-[13px] tracking-[0.14em] text-muted">
+      <nav aria-label="현재 위치" className="text-[14px] tracking-[0.14em] text-muted">
         <ol className="flex flex-wrap items-center gap-2">
           <li>
             <Link href="/" className="hover:text-ink">
@@ -128,7 +128,7 @@ export default async function BrandDetailPage({ params }: PageProps) {
             {[brand.origin, brand.since ? `SINCE ${brand.since}` : ''].filter(Boolean).join(' · ')}
           </p>
         ) : null}
-        <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
+        <h1 className="mt-3 font-serif text-[28px] leading-snug text-ink md:text-[36px]">
           {brand.nameKo || brand.name}
         </h1>
         {/* 로고를 올린 브랜드는 로고로, 아니면 브랜드명을 글자로 보여 줍니다. */}
@@ -136,7 +136,7 @@ export default async function BrandDetailPage({ params }: PageProps) {
           <BrandMark brand={brand} size="lg" />
         </div>
         {brand.tagline ? (
-          <p className="mt-5 text-[16px] leading-relaxed text-ink">{brand.tagline}</p>
+          <p className="mt-5 text-[17px] leading-relaxed text-ink">{brand.tagline}</p>
         ) : null}
       </header>
 
@@ -170,14 +170,14 @@ export default async function BrandDetailPage({ params }: PageProps) {
       {/* ★ 브랜드 스토리 — 검색 유입 경로입니다. 실제 텍스트로 출력합니다. */}
       {brand.story.length > 0 ? (
         <section aria-labelledby="brand-story" className="section border-b border-stone">
-          <h2 id="brand-story" className="font-serif text-[22px] text-ink md:text-[26px]">
+          <h2 id="brand-story" className="font-serif text-[24px] text-ink md:text-[28px]">
             {brand.name} 브랜드 소개
           </h2>
           <div className="mt-6 flex max-w-[760px] flex-col gap-6">
             {brand.story.map((paragraph, index) => (
               <p
                 key={index}
-                className="text-[16px] leading-[2.1] text-ink md:text-[17px]"
+                className="text-[17px] leading-[2.1] text-ink md:text-[18px]"
               >
                 {paragraph}
               </p>
@@ -189,14 +189,14 @@ export default async function BrandDetailPage({ params }: PageProps) {
       <section aria-labelledby="brand-products" className="mt-14">
         <h2
           id="brand-products"
-          className="font-serif text-[22px] text-ink md:text-[26px]"
+          className="font-serif text-[24px] text-ink md:text-[28px]"
         >
           {brand.label} 상품
         </h2>
         <div className="mt-8">
           {items.length === 0 ? (
             <div className="border-t border-stone py-16">
-              <p className="text-[16px] leading-relaxed text-ink">
+              <p className="text-[17px] leading-relaxed text-ink">
                 준비 중인 브랜드입니다. 입고 소식은 카카오톡으로 문의해 주세요.
               </p>
               <div className="btn-row mt-8">

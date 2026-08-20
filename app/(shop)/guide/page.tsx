@@ -35,10 +35,10 @@ export default async function GuidePage() {
     <div className="shell py-14 md:py-20">
       <header className="max-w-[720px]">
         <p className="label-xs">GUIDE</p>
-        <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
+        <h1 className="mt-3 font-serif text-[28px] leading-snug text-ink md:text-[36px]">
           배송·교환·반품 안내
         </h1>
-        <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
+        <p className="mt-4 text-[17px] leading-[1.9] text-ink md:text-[18px]">
           아래 내용은 국내 전자상거래 일반 기준을 따릅니다. 개별 상품에 다른 조건이 적용될
           때는 상품 상세 페이지에 별도로 표기합니다.
         </p>
@@ -48,11 +48,11 @@ export default async function GuidePage() {
       <section aria-labelledby="fee-heading" className="mt-12">
         <h2
           id="fee-heading"
-          className="border-t border-stone pt-6 font-serif text-[20px] text-ink md:text-[24px]"
+          className="border-t border-stone pt-6 font-serif text-[22px] text-ink md:text-[26px]"
         >
           배송비
         </h2>
-        <dl className="mt-6 flex max-w-[820px] flex-col gap-3 text-[15px] leading-[1.9] text-ink">
+        <dl className="mt-6 flex max-w-[820px] flex-col gap-3 text-[16px] leading-[1.9] text-ink">
           <div className="flex gap-4">
             <dt className="w-40 shrink-0 text-muted">기본 배송비</dt>
             <dd>
@@ -89,8 +89,8 @@ export default async function GuidePage() {
       <div className="mt-14">
         <CopyBlocks
           blocks={blocks}
-          headingClassName="border-t border-stone pt-6 font-serif text-[20px] text-ink md:text-[24px]"
-          bodyClassName="detail-body mt-6 max-w-[820px] text-[15px] leading-[1.9] text-ink"
+          headingClassName="border-t border-stone pt-6 font-serif text-[22px] text-ink md:text-[26px]"
+          bodyClassName="detail-body mt-6 max-w-[820px] text-[16px] leading-[1.9] text-ink"
           className="flex flex-col gap-16"
         />
       </div>

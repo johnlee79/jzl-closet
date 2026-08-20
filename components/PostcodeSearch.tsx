@@ -21,7 +21,7 @@ export type { PostcodeResult };
  */
 export default function PostcodeSearch({
   onSelect,
-  className = 'btn-secondary min-h-[48px] shrink-0 px-6 py-0 text-[14px] disabled:opacity-40',
+  className = 'btn-secondary min-h-[48px] shrink-0 px-6 py-0 text-[15px] disabled:opacity-40',
   label = '주소 검색',
   /** 실패 안내를 버튼 아래에 함께 보여 줄지 */
   showNotice = true,
@@ -60,7 +60,7 @@ export default function PostcodeSearch({
       {showNotice && state === 'failed' ? (
         <p
           role="alert"
-          className="mt-2 w-full whitespace-pre-line text-[13px] leading-relaxed text-wine"
+          className="mt-2 w-full whitespace-pre-line text-[14px] leading-relaxed text-wine"
         >
           {postcodeFallbackNotice(store.phone)}
         </p>

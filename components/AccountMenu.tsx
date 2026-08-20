@@ -40,11 +40,11 @@ function PersonIcon() {
 
 /** 34px 높이의 테두리 버튼 (로그인·마이페이지) */
 const OUTLINE_BUTTON =
-  'inline-flex h-[34px] items-center justify-center rounded-sm border border-ink px-4 text-[13px] tracking-[0.1em] text-ink transition-colors duration-200 hover:bg-ink hover:text-paper';
+  'inline-flex h-[34px] items-center justify-center rounded-sm border border-ink px-4 text-[14px] tracking-[0.1em] text-ink transition-colors duration-200 hover:bg-ink hover:text-paper';
 
 /** 34px 높이의 채운 버튼 (회원가입) */
 const FILLED_BUTTON =
-  'inline-flex h-[34px] items-center justify-center rounded-sm bg-ink px-4 text-[13px] tracking-[0.1em] text-paper transition-opacity duration-200 hover:opacity-80';
+  'inline-flex h-[34px] items-center justify-center rounded-sm bg-ink px-4 text-[14px] tracking-[0.1em] text-paper transition-opacity duration-200 hover:opacity-80';
 
 export default function AccountMenu({ variant = 'desktop' }: { variant?: Variant }) {
   const router = useRouter();
@@ -91,13 +91,13 @@ export default function AccountMenu({ variant = 'desktop' }: { variant?: Variant
         <div className="flex gap-2">
           <Link
             href="/login"
-            className="inline-flex min-h-[52px] flex-1 items-center justify-center rounded-sm border border-ink text-[15px] tracking-[0.14em] text-ink"
+            className="inline-flex min-h-[52px] flex-1 items-center justify-center rounded-sm border border-ink text-[16px] tracking-[0.14em] text-ink"
           >
             로그인
           </Link>
           <Link
             href="/signup"
-            className="inline-flex min-h-[52px] flex-1 items-center justify-center rounded-sm bg-ink text-[15px] tracking-[0.14em] text-paper"
+            className="inline-flex min-h-[52px] flex-1 items-center justify-center rounded-sm bg-ink text-[16px] tracking-[0.14em] text-paper"
           >
             회원가입
           </Link>
@@ -107,22 +107,22 @@ export default function AccountMenu({ variant = 'desktop' }: { variant?: Variant
 
     return (
       <div>
-        <p className="text-[15px] text-muted">
+        <p className="text-[16px] text-muted">
           <strong className="text-ink">{name}</strong>님
         </p>
         <ul className="mt-3 border-t border-stone">
           <li className="border-b border-stone">
-            <Link href="/mypage" className="block py-4 text-[16px] text-ink">
+            <Link href="/mypage" className="block py-4 text-[17px] text-ink">
               마이페이지
             </Link>
           </li>
           <li className="border-b border-stone">
-            <Link href="/mypage/orders" className="block py-4 text-[16px] text-ink">
+            <Link href="/mypage/orders" className="block py-4 text-[17px] text-ink">
               주문 내역
             </Link>
           </li>
           <li className="border-b border-stone">
-            <Link href="/mypage/inquiries" className="block py-4 text-[16px] text-ink">
+            <Link href="/mypage/inquiries" className="block py-4 text-[17px] text-ink">
               문의 내역
             </Link>
           </li>
@@ -131,7 +131,7 @@ export default function AccountMenu({ variant = 'desktop' }: { variant?: Variant
               type="button"
               onClick={logout}
               disabled={pending}
-              className="block w-full py-4 text-left text-[16px] text-ink"
+              className="block w-full py-4 text-left text-[17px] text-ink"
             >
               {pending ? '로그아웃 중…' : '로그아웃'}
             </button>
@@ -173,7 +173,7 @@ export default function AccountMenu({ variant = 'desktop' }: { variant?: Variant
     return (
       <Link
         href="/login"
-        className="hidden h-[36px] min-h-[36px] items-center justify-center rounded-sm border border-ink px-3.5 text-[13px] tracking-[0.06em] text-ink md:inline-flex"
+        className="hidden h-[36px] min-h-[36px] items-center justify-center rounded-sm border border-ink px-3.5 text-[14px] tracking-[0.06em] text-ink md:inline-flex"
       >
         로그인
       </Link>
@@ -196,7 +196,7 @@ export default function AccountMenu({ variant = 'desktop' }: { variant?: Variant
           type="button"
           onClick={logout}
           disabled={pending}
-          className="shrink-0 text-[13px] tracking-[0.1em] text-muted transition-opacity duration-200 hover:opacity-60"
+          className="shrink-0 text-[14px] tracking-[0.1em] text-muted transition-opacity duration-200 hover:opacity-60"
         >
           {pending ? '…' : '로그아웃'}
         </button>

@@ -88,12 +88,12 @@ export default function LoginForm({
       {error ? (
         <div
           role="alert"
-          className="mb-6 border border-wine bg-wine/5 px-4 py-3 text-[14px] leading-relaxed text-wine"
+          className="mb-6 border border-wine bg-wine/5 px-4 py-3 text-[15px] leading-relaxed text-wine"
         >
           {error}
           {needsVerification ? (
             <div className="mt-3">
-              <p className="text-[13px] leading-relaxed text-ink">
+              <p className="text-[14px] leading-relaxed text-ink">
                 가입하실 때 보내드린 메일의 인증 링크를 눌러 주세요. 메일이 보이지 않으면
                 스팸함도 확인해 주세요.
               </p>
@@ -135,7 +135,7 @@ export default function LoginForm({
         </div>
 
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-          <label className="flex cursor-pointer items-center gap-2 text-[14px] text-ink">
+          <label className="flex cursor-pointer items-center gap-2 text-[15px] text-ink">
             <input
               type="checkbox"
               checked={keepLoggedIn}
@@ -146,7 +146,7 @@ export default function LoginForm({
           </label>
           <Link
             href="/reset-password"
-            className="text-[14px] text-muted underline underline-offset-4"
+            className="text-[15px] text-muted underline underline-offset-4"
           >
             비밀번호를 잊으셨나요?
           </Link>

@@ -45,20 +45,20 @@ export default async function AdminInquiriesPage({
 
   return (
     <div className="mx-auto w-full max-w-[1280px]">
-      <h1 className="text-[20px] font-semibold text-slate-900">문의 관리</h1>
-      <p className="mt-1 text-[13px] text-slate-600">
+      <h1 className="text-[22px] font-semibold text-slate-900">문의 관리</h1>
+      <p className="mt-1 text-[14px] text-slate-600">
         조건에 맞는 문의 {total}건 · {page}/{totalPages} 페이지
       </p>
 
       {!configured ? (
-        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[14px] leading-relaxed text-amber-900">
+        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[15px] leading-relaxed text-amber-900">
           Supabase 연결 정보가 없습니다. <code>.env.local</code> 을 설정한 뒤 서버를 다시
           시작해 주세요.
         </div>
       ) : null}
 
       <div className="mt-5">
-        <Suspense fallback={<p className="text-[13px] text-slate-500">불러오는 중…</p>}>
+        <Suspense fallback={<p className="text-[14px] text-slate-500">불러오는 중…</p>}>
           <InquiryTable inquiries={inquiries} counts={counts} total={allCount} />
         </Suspense>
       </div>
@@ -70,7 +70,7 @@ export default async function AdminInquiriesPage({
               key={number}
               href={pageHref(number)}
               aria-current={number === page ? 'page' : undefined}
-              className={`min-h-[38px] min-w-[38px] rounded-md border px-3 py-2 text-center text-[14px] ${
+              className={`min-h-[38px] min-w-[38px] rounded-md border px-3 py-2 text-center text-[15px] ${
                 number === page
                   ? 'border-blue-700 bg-blue-700 font-semibold text-white'
                   : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
@@ -82,7 +82,7 @@ export default async function AdminInquiriesPage({
         </nav>
       ) : null}
 
-      <p className="mt-6 text-[12px] leading-relaxed text-slate-500">
+      <p className="mt-6 text-[13px] leading-relaxed text-slate-500">
         inquiries 테이블이 없다는 안내가 나오면 Supabase SQL Editor 에서{' '}
         <code>supabase/schema-2b.sql</code> 을 실행한 뒤{' '}
         <code>supabase/rls-2b.sql</code> 을 이어서 실행해 주세요.

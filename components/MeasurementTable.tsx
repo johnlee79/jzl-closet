@@ -17,7 +17,7 @@ export default function MeasurementTable({
 
   return (
     <section aria-labelledby="measurement-heading" className="w-full">
-      <h3 id="measurement-heading" className="font-serif text-[20px] text-ink md:text-[24px]">
+      <h3 id="measurement-heading" className="font-serif text-[22px] text-ink md:text-[26px]">
         실측 사이즈
       </h3>
       <div className="mt-6 overflow-x-auto">
@@ -28,17 +28,17 @@ export default function MeasurementTable({
               <tr key={row.label} className="border-b border-stone first:border-t">
                 <th
                   scope="row"
-                  className="w-[45%] py-3 pr-4 text-[13px] font-normal tracking-[0.1em] text-muted md:w-40"
+                  className="w-[45%] py-3 pr-4 text-[14px] font-normal tracking-[0.1em] text-muted md:w-40"
                 >
                   {row.label}
                 </th>
-                <td className="py-3 pr-4 text-[15px] tabular-nums text-ink">{row.value}</td>
+                <td className="py-3 pr-4 text-[16px] tabular-nums text-ink">{row.value}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="mt-4 text-[13px] leading-relaxed text-muted">
+      <p className="mt-4 text-[14px] leading-relaxed text-muted">
         단위 cm. 재는 방법에 따라 1~2cm 오차가 있을 수 있습니다.
       </p>
     </section>

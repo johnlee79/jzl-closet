@@ -15,7 +15,7 @@ const config: Config = {
         ink: '#14141A',
         paper: '#F6F5F2',
         stone: '#DBD7D1',
-        muted: '#55524E', // 캡션·라벨 전용. 본문에는 ink 를 쓴다
+        muted: '#46433E', // 캡션·라벨 전용. 본문에는 ink 를 쓴다 (종이색 대비 9.0:1)
         wine: '#6A2E3C',
       },
       fontFamily: {

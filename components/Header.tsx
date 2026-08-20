@@ -72,7 +72,7 @@ export default function Header({
     /* eslint-disable-next-line @next/next/no-img-element */
     <img src={logoUrl} alt={storeName} className="h-7 w-auto object-contain sm:h-8 md:h-9" />
   ) : (
-    <span className="whitespace-nowrap font-display text-[15px] font-light tracking-[0.18em] text-ink sm:text-[18px] sm:tracking-[0.26em] md:text-[24px] md:tracking-[0.34em]">
+    <span className="whitespace-nowrap font-display text-[16px] font-light tracking-[0.18em] text-ink sm:text-[19px] sm:tracking-[0.26em] md:text-[26px] md:tracking-[0.34em]">
       {storeName}
     </span>
   );
@@ -115,7 +115,7 @@ export default function Header({
               <li key={category.slug} className="group/item relative">
                 <Link
                   href={`/category/${category.slug}`}
-                  className="block py-6 text-[17px] tracking-[0.18em] text-ink transition-opacity duration-200 hover:opacity-60"
+                  className="block py-6 text-[18px] tracking-[0.18em] text-ink transition-opacity duration-200 hover:opacity-60"
                 >
                   {category.label}
                 </Link>
@@ -127,7 +127,7 @@ export default function Header({
                         <li key={child.slug}>
                           <Link
                             href={`/category/${category.slug}/${child.slug}`}
-                            className="block whitespace-nowrap px-5 py-2 text-[16px] tracking-[0.12em] text-ink transition-opacity duration-200 hover:opacity-60"
+                            className="block whitespace-nowrap px-5 py-2 text-[17px] tracking-[0.12em] text-ink transition-opacity duration-200 hover:opacity-60"
                           >
                             {child.label}
                           </Link>
@@ -190,7 +190,7 @@ export default function Header({
                 <li key={category.slug} className="border-b border-stone py-4">
                   <Link
                     href={`/category/${category.slug}`}
-                    className="block text-[17px] tracking-[0.16em] text-ink"
+                    className="block text-[18px] tracking-[0.16em] text-ink"
                   >
                     {category.label}
                   </Link>
@@ -201,7 +201,7 @@ export default function Header({
                         <li key={child.slug}>
                           <Link
                             href={`/category/${category.slug}/${child.slug}`}
-                            className="text-[13px] text-muted"
+                            className="text-[14px] text-muted"
                           >
                             {child.label}
                           </Link>
@@ -216,35 +216,35 @@ export default function Header({
             <p className="label-xs mt-10">INFORMATION</p>
             <ul className="mt-4 border-t border-stone">
               <li className="border-b border-stone">
-                <Link href="/products" className="block py-4 text-[16px] text-ink">
+                <Link href="/products" className="block py-4 text-[17px] text-ink">
                   전체 상품
                 </Link>
               </li>
               <li className="border-b border-stone">
-                <Link href="/brands" className="block py-4 text-[16px] text-ink">
+                <Link href="/brands" className="block py-4 text-[17px] text-ink">
                   브랜드 목록
                 </Link>
               </li>
               {mainLinks.map((link) => (
                 <li key={link.href} className="border-b border-stone">
-                  <Link href={link.href} className="block py-4 text-[16px] text-ink">
+                  <Link href={link.href} className="block py-4 text-[17px] text-ink">
                     {link.label}
                   </Link>
                 </li>
               ))}
               <li className="border-b border-stone">
-                <Link href="/order-lookup" className="block py-4 text-[16px] text-ink">
+                <Link href="/order-lookup" className="block py-4 text-[17px] text-ink">
                   주문 조회
                 </Link>
               </li>
               <li className="border-b border-stone">
-                <Link href="/inquiry/new" className="block py-4 text-[16px] text-ink">
+                <Link href="/inquiry/new" className="block py-4 text-[17px] text-ink">
                   1:1 문의
                 </Link>
               </li>
             </ul>
 
-            <p className="mt-10 text-[13px] leading-relaxed text-muted">
+            <p className="mt-10 text-[14px] leading-relaxed text-muted">
               고객센터 {storePhone}
               <br />
               {storeHours}

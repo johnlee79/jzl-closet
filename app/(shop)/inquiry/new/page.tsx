@@ -55,10 +55,10 @@ export default async function NewInquiryPage({ searchParams }: PageProps) {
     <div className="shell py-14 md:py-20">
       <header className="max-w-[680px]">
         <p className="label-xs">INQUIRY</p>
-        <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
+        <h1 className="mt-3 font-serif text-[28px] leading-snug text-ink md:text-[36px]">
           1:1 문의
         </h1>
-        <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
+        <p className="mt-4 text-[17px] leading-[1.9] text-ink md:text-[18px]">
           궁금한 점을 남겨 주시면 영업일 기준 1~2일 안에 답변드립니다.
           {store.kakao.trim() ? ' 급하신 문의는 카카오톡으로 보내 주세요.' : ''}
         </p>
@@ -68,7 +68,7 @@ export default async function NewInquiryPage({ searchParams }: PageProps) {
           </div>
         ) : null}
         {!isMember ? (
-          <p className="mt-3 text-[15px] text-ink">
+          <p className="mt-3 text-[16px] text-ink">
             <Link href="/login?next=/inquiry/new" className="link-wine">
               로그인
             </Link>
@@ -95,7 +95,7 @@ export default async function NewInquiryPage({ searchParams }: PageProps) {
         defaultOrderId={searchParams.order ?? ''}
       />
 
-      <p className="mt-12 border-t border-stone pt-6 text-[13px] leading-relaxed text-muted">
+      <p className="mt-12 border-t border-stone pt-6 text-[14px] leading-relaxed text-muted">
         비회원으로 문의하셨다면{' '}
         <Link href="/inquiry/lookup" className="link-wine">
           문의 조회

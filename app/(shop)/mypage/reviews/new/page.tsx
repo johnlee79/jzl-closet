@@ -35,8 +35,8 @@ export default async function NewReviewPage({ searchParams }: PageProps) {
   if (!reviewable || already) {
     return (
       <section>
-        <h2 className="font-serif text-[20px] text-ink">후기 쓰기</h2>
-        <p className="mt-6 border border-stone px-5 py-4 text-[15px] leading-relaxed text-ink">
+        <h2 className="font-serif text-[22px] text-ink">후기 쓰기</h2>
+        <p className="mt-6 border border-stone px-5 py-4 text-[16px] leading-relaxed text-ink">
           {already
             ? '이미 이 상품의 후기를 남기셨습니다.'
             : '배송이 완료된 주문에만 후기를 남기실 수 있습니다.'}
@@ -50,7 +50,7 @@ export default async function NewReviewPage({ searchParams }: PageProps) {
 
   return (
     <section>
-      <h2 className="font-serif text-[20px] text-ink">후기 쓰기</h2>
+      <h2 className="font-serif text-[22px] text-ink">후기 쓰기</h2>
       <div className="mt-8">
         <ReviewForm
           orderId={order.id}

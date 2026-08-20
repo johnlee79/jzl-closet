@@ -114,20 +114,20 @@ export default function PointPopup() {
     <div className="pointer-events-none fixed inset-0 z-40 flex items-end justify-center p-4 md:items-center">
       <div className="pointer-events-auto w-full max-w-[360px] border border-stone bg-paper">
         <div className="p-6 text-center">
-          <p className="text-[13px] tracking-[0.14em] text-muted">회원님의 보유 포인트</p>
-          <p className="mt-4 font-display text-[40px] leading-none text-ink">
+          <p className="text-[14px] tracking-[0.14em] text-muted">회원님의 보유 포인트</p>
+          <p className="mt-4 text-[40px] font-semibold leading-none tabular-nums text-ink">
             {won(balance)}
-            <span className="ml-1 font-sans text-[18px]">P</span>
+            <span className="ml-1 font-sans text-[19px]">P</span>
           </p>
 
           {expiring > 0 ? (
-            <p className="mt-4 text-[14px] leading-relaxed text-wine">
+            <p className="mt-4 text-[15px] leading-relaxed text-wine">
               30일 내 소멸 예정 {won(expiring)} P
             </p>
           ) : null}
 
           {minUse > 0 ? (
-            <p className="mt-2 text-[13px] leading-relaxed text-muted">
+            <p className="mt-2 text-[14px] leading-relaxed text-muted">
               {won(minUse)}P 이상부터 사용하실 수 있습니다.
             </p>
           ) : null}
@@ -137,14 +137,14 @@ export default function PointPopup() {
           <Link
             href="/products"
             onClick={() => setClosed(true)}
-            className="flex min-h-[48px] items-center justify-center border-r border-stone text-[14px] tracking-[0.1em] text-ink"
+            className="flex min-h-[48px] items-center justify-center border-r border-stone text-[15px] tracking-[0.1em] text-ink"
           >
             쇼핑하러 가기
           </Link>
           <button
             type="button"
             onClick={() => setClosed(true)}
-            className="flex min-h-[48px] items-center justify-center text-[14px] tracking-[0.1em] text-muted"
+            className="flex min-h-[48px] items-center justify-center text-[15px] tracking-[0.1em] text-muted"
           >
             닫기
           </button>

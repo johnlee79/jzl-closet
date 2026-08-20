@@ -48,10 +48,10 @@ export default function OrderReceipt({
           <h2 id="status-heading" className="label-xs">
             주문 상태
           </h2>
-          <p className="mt-3 font-serif text-[22px] text-ink md:text-[26px]">
+          <p className="mt-3 font-serif text-[24px] text-ink md:text-[28px]">
             {payment.title}
           </p>
-          <p className="mt-2 text-[16px] leading-[1.8] text-ink">{payment.body}</p>
+          <p className="mt-2 text-[17px] leading-[1.8] text-ink">{payment.body}</p>
 
           {/*
             카드 승인 정보 (4-A)
@@ -60,7 +60,7 @@ export default function OrderReceipt({
             ★ 무통장입금에는 나오지 않습니다. (승인번호가 없습니다)
           */}
           {payment.view === 'paid' && order.pgAuthNo ? (
-            <dl className="mt-6 flex flex-col gap-2.5 border-t border-stone pt-5 text-[16px]">
+            <dl className="mt-6 flex flex-col gap-2.5 border-t border-stone pt-5 text-[17px]">
               <div className="flex justify-between gap-4">
                 <dt className="text-muted">결제수단</dt>
                 {/* ★ 카드사명까지 보여 줍니다. 손님이 어느 카드로 결제했는지 바로 압니다. */}
@@ -83,7 +83,7 @@ export default function OrderReceipt({
 
           {order.trackingNo ? (
             <div className="mt-6 border-t border-stone pt-5">
-              <p className="text-[15px] text-ink">
+              <p className="text-[16px] text-ink">
                 {courierName(order.courier)} · {order.trackingNo}
               </p>
               {tracking ? (
@@ -110,12 +110,12 @@ export default function OrderReceipt({
           <h2 id="bank-heading" className="label-xs">
             입금 계좌
           </h2>
-          <p className="mt-3 font-sans text-[22px] font-semibold leading-snug tabular-nums text-ink md:text-[26px]">
+          <p className="mt-3 font-sans text-[24px] font-semibold leading-snug tabular-nums text-ink md:text-[28px]">
             {bank.bankName} {bank.accountNo}
           </p>
-          <p className="mt-1.5 text-[16px] text-ink">예금주 {bank.accountHolder}</p>
+          <p className="mt-1.5 text-[17px] text-ink">예금주 {bank.accountHolder}</p>
 
-          <dl className="mt-6 flex flex-col gap-2.5 border-t border-stone pt-5 text-[16px]">
+          <dl className="mt-6 flex flex-col gap-2.5 border-t border-stone pt-5 text-[17px]">
             <div className="flex justify-between gap-4">
               <dt className="text-muted">입금 금액</dt>
               <dd className="font-medium text-ink">{formatPrice(order.totalAmount)}원</dd>
@@ -130,7 +130,7 @@ export default function OrderReceipt({
             </div>
           </dl>
 
-          <p className="mt-5 text-[14px] leading-[1.8] text-muted">
+          <p className="mt-5 text-[15px] leading-[1.8] text-muted">
             기한 안에 입금이 확인되지 않으면 주문이 자동으로 취소될 수 있습니다. 입금자명이
             주문자와 다르면 고객센터로 알려 주세요.
           </p>
@@ -141,7 +141,7 @@ export default function OrderReceipt({
       <section aria-labelledby="items-heading">
         <h2
           id="items-heading"
-          className="border-b border-stone pb-4 font-serif text-[18px] text-ink"
+          className="border-b border-stone pb-4 font-serif text-[19px] text-ink"
         >
           주문 상품
         </h2>
@@ -150,21 +150,21 @@ export default function OrderReceipt({
             <li key={item.id} className="flex gap-4 border-b border-stone py-5">
               <div className="flex min-w-0 flex-1 flex-col justify-center">
                 {item.brandLabel ? (
-                  <p className="text-[12px] tracking-[0.16em] text-muted">
+                  <p className="text-[13px] tracking-[0.16em] text-muted">
                     {item.brandLabel}
                   </p>
                 ) : null}
                 <Link
                   href={`/products/${item.productSlug}`}
-                  className="mt-1 text-[16px] font-medium leading-snug text-ink"
+                  className="mt-1 text-[17px] font-medium leading-snug text-ink"
                 >
                   {item.productName}
                 </Link>
-                <p className="mt-1 text-[14px] text-muted">
+                <p className="mt-1 text-[15px] text-muted">
                   {item.optionKey || '옵션 없음'} · {item.quantity}개
                 </p>
               </div>
-              <p className="self-center whitespace-nowrap text-[16px] font-medium tabular-nums text-ink">
+              <p className="self-center whitespace-nowrap text-[17px] font-medium tabular-nums text-ink">
                 {formatPrice(item.lineTotal)}원
               </p>
             </li>
@@ -176,19 +176,19 @@ export default function OrderReceipt({
               className="flex gap-4 border-b border-stone py-5 text-muted line-through"
             >
               <div className="flex min-w-0 flex-1 flex-col justify-center">
-                <p className="font-serif text-[16px] leading-snug">{item.productName}</p>
-                <p className="mt-1 text-[13px]">
+                <p className="text-[17px] font-medium leading-snug">{item.productName}</p>
+                <p className="mt-1 text-[14px]">
                   {item.optionKey || '옵션 없음'} · {item.quantity}개 · 취소됨
                 </p>
               </div>
-              <p className="self-center whitespace-nowrap text-[15px]">
+              <p className="self-center whitespace-nowrap text-[16px]">
                 {formatPrice(item.lineTotal)}원
               </p>
             </li>
           ))}
         </ul>
 
-        <dl className="mt-6 flex flex-col gap-3 text-[15px]">
+        <dl className="mt-6 flex flex-col gap-3 text-[16px]">
           <div className="flex justify-between">
             <dt className="text-muted">상품 합계</dt>
             <dd className="text-ink">{formatPrice(order.itemsTotal)}원</dd>
@@ -214,10 +214,10 @@ export default function OrderReceipt({
         </dl>
 
         <div className="mt-5 flex items-baseline justify-between border-t border-stone pt-5">
-          <span className="text-[13px] tracking-[0.14em] text-muted">총 결제금액</span>
-          <span className="font-display text-[26px] font-medium tracking-wide text-ink">
+          <span className="text-[14px] tracking-[0.14em] text-muted">총 결제금액</span>
+          <span className="text-[28px] font-semibold tabular-nums tracking-tight text-ink">
             {formatPrice(order.totalAmount)}
-            <span className="ml-1 font-sans text-[15px]">원</span>
+            <span className="ml-1 font-sans text-[16px]">원</span>
           </span>
         </div>
       </section>
@@ -226,11 +226,11 @@ export default function OrderReceipt({
       <section aria-labelledby="delivery-heading">
         <h2
           id="delivery-heading"
-          className="border-b border-stone pb-4 font-serif text-[18px] text-ink"
+          className="border-b border-stone pb-4 font-serif text-[19px] text-ink"
         >
           배송 정보
         </h2>
-        <dl className="mt-5 flex flex-col gap-3 text-[15px] leading-relaxed">
+        <dl className="mt-5 flex flex-col gap-3 text-[16px] leading-relaxed">
           <div className="flex gap-4">
             <dt className="w-24 shrink-0 text-muted">받는 분</dt>
             <dd className="text-ink">

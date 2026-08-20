@@ -58,7 +58,7 @@ export default function TopRibbon({
     }
   };
 
-  const body = <span className="text-[13px] tracking-[0.06em]">{text}</span>;
+  const body = <span className="text-[14px] tracking-[0.06em]">{text}</span>;
 
   return (
     <div className={`relative ${TONE_CLASS[tone] ?? TONE_CLASS.ink}`}>

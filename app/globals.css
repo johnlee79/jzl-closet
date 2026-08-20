@@ -10,7 +10,14 @@
   --ink: #14141a;
   --paper: #f6f5f2;
   --stone: #dbd7d1;
-  --muted: #55524e; /* 보조 텍스트 — 캡션·라벨 전용. 본문은 ink 를 쓴다 */
+  /*
+   * 보조 텍스트 — 캡션·라벨 전용. 본문은 ink 를 쓴다.
+   * ★ 예전 값 #55524e 는 종이색 대비 7.1:1 로 기준은 넘었지만,
+   *   12~14px 작은 글씨에 쓰이다 보니 흐리다는 지적이 있었습니다.
+   *   9.0:1 로 진하게 바꿉니다. ink(#14141a) 보다는 여전히 옅어
+   *   본문과 보조 글자의 구분은 그대로 남습니다.
+   */
+  --muted: #46433e;
   --wine: #6a2e3c;
 
   /* ============================================================
@@ -68,7 +75,7 @@
     color: var(--ink);
     /* 가변 폰트를 먼저 두어 450 굵기가 실제로 적용되게 한다 */
     font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 450;
     line-height: 1.75;
     -webkit-font-smoothing: antialiased;
@@ -78,7 +85,7 @@
 
   @media (min-width: 768px) {
     body {
-      font-size: 17px;
+      font-size: 18px;
     }
   }
 
@@ -107,11 +114,11 @@
 
   /* 터치 영역 최소 44px 확보 */
   .btn-primary {
-    @apply inline-flex min-h-[52px] items-center justify-center rounded-sm bg-ink px-10 py-4 text-[15px] tracking-[0.14em] text-paper transition-opacity duration-200 hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30;
+    @apply inline-flex min-h-[52px] items-center justify-center rounded-sm bg-ink px-10 py-4 text-[16px] tracking-[0.14em] text-paper transition-opacity duration-200 hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30;
   }
 
   .btn-secondary {
-    @apply inline-flex min-h-[52px] items-center justify-center rounded-sm border border-ink bg-transparent px-10 py-4 text-[15px] tracking-[0.14em] text-ink transition-colors duration-200 hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:opacity-30;
+    @apply inline-flex min-h-[52px] items-center justify-center rounded-sm border border-ink bg-transparent px-10 py-4 text-[16px] tracking-[0.14em] text-ink transition-colors duration-200 hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:opacity-30;
   }
 
   /*
@@ -123,7 +130,7 @@
       컴포넌트 레이어를 이겨서, .btn-row 가 좁은 화면에서 여백을 못 줄입니다.
   */
   .btn-kakao {
-    @apply inline-flex min-h-[52px] items-center justify-center gap-2 rounded-sm px-8 py-4 text-[15px] tracking-[0.14em] transition-opacity duration-200 hover:opacity-90;
+    @apply inline-flex min-h-[52px] items-center justify-center gap-2 rounded-sm px-8 py-4 text-[16px] tracking-[0.14em] transition-opacity duration-200 hover:opacity-90;
   }
 
   /* ============================================================
@@ -164,7 +171,7 @@
   }
 
   .btn-row > * {
-    @apply min-w-0 flex-1 break-words break-keep px-3 text-center text-[13px] leading-snug tracking-normal sm:px-6 sm:text-[14px] sm:tracking-[0.1em] md:px-8 md:text-[15px] md:tracking-[0.14em];
+    @apply min-w-0 flex-1 break-words break-keep px-3 text-center text-[14px] leading-snug tracking-normal sm:px-6 sm:text-[15px] sm:tracking-[0.1em] md:px-8 md:text-[16px] md:tracking-[0.14em];
   }
 
   .btn-row > *:only-child {
@@ -367,7 +374,7 @@
   }
 
   .label-xs {
-    @apply text-[13px] uppercase tracking-[0.22em] text-muted;
+    @apply text-[14px] uppercase tracking-[0.22em] text-muted;
   }
 
   .link-wine {
@@ -451,8 +458,9 @@
        관리자는 업무 도구, 고객 화면은 브랜드 얼굴이라 의도적으로 다르게 갑니다. */
     font-family: 'Pretendard Variable', Pretendard, ui-sans-serif, system-ui,
       'Segoe UI', 'Malgun Gothic', sans-serif;
+    font-size: 15px;
     font-weight: 400;
-    line-height: 1.5;
+    line-height: 1.55;
     letter-spacing: 0;
     background-color: var(--admin-bg);
     color: var(--admin-text);
@@ -479,12 +487,12 @@
   }
 
   .admin-label {
-    @apply mb-1 block text-[13px] font-medium;
+    @apply mb-1 block text-[14px] font-medium;
     color: var(--admin-sub);
   }
 
   .admin-input {
-    @apply w-full rounded-md border px-3 py-2 text-[14px] outline-none transition-colors focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:opacity-60;
+    @apply w-full rounded-md border px-3 py-2 text-[15px] outline-none transition-colors focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:opacity-60;
     border-color: var(--admin-border-strong);
     background-color: var(--admin-card);
     color: var(--admin-text);
@@ -495,7 +503,7 @@
   }
 
   .admin-btn {
-    @apply inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-[14px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-[15px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
     border-color: var(--admin-border-strong);
     background-color: var(--admin-card);
     color: var(--admin-sub);
@@ -506,16 +514,16 @@
   }
 
   .admin-btn-primary {
-    @apply inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md border border-blue-700 bg-blue-700 px-4 py-2 text-[14px] font-semibold text-white transition-colors hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md border border-blue-700 bg-blue-700 px-4 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .admin-btn-danger {
-    @apply inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md border border-red-300 px-3 py-2 text-[14px] font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md border border-red-300 px-3 py-2 text-[15px] font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50;
     background-color: var(--admin-card);
   }
 
   .admin-badge {
-    @apply inline-flex items-center rounded px-2 py-0.5 text-[12px] font-medium;
+    @apply inline-flex items-center rounded px-2 py-0.5 text-[13px] font-medium;
   }
 }
 

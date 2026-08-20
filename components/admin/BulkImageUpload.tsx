@@ -75,7 +75,7 @@ export default function BulkImageUpload({
         dragOver ? 'border-blue-600 bg-blue-50' : 'border-slate-300 bg-slate-50'
       }`}
     >
-      <p className="text-[14px] text-slate-600">{label}</p>
+      <p className="text-[15px] text-slate-600">{label}</p>
 
       <button
         type="button"
@@ -95,7 +95,7 @@ export default function BulkImageUpload({
         className="hidden"
       />
 
-      <p className="mt-2 text-[12px] leading-relaxed text-slate-500">
+      <p className="mt-2 text-[13px] leading-relaxed text-slate-500">
         {hint} jpg · png · webp · gif / 한 장당 20MB까지. 올리면 자동으로 webp 로
         최적화됩니다.
       </p>
@@ -114,7 +114,7 @@ export default function BulkImageUpload({
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="mt-1 text-[12px] text-slate-600">
+          <p className="mt-1 text-[13px] text-slate-600">
             {count}장 · {progress}%
             {progress === 100 ? ' — 이미지 변환 중…' : ''}
           </p>
@@ -122,7 +122,7 @@ export default function BulkImageUpload({
       ) : null}
 
       {error ? (
-        <p role="alert" className="mt-2 text-[13px] text-red-700">
+        <p role="alert" className="mt-2 text-[14px] text-red-700">
           {error}
         </p>
       ) : null}

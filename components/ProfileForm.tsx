@@ -18,7 +18,7 @@ import { useSave } from '@/lib/use-save';
 const TODAY = new Date().toISOString().slice(0, 10);
 
 const inputClass =
-  'mt-2 w-full min-h-[48px] border border-stone bg-transparent px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-muted focus:border-ink';
+  'mt-2 w-full min-h-[48px] border border-stone bg-transparent px-4 py-3 text-[16px] text-ink outline-none transition-colors placeholder:text-muted focus:border-ink';
 
 export default function ProfileForm({
   initial,
@@ -122,17 +122,17 @@ export default function ProfileForm({
     <div className="flex flex-col gap-16">
       {/* ── 기본 정보 ─────────────────────────────────── */}
       <form onSubmit={save} noValidate>
-        <h2 className="border-b border-stone pb-4 font-serif text-[20px] text-ink">
+        <h2 className="border-b border-stone pb-4 font-serif text-[22px] text-ink">
           기본 정보
         </h2>
 
         <div className="mt-6 flex max-w-[520px] flex-col gap-5">
           <div>
             <span className="label-xs block">이메일</span>
-            <p className="mt-2 min-h-[48px] border border-stone px-4 py-3 text-[15px] text-muted">
+            <p className="mt-2 min-h-[48px] border border-stone px-4 py-3 text-[16px] text-muted">
               {email}
             </p>
-            <p className="mt-2 text-[13px] text-muted">
+            <p className="mt-2 text-[14px] text-muted">
               이메일(로그인 아이디)은 바꿀 수 없습니다. 변경이 필요하시면 고객센터로 문의해
               주세요.
             </p>
@@ -207,7 +207,7 @@ export default function ProfileForm({
             {manualAddress ? (
               <p
                 role="alert"
-                className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-wine"
+                className="mt-2 whitespace-pre-line text-[14px] leading-relaxed text-wine"
               >
                 {postcodeFallbackNotice(store.phone)}
               </p>
@@ -242,12 +242,12 @@ export default function ProfileForm({
               onChange={(event) => set('birthday', event.target.value)}
               className={inputClass}
             />
-            <p className="mt-2 text-[13px] text-muted">
+            <p className="mt-2 text-[14px] text-muted">
               생일에 축하 포인트를 드립니다. 적어 두지 않으시면 지급되지 않습니다.
             </p>
           </div>
 
-          <label className="flex cursor-pointer items-center gap-3 text-[15px] text-ink">
+          <label className="flex cursor-pointer items-center gap-3 text-[16px] text-ink">
             <input
               type="checkbox"
               checked={form.agreeMarketing}
@@ -269,13 +269,13 @@ export default function ProfileForm({
       {/* ── 로그인 방식 (간편가입) ────────────────────── */}
       {isSocial ? (
         <section>
-          <h2 className="border-b border-stone pb-4 font-serif text-[20px] text-ink">
+          <h2 className="border-b border-stone pb-4 font-serif text-[22px] text-ink">
             로그인 방식
           </h2>
-          <p className="mt-6 text-[15px] leading-relaxed text-ink">
+          <p className="mt-6 text-[16px] leading-relaxed text-ink">
             {providerName} 계정으로 로그인 중입니다{email ? ` (${email})` : ''}
           </p>
-          <p className="mt-3 max-w-[520px] text-[14px] leading-relaxed text-muted">
+          <p className="mt-3 max-w-[520px] text-[15px] leading-relaxed text-muted">
             비밀번호 없이 소셜 계정으로 로그인하고 있어 따로 관리할 비밀번호가 없습니다.
           </p>
         </section>
@@ -284,10 +284,10 @@ export default function ProfileForm({
       {/* ── 비밀번호 변경 (이메일 가입 회원만) ─────────── */}
       {isSocial ? null : (
       <form onSubmit={changePassword} noValidate>
-        <h2 className="border-b border-stone pb-4 font-serif text-[20px] text-ink">
+        <h2 className="border-b border-stone pb-4 font-serif text-[22px] text-ink">
           비밀번호 변경
         </h2>
-        <p className="mt-4 text-[14px] leading-relaxed text-muted">
+        <p className="mt-4 text-[15px] leading-relaxed text-muted">
           8자 이상, 영문과 숫자를 모두 포함해 주세요.
         </p>
 

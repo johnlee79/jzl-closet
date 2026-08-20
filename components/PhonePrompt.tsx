@@ -45,16 +45,16 @@ export default function PhonePrompt({
   if (variant === 'inline') {
     return (
       <div className="mb-8 flex flex-wrap items-center justify-between gap-3 border border-stone bg-stone/20 px-5 py-4">
-        <p className="text-[15px] leading-relaxed text-ink">
+        <p className="text-[16px] leading-relaxed text-ink">
           주문을 위해 연락처를 입력해 주세요.
-          <span className="mt-1 block text-[13px] text-muted">
+          <span className="mt-1 block text-[14px] text-muted">
             배송 안내와 주문 확인 문자를 받으실 번호입니다.
           </span>
         </p>
         <div className="flex shrink-0 items-center gap-3">
           <Link
             href="/mypage/profile"
-            className="inline-flex min-h-[44px] items-center border border-ink px-5 text-[14px] text-ink transition-colors hover:bg-ink hover:text-paper"
+            className="inline-flex min-h-[44px] items-center border border-ink px-5 text-[15px] text-ink transition-colors hover:bg-ink hover:text-paper"
           >
             입력하기
           </Link>
@@ -62,7 +62,7 @@ export default function PhonePrompt({
             type="button"
             onClick={dismiss}
             aria-label="안내 닫기"
-            className="text-[13px] text-muted underline underline-offset-4"
+            className="text-[14px] text-muted underline underline-offset-4"
           >
             나중에
           </button>
@@ -74,11 +74,11 @@ export default function PhonePrompt({
   return (
     <div className="border-b border-stone bg-stone/25">
       <div className="shell flex flex-wrap items-center justify-between gap-3 py-3">
-        <p className="text-[14px] leading-relaxed text-ink">
+        <p className="text-[15px] leading-relaxed text-ink">
           주문을 위해 연락처를 입력해 주세요.
         </p>
         <div className="flex shrink-0 items-center gap-4">
-          <Link href="/mypage/profile" className="link-wine text-[14px]">
+          <Link href="/mypage/profile" className="link-wine text-[15px]">
             입력하기
           </Link>
           <button

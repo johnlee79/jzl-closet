@@ -113,18 +113,18 @@ export default async function HomePage() {
           <div className={`max-w-[640px] ${banners.length > 0 ? 'mt-10 md:mt-14' : ''}`}>
             <h1
               id="hero-title"
-              className="font-display text-[38px] font-light leading-none tracking-[0.24em] text-ink md:text-[56px]"
+              className="font-display text-[40px] font-light leading-none tracking-[0.24em] text-ink md:text-[56px]"
             >
               {store.name}
             </h1>
             {hero?.heading ? (
-              <p className="mt-5 font-serif text-[18px] leading-relaxed text-ink md:text-[22px]">
+              <p className="mt-5 font-serif text-[19px] leading-relaxed text-ink md:text-[24px]">
                 {hero.heading}
               </p>
             ) : null}
             {hero?.html ? (
               <div
-                className="detail-body mt-4 text-[16px] leading-relaxed text-ink md:text-[17px]"
+                className="detail-body mt-4 text-[17px] leading-relaxed text-ink md:text-[18px]"
                 dangerouslySetInnerHTML={{ __html: hero.html }}
               />
             ) : null}
@@ -160,14 +160,14 @@ export default async function HomePage() {
               <p className="label-xs">NEW ARRIVAL</p>
               <h2
                 id="new-title"
-                className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[30px]"
+                className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[32px]"
               >
                 이번에 새로 들어온 것
               </h2>
             </div>
             <Link
               href="/products"
-              className="shrink-0 text-[13px] tracking-[0.14em] text-muted underline underline-offset-4"
+              className="shrink-0 text-[14px] tracking-[0.14em] text-muted underline underline-offset-4"
             >
               전체 보기
             </Link>
@@ -189,7 +189,7 @@ export default async function HomePage() {
             <p className="label-xs">OUR STORY</p>
             <h2
               id="story-title"
-              className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[30px]"
+              className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[32px]"
             >
               {story[0]?.heading || '오래 쓰는 쪽을 택합니다'}
             </h2>
@@ -202,7 +202,7 @@ export default async function HomePage() {
             {story.map((block, index) => (
               <div
                 key={index}
-                className="detail-body text-[16px] leading-[2.1] text-ink md:text-[17px]"
+                className="detail-body text-[17px] leading-[2.1] text-ink md:text-[18px]"
                 dangerouslySetInnerHTML={{ __html: block.html }}
               />
             ))}
@@ -225,14 +225,14 @@ export default async function HomePage() {
           {categoryHead.heading ? (
             <h2
               id="category-title"
-              className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[30px]"
+              className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[32px]"
             >
               {categoryHead.heading}
             </h2>
           ) : null}
           {categoryHead.html ? (
             <div
-              className="detail-body mt-4 max-w-[640px] text-[16px] leading-[1.9] text-ink"
+              className="detail-body mt-4 max-w-[640px] text-[17px] leading-[1.9] text-ink"
               dangerouslySetInnerHTML={{ __html: categoryHead.html }}
             />
           ) : null}
@@ -277,10 +277,10 @@ export default async function HomePage() {
                     ) : (
                       <div className="border-t border-stone pt-1" aria-hidden="true" />
                     )}
-                    <h3 className="mt-4 font-serif text-[19px] text-ink">
+                    <h3 className="mt-4 font-serif text-[20px] text-ink">
                       {category.nameKo}
                     </h3>
-                    <p className="mt-1 text-[13px] tracking-[0.14em] text-muted">
+                    <p className="mt-1 text-[14px] tracking-[0.14em] text-muted">
                       {category.label} · {count}개 상품
                     </p>
                   </Link>
@@ -292,7 +292,7 @@ export default async function HomePage() {
                         <li key={child.slug}>
                           <Link
                             href={`/category/${category.slug}/${child.slug}`}
-                            className="text-[13px] text-muted underline-offset-4 hover:text-ink hover:underline"
+                            className="text-[14px] text-muted underline-offset-4 hover:text-ink hover:underline"
                           >
                             {child.label}
                           </Link>

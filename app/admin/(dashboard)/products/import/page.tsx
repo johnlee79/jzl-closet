@@ -22,8 +22,8 @@ export default async function AdminProductImportPage() {
 
   return (
     <div className="mx-auto w-full max-w-[900px]">
-      <h1 className="text-[20px] font-semibold text-slate-900">상품 가져오기</h1>
-      <p className="mt-1 text-[13px] leading-relaxed text-slate-600">
+      <h1 className="text-[22px] font-semibold text-slate-900">상품 가져오기</h1>
+      <p className="mt-1 text-[14px] leading-relaxed text-slate-600">
         셀스타 상품 주소를 넣으면 정보와 이미지를 가져옵니다. 이미지는 우리 저장소로
         복사해 두므로 셀스타에서 바뀌어도 상품 페이지가 깨지지 않습니다.
       </p>

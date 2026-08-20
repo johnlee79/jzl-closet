@@ -75,8 +75,8 @@ export default function BannerManager({ initial }: { initial: DesignSettings }) 
   return (
     <div className="flex flex-col gap-5">
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[16px] font-semibold text-slate-900">자동 슬라이드</h2>
-        <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+        <h2 className="text-[17px] font-semibold text-slate-900">자동 슬라이드</h2>
+        <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
           배너는 상품 이미지와 달리 천천히 넘어가야 읽힙니다. 기본값은{' '}
           {DEFAULT_BANNER_INTERVAL / 1000}초입니다.
           {visibleCount <= 1
@@ -100,7 +100,7 @@ export default function BannerManager({ initial }: { initial: DesignSettings }) 
               className="admin-input tabular-nums"
             />
           </div>
-          <p className="pb-2 text-[13px] text-slate-600">
+          <p className="pb-2 text-[14px] text-slate-600">
             = {(interval / 1000).toFixed(1)}초 · {MIN_BANNER_INTERVAL / 1000}~
             {MAX_BANNER_INTERVAL / 1000}초 사이로 넣어 주세요.
           </p>
@@ -110,10 +110,10 @@ export default function BannerManager({ initial }: { initial: DesignSettings }) 
       <section className="admin-card p-4 md:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="text-[16px] font-semibold text-slate-900">
+            <h2 className="text-[17px] font-semibold text-slate-900">
               메인 배너 {banners.length}/{MAX_BANNERS}
             </h2>
-            <p className="mt-1 text-[13px] text-slate-500">
+            <p className="mt-1 text-[14px] text-slate-500">
               권장 사이즈 — PC {BANNER_SIZE_PC} · 모바일 {BANNER_SIZE_MOBILE}
             </p>
           </div>
@@ -128,7 +128,7 @@ export default function BannerManager({ initial }: { initial: DesignSettings }) 
         </div>
 
         {banners.length === 0 ? (
-          <p className="mt-4 rounded-md bg-slate-50 px-3 py-4 text-[13px] leading-relaxed text-slate-600">
+          <p className="mt-4 rounded-md bg-slate-50 px-3 py-4 text-[14px] leading-relaxed text-slate-600">
             등록된 배너가 없습니다. 배너를 하나도 넣지 않으면 첫 화면은 큰 사진 없이
             브랜드명부터 시작합니다. (3-K 에서 바꿨습니다 — 예전에는 없는 파일을
             가리키느라 회색 상자만 남았습니다)
@@ -150,12 +150,12 @@ export default function BannerManager({ initial }: { initial: DesignSettings }) 
                       dragIndex.current = index;
                     }}
                     title="끌어서 순서 변경"
-                    className="cursor-move select-none text-[14px] font-semibold text-slate-700"
+                    className="cursor-move select-none text-[15px] font-semibold text-slate-700"
                   >
                     ≡ 배너 {index + 1}
                   </span>
                   <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-2 text-[13px] text-slate-700">
+                    <label className="flex items-center gap-2 text-[14px] text-slate-700">
                       <input
                         type="checkbox"
                         checked={banner.isVisible}
@@ -257,7 +257,7 @@ export default function BannerManager({ initial }: { initial: DesignSettings }) 
                       placeholder="/products"
                       className="admin-input"
                     />
-                    <p className="mt-1 text-[12px] text-slate-500">
+                    <p className="mt-1 text-[13px] text-slate-500">
                       사이트 안이면 /products 처럼, 밖이면 https:// 로 시작해 주세요.
                     </p>
                   </div>
@@ -271,7 +271,7 @@ export default function BannerManager({ initial }: { initial: DesignSettings }) 
       {message ? (
         <p
           role="status"
-          className={`rounded-md px-3 py-2 text-[14px] ${
+          className={`rounded-md px-3 py-2 text-[15px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >

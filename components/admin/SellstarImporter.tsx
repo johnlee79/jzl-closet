@@ -500,8 +500,8 @@ export default function SellstarImporter({
     <div className="flex flex-col gap-5">
       {/* ── 주소 입력 ─────────────────────────────────── */}
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[16px] font-semibold text-slate-900">셀스타 상품 주소</h2>
-        <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+        <h2 className="text-[17px] font-semibold text-slate-900">셀스타 상품 주소</h2>
+        <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
           전체 주소(https://sellstar.kr/marquenco/product/188)와 번호(188) 둘 다 됩니다.
         </p>
 
@@ -532,7 +532,7 @@ export default function SellstarImporter({
         {message ? (
           <p
             role="status"
-            className={`mt-3 rounded-md px-3 py-2 text-[14px] ${
+            className={`mt-3 rounded-md px-3 py-2 text-[15px] ${
               message.tone === 'ok'
                 ? 'bg-green-50 text-green-800'
                 : 'bg-red-50 text-red-700'
@@ -543,7 +543,7 @@ export default function SellstarImporter({
         ) : null}
 
         {existing ? (
-          <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-[13px] leading-relaxed text-amber-900">
+          <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-[14px] leading-relaxed text-amber-900">
             ★ 이미 등록된 상품입니다 —{' '}
             <Link href={`/admin/products?q=${existing.slug}`} className="underline">
               {existing.name}
@@ -554,7 +554,7 @@ export default function SellstarImporter({
         ) : null}
 
         {warnings.length > 0 ? (
-          <ul className="mt-3 flex flex-col gap-1 rounded-md bg-amber-50 px-3 py-2 text-[13px] text-amber-900">
+          <ul className="mt-3 flex flex-col gap-1 rounded-md bg-amber-50 px-3 py-2 text-[14px] text-amber-900">
             {warnings.map((warning) => (
               <li key={warning}>· {warning}</li>
             ))}
@@ -566,7 +566,7 @@ export default function SellstarImporter({
         <>
           {/* ── 기본 정보 ─────────────────────────────── */}
           <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[16px] font-semibold text-slate-900">기본 정보</h2>
+            <h2 className="text-[17px] font-semibold text-slate-900">기본 정보</h2>
 
             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="md:col-span-2">
@@ -588,7 +588,7 @@ export default function SellstarImporter({
               </div>
 
               {/* 셀스타 가격은 참고용입니다. */}
-              <div className="md:col-span-2 rounded-md bg-slate-50 px-3 py-2 text-[13px] text-slate-700">
+              <div className="md:col-span-2 rounded-md bg-slate-50 px-3 py-2 text-[14px] text-slate-700">
                 셀스타 정가 <strong>{formatPrice(sellstarPrice)}원</strong> · 판매가{' '}
                 <strong>{formatPrice(sellstarSalePrice)}원</strong>
                 <span className="ml-2 text-slate-500">(참고용)</span>
@@ -615,12 +615,12 @@ export default function SellstarImporter({
                           Math.round((sellstarSalePrice * (100 + percent)) / 100 / 100) * 100
                         )
                       }
-                      className="admin-btn min-h-0 px-2 py-1 text-[13px]"
+                      className="admin-btn min-h-0 px-2 py-1 text-[14px]"
                     >
                       +{percent}%
                     </button>
                   ))}
-                  <span className="self-center text-[12px] text-slate-500">
+                  <span className="self-center text-[13px] text-slate-500">
                     셀스타 판매가 기준 · 100원 단위
                   </span>
                 </div>
@@ -639,7 +639,7 @@ export default function SellstarImporter({
                   }
                   className={`${inputClass} tabular-nums`}
                 />
-                <p className="mt-1 text-[12px] text-slate-500">
+                <p className="mt-1 text-[13px] text-slate-500">
                   판매가보다 크면 할인 표시가 붙습니다.
                 </p>
               </div>
@@ -743,16 +743,16 @@ export default function SellstarImporter({
           {/* ── 옵션 · 재고 ───────────────────────────── */}
           {groups.length > 0 ? (
             <section className="admin-card p-4 md:p-5">
-              <h2 className="text-[16px] font-semibold text-slate-900">옵션 · 재고</h2>
-              <p className="mt-1 text-[13px] text-slate-500">
+              <h2 className="text-[17px] font-semibold text-slate-900">옵션 · 재고</h2>
+              <p className="mt-1 text-[14px] text-slate-500">
                 {groups.map((group) => `${group.name}(${group.values.length})`).join(' · ')} —
                 조합 {variants.length}개. 재고와 품절은 여기서 고칠 수 있습니다.
               </p>
 
               <div className="mt-3 overflow-x-auto">
-                <table className="w-full min-w-[420px] border-collapse text-[14px]">
+                <table className="w-full min-w-[420px] border-collapse text-[15px]">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-left text-[13px] text-slate-600">
+                    <tr className="border-b border-slate-200 bg-slate-50 text-left text-[14px] text-slate-600">
                       <th scope="col" className="px-3 py-2 font-medium">조합</th>
                       <th scope="col" className="px-3 py-2 text-right font-medium">재고</th>
                       <th scope="col" className="px-3 py-2 font-medium">품절</th>
@@ -802,7 +802,7 @@ export default function SellstarImporter({
                   </tbody>
                 </table>
               </div>
-              <p className="mt-2 text-[12px] text-slate-500">
+              <p className="mt-2 text-[13px] text-slate-500">
                 재고를 비워 두면 수량을 관리하지 않고 품절 체크만 씁니다.
               </p>
             </section>
@@ -810,12 +810,12 @@ export default function SellstarImporter({
 
           {/* ── 배송 ──────────────────────────────────── */}
           <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[16px] font-semibold text-slate-900">배송 · 반품</h2>
-            <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[13px] leading-relaxed text-slate-700">
+            <h2 className="text-[17px] font-semibold text-slate-900">배송 · 반품</h2>
+            <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[14px] leading-relaxed text-slate-700">
               셀스타 값 — {shippingNote}
             </p>
 
-            <label className="mt-3 flex items-start gap-2 text-[14px] text-slate-800">
+            <label className="mt-3 flex items-start gap-2 text-[15px] text-slate-800">
               <input
                 type="checkbox"
                 checked={!useOwnShipping}
@@ -824,7 +824,7 @@ export default function SellstarImporter({
               />
               <span>
                 우리 공통 배송·판매정보 설정을 씁니다 (권장)
-                <span className="mt-1 block text-[12px] leading-relaxed text-slate-500">
+                <span className="mt-1 block text-[13px] leading-relaxed text-slate-500">
                   설정 &gt; 판매정보 · 배송·반품 값이 전 상품에 함께 적용됩니다. 셀스타
                   값과 다르면 우리 설정이 우선입니다.
                 </span>
@@ -832,13 +832,13 @@ export default function SellstarImporter({
             </label>
 
             {useOwnShipping ? (
-              <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-[12px] leading-relaxed text-amber-900">
+              <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-[13px] leading-relaxed text-amber-900">
                 상품별 배송 설정은 아직 만들지 않았습니다. 지금은 무료배송 여부만
                 상품에 저장되고, 나머지 안내는 공통 설정을 씁니다.
               </p>
             ) : null}
 
-            <label className="mt-3 flex items-center gap-2 text-[14px] text-slate-800">
+            <label className="mt-3 flex items-center gap-2 text-[15px] text-slate-800">
               <input
                 type="checkbox"
                 checked={freeShipping}
@@ -851,10 +851,10 @@ export default function SellstarImporter({
 
           {/* ── 대표 이미지 ───────────────────────────── */}
           <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[16px] font-semibold text-slate-900">
+            <h2 className="text-[17px] font-semibold text-slate-900">
               대표 이미지 ({galleryRows.filter((row) => row.checked).length}/{galleryRows.length})
             </h2>
-            <p className="mt-1 text-[13px] text-slate-500">
+            <p className="mt-1 text-[14px] text-slate-500">
               체크한 것만 등록합니다. 맨 앞이 목록에 나오는 대표 이미지입니다.
             </p>
 
@@ -862,7 +862,7 @@ export default function SellstarImporter({
               {galleryRows.map((row, index) =>
                 row.kind === 'image' ? (
                   <li key={row.key} className="rounded-md border border-slate-200 bg-white">
-                    <label className="flex cursor-pointer items-center gap-1.5 px-2 py-1.5 text-[12px] text-slate-700">
+                    <label className="flex cursor-pointer items-center gap-1.5 px-2 py-1.5 text-[13px] text-slate-700">
                       <input
                         type="checkbox"
                         checked={row.checked}
@@ -891,10 +891,10 @@ export default function SellstarImporter({
 
           {/* ── 상세페이지 구성 ───────────────────────── */}
           <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[16px] font-semibold text-slate-900">
+            <h2 className="text-[17px] font-semibold text-slate-900">
               상세페이지 구성 ({rows.filter((row) => row.checked).length}/{rows.length})
             </h2>
-            <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+            <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
               체크를 풀면 등록에서 빠집니다. 리셀러(마르크앤코) 브랜드 이미지는 자동으로
               풀어 두었습니다. 사이사이 <strong>+ 추가</strong>로 글이나 우리 이미지를
               끼워 넣을 수 있고, 끌어서 순서를 바꿀 수 있습니다.
@@ -928,7 +928,7 @@ export default function SellstarImporter({
                     }`}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50 px-3 py-2">
-                      <label className="flex cursor-pointer items-center gap-2 text-[13px] text-slate-700">
+                      <label className="flex cursor-pointer items-center gap-2 text-[14px] text-slate-700">
                         <input
                           type="checkbox"
                           checked={row.checked}
@@ -1025,8 +1025,8 @@ export default function SellstarImporter({
 
           {/* ── 등록 ──────────────────────────────────── */}
           <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[16px] font-semibold text-slate-900">등록</h2>
-            <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+            <h2 className="text-[17px] font-semibold text-slate-900">등록</h2>
+            <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
               이미지를 우리 저장소로 옮긴 뒤 <strong>임시저장(노출 꺼짐)</strong> 상태로
               등록합니다. 확인하신 뒤 상품 편집 화면에서 판매중으로 바꿔 주세요.
             </p>
@@ -1051,14 +1051,14 @@ export default function SellstarImporter({
                     }}
                   />
                 </div>
-                <p className="mt-1 text-[13px] tabular-nums text-slate-600">
+                <p className="mt-1 text-[14px] tabular-nums text-slate-600">
                   이미지 {progress.done}/{progress.total} 처리 중…
                 </p>
               </div>
             ) : null}
 
             {failed.length > 0 ? (
-              <div className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-[13px] text-amber-900">
+              <div className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-[14px] text-amber-900">
                 <p className="font-medium">가져오지 못한 이미지 {failed.length}장</p>
                 <ul className="mt-1 flex flex-col gap-0.5">
                   {failed.slice(0, 5).map((item) => (
@@ -1114,14 +1114,14 @@ function InsertBar({
           <button
             type="button"
             onClick={() => setOpen('text')}
-            className="admin-btn min-h-0 px-2 py-1 text-[12px]"
+            className="admin-btn min-h-0 px-2 py-1 text-[13px]"
           >
             + 글 넣기
           </button>
           <button
             type="button"
             onClick={() => setOpen('image')}
-            className="admin-btn min-h-0 px-2 py-1 text-[12px]"
+            className="admin-btn min-h-0 px-2 py-1 text-[13px]"
           >
             + 이미지 넣기
           </button>
@@ -1138,7 +1138,7 @@ function InsertBar({
                 onText(index, '');
                 setOpen('none');
               }}
-              className="admin-btn min-h-0 px-2 py-1 text-[12px]"
+              className="admin-btn min-h-0 px-2 py-1 text-[13px]"
             >
               빈 글 넣기
             </button>
@@ -1150,7 +1150,7 @@ function InsertBar({
                   onText(index, fillTemplate(template.body, productName));
                   setOpen('none');
                 }}
-                className="admin-btn min-h-0 px-2 py-1 text-[12px]"
+                className="admin-btn min-h-0 px-2 py-1 text-[13px]"
               >
                 {template.title}
               </button>
@@ -1158,13 +1158,13 @@ function InsertBar({
             <button
               type="button"
               onClick={() => setOpen('none')}
-              className="ml-auto text-[12px] text-slate-500 underline"
+              className="ml-auto text-[13px] text-slate-500 underline"
             >
               닫기
             </button>
           </div>
           {templates.length === 0 ? (
-            <p className="mt-2 text-[12px] text-slate-500">
+            <p className="mt-2 text-[13px] text-slate-500">
               설정 &gt; 가져오기에서 자주 쓰는 문구를 템플릿으로 등록해 두면 여기에
               나옵니다.
             </p>
@@ -1186,7 +1186,7 @@ function InsertBar({
           <button
             type="button"
             onClick={() => setOpen('none')}
-            className="mt-2 text-[12px] text-slate-500 underline"
+            className="mt-2 text-[13px] text-slate-500 underline"
           >
             닫기
           </button>

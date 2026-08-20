@@ -52,7 +52,7 @@ function filterChipClass(active: boolean): string {
  * ★ 한글 분류명은 Cormorant Garamond 에 글자가 없어 본문 서체로 떨어집니다.
  *   그래도 자간과 크기가 같으면 한 줄에 섞여도 어색하지 않습니다.
  */
-const CHIP_TEXT = 'font-display text-[15px] leading-none tracking-[0.18em] md:text-[16px]';
+const CHIP_TEXT = 'font-display text-[16px] leading-none tracking-[0.18em] md:text-[17px]';
 
 /**
  * ★ 줄 이름과 첫 항목 사이가 붙어 있으면 이름이 항목처럼 보입니다.
@@ -61,7 +61,7 @@ const CHIP_TEXT = 'font-display text-[15px] leading-none tracking-[0.18em] md:te
  */
 function RowLabel({ children }: { children: string }) {
   return (
-    <span className="mt-3.5 w-[74px] shrink-0 text-[12px] tracking-[0.2em] text-muted md:w-[84px]">
+    <span className="mt-3.5 w-[74px] shrink-0 text-[13px] tracking-[0.2em] text-muted md:w-[84px]">
       {children}
     </span>
   );
@@ -167,7 +167,7 @@ export default function ProductList({
             <span className="w-[74px] shrink-0 md:w-[84px]" aria-hidden="true" />
             <Link
               href={`/brand/${selectedBrand.slug}`}
-              className="tap-target text-[14px] tracking-[0.1em] text-muted underline underline-offset-4 transition-colors duration-200 hover:text-ink"
+              className="tap-target text-[15px] tracking-[0.1em] text-muted underline underline-offset-4 transition-colors duration-200 hover:text-ink"
             >
               {selectedBrand.label} 브랜드 소개 보기
             </Link>
@@ -212,7 +212,7 @@ export default function ProductList({
                   type="button"
                   onClick={() => setGender(item.key)}
                   aria-pressed={gender === item.key}
-                  className={`tap-target text-[15px] tracking-[0.12em] transition-colors duration-200 ${
+                  className={`tap-target text-[16px] tracking-[0.12em] transition-colors duration-200 ${
                     gender === item.key
                       ? 'text-ink underline decoration-wine underline-offset-[6px]'
                       : 'text-muted hover:text-ink'
@@ -225,7 +225,7 @@ export default function ProductList({
           </ul>
 
           <div className="flex items-center gap-4">
-            <span className="text-[13px] tracking-[0.14em] text-muted">
+            <span className="text-[14px] tracking-[0.14em] text-muted">
               {visible.length}개 상품
             </span>
             {sortOptions.map((option) => (
@@ -234,7 +234,7 @@ export default function ProductList({
                 type="button"
                 onClick={() => setSort(option.key)}
                 aria-pressed={sort === option.key}
-                className={`tap-target text-[15px] tracking-[0.1em] transition-colors duration-200 ${
+                className={`tap-target text-[16px] tracking-[0.1em] transition-colors duration-200 ${
                   sort === option.key ? 'text-ink' : 'text-muted hover:text-ink'
                 }`}
               >
@@ -247,10 +247,10 @@ export default function ProductList({
 
       {visible.length === 0 ? (
         <div className="py-20">
-          <p className="text-[16px] leading-relaxed text-ink">
+          <p className="text-[17px] leading-relaxed text-ink">
             조건에 맞는 상품이 없습니다.
           </p>
-          <p className="mt-2 text-[15px] leading-relaxed text-ink">
+          <p className="mt-2 text-[16px] leading-relaxed text-ink">
             선택하신 조건을 지우면 다시 전체 상품을 보실 수 있습니다.
           </p>
           <div className="btn-row mt-8">

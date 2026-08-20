@@ -271,17 +271,17 @@ export default function ProductForm({
   };
 
   const sectionClass = 'admin-card p-4 md:p-5';
-  const sectionTitle = 'text-[16px] font-semibold text-slate-900';
+  const sectionTitle = 'text-[17px] font-semibold text-slate-900';
 
   return (
     <div className="mx-auto w-full max-w-[900px] pb-28">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-[20px] font-semibold text-slate-900">
+          <h1 className="text-[22px] font-semibold text-slate-900">
             {product ? '상품 수정' : '새 상품 등록'}
           </h1>
           {product ? (
-            <p className="mt-1 text-[13px] text-slate-500">/products/{product.slug}</p>
+            <p className="mt-1 text-[14px] text-slate-500">/products/{product.slug}</p>
           ) : null}
         </div>
         <Link href="/admin/products" className="admin-btn">
@@ -292,7 +292,7 @@ export default function ProductForm({
       {message ? (
         <p
           role="status"
-          className={`mt-4 rounded-md px-3 py-2 text-[14px] ${
+          className={`mt-4 rounded-md px-3 py-2 text-[15px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >
@@ -548,8 +548,8 @@ export default function ProductForm({
           </div>
 
           <div className="mt-5 flex flex-wrap gap-x-6 gap-y-3 border-t border-slate-100 pt-4">
-            <span className="text-[13px] font-medium text-slate-700">뱃지</span>
-            <label className="flex items-center gap-2 text-[14px] text-slate-700">
+            <span className="text-[14px] font-medium text-slate-700">뱃지</span>
+            <label className="flex items-center gap-2 text-[15px] text-slate-700">
               <input
                 type="checkbox"
                 checked={form.isNew}
@@ -558,7 +558,7 @@ export default function ProductForm({
               />
               신상품
             </label>
-            <label className="flex items-center gap-2 text-[14px] text-slate-700">
+            <label className="flex items-center gap-2 text-[15px] text-slate-700">
               <input
                 type="checkbox"
                 checked={form.isSale}
@@ -567,7 +567,7 @@ export default function ProductForm({
               />
               세일
             </label>
-            <label className="flex items-center gap-2 text-[14px] text-slate-700">
+            <label className="flex items-center gap-2 text-[15px] text-slate-700">
               <input
                 type="checkbox"
                 checked={form.isSoldOut}
@@ -579,8 +579,8 @@ export default function ProductForm({
           </div>
 
           <div className="mt-3 flex flex-wrap gap-x-6 gap-y-3">
-            <span className="text-[13px] font-medium text-slate-700">전시</span>
-            <label className="flex items-center gap-2 text-[14px] text-slate-700">
+            <span className="text-[14px] font-medium text-slate-700">전시</span>
+            <label className="flex items-center gap-2 text-[15px] text-slate-700">
               <input
                 type="radio"
                 name="visible"
@@ -590,7 +590,7 @@ export default function ProductForm({
               />
               노출
             </label>
-            <label className="flex items-center gap-2 text-[14px] text-slate-700">
+            <label className="flex items-center gap-2 text-[15px] text-slate-700">
               <input
                 type="radio"
                 name="visible"
@@ -603,8 +603,8 @@ export default function ProductForm({
           </div>
 
           <div className="mt-3 flex flex-wrap gap-x-6 gap-y-3">
-            <span className="text-[13px] font-medium text-slate-700">배송비</span>
-            <label className="flex items-center gap-2 text-[14px] text-slate-700">
+            <span className="text-[14px] font-medium text-slate-700">배송비</span>
+            <label className="flex items-center gap-2 text-[15px] text-slate-700">
               <input
                 type="radio"
                 name="shipping"
@@ -614,7 +614,7 @@ export default function ProductForm({
               />
               무료
             </label>
-            <label className="flex items-center gap-2 text-[14px] text-slate-700">
+            <label className="flex items-center gap-2 text-[15px] text-slate-700">
               <input
                 type="radio"
                 name="shipping"
@@ -630,7 +630,7 @@ export default function ProductForm({
         {/* ── 2) 대표 이미지 ───────────────────────────── */}
         <section className={sectionClass}>
           <h2 className={sectionTitle}>2. 대표 이미지</h2>
-          <p className="mt-1 text-[13px] text-slate-500">
+          <p className="mt-1 text-[14px] text-slate-500">
             여러 장을 한 번에 올릴 수 있습니다. 맨 앞 이미지가 목록에 나오는 대표 이미지입니다.
           </p>
           <div className="mt-4">
@@ -647,7 +647,7 @@ export default function ProductForm({
         <section className={sectionClass}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className={sectionTitle}>3. 옵션</h2>
-            <label className="flex items-center gap-2 text-[14px] text-slate-700">
+            <label className="flex items-center gap-2 text-[15px] text-slate-700">
               <input
                 type="checkbox"
                 checked={useOptions}
@@ -680,7 +680,7 @@ export default function ProductForm({
               />
             </div>
           ) : (
-            <p className="mt-3 text-[14px] text-slate-500">
+            <p className="mt-3 text-[15px] text-slate-500">
               옵션을 쓰지 않는 상품입니다. 필요하면 위 &ldquo;옵션 사용&rdquo;을 켜 주세요.
             </p>
           )}
@@ -749,7 +749,7 @@ export default function ProductForm({
         {/* ── 5) 상세 편집기 ───────────────────────────── */}
         <section className={sectionClass}>
           <h2 className={sectionTitle}>5. 상세 편집기</h2>
-          <p className="mt-1 text-[13px] text-slate-500">
+          <p className="mt-1 text-[14px] text-slate-500">
             이미지·문구·표 블록을 원하는 순서로 쌓아 상세 페이지를 만듭니다.
           </p>
           <div className="mt-4">
@@ -768,7 +768,7 @@ export default function ProductForm({
       {/* ── 6) 하단 고정 바 ───────────────────────────── */}
       <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur lg:left-[220px]">
         <div className="mx-auto flex max-w-[900px] flex-wrap items-center justify-between gap-3">
-          <span className="text-[13px] text-slate-500">
+          <span className="text-[14px] text-slate-500">
             {dirty ? '저장하지 않은 변경사항이 있습니다.' : '모든 변경사항이 저장되었습니다.'}
           </span>
           <div className="flex flex-wrap gap-2">

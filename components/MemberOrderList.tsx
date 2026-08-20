@@ -74,7 +74,7 @@ export default function MemberOrderList({
   };
 
   const inputClass =
-    'mt-2 w-full min-h-[48px] border border-stone bg-transparent px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-muted focus:border-ink';
+    'mt-2 w-full min-h-[48px] border border-stone bg-transparent px-4 py-3 text-[16px] text-ink outline-none transition-colors placeholder:text-muted focus:border-ink';
 
   return (
     <div>
@@ -85,7 +85,7 @@ export default function MemberOrderList({
             <Link
               href="/mypage/orders"
               aria-current={status === 'all' ? 'page' : undefined}
-              className={`text-[15px] tracking-[0.1em] transition-colors ${
+              className={`text-[16px] tracking-[0.1em] transition-colors ${
                 status === 'all'
                   ? 'text-ink underline decoration-wine underline-offset-[6px]'
                   : 'text-muted hover:text-ink'
@@ -99,7 +99,7 @@ export default function MemberOrderList({
               <Link
                 href={`/mypage/orders?status=${item}`}
                 aria-current={status === item ? 'page' : undefined}
-                className={`whitespace-nowrap text-[15px] tracking-[0.1em] transition-colors ${
+                className={`whitespace-nowrap text-[16px] tracking-[0.1em] transition-colors ${
                   status === item
                     ? 'text-ink underline decoration-wine underline-offset-[6px]'
                     : 'text-muted hover:text-ink'
@@ -115,7 +115,7 @@ export default function MemberOrderList({
       {/* ── 목록 ──────────────────────────────────────── */}
       {orders.length === 0 ? (
         <div className="py-14">
-          <p className="text-[16px] leading-relaxed text-ink">
+          <p className="text-[17px] leading-relaxed text-ink">
             {status === 'all'
               ? '주문 내역이 없습니다.'
               : '이 상태의 주문이 없습니다.'}
@@ -134,11 +134,11 @@ export default function MemberOrderList({
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <Link
                     href={`/mypage/orders/${order.id}`}
-                    className="font-display text-[16px] tracking-[0.1em] text-ink"
+                    className="text-[17px] font-semibold tabular-nums tracking-[0.02em] text-ink"
                   >
                     {order.orderNo}
                   </Link>
-                  <span className="text-[13px] text-muted">
+                  <span className="text-[14px] text-muted">
                     {formatDate(order.createdAt)}
                   </span>
                 </div>
@@ -156,7 +156,7 @@ export default function MemberOrderList({
                         key={item.id}
                         className="flex flex-wrap items-center justify-between gap-2"
                       >
-                        <span className="text-[15px] leading-snug text-ink">
+                        <span className="text-[16px] leading-snug text-ink">
                           {item.productName}
                           {item.optionKey ? (
                             <span className="text-muted"> ({item.optionKey})</span>
@@ -167,12 +167,12 @@ export default function MemberOrderList({
                         {canReview ? (
                           <Link
                             href={`/mypage/reviews/new?order=${order.id}&product=${item.productSlug}`}
-                            className="inline-flex min-h-[36px] shrink-0 items-center border border-ink px-3.5 text-[13px] text-ink transition-colors hover:bg-ink hover:text-paper"
+                            className="inline-flex min-h-[36px] shrink-0 items-center border border-ink px-3.5 text-[14px] text-ink transition-colors hover:bg-ink hover:text-paper"
                           >
                             리뷰 쓰기
                           </Link>
                         ) : REVIEWABLE.includes(order.status) && item.productId ? (
-                          <span className="shrink-0 text-[13px] text-muted">
+                          <span className="shrink-0 text-[14px] text-muted">
                             후기 작성 완료
                           </span>
                         ) : null}
@@ -180,24 +180,24 @@ export default function MemberOrderList({
                     );
                   })}
                   {live.length === 0 ? (
-                    <li className="text-[15px] text-muted">전체 취소된 주문입니다.</li>
+                    <li className="text-[16px] text-muted">전체 취소된 주문입니다.</li>
                   ) : null}
                 </ul>
 
                 <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-                  <span className="text-[15px] font-medium text-ink">
+                  <span className="text-[16px] font-medium text-ink">
                     {statusLabel(order.status)}
                     {/* ★ 입금대기 주문에는 기한을 함께 보여 줍니다. */}
                     {order.status === 'pending_payment' && depositHours > 0
                       ? ` · ${deadlineLabel(order.createdAt, depositHours)}까지`
                       : ''}
                   </span>
-                  <span className="text-[15px] text-ink">
+                  <span className="text-[16px] text-ink">
                     {formatPrice(order.totalAmount)}원
                   </span>
                   <Link
                     href={`/mypage/orders/${order.id}`}
-                    className="text-[14px] text-muted underline underline-offset-4"
+                    className="text-[15px] text-muted underline underline-offset-4"
                   >
                     상세 보기
                   </Link>
@@ -206,7 +206,7 @@ export default function MemberOrderList({
                       href={tracking}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-[14px] text-muted underline underline-offset-4"
+                      className="text-[15px] text-muted underline underline-offset-4"
                     >
                       {courierName(order.courier)} 배송 조회 ↗
                     </a>
@@ -221,18 +221,18 @@ export default function MemberOrderList({
       {/* ── 비회원 주문 불러오기 ──────────────────────── */}
       <section aria-labelledby="claim-heading" className="mt-12 border border-stone p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="claim-heading" className="font-serif text-[17px] text-ink">
+          <h2 id="claim-heading" className="font-serif text-[18px] text-ink">
             비회원 주문 불러오기
           </h2>
           <button
             type="button"
             onClick={() => setClaimOpen((prev) => !prev)}
-            className="text-[14px] text-muted underline underline-offset-4"
+            className="text-[15px] text-muted underline underline-offset-4"
           >
             {claimOpen ? '닫기' : '열기'}
           </button>
         </div>
-        <p className="mt-2 text-[13px] leading-relaxed text-muted">
+        <p className="mt-2 text-[14px] leading-relaxed text-muted">
           가입 전에 비회원으로 주문하셨다면 주문번호와 연락처로 내 주문 내역에 가져올 수
           있습니다.
         </p>
@@ -272,7 +272,7 @@ export default function MemberOrderList({
             {message ? (
               <p
                 role="status"
-                className={`mt-4 text-[14px] leading-relaxed ${
+                className={`mt-4 text-[15px] leading-relaxed ${
                   message.tone === 'ok' ? 'text-ink' : 'text-wine'
                 }`}
               >

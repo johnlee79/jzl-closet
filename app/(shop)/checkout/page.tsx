@@ -76,16 +76,16 @@ export default async function CheckoutPage() {
     <div className="shell py-14 md:py-20">
       <header className="max-w-[680px]">
         <p className="label-xs">CHECKOUT</p>
-        <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
+        <h1 className="mt-3 font-serif text-[28px] leading-snug text-ink md:text-[36px]">
           주문서 작성
         </h1>
-        <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
+        <p className="mt-4 text-[17px] leading-[1.9] text-ink md:text-[18px]">
           받는 분과 배송지를 확인해 주세요. 주문이 접수되면 입금 계좌를 안내드립니다.
         </p>
       </header>
 
       {!ready ? (
-        <div className="mt-10 border border-wine px-5 py-4 text-[15px] leading-relaxed text-wine">
+        <div className="mt-10 border border-wine px-5 py-4 text-[16px] leading-relaxed text-wine">
           입금 계좌가 아직 등록되지 않아 주문을 받을 수 없습니다. 고객센터{' '}
           {store.phone}으로 연락 주시면 바로 도와드리겠습니다.
           <br />

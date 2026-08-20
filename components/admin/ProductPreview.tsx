@@ -47,7 +47,7 @@ export default function ProductPreview({
   if (!draft) {
     return (
       <div className="shell py-20">
-        <p className="text-[16px] text-ink">
+        <p className="text-[17px] text-ink">
           미리볼 내용이 없습니다. 관리자 편집 화면에서 [미리보기]를 눌러 주세요.
         </p>
       </div>
@@ -64,7 +64,7 @@ export default function ProductPreview({
 
   return (
     <article className="shell py-10 md:py-14">
-      <p className="mb-6 rounded-sm border border-wine px-4 py-3 text-[14px] text-wine">
+      <p className="mb-6 rounded-sm border border-wine px-4 py-3 text-[15px] text-wine">
         미리보기 — 아직 저장되지 않은 내용입니다. 실제 페이지 주소는 /products/
         {draft.slug || '(slug 미정)'} 가 됩니다.
       </p>
@@ -78,33 +78,33 @@ export default function ProductPreview({
 
         <section aria-label="상품 정보" className="lg:pt-4">
           {brandLabel ? (
-            <p className="text-[13px] tracking-[0.16em] text-muted">{brandLabel}</p>
+            <p className="text-[14px] tracking-[0.16em] text-muted">{brandLabel}</p>
           ) : null}
-          <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[32px]">
+          <h1 className="mt-3 font-serif text-[28px] leading-snug text-ink md:text-[34px]">
             {draft.name || '상품명 미입력'}
           </h1>
-          <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
+          <p className="mt-4 text-[17px] leading-[1.9] text-ink md:text-[18px]">
             {draft.summary}
           </p>
 
           <div className="mt-8 flex flex-wrap items-baseline gap-3">
-            <span className="font-display text-[32px] font-medium tracking-wide text-ink md:text-[38px]">
+            <span className="font-display text-[34px] font-medium tracking-wide text-ink md:text-[40px]">
               {formatPrice(draft.price)}
-              <span className="ml-1 font-sans text-[16px]">원</span>
+              <span className="ml-1 font-sans text-[17px]">원</span>
             </span>
             {draft.originalPrice ? (
-              <span className="text-[16px] text-muted line-through">
+              <span className="text-[17px] text-muted line-through">
                 {formatPrice(draft.originalPrice)}원
               </span>
             ) : null}
             {discount > 0 ? (
-              <span className="border border-wine px-2 py-1 text-[13px] tracking-[0.14em] text-wine">
+              <span className="border border-wine px-2 py-1 text-[14px] tracking-[0.14em] text-wine">
                 {discount}% OFF
               </span>
             ) : null}
           </div>
 
-          <dl className="mt-8 flex flex-col gap-2 border-t border-stone pt-6 text-[13px]">
+          <dl className="mt-8 flex flex-col gap-2 border-t border-stone pt-6 text-[14px]">
             <div className="flex gap-4">
               <dt className="w-20 shrink-0 text-muted">카테고리</dt>
               <dd className="text-ink">
@@ -136,13 +136,13 @@ export default function ProductPreview({
           {draft.optionGroups.length > 0 ? (
             <div className="mt-8 flex flex-col gap-1.5 border-t border-stone pt-6">
               {draft.optionGroups.map((group) => (
-                <p key={group.name} className="text-[14px] text-ink">
+                <p key={group.name} className="text-[15px] text-ink">
                   <span className="text-muted">{group.name}</span> —{' '}
                   {group.values.join(' / ')}
                 </p>
               ))}
               {draft.optionCombinations.length > 0 ? (
-                <p className="mt-2 text-[13px] text-muted">
+                <p className="mt-2 text-[14px] text-muted">
                   조합 {draft.optionCombinations.length}개 · 판매 가능{' '}
                   {draft.optionCombinations.filter(isCombinationAvailable).length}개
                 </p>

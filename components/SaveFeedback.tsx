@@ -40,7 +40,7 @@ export default function SaveFeedback({
     <p
       role="status"
       aria-live="polite"
-      className={`flex items-start gap-2 px-3 py-2 text-[14px] leading-relaxed ${
+      className={`flex items-start gap-2 px-3 py-2 text-[15px] leading-relaxed ${
         admin ? 'rounded-md' : ''
       } ${tone} ${className}`}
     >

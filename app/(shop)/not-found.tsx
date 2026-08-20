@@ -20,13 +20,13 @@ export default async function NotFound() {
       <p className="font-display text-[64px] font-light leading-none tracking-[0.16em] text-ink md:text-[88px]">
         404
       </p>
-      <h1 className="mt-6 font-serif text-[22px] leading-snug text-ink md:text-[28px]">
+      <h1 className="mt-6 font-serif text-[24px] leading-snug text-ink md:text-[30px]">
         {first?.heading || '찾으시는 페이지가 없습니다'}
       </h1>
       {blocks.map((block, index) => (
         <div
           key={index}
-          className="detail-body mt-4 max-w-[520px] text-[16px] leading-[1.9] text-ink md:text-[17px]"
+          className="detail-body mt-4 max-w-[520px] text-[17px] leading-[1.9] text-ink md:text-[18px]"
           dangerouslySetInnerHTML={{ __html: block.html }}
         />
       ))}
@@ -46,7 +46,7 @@ export default async function NotFound() {
             <li key={category.slug}>
               <Link
                 href={`/category/${category.slug}`}
-                className="text-[15px] text-ink transition-colors duration-200 hover:text-ink"
+                className="text-[16px] text-ink transition-colors duration-200 hover:text-ink"
               >
                 {category.nameKo}
               </Link>

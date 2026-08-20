@@ -263,7 +263,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
       {/* 최근 본 상품 기록 — 브라우저에만 남깁니다. 화면에는 아무것도 그리지 않습니다. */}
       <RecentlyViewedRecorder product={product} />
 
-      <nav aria-label="현재 위치" className="text-[13px] tracking-[0.14em] text-muted">
+      <nav aria-label="현재 위치" className="text-[14px] tracking-[0.14em] text-muted">
         <ol className="flex flex-wrap items-center gap-2">
           <li>
             <Link href="/" className="hover:text-ink">
@@ -338,12 +338,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
           {product.brandSlug ? (
             <Link
               href={`/brand/${product.brandSlug}`}
-              className="text-[13px] tracking-[0.16em] text-muted underline-offset-4 hover:underline"
+              className="text-[14px] tracking-[0.16em] text-muted underline-offset-4 hover:underline"
             >
               {brandLabel}
             </Link>
           ) : null}
-          <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[32px]">
+          <h1 className="mt-3 text-[28px] font-semibold leading-snug text-ink md:text-[34px]">
             {product.name}
           </h1>
 
@@ -351,10 +351,10 @@ export default async function ProductDetailPage({ params }: PageProps) {
           {reviewSummary.count > 0 ? (
             <a href="#review-title" className="mt-3 inline-flex items-center gap-2">
               <StarRating value={reviewSummary.average} size={15} />
-              <span className="text-[14px] text-ink">
+              <span className="text-[15px] text-ink">
                 {reviewSummary.average.toFixed(1)}
               </span>
-              <span className="text-[14px] text-muted underline underline-offset-4">
+              <span className="text-[15px] text-muted underline underline-offset-4">
                 후기 {reviewSummary.count}개
               </span>
             </a>
@@ -370,12 +370,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
           {product.summary || earnNotice ? (
             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
               {product.summary ? (
-                <p className="text-[16px] leading-[1.9] text-ink md:text-[17px]">
+                <p className="text-[17px] leading-[1.9] text-ink md:text-[18px]">
                   {product.summary}
                 </p>
               ) : null}
               {earnNotice ? (
-                <span className="shrink-0 border border-stone px-3 py-1.5 text-[13px] tracking-[0.06em] text-wine">
+                <span className="shrink-0 border border-stone px-3 py-1.5 text-[14px] tracking-[0.06em] text-wine">
                   {earnNotice}
                 </span>
               ) : null}
@@ -383,28 +383,28 @@ export default async function ProductDetailPage({ params }: PageProps) {
           ) : null}
 
           <div className="mt-8 flex flex-wrap items-baseline gap-3">
-            <span className="font-display text-[32px] font-medium tracking-wide text-ink md:text-[38px]">
+            <span className="text-[34px] font-semibold tabular-nums tracking-tight text-ink md:text-[40px]">
               {formatPrice(product.price)}
-              <span className="ml-1 font-sans text-[16px]">원</span>
+              <span className="ml-1 font-sans text-[17px]">원</span>
             </span>
             {product.originalPrice ? (
-              <span className="text-[16px] text-muted line-through">
+              <span className="text-[17px] text-muted line-through">
                 {formatPrice(product.originalPrice)}원
               </span>
             ) : null}
             {discount > 0 ? (
-              <span className="border border-wine px-2 py-1 text-[13px] tracking-[0.14em] text-wine">
+              <span className="border border-wine px-2 py-1 text-[14px] tracking-[0.14em] text-wine">
                 {discount}% OFF
               </span>
             ) : null}
             {product.isNew ? (
-              <span className="border border-ink px-2 py-1 text-[13px] tracking-[0.14em] text-ink">
+              <span className="border border-ink px-2 py-1 text-[14px] tracking-[0.14em] text-ink">
                 NEW
               </span>
             ) : null}
           </div>
 
-          <dl className="mt-8 flex flex-col gap-2 border-t border-stone pt-6 text-[13px]">
+          <dl className="mt-8 flex flex-col gap-2 border-t border-stone pt-6 text-[14px]">
             <div className="flex gap-4">
               <dt className="w-20 shrink-0 text-muted">카테고리</dt>
               <dd className="text-ink">
@@ -493,12 +493,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
           <p className="label-xs">BRAND</p>
           <h2
             id="brand-title"
-            className="mt-3 font-serif text-[22px] leading-snug text-ink md:text-[28px]"
+            className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[30px]"
           >
             {brand.label}
           </h2>
           {brand.story[0] ? (
-            <p className="mt-4 max-w-[720px] text-[16px] leading-[1.9] text-ink md:text-[17px]">
+            <p className="mt-4 max-w-[720px] text-[17px] leading-[1.9] text-ink md:text-[18px]">
               {brand.story[0]}
             </p>
           ) : null}
@@ -508,7 +508,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
           {brandRelated.length > 0 ? (
             <>
-              <h3 className="mt-16 font-serif text-[18px] text-ink">
+              <h3 className="mt-16 font-serif text-[19px] text-ink">
                 이 브랜드의 다른 상품
               </h3>
               <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-12 md:grid-cols-3 md:gap-x-6 lg:grid-cols-4">
@@ -533,7 +533,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
           <p className="label-xs">YOU MAY ALSO LIKE</p>
           <h2
             id="related-title"
-            className="mt-3 font-serif text-[22px] leading-snug text-ink md:text-[28px]"
+            className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[30px]"
           >
             함께 보면 좋은 상품
           </h2>

@@ -105,7 +105,7 @@ export default function ShareButton({
       <button
         type="button"
         onClick={share}
-        className={`tap-target inline-flex items-center gap-2 text-[14px] tracking-[0.1em] text-muted transition-colors duration-200 hover:text-ink ${className}`}
+        className={`tap-target inline-flex items-center gap-2 text-[15px] tracking-[0.1em] text-muted transition-colors duration-200 hover:text-ink ${className}`}
       >
         <ShareIcon />
         {label}
@@ -113,11 +113,11 @@ export default function ShareButton({
 
       {/* 왜 공유하는지 — 상황에 맞는 한 줄. 없으면 버튼만 나갑니다. */}
       {notice ? (
-        <span className="pl-6 text-[13px] leading-relaxed text-muted">{notice}</span>
+        <span className="pl-6 text-[14px] leading-relaxed text-muted">{notice}</span>
       ) : null}
 
       {/* aria-live 를 두어야 화면을 못 보는 손님에게도 결과가 읽힙니다. */}
-      <span aria-live="polite" className="text-[12px] text-muted">
+      <span aria-live="polite" className="text-[13px] text-muted">
         {done}
       </span>
     </span>

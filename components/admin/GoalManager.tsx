@@ -93,7 +93,7 @@ function GoalForm({
             placeholder="친구 5명 첫 구매하면 캠핑 테이블"
             className="admin-input"
           />
-          <p className="mt-1 text-[12px] text-slate-500">
+          <p className="mt-1 text-[13px] text-slate-500">
             회원 화면에 그대로 보입니다. 무엇을 하면 무엇을 받는지가 한 줄에 들어가게 적어
             주세요.
           </p>
@@ -124,7 +124,7 @@ function GoalForm({
               </option>
             ))}
           </select>
-          <p className="mt-1 text-[12px] leading-relaxed text-slate-500">{criteriaHint}</p>
+          <p className="mt-1 text-[13px] leading-relaxed text-slate-500">{criteriaHint}</p>
         </div>
 
         <div>
@@ -150,7 +150,7 @@ function GoalForm({
             <option value="point">포인트</option>
             <option value="gift">사은품</option>
           </select>
-          <p className="mt-1 text-[12px] leading-relaxed text-slate-500">
+          <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
             포인트는 달성 즉시 자동 지급됩니다. 사은품은 자동으로 나가지 않고 [보상 처리]
             화면에서 발송하십니다.
           </p>
@@ -184,7 +184,7 @@ function GoalForm({
               ))}
             </select>
             {gifts.length === 0 ? (
-              <p className="mt-1 text-[12px] text-amber-700">
+              <p className="mt-1 text-[13px] text-amber-700">
                 등록된 사은품이 없습니다. 아래 사은품 등록에서 먼저 만들어 주세요.
               </p>
             ) : null}
@@ -212,12 +212,12 @@ function GoalForm({
           />
         </div>
       </div>
-      <p className="mt-1 text-[12px] leading-relaxed text-slate-500">
+      <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
         비워 두면 기간 제한이 없습니다. 날짜는 한국시간 기준으로 그 날 0시부터 24시까지입니다.
       </p>
 
       <div className="mt-4 flex flex-col gap-2">
-        <label className="flex items-center gap-2 text-[14px] text-slate-800">
+        <label className="flex items-center gap-2 text-[15px] text-slate-800">
           <input
             type="checkbox"
             checked={draft.isRepeatable}
@@ -225,12 +225,12 @@ function GoalForm({
           />
           달성할 때마다 반복 지급
         </label>
-        <p className="-mt-1 text-[12px] leading-relaxed text-slate-500">
+        <p className="-mt-1 text-[13px] leading-relaxed text-slate-500">
           켜면 목표 인원의 배수마다 계속 지급합니다. (5명 목표에 10명이면 2회) 끄면 한
           사람당 한 번만 받습니다.
         </p>
 
-        <label className="flex items-center gap-2 text-[14px] text-slate-800">
+        <label className="flex items-center gap-2 text-[15px] text-slate-800">
           <input
             type="checkbox"
             checked={draft.isActive}
@@ -322,7 +322,7 @@ export default function GoalManager({ goals, gifts }: { goals: Goal[]; gifts: Gi
       {message ? (
         <p
           role="status"
-          className={`text-[13px] ${
+          className={`text-[14px] ${
             message.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'
           }`}
         >
@@ -331,7 +331,7 @@ export default function GoalManager({ goals, gifts }: { goals: Goal[]; gifts: Gi
       ) : null}
 
       {goals.length === 0 && editing !== 'new' ? (
-        <p className="text-[14px] leading-relaxed text-slate-600">
+        <p className="text-[15px] leading-relaxed text-slate-600">
           아직 목표가 없습니다. 목표를 만들기 전까지는 회원의 방문·가입·구매 숫자만 쌓이고
           보상은 나가지 않습니다.
         </p>
@@ -364,13 +364,13 @@ export default function GoalManager({ goals, gifts }: { goals: Goal[]; gifts: Gi
             ) : (
               <div className="flex flex-wrap items-center gap-4 border border-slate-200 p-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[15px] text-slate-900">
+                  <p className="text-[16px] text-slate-900">
                     {goal.name}
                     {!goal.isActive ? (
                       <span className="admin-badge ml-2">사용 안 함</span>
                     ) : null}
                   </p>
-                  <p className="mt-1 text-[13px] text-slate-600">{summary(goal, gifts)}</p>
+                  <p className="mt-1 text-[14px] text-slate-600">{summary(goal, gifts)}</p>
                 </div>
                 <div className="flex gap-2">
                   <button

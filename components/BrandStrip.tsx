@@ -65,14 +65,14 @@ export default function BrandStrip({
               <p className="label-xs">BRANDS</p>
               <h2
                 id="brands-title"
-                className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]"
+                className="mt-3 font-serif text-[28px] leading-snug text-ink md:text-[36px]"
               >
                 취급 브랜드
               </h2>
             </div>
             <Link
               href="/brands"
-              className="tap-target text-[15px] tracking-[0.1em] text-ink transition-opacity duration-200 hover:opacity-60"
+              className="tap-target text-[16px] tracking-[0.1em] text-ink transition-opacity duration-200 hover:opacity-60"
             >
               전체 보기 →
             </Link>

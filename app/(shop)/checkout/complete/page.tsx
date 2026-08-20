@@ -37,10 +37,10 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
   if (!order) {
     return (
       <div className="shell py-20">
-        <h1 className="font-serif text-[24px] leading-snug text-ink md:text-[30px]">
+        <h1 className="font-serif text-[26px] leading-snug text-ink md:text-[32px]">
           주문 정보를 확인할 수 없습니다
         </h1>
-        <p className="mt-4 max-w-[560px] text-[17px] leading-[1.9] text-ink">
+        <p className="mt-4 max-w-[560px] text-[18px] leading-[1.9] text-ink">
           주문 완료 화면은 주문 직후에만 열립니다. 이미 지난 주문은 아래에서 주문번호와
           연락처로 조회해 주세요.
         </p>
@@ -118,16 +118,16 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
         <p className="label-xs">
           {view === 'paid' ? 'PAYMENT COMPLETE' : 'ORDER COMPLETE'}
         </p>
-        <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
+        <h1 className="mt-3 font-serif text-[28px] leading-snug text-ink md:text-[36px]">
           {payment_.title}
         </h1>
         <p className="mt-6 border border-stone px-6 py-5">
-          <span className="text-[14px] tracking-[0.14em] text-muted">주문번호</span>
-          <span className="mt-2 block select-all font-sans text-[28px] font-semibold tracking-[0.02em] tabular-nums text-ink md:text-[34px]">
+          <span className="text-[15px] tracking-[0.14em] text-muted">주문번호</span>
+          <span className="mt-2 block select-all font-sans text-[30px] font-semibold tracking-[0.02em] tabular-nums text-ink md:text-[36px]">
             {order.orderNo}
           </span>
         </p>
-        <p className="mt-5 text-[17px] leading-[1.9] text-ink md:text-[18px]">
+        <p className="mt-5 text-[18px] leading-[1.9] text-ink md:text-[19px]">
           {isBank ? (
             <>
               아래 계좌로 <strong>{payment.depositHours}시간</strong> 이내에 입금해 주시면
@@ -174,8 +174,8 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
 
         <aside className="lg:sticky lg:top-28 lg:self-start">
           <div className="border border-stone p-6 md:p-8">
-            <h2 className="font-serif text-[18px] text-ink">주문 내역 보관</h2>
-            <p className="mt-2 text-[14px] leading-[1.8] text-muted">
+            <h2 className="font-serif text-[19px] text-ink">주문 내역 보관</h2>
+            <p className="mt-2 text-[15px] leading-[1.8] text-muted">
               주문번호는 조회할 때 필요합니다. 아래 버튼으로 복사해 두세요.
             </p>
             <div className="mt-5">
@@ -186,7 +186,7 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
               주문 조회 페이지
             </Link>
 
-            <p className="mt-6 border-t border-stone pt-5 text-[14px] leading-[1.8] text-muted">
+            <p className="mt-6 border-t border-stone pt-5 text-[15px] leading-[1.8] text-muted">
               문의는 고객센터 {store.phone}
               <br />
               {store.hours}
@@ -213,7 +213,7 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
                 </a>
               ) : null}
               {payment.escrowNotice ? (
-                <p className="mt-3 text-[13px] leading-relaxed text-muted">
+                <p className="mt-3 text-[14px] leading-relaxed text-muted">
                   {payment.escrowNotice}
                 </p>
               ) : null}

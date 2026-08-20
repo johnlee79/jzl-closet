@@ -38,8 +38,8 @@ export default function AnalyticsForm({ initial }: { initial: AnalyticsSettings 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[16px] font-semibold text-slate-900">GA4 측정 ID</h2>
-        <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+        <h2 className="text-[17px] font-semibold text-slate-900">GA4 측정 ID</h2>
+        <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
           비워 두면 아무 스크립트도 넣지 않습니다. 개발 환경(localhost)에서는 값이 있어도
           전송하지 않습니다.
         </p>
@@ -57,13 +57,13 @@ export default function AnalyticsForm({ initial }: { initial: AnalyticsSettings 
             className="admin-input font-mono"
           />
           {invalid ? (
-            <p className="mt-1 text-[12px] text-red-700">
+            <p className="mt-1 text-[13px] text-red-700">
               G- 로 시작하는 형식이어야 합니다. (예: G-AB12CD34EF)
             </p>
           ) : null}
         </div>
 
-        <div className="mt-5 rounded-md bg-slate-50 p-4 text-[13px] leading-relaxed text-slate-700">
+        <div className="mt-5 rounded-md bg-slate-50 p-4 text-[14px] leading-relaxed text-slate-700">
           <p className="font-semibold text-slate-900">측정 ID 받는 법</p>
           <ol className="mt-2 flex list-decimal flex-col gap-1 pl-5">
             <li>
@@ -91,7 +91,7 @@ export default function AnalyticsForm({ initial }: { initial: AnalyticsSettings 
       {message ? (
         <p
           role="status"
-          className={`rounded-md px-3 py-2 text-[14px] ${
+          className={`rounded-md px-3 py-2 text-[15px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >

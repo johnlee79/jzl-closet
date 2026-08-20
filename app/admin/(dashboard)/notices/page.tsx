@@ -12,11 +12,11 @@ export default async function AdminNoticesPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1000px]">
-      <h1 className="text-[20px] font-semibold text-slate-900">공지 관리</h1>
-      <p className="mt-1 text-[13px] text-slate-600">전체 {notices.length}건</p>
+      <h1 className="text-[22px] font-semibold text-slate-900">공지 관리</h1>
+      <p className="mt-1 text-[14px] text-slate-600">전체 {notices.length}건</p>
 
       {!configured ? (
-        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[14px] leading-relaxed text-amber-900">
+        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[15px] leading-relaxed text-amber-900">
           Supabase 연결 정보가 없습니다. <code>.env.local</code> 을 설정한 뒤 서버를 다시
           시작해 주세요.
         </div>
@@ -26,7 +26,7 @@ export default async function AdminNoticesPage() {
         <NoticeManager notices={notices} />
       </div>
 
-      <p className="mt-6 text-[12px] leading-relaxed text-slate-500">
+      <p className="mt-6 text-[13px] leading-relaxed text-slate-500">
         notices 테이블이 없다는 안내가 나오면 Supabase SQL Editor 에서{' '}
         <code>supabase/schema-3a.sql</code> 을 실행해 주세요.
       </p>

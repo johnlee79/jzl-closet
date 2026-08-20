@@ -42,8 +42,8 @@ export default async function AdminDesignPage({
 
   return (
     <div className="mx-auto w-full max-w-[1000px]">
-      <h1 className="text-[20px] font-semibold text-slate-900">디자인 관리</h1>
-      <p className="mt-1 text-[13px] text-slate-600">
+      <h1 className="text-[22px] font-semibold text-slate-900">디자인 관리</h1>
+      <p className="mt-1 text-[14px] text-slate-600">
         첫 화면 배너와 사이트 곳곳의 문구를 여기서 고칩니다.
       </p>
 
@@ -56,7 +56,7 @@ export default async function AdminDesignPage({
                 <Link
                   href={`/admin/design?tab=${item.key}`}
                   aria-current={active ? 'page' : undefined}
-                  className={`inline-flex min-h-[40px] items-center border-b-2 px-3 py-2 text-[14px] transition-colors ${
+                  className={`inline-flex min-h-[40px] items-center border-b-2 px-3 py-2 text-[15px] transition-colors ${
                     active
                       ? 'border-blue-700 font-semibold text-blue-700'
                       : 'border-transparent text-slate-600 hover:text-slate-900'
@@ -74,7 +74,7 @@ export default async function AdminDesignPage({
         {tab === 'banner' ? <BannerManager initial={design} /> : null}
         {tab === 'sections' ? (
           <>
-            <p className="mb-4 text-[13px] leading-relaxed text-slate-600">
+            <p className="mb-4 text-[14px] leading-relaxed text-slate-600">
               메인 화면의 섹션을 하나씩 켜고 끕니다. 끄면 그 자리가 통째로 사라지고 빈
               여백도 남지 않습니다. 준비가 덜 된 섹션을 잠시 감출 때 쓰세요.
             </p>
@@ -83,7 +83,7 @@ export default async function AdminDesignPage({
         ) : null}
         {tab === 'copy' ? (
           <>
-            <p className="mb-4 text-[13px] leading-relaxed text-slate-600">
+            <p className="mb-4 text-[14px] leading-relaxed text-slate-600">
               항목을 펼쳐 문단을 고치고 저장하면 해당 페이지가 바로 갱신됩니다. 잘못
               지웠다면 [기본값으로 되돌리기] 로 원래 문구를 되살릴 수 있습니다.
             </p>

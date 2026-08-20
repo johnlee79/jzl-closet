@@ -41,13 +41,13 @@ export function RequestResetForm() {
   if (sent && social) {
     return (
       <div className="text-left">
-        <div className="border border-stone bg-paper px-5 py-4 text-[15px] leading-relaxed text-ink">
+        <div className="border border-stone bg-paper px-5 py-4 text-[16px] leading-relaxed text-ink">
           <p className="font-medium">이 계정은 {providerLabel(social)} 계정으로 가입하셨습니다.</p>
           <p className="mt-1.5">
             로그인 화면에서 &lsquo;{providerLabel(social)}로 계속하기&rsquo;를 눌러 주세요.
           </p>
         </div>
-        <p className="mt-4 text-[13px] leading-relaxed text-muted">
+        <p className="mt-4 text-[14px] leading-relaxed text-muted">
           소셜 계정의 비밀번호는 {providerLabel(social)}에서 관리합니다. JZL CLOSET 에는
           따로 저장된 비밀번호가 없습니다.
         </p>
@@ -61,14 +61,14 @@ export function RequestResetForm() {
   if (sent) {
     return (
       <div className="text-left">
-        <div className="border border-amber-300 bg-amber-50 px-5 py-4 text-[14px] leading-relaxed text-amber-900">
+        <div className="border border-amber-300 bg-amber-50 px-5 py-4 text-[15px] leading-relaxed text-amber-900">
           <p className="font-medium">메일을 보냈습니다</p>
           <p className="mt-1.5">
             가입된 이메일이라면 <strong className="break-all">{email}</strong> 으로 재설정
             링크를 보내드렸습니다. 메일이 보이지 않으면 스팸함(정크메일)도 확인해 주세요.
           </p>
         </div>
-        <p className="mt-4 text-[13px] leading-relaxed text-muted">
+        <p className="mt-4 text-[14px] leading-relaxed text-muted">
           보안을 위해 가입 여부는 알려드리지 않습니다.
         </p>
         <Link href="/login" className={`${authButtonClass} mt-6`}>
@@ -83,7 +83,7 @@ export function RequestResetForm() {
       {error ? (
         <p
           role="alert"
-          className="mb-6 border border-wine bg-wine/5 px-5 py-4 text-[15px] leading-relaxed text-wine"
+          className="mb-6 border border-wine bg-wine/5 px-5 py-4 text-[16px] leading-relaxed text-wine"
         >
           {error}
         </p>
@@ -143,7 +143,7 @@ export function UpdatePasswordForm() {
   if (done) {
     return (
       <div>
-        <p className="text-[15px] leading-relaxed text-ink">
+        <p className="text-[16px] leading-relaxed text-ink">
           비밀번호를 바꿨습니다. 새 비밀번호로 로그인되어 있습니다.
         </p>
         <Link href="/mypage" className={`${authButtonClass} mt-6`}>
@@ -158,7 +158,7 @@ export function UpdatePasswordForm() {
       {error ? (
         <p
           role="alert"
-          className="mb-6 border border-wine bg-wine/5 px-5 py-4 text-[15px] leading-relaxed text-wine"
+          className="mb-6 border border-wine bg-wine/5 px-5 py-4 text-[16px] leading-relaxed text-wine"
         >
           {error}
         </p>
@@ -181,7 +181,7 @@ export function UpdatePasswordForm() {
           {rules.map((rule) => (
             <li
               key={rule.label}
-              className={`text-[13px] ${rule.ok ? 'text-ink' : 'text-muted'}`}
+              className={`text-[14px] ${rule.ok ? 'text-ink' : 'text-muted'}`}
             >
               {rule.ok ? '✓' : '·'} {rule.label}
             </li>

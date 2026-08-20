@@ -29,16 +29,16 @@ export default async function NoticeListPage() {
     <div className="shell py-14 md:py-20">
       <header className="max-w-[680px]">
         <p className="label-xs">NOTICE</p>
-        <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
+        <h1 className="mt-3 font-serif text-[28px] leading-snug text-ink md:text-[36px]">
           공지사항
         </h1>
-        <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
+        <p className="mt-4 text-[17px] leading-[1.9] text-ink md:text-[18px]">
           배송과 운영에 관한 안내를 올립니다.
         </p>
       </header>
 
       {notices.length === 0 ? (
-        <p className="mt-14 border-t border-stone py-16 text-[16px] leading-relaxed text-ink">
+        <p className="mt-14 border-t border-stone py-16 text-[17px] leading-relaxed text-ink">
           등록된 공지사항이 없습니다.
         </p>
       ) : (
@@ -51,15 +51,15 @@ export default async function NoticeListPage() {
               >
                 <span className="flex min-w-0 items-baseline gap-3">
                   {notice.isPinned ? (
-                    <span className="shrink-0 border border-wine px-2 py-0.5 text-[12px] tracking-[0.14em] text-wine">
+                    <span className="shrink-0 border border-wine px-2 py-0.5 text-[13px] tracking-[0.14em] text-wine">
                       공지
                     </span>
                   ) : null}
-                  <span className="font-serif text-[17px] leading-snug text-ink md:text-[18px]">
+                  <span className="font-serif text-[18px] leading-snug text-ink md:text-[19px]">
                     {notice.title}
                   </span>
                 </span>
-                <span className="shrink-0 text-[13px] text-muted">
+                <span className="shrink-0 text-[14px] text-muted">
                   {formatDate(notice.createdAt)}
                 </span>
               </Link>

@@ -34,36 +34,36 @@ export default async function CheckoutPendingPage({ searchParams }: PageProps) {
     <div className="shell py-14 md:py-20">
       <header className="max-w-[680px]">
         <p className="label-xs">PAYMENT</p>
-        <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
+        <h1 className="mt-3 font-serif text-[28px] leading-snug text-ink md:text-[36px]">
           결제 결과를 확인하고 있습니다
         </h1>
 
         {orderNo ? (
           <p className="mt-6 border border-stone px-6 py-5">
-            <span className="text-[13px] tracking-[0.14em] text-muted">주문번호</span>
-            <span className="mt-2 block font-display text-[28px] tracking-[0.12em] text-ink md:text-[34px]">
+            <span className="text-[14px] tracking-[0.14em] text-muted">주문번호</span>
+            <span className="mt-2 block select-all text-[30px] font-semibold tabular-nums tracking-[0.02em] text-ink md:text-[36px]">
               {orderNo}
             </span>
           </p>
         ) : null}
 
-        <p className="mt-6 text-[16px] leading-[1.9] text-ink md:text-[17px]">
+        <p className="mt-6 text-[17px] leading-[1.9] text-ink md:text-[18px]">
           주문은 정상적으로 접수되었습니다. 결제 승인 결과를 확인하는 데 시간이 조금
           걸리고 있습니다.
         </p>
 
         {/* ★ 이 상자가 이 화면의 핵심입니다. 이중결제를 막는 안내입니다. */}
         <div className="mt-8 border border-wine px-6 py-5">
-          <p className="text-[15px] font-medium leading-[1.9] text-wine">
+          <p className="text-[16px] font-medium leading-[1.9] text-wine">
             다시 결제하지 마세요.
           </p>
-          <p className="mt-2 text-[15px] leading-[1.9] text-ink">
+          <p className="mt-2 text-[16px] leading-[1.9] text-ink">
             카드 승인이 이미 완료되었을 수 있습니다. 이 상태에서 한 번 더 결제하시면
             두 번 결제될 수 있습니다. 저희가 확인한 뒤 바로 연락드리겠습니다.
           </p>
         </div>
 
-        <p className="mt-6 text-[15px] leading-[1.9] text-muted">
+        <p className="mt-6 text-[16px] leading-[1.9] text-muted">
           확인이 끝나면 주문 조회 화면에서 결제완료로 바뀝니다. 급하시면 고객센터{' '}
           {store.phone}으로 연락 주세요.
           <br />

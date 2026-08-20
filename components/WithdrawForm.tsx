@@ -69,8 +69,8 @@ export default function WithdrawForm({
   if (done) {
     return (
       <div className="border border-stone p-6 md:p-8">
-        <h2 className="font-serif text-[20px] text-ink">탈퇴가 완료되었습니다</h2>
-        <p className="mt-4 text-[15px] leading-relaxed text-ink">
+        <h2 className="font-serif text-[22px] text-ink">탈퇴가 완료되었습니다</h2>
+        <p className="mt-4 text-[16px] leading-relaxed text-ink">
           그동안 이용해 주셔서 감사합니다. 주문 내역은 전자상거래법에 따라 보관되며,
           회원 정보는 삭제되었습니다.
         </p>
@@ -83,9 +83,9 @@ export default function WithdrawForm({
 
   return (
     <form onSubmit={submit} noValidate>
-      <div className="border border-wine bg-wine/5 p-5 text-[15px] leading-relaxed text-wine">
+      <div className="border border-wine bg-wine/5 p-5 text-[16px] leading-relaxed text-wine">
         <p className="font-medium">탈퇴하시기 전에 확인해 주세요</p>
-        <ul className="mt-3 flex flex-col gap-1.5 text-[14px]">
+        <ul className="mt-3 flex flex-col gap-1.5 text-[15px]">
           <li>
             · <strong>
               탈퇴하시면 보유 포인트가 모두 소멸되며 복구할 수 없습니다.
@@ -108,7 +108,7 @@ export default function WithdrawForm({
         <ul className="mt-3 flex flex-col gap-2">
           {REASONS.map((item) => (
             <li key={item}>
-              <label className="flex cursor-pointer items-center gap-3 text-[15px] text-ink">
+              <label className="flex cursor-pointer items-center gap-3 text-[16px] text-ink">
                 <input
                   type="radio"
                   name="reason"
@@ -128,7 +128,7 @@ export default function WithdrawForm({
           rows={3}
           placeholder="자세한 의견을 남겨 주시면 큰 도움이 됩니다. (선택)"
           aria-label="탈퇴 사유 상세"
-          className="mt-4 w-full resize-none border border-stone bg-transparent p-4 text-[15px] leading-relaxed text-ink outline-none focus:border-ink"
+          className="mt-4 w-full resize-none border border-stone bg-transparent p-4 text-[16px] leading-relaxed text-ink outline-none focus:border-ink"
         />
 
         {isSocial ? (
@@ -136,7 +136,7 @@ export default function WithdrawForm({
             <label htmlFor="withdraw-confirm" className="label-xs block">
               확인 — 아래에 &ldquo;{PHRASE}&rdquo; 를 입력해 주세요
             </label>
-            <p className="mt-2 text-[13px] leading-relaxed text-muted">
+            <p className="mt-2 text-[14px] leading-relaxed text-muted">
               {providerName} 계정으로 로그인 중이라 확인할 비밀번호가 없습니다. 문구를
               직접 입력해 주세요.
             </p>
@@ -147,7 +147,7 @@ export default function WithdrawForm({
               onChange={(event) => setConfirmText(event.target.value)}
               placeholder={PHRASE}
               autoComplete="off"
-              className="mt-2 w-full min-h-[48px] max-w-[240px] border border-stone bg-transparent px-4 py-3 text-[15px] text-ink outline-none focus:border-ink"
+              className="mt-2 w-full min-h-[48px] max-w-[240px] border border-stone bg-transparent px-4 py-3 text-[16px] text-ink outline-none focus:border-ink"
             />
           </div>
         ) : (
@@ -161,13 +161,13 @@ export default function WithdrawForm({
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               autoComplete="current-password"
-              className="mt-2 w-full min-h-[48px] max-w-[280px] border border-stone bg-transparent px-4 py-3 text-[15px] text-ink outline-none focus:border-ink"
+              className="mt-2 w-full min-h-[48px] max-w-[280px] border border-stone bg-transparent px-4 py-3 text-[16px] text-ink outline-none focus:border-ink"
             />
           </div>
         )}
 
         {error ? (
-          <p role="alert" className="mt-4 text-[14px] leading-relaxed text-wine">
+          <p role="alert" className="mt-4 text-[15px] leading-relaxed text-wine">
             {error}
           </p>
         ) : null}

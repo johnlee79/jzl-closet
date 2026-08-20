@@ -30,7 +30,7 @@ const KAKAO_INK = '#191919';
  * ★ 여기 한 줄만 고치면 구글·카카오가 같이 움직입니다. 높이가 어긋날 수 없습니다.
  */
 const SOCIAL_BUTTON =
-  'inline-flex min-h-[52px] w-full items-center justify-center gap-3 rounded-sm px-6 text-[15px] font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50';
+  'inline-flex min-h-[52px] w-full items-center justify-center gap-3 rounded-sm px-6 text-[16px] font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50';
 
 /** 구글 정품 로고(4색)를 인라인 SVG 로 직접 그립니다. */
 function GoogleLogo() {
@@ -175,13 +175,13 @@ function SocialButton({
       </button>
 
       {stage === 2 ? (
-        <p role="status" className="mt-3 text-center text-[13px] leading-relaxed text-muted">
+        <p role="status" className="mt-3 text-center text-[14px] leading-relaxed text-muted">
           잠시만 기다려 주세요. 곧 연결됩니다.
         </p>
       ) : null}
 
       {stage === 3 ? (
-        <p role="alert" className="mt-3 text-center text-[13px] leading-relaxed text-wine">
+        <p role="alert" className="mt-3 text-center text-[14px] leading-relaxed text-wine">
           연결이 오래 걸리고 있습니다. 위 버튼으로 다시 시도해 주세요.
         </p>
       ) : null}
@@ -233,14 +233,14 @@ export default function SocialAuthButtons({
       </div>
 
       {error ? (
-        <p role="alert" className="mt-3 text-center text-[13px] leading-relaxed text-wine">
+        <p role="alert" className="mt-3 text-center text-[14px] leading-relaxed text-wine">
           {error}
         </p>
       ) : null}
 
       {/* TODO: 네이버 로그인 버튼 — Supabase 미지원이라 직접 붙여야 합니다. */}
 
-      <p className="mt-3 text-center text-[12px] leading-relaxed text-muted">
+      <p className="mt-3 text-center text-[13px] leading-relaxed text-muted">
         가입 시{' '}
         <Link href="/terms" target="_blank" className="underline underline-offset-2">
           이용약관
@@ -260,7 +260,7 @@ export function OrDivider({ label = '또는' }: { label?: string }) {
   return (
     <div className="my-7 flex items-center gap-4" role="separator">
       <span aria-hidden="true" className="h-px flex-1 bg-stone" />
-      <span className="text-[13px] tracking-[0.14em] text-muted">{label}</span>
+      <span className="text-[14px] tracking-[0.14em] text-muted">{label}</span>
       <span aria-hidden="true" className="h-px flex-1 bg-stone" />
     </div>
   );

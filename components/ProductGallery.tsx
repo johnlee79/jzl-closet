@@ -265,7 +265,7 @@ export default function ProductGallery({
               </svg>
             </button>
 
-            <span className="absolute bottom-3 left-3 z-10 bg-paper/85 px-2.5 py-1 text-[12px] tabular-nums tracking-[0.1em] text-ink">
+            <span className="absolute bottom-3 left-3 z-10 bg-paper/85 px-2.5 py-1 text-[13px] tabular-nums tracking-[0.1em] text-ink">
               {active + 1} / {list.length}
             </span>
 
@@ -274,7 +274,7 @@ export default function ProductGallery({
               <button
                 type="button"
                 onClick={startAuto}
-                className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-1.5 bg-paper/90 px-3 py-1.5 text-[12px] tracking-[0.1em] text-ink transition-colors hover:bg-paper"
+                className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-1.5 bg-paper/90 px-3 py-1.5 text-[13px] tracking-[0.1em] text-ink transition-colors hover:bg-paper"
               >
                 <svg width="8" height="10" viewBox="0 0 8 10" fill="currentColor" aria-hidden="true">
                   <path d="M0 0l8 5-8 5z" />

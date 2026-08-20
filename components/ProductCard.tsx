@@ -72,17 +72,17 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
 
           <div className="absolute left-0 top-0 flex flex-col items-start">
             {soldOut ? (
-              <span className="bg-ink px-3 py-1.5 text-[13px] tracking-[0.2em] text-paper">
+              <span className="bg-ink px-3 py-1.5 text-[14px] tracking-[0.2em] text-paper">
                 SOLD OUT
               </span>
             ) : null}
             {!soldOut && product.isNew ? (
-              <span className="bg-wine px-3 py-1.5 text-[13px] tracking-[0.2em] text-paper">
+              <span className="bg-wine px-3 py-1.5 text-[14px] tracking-[0.2em] text-paper">
                 NEW
               </span>
             ) : null}
             {!soldOut && product.isSale ? (
-              <span className="border border-wine px-3 py-1.5 text-[13px] tracking-[0.2em] text-wine">
+              <span className="border border-wine px-3 py-1.5 text-[14px] tracking-[0.2em] text-wine">
                 SALE
               </span>
             ) : null}
@@ -91,7 +91,7 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
 
         <div className="pt-4">
           {brandLabel ? (
-            <p className="text-[13px] tracking-[0.16em] text-muted">{brandLabel}</p>
+            <p className="text-[14px] tracking-[0.16em] text-muted">{brandLabel}</p>
           ) : null}
           {/*
             ★ 상품명은 두 줄까지만 보여 줍니다.
@@ -99,13 +99,13 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
               기기에서 세 줄로 늘어나고, 그만큼 가격과 할인율이 아래로 밀립니다.
               목록에서 카드마다 높이가 달라져 줄이 어긋나 보입니다.
           */}
-          <h3 className="mt-1.5 line-clamp-2 font-serif text-[17px] leading-snug text-ink">
+          <h3 className="mt-1.5 line-clamp-2 text-[18px] font-medium leading-snug text-ink">
             {product.name}
           </h3>
-          <p className="mt-1.5 line-clamp-2 text-[15px] leading-relaxed text-ink">
+          <p className="mt-1.5 line-clamp-2 text-[16px] leading-relaxed text-ink">
             {product.summary}
           </p>
-          <p className="mt-3 flex flex-wrap items-baseline gap-2 text-[16px]">
+          <p className="mt-3 flex flex-wrap items-baseline gap-2 text-[17px]">
             <span className="font-medium text-ink">{formatPrice(product.price)}원</span>
             {/*
               ★ 정가와 할인율은 한 덩어리로 묶어 둡니다.
@@ -114,17 +114,17 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
             */}
             {product.originalPrice ? (
               <span className="inline-flex items-baseline gap-2 whitespace-nowrap">
-                <span className="text-[14px] text-muted line-through">
+                <span className="text-[15px] text-muted line-through">
                   {formatPrice(product.originalPrice)}원
                 </span>
                 {discount > 0 ? (
-                  <span className="text-[14px] text-wine">{discount}%</span>
+                  <span className="text-[15px] text-wine">{discount}%</span>
                 ) : null}
               </span>
             ) : null}
           </p>
           {earn > 0 ? (
-            <p className="mt-1.5 text-[13px] text-wine">
+            <p className="mt-1.5 text-[14px] text-wine">
               {fillTokens(event.earnNotice, { points: formatPrice(earn) })}
             </p>
           ) : null}

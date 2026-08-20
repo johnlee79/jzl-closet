@@ -349,7 +349,7 @@ export default function ImageViewer({
 
       {/* ── 아래: 몇 번째인지 ────────────────────────── */}
       <div className="shrink-0 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] pt-3 text-center">
-        <span className="text-[13px] tabular-nums tracking-[0.14em] text-paper/80">
+        <span className="text-[14px] tabular-nums tracking-[0.14em] text-paper/80">
           {index + 1} / {total}
         </span>
       </div>

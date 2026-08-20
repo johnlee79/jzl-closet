@@ -61,7 +61,7 @@ function FooterNav({
           <li key={link.href}>
             <Link
               href={link.href}
-              className={`tap-target break-keep text-[15px] text-ink transition-opacity duration-200 hover:opacity-60 ${
+              className={`tap-target break-keep text-[16px] text-ink transition-opacity duration-200 hover:opacity-60 ${
                 link.strong ? 'font-semibold' : ''
               }`}
             >
@@ -135,11 +135,11 @@ export default function Footer({
       */}
       <div className="shell grid grid-cols-2 gap-x-6 gap-y-12 py-16 md:grid-cols-3 md:gap-8 md:py-20 lg:grid-cols-5">
         <div className="col-span-2 md:col-span-3 lg:col-span-2">
-          <p className="font-display text-[22px] font-light tracking-[0.34em] text-ink">
+          <p className="font-display text-[24px] font-light tracking-[0.34em] text-ink">
             {store.name}
           </p>
-          <p className="mt-4 font-serif text-[17px] text-ink">{store.slogan}</p>
-          <p className="mt-3 max-w-[420px] text-[15px] leading-relaxed text-ink">
+          <p className="mt-4 font-serif text-[18px] text-ink">{store.slogan}</p>
+          <p className="mt-3 max-w-[420px] text-[16px] leading-relaxed text-ink">
             {store.intro}
           </p>
 
@@ -150,12 +150,12 @@ export default function Footer({
                 사업자 정보 표시 의무가 있어 번호 자체는 반드시 남기지만,
                 문의는 카카오톡으로 받기로 했습니다. 링크로 두면 전화가 계속 옵니다.
             */}
-            <p className="mt-2 font-display text-[26px] tracking-[0.1em] text-ink">
+            <p className="mt-2 select-all text-[28px] font-semibold tabular-nums tracking-tight text-ink">
               {store.phone}
             </p>
-            <p className="mt-2 text-[13px] leading-relaxed text-muted">{store.hours}</p>
+            <p className="mt-2 text-[14px] leading-relaxed text-muted">{store.hours}</p>
             {store.email ? (
-              <p className="mt-1 text-[13px] leading-relaxed text-muted">
+              <p className="mt-1 text-[14px] leading-relaxed text-muted">
                 <a href={`mailto:${store.email}`} className="underline underline-offset-4">
                   {store.email}
                 </a>
@@ -217,7 +217,7 @@ export default function Footer({
                   라벨과 값 사이가 벌어져 읽는 눈이 짝을 잃습니다.
                   이 여백이 지금 오른쪽 SNS 아이콘이 서 있는 자리이기도 합니다.
               */}
-              <dl className="mt-4 grid max-w-[520px] grid-cols-[auto_1fr] gap-x-5 gap-y-2 text-[13px] leading-relaxed">
+              <dl className="mt-4 grid max-w-[520px] grid-cols-[auto_1fr] gap-x-5 gap-y-2 text-[14px] leading-relaxed">
                 {businessRows.map((row) => (
                   <Fragment key={row.label}>
                     <dt className="whitespace-nowrap text-muted">{row.label}</dt>
@@ -244,14 +244,14 @@ export default function Footer({
                     </a>
                   ) : null}
                   {escrow.notice ? (
-                    <p className="max-w-[640px] text-[13px] leading-relaxed text-muted">
+                    <p className="max-w-[640px] text-[14px] leading-relaxed text-muted">
                       {escrow.notice}
                     </p>
                   ) : null}
                 </div>
               ) : null}
 
-              <p className="mt-6 text-[13px] tracking-[0.1em] text-muted">
+              <p className="mt-6 text-[14px] tracking-[0.1em] text-muted">
                 © {store.name} ALL RIGHTS RESERVED.
               </p>
             </div>

@@ -6,7 +6,7 @@ import { formatPhone } from '@/lib/format';
 import { INQUIRY_CATEGORIES } from '@/lib/inquiry-status';
 
 const inputClass =
-  'mt-2 w-full min-h-[48px] border border-stone bg-transparent px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-muted focus:border-ink';
+  'mt-2 w-full min-h-[48px] border border-stone bg-transparent px-4 py-3 text-[16px] text-ink outline-none transition-colors placeholder:text-muted focus:border-ink';
 
 /**
  * 상품 상세 Q&A 탭에서 바로 쓰는 문의 폼.
@@ -84,8 +84,8 @@ export default function ProductInquiryForm({
 
   return (
     <form onSubmit={submit} noValidate>
-      <p className="text-[13px] tracking-[0.14em] text-muted">문의할 상품</p>
-      <p className="mt-1.5 text-[16px] leading-snug text-ink">{productName}</p>
+      <p className="text-[14px] tracking-[0.14em] text-muted">문의할 상품</p>
+      <p className="mt-1.5 text-[17px] leading-snug text-ink">{productName}</p>
 
       <div className="mt-6 flex max-w-[560px] flex-col gap-5">
         <div>
@@ -131,12 +131,12 @@ export default function ProductInquiryForm({
             onChange={(event) => set('content', event.target.value)}
             rows={5}
             placeholder="키·몸무게나 평소 입으시는 사이즈를 함께 알려 주시면 더 정확히 안내해 드릴 수 있습니다."
-            className="mt-2 w-full resize-none border border-stone bg-transparent p-4 text-[15px] leading-relaxed text-ink outline-none placeholder:text-muted focus:border-ink"
+            className="mt-2 w-full resize-none border border-stone bg-transparent p-4 text-[16px] leading-relaxed text-ink outline-none placeholder:text-muted focus:border-ink"
           />
         </div>
 
         {isMember ? (
-          <label className="flex cursor-pointer items-center gap-3 text-[15px] text-ink">
+          <label className="flex cursor-pointer items-center gap-3 text-[16px] text-ink">
             <input
               type="checkbox"
               checked={form.isSecret}
@@ -200,7 +200,7 @@ export default function ProductInquiryForm({
                 />
               </div>
             </div>
-            <p className="text-[13px] leading-relaxed text-muted">
+            <p className="text-[14px] leading-relaxed text-muted">
               연락처와 이메일 중 하나는 꼭 적어 주세요. 비회원 문의는 비밀글로 저장되며,
               문의번호와 비밀번호로만 확인하실 수 있습니다.
             </p>
@@ -209,7 +209,7 @@ export default function ProductInquiryForm({
       </div>
 
       {error ? (
-        <p role="alert" className="mt-5 text-[14px] leading-relaxed text-wine">
+        <p role="alert" className="mt-5 text-[15px] leading-relaxed text-wine">
           {error}
         </p>
       ) : null}

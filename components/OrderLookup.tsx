@@ -74,7 +74,7 @@ export default function OrderLookup({ storeName }: { storeName: string }) {
         title="주문 조회"
         description="회원가입 없이 주문번호와 연락처만으로 주문 상태와 배송 정보를 확인하실 수 있습니다."
         footer={
-          <p className="text-[13px] leading-relaxed text-muted">
+          <p className="text-[14px] leading-relaxed text-muted">
             회원으로 주문하셨다면{' '}
             <Link href="/mypage/orders" className="link-wine">
               마이페이지 &gt; 주문 내역
@@ -114,7 +114,7 @@ export default function OrderLookup({ storeName }: { storeName: string }) {
           </div>
 
           {error ? (
-            <p role="alert" className="mt-4 text-[14px] leading-relaxed text-wine">
+            <p role="alert" className="mt-4 text-[15px] leading-relaxed text-wine">
               {error}
             </p>
           ) : null}
@@ -131,7 +131,7 @@ export default function OrderLookup({ storeName }: { storeName: string }) {
   return (
     <div className="shell py-14 md:py-20">
       {error ? (
-        <p role="alert" className="mb-6 text-[14px] leading-relaxed text-wine">
+        <p role="alert" className="mb-6 text-[15px] leading-relaxed text-wine">
           {error}
         </p>
       ) : null}
@@ -139,7 +139,7 @@ export default function OrderLookup({ storeName }: { storeName: string }) {
       {cancelDone ? (
         <p
           role="status"
-          className="mt-8 border border-stone px-5 py-4 text-[15px] leading-relaxed text-ink"
+          className="mt-8 border border-stone px-5 py-4 text-[16px] leading-relaxed text-ink"
         >
           취소 요청을 접수했습니다. 확인 후 고객센터에서 연락드리겠습니다.
         </p>
@@ -150,11 +150,11 @@ export default function OrderLookup({ storeName }: { storeName: string }) {
           <div className="flex flex-wrap items-baseline justify-between gap-4 border-b border-stone pb-4">
             <div>
               <p className="label-xs">주문번호</p>
-              <p className="mt-2 font-display text-[24px] tracking-[0.12em] text-ink">
+              <p className="mt-2 select-all text-[26px] font-semibold tabular-nums tracking-[0.02em] text-ink">
                 {order.orderNo}
               </p>
             </div>
-            <p className="text-[13px] text-muted">
+            <p className="text-[14px] text-muted">
               {order.createdAt ? new Date(order.createdAt).toLocaleString('ko-KR') : ''}
             </p>
           </div>
@@ -164,7 +164,7 @@ export default function OrderLookup({ storeName }: { storeName: string }) {
 
             <aside className="lg:sticky lg:top-28 lg:self-start">
               <div className="border border-stone p-6 md:p-8">
-                <h3 className="font-serif text-[18px] text-ink">주문 내역</h3>
+                <h3 className="font-serif text-[19px] text-ink">주문 내역</h3>
                 <div className="mt-5">
                   <CopyOrderButton text={orderToText(order, storeName)} />
                 </div>
@@ -183,7 +183,7 @@ export default function OrderLookup({ storeName }: { storeName: string }) {
                           onChange={(event) => setCancelReason(event.target.value)}
                           rows={3}
                           placeholder="예: 다른 색상으로 다시 주문하려 합니다."
-                          className="mt-2 w-full resize-none border border-stone bg-transparent p-3 text-[14px] leading-relaxed text-ink outline-none focus:border-ink"
+                          className="mt-2 w-full resize-none border border-stone bg-transparent p-3 text-[15px] leading-relaxed text-ink outline-none focus:border-ink"
                         />
                         <div className="mt-3 flex gap-2">
                           <button
@@ -212,7 +212,7 @@ export default function OrderLookup({ storeName }: { storeName: string }) {
                         >
                           주문 취소 요청
                         </button>
-                        <p className="mt-3 text-[13px] leading-relaxed text-muted">
+                        <p className="mt-3 text-[14px] leading-relaxed text-muted">
                           요청을 보내시면 확인 후 취소 처리해 드립니다. 입금하신 금액이
                           있으면 환불해 드립니다.
                         </p>
@@ -222,7 +222,7 @@ export default function OrderLookup({ storeName }: { storeName: string }) {
                 ) : (
                   /* ★ 전화 걸기 링크를 카카오톡·1:1 문의로 바꿨습니다. */
                   <div className="mt-6 border-t border-stone pt-6">
-                    <p className="text-[13px] leading-relaxed text-muted">
+                    <p className="text-[14px] leading-relaxed text-muted">
                       이미 상품 준비가 시작되어 이 화면에서는 취소할 수 없습니다.
                       카카오톡이나{' '}
                       <Link href="/inquiry/new" className="link-wine">
@@ -234,7 +234,7 @@ export default function OrderLookup({ storeName }: { storeName: string }) {
                   </div>
                 )}
 
-                <p className="mt-6 border-t border-stone pt-5 text-[13px] leading-relaxed text-muted">
+                <p className="mt-6 border-t border-stone pt-5 text-[14px] leading-relaxed text-muted">
                   교환·반품 규정은{' '}
                   <Link href="/guide" className="link-wine">
                     배송·교환·반품 안내
@@ -253,7 +253,7 @@ export default function OrderLookup({ storeName }: { storeName: string }) {
                 setError('');
                 setCancelDone(false);
               }}
-              className="text-[14px] text-muted underline underline-offset-4"
+              className="text-[15px] text-muted underline underline-offset-4"
             >
               다른 주문 조회하기
             </button>

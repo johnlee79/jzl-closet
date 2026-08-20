@@ -59,7 +59,7 @@ function ShippingForm({
 
   return (
     <div className="mt-4 border-t border-slate-200 pt-4">
-      <p className="text-[13px] text-slate-500">
+      <p className="text-[14px] text-slate-500">
         받는 분 — 마지막 배송지를 가져왔습니다. 필요하면 고쳐 주세요.
       </p>
 
@@ -182,7 +182,7 @@ export default function RewardManager({ items }: { items: Achievement[] }) {
 
   if (items.length === 0) {
     return (
-      <p className="mt-4 text-[14px] text-slate-600">처리할 보상이 없습니다.</p>
+      <p className="mt-4 text-[15px] text-slate-600">처리할 보상이 없습니다.</p>
     );
   }
 
@@ -191,7 +191,7 @@ export default function RewardManager({ items }: { items: Achievement[] }) {
       {message ? (
         <p
           role="status"
-          className={`text-[13px] ${
+          className={`text-[14px] ${
             message.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'
           }`}
         >
@@ -204,14 +204,14 @@ export default function RewardManager({ items }: { items: Achievement[] }) {
           <li key={item.id} className="border border-slate-200 p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[15px] text-slate-900">
+                <p className="text-[16px] text-slate-900">
                   {item.userName || '이름 없음'}
-                  <span className="ml-2 text-[13px] text-slate-500">
+                  <span className="ml-2 text-[14px] text-slate-500">
                     {item.goalName}
                     {item.round > 1 ? ` · ${item.round}회차` : ''}
                   </span>
                 </p>
-                <p className="mt-1 text-[13px] text-slate-600">
+                <p className="mt-1 text-[14px] text-slate-600">
                   {item.rewardType === 'point'
                     ? `포인트 ${item.rewardPoints.toLocaleString('ko-KR')}P`
                     : `사은품 ${item.giftName || '미지정'}`}{' '}
@@ -221,10 +221,10 @@ export default function RewardManager({ items }: { items: Achievement[] }) {
                   </span>
                 </p>
                 {item.holdReason ? (
-                  <p className="mt-1 text-[13px] text-amber-700">{item.holdReason}</p>
+                  <p className="mt-1 text-[14px] text-amber-700">{item.holdReason}</p>
                 ) : null}
                 {item.status === 'shipped' ? (
-                  <p className="mt-1 text-[13px] text-slate-600">
+                  <p className="mt-1 text-[14px] text-slate-600">
                     {item.courier} {item.trackingNo}
                   </p>
                 ) : null}

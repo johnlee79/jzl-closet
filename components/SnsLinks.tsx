@@ -114,7 +114,7 @@ function WeChatModal({ qrUrl, onClose }: { qrUrl: string; onClose: () => void })
           alt="위챗 QR 코드"
           className="mx-auto mt-5 block h-auto w-full max-w-[220px]"
         />
-        <p className="mt-5 text-[15px] leading-relaxed text-ink">위챗에서 스캔해 주세요</p>
+        <p className="mt-5 text-[16px] leading-relaxed text-ink">위챗에서 스캔해 주세요</p>
       </div>
     </div>
   );

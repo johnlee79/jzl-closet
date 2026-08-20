@@ -48,7 +48,7 @@ function NoticeForm({
       }}
       className="rounded-md border border-blue-200 bg-blue-50/50 p-4"
     >
-      <h3 className="text-[14px] font-semibold text-slate-900">
+      <h3 className="text-[15px] font-semibold text-slate-900">
         {isNew ? '공지 등록' : '공지 수정'}
       </h3>
 
@@ -75,7 +75,7 @@ function NoticeForm({
       </div>
 
       <div className="mt-4 flex flex-wrap gap-5">
-        <label className="flex items-center gap-2 text-[14px] text-slate-800">
+        <label className="flex items-center gap-2 text-[15px] text-slate-800">
           <input
             type="checkbox"
             checked={draft.isPinned}
@@ -84,7 +84,7 @@ function NoticeForm({
           />
           상단 고정
         </label>
-        <label className="flex items-center gap-2 text-[14px] text-slate-800">
+        <label className="flex items-center gap-2 text-[15px] text-slate-800">
           <input
             type="checkbox"
             checked={draft.isVisible}
@@ -144,7 +144,7 @@ export default function NoticeManager({ notices }: { notices: Notice[] }) {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[13px] text-slate-600">
+        <p className="text-[14px] text-slate-600">
           상단 고정한 공지가 목록 맨 위에 나옵니다.
         </p>
         <button
@@ -162,7 +162,7 @@ export default function NoticeManager({ notices }: { notices: Notice[] }) {
       {message ? (
         <p
           role="status"
-          className={`mt-4 rounded-md px-3 py-2 text-[14px] ${
+          className={`mt-4 rounded-md px-3 py-2 text-[15px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >
@@ -184,7 +184,7 @@ export default function NoticeManager({ notices }: { notices: Notice[] }) {
 
       <div className="admin-card mt-4 overflow-hidden">
         {notices.length === 0 ? (
-          <p className="px-4 py-16 text-center text-[14px] text-slate-500">
+          <p className="px-4 py-16 text-center text-[15px] text-slate-500">
             등록된 공지가 없습니다.
           </p>
         ) : (
@@ -201,15 +201,15 @@ export default function NoticeManager({ notices }: { notices: Notice[] }) {
                         숨김
                       </span>
                     ) : null}
-                    <span className="text-[14px] font-medium text-slate-900">
+                    <span className="text-[15px] font-medium text-slate-900">
                       {notice.title}
                     </span>
                   </span>
 
-                  <span className="text-[13px] text-slate-500">
+                  <span className="text-[14px] text-slate-500">
                     조회 {notice.viewCount}
                   </span>
-                  <span className="text-[13px] text-slate-500">
+                  <span className="text-[14px] text-slate-500">
                     {formatDate(notice.createdAt)}
                   </span>
 

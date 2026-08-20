@@ -88,7 +88,7 @@ export default function RecentlyViewed({
           <p className="label-xs">RECENTLY VIEWED</p>
           <h2
             id="recently-viewed-title"
-            className="mt-3 font-serif text-[22px] leading-snug text-ink md:text-[28px]"
+            className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[30px]"
           >
             최근 본 상품
           </h2>
@@ -96,7 +96,7 @@ export default function RecentlyViewed({
         <button
           type="button"
           onClick={clearRecent}
-          className="tap-target text-[13px] text-muted underline underline-offset-4 transition-colors duration-200 hover:text-ink"
+          className="tap-target text-[14px] text-muted underline underline-offset-4 transition-colors duration-200 hover:text-ink"
         >
           전체 지우기
         </button>
@@ -124,12 +124,12 @@ export default function RecentlyViewed({
                     />
                   </div>
                   {brand ? (
-                    <p className="mt-3 text-[12px] tracking-[0.14em] text-muted">{brand}</p>
+                    <p className="mt-3 text-[13px] tracking-[0.14em] text-muted">{brand}</p>
                   ) : null}
-                  <p className="mt-1 break-keep text-[14px] leading-snug text-ink">
+                  <p className="mt-1 break-keep text-[15px] leading-snug text-ink">
                     {item.name}
                   </p>
-                  <p className="mt-1 text-[14px] tabular-nums text-ink">
+                  <p className="mt-1 text-[15px] tabular-nums text-ink">
                     {formatPrice(item.price)}원
                   </p>
                 </Link>

@@ -87,7 +87,7 @@ export default function ProductQna({
           <p className="label-xs">Q&amp;A</p>
           <h2
             id="inquiry-title"
-            className="mt-3 font-serif text-[22px] leading-snug text-ink md:text-[28px]"
+            className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[30px]"
           >
             상품 문의
           </h2>
@@ -107,7 +107,7 @@ export default function ProductQna({
       {done ? (
         <p
           role="status"
-          className="mt-6 border border-stone bg-paper px-5 py-4 text-[15px] leading-relaxed text-ink"
+          className="mt-6 border border-stone bg-paper px-5 py-4 text-[16px] leading-relaxed text-ink"
         >
           {done}
         </p>
@@ -130,7 +130,7 @@ export default function ProductQna({
       ) : null}
 
       {inquiries.length === 0 ? (
-        <p className="mt-10 border-t border-stone pt-10 text-[16px] leading-relaxed text-ink">
+        <p className="mt-10 border-t border-stone pt-10 text-[17px] leading-relaxed text-ink">
           아직 등록된 문의가 없습니다. 사이즈나 소재가 궁금하시면 편하게 물어봐 주세요.
         </p>
       ) : (
@@ -143,11 +143,11 @@ export default function ProductQna({
               return (
                 <li key={inquiry.id} className="border-b border-stone">
                   <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 py-5">
-                    <span className="w-[70px] shrink-0 text-[13px] tracking-[0.14em] text-muted">
+                    <span className="w-[70px] shrink-0 text-[14px] tracking-[0.14em] text-muted">
                       {inquiryCategoryLabel(inquiry.category)}
                     </span>
 
-                    <span className="min-w-0 flex-1 text-[16px] leading-snug">
+                    <span className="min-w-0 flex-1 text-[17px] leading-snug">
                       {canOpen ? (
                         <button
                           type="button"
@@ -165,14 +165,14 @@ export default function ProductQna({
                       )}
                     </span>
 
-                    <span className="w-[80px] shrink-0 text-[13px] text-muted">
+                    <span className="w-[80px] shrink-0 text-[14px] text-muted">
                       {inquiry.writerName}
                     </span>
-                    <span className="w-[92px] shrink-0 text-[13px] text-muted">
+                    <span className="w-[92px] shrink-0 text-[14px] text-muted">
                       {formatDate(inquiry.createdAt)}
                     </span>
                     <span
-                      className={`w-[68px] shrink-0 text-[13px] ${
+                      className={`w-[68px] shrink-0 text-[14px] ${
                         inquiry.hasAnswer ? 'text-ink' : 'text-muted'
                       }`}
                     >
@@ -182,25 +182,25 @@ export default function ProductQna({
 
                   {expanded && canOpen ? (
                     <div className="pb-7">
-                      <p className="whitespace-pre-line text-[15px] leading-[1.9] text-ink">
+                      <p className="whitespace-pre-line text-[16px] leading-[1.9] text-ink">
                         {inquiry.content}
                       </p>
 
                       {inquiry.answer ? (
                         <div className="mt-5 border-l-2 border-stone pl-5">
-                          <p className="text-[13px] tracking-[0.14em] text-muted">
+                          <p className="text-[14px] tracking-[0.14em] text-muted">
                             판매자 답변
                             {inquiry.answeredAt
                               ? ` · ${formatDate(inquiry.answeredAt)}`
                               : ''}
                           </p>
                           <div
-                            className="mt-2 text-[15px] leading-[1.9] text-ink [&_a]:underline"
+                            className="mt-2 text-[16px] leading-[1.9] text-ink [&_a]:underline"
                             dangerouslySetInnerHTML={{ __html: inquiry.answer }}
                           />
                         </div>
                       ) : (
-                        <p className="mt-4 text-[13px] text-muted">
+                        <p className="mt-4 text-[14px] text-muted">
                           아직 답변이 등록되지 않았습니다. 영업일 기준 1~2일 안에
                           답변드리고 있습니다.
                         </p>
@@ -220,7 +220,7 @@ export default function ProductQna({
                   type="button"
                   onClick={() => setPage(number)}
                   aria-current={number === page ? 'page' : undefined}
-                  className={`tap-target min-w-[40px] border px-3 py-2 text-[14px] tabular-nums transition-colors ${
+                  className={`tap-target min-w-[40px] border px-3 py-2 text-[15px] tabular-nums transition-colors ${
                     number === page
                       ? 'border-ink text-ink'
                       : 'border-stone text-muted hover:text-ink'
@@ -234,7 +234,7 @@ export default function ProductQna({
         </>
       )}
 
-      <p className="mt-6 text-[13px] leading-relaxed text-muted">
+      <p className="mt-6 text-[14px] leading-relaxed text-muted">
         비밀글은 작성하신 분과 관리자만 볼 수 있습니다. 답변은{' '}
         <Link href="/mypage/inquiries" className="link-wine">
           마이페이지

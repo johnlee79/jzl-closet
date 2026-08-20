@@ -68,7 +68,7 @@ function PopupForm({
       }}
       className="rounded-md border border-blue-200 bg-blue-50/50 p-4"
     >
-      <h3 className="text-[14px] font-semibold text-slate-900">
+      <h3 className="text-[15px] font-semibold text-slate-900">
         {isNew ? '팝업 등록' : '팝업 수정'}
       </h3>
 
@@ -177,7 +177,7 @@ function PopupForm({
             onChange={(event) => set('startsOn', event.target.value)}
             className="admin-input"
           />
-          <p className="mt-1 text-[12px] text-slate-500">그날 0시부터 (한국시간)</p>
+          <p className="mt-1 text-[13px] text-slate-500">그날 0시부터 (한국시간)</p>
         </div>
         <div>
           <label className="admin-label" htmlFor="popup-end">
@@ -190,7 +190,7 @@ function PopupForm({
             onChange={(event) => set('endsOn', event.target.value)}
             className="admin-input"
           />
-          <p className="mt-1 text-[12px] text-slate-500">그날 밤 12시까지 (한국시간)</p>
+          <p className="mt-1 text-[13px] text-slate-500">그날 밤 12시까지 (한국시간)</p>
         </div>
 
         <div>
@@ -211,7 +211,7 @@ function PopupForm({
           </select>
         </div>
         <div className="flex items-end">
-          <label className="flex items-center gap-2 pb-2 text-[14px] text-slate-800">
+          <label className="flex items-center gap-2 pb-2 text-[15px] text-slate-800">
             <input
               type="checkbox"
               checked={draft.isVisible}
@@ -223,7 +223,7 @@ function PopupForm({
         </div>
       </div>
 
-      <p className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-[12px] leading-relaxed text-slate-600">
+      <p className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-[13px] leading-relaxed text-slate-600">
         모바일에서는 위치·폭 설정을 무시하고 화면 가운데에 가로 90%로 뜹니다. 좁은 화면에서
         옆으로 붙이면 잘리기 때문입니다.
       </p>
@@ -249,12 +249,12 @@ function PopupForm({
                 <img src={draft.imageUrl} alt="" className="block h-auto w-full" />
               ) : (
                 <div className="p-5">
-                  <p className="text-[16px] font-medium text-slate-900">
+                  <p className="text-[17px] font-medium text-slate-900">
                     {draft.title || '(제목 없음)'}
                   </p>
                   {draft.content ? (
                     <div
-                      className="mt-2 text-[14px] leading-relaxed text-slate-700"
+                      className="mt-2 text-[15px] leading-relaxed text-slate-700"
                       dangerouslySetInnerHTML={{
                         __html: sanitizeRichText(draft.content),
                       }}
@@ -262,7 +262,7 @@ function PopupForm({
                   ) : null}
                 </div>
               )}
-              <div className="flex items-center justify-between border-t border-slate-200 text-[12px] text-slate-500">
+              <div className="flex items-center justify-between border-t border-slate-200 text-[13px] text-slate-500">
                 <span className="py-2 pl-3">오늘 하루 보지 않기</span>
                 <span className="py-2 pr-3">닫기</span>
               </div>
@@ -324,7 +324,7 @@ export default function PopupManager({ popups }: { popups: Popup[] }) {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[13px] text-slate-600">
+        <p className="text-[14px] text-slate-600">
           표시 순서가 작은 팝업부터 왼쪽에 놓입니다.
         </p>
         <button
@@ -342,7 +342,7 @@ export default function PopupManager({ popups }: { popups: Popup[] }) {
       {message ? (
         <p
           role="status"
-          className={`mt-4 rounded-md px-3 py-2 text-[14px] ${
+          className={`mt-4 rounded-md px-3 py-2 text-[15px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >
@@ -364,7 +364,7 @@ export default function PopupManager({ popups }: { popups: Popup[] }) {
 
       <div className="admin-card mt-4 overflow-hidden">
         {popups.length === 0 ? (
-          <p className="px-4 py-16 text-center text-[14px] text-slate-500">
+          <p className="px-4 py-16 text-center text-[15px] text-slate-500">
             등록된 팝업이 없습니다.
           </p>
         ) : (
@@ -372,7 +372,7 @@ export default function PopupManager({ popups }: { popups: Popup[] }) {
             {popups.map((popup) => (
               <li key={popup.id} className="border-b border-slate-200 last:border-b-0">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
-                  <span className="w-10 text-[13px] tabular-nums text-slate-400">
+                  <span className="w-10 text-[14px] tabular-nums text-slate-400">
                     {popup.displayOrder}
                   </span>
 
@@ -384,22 +384,22 @@ export default function PopupManager({ popups }: { popups: Popup[] }) {
                       className="h-12 w-12 rounded-md border border-slate-200 object-cover"
                     />
                   ) : (
-                    <span className="flex h-12 w-12 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-[11px] text-slate-400">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-[12px] text-slate-400">
                       글
                     </span>
                   )}
 
                   <span className="min-w-0 flex-1">
-                    <span className="text-[14px] font-medium text-slate-900">
+                    <span className="text-[15px] font-medium text-slate-900">
                       {popup.title}
                     </span>
-                    <span className="block text-[12px] text-slate-500">
+                    <span className="block text-[13px] text-slate-500">
                       {popup.position} · {popup.width}px ·{' '}
                       {popup.showOn === 'all' ? '모든 화면' : '메인만'}
                     </span>
                   </span>
 
-                  <span className="text-[12px] text-slate-500">
+                  <span className="text-[13px] text-slate-500">
                     {popup.startsOn || popup.endsOn
                       ? `${popup.startsOn || '제한 없음'} ~ ${
                           popup.endsOn || '무기한'

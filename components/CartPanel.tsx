@@ -91,7 +91,7 @@ export default function CartPanel({
 
   if (!ready) {
     return (
-      <p className="border-t border-stone py-16 text-[16px] text-ink">
+      <p className="border-t border-stone py-16 text-[17px] text-ink">
         장바구니를 불러오는 중입니다.
       </p>
     );
@@ -102,11 +102,11 @@ export default function CartPanel({
       <div className="border-t border-stone py-16">
         {/* 빈 장바구니 안내 — 관리자 문구입니다. (3-L) */}
         {emptyNote?.heading ? (
-          <p className="text-[16px] leading-relaxed text-ink">{emptyNote.heading}</p>
+          <p className="text-[17px] leading-relaxed text-ink">{emptyNote.heading}</p>
         ) : null}
         {emptyNote?.html ? (
           <div
-            className="detail-body mt-2 text-[15px] leading-relaxed text-ink"
+            className="detail-body mt-2 text-[16px] leading-relaxed text-ink"
             dangerouslySetInnerHTML={{ __html: emptyNote.html }}
           />
         ) : null}
@@ -148,14 +148,14 @@ export default function CartPanel({
               </Link>
 
               <div className="flex min-w-0 flex-1 flex-col">
-                <p className="text-[13px] tracking-[0.16em] text-muted">{item.brand}</p>
+                <p className="text-[14px] tracking-[0.16em] text-muted">{item.brand}</p>
                 <Link
                   href={`/products/${item.productId}`}
-                  className="mt-1 font-serif text-[17px] leading-snug text-ink"
+                  className="mt-1 text-[18px] font-medium leading-snug text-ink"
                 >
                   {item.name}
                 </Link>
-                <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
+                <p className="mt-1.5 text-[14px] leading-relaxed text-muted">
                   {Object.entries(item.options)
                     .map(([name, value]) => `${name} · ${value}`)
                     .join(' / ') ||
@@ -181,7 +181,7 @@ export default function CartPanel({
                         <path d="M0 0.5h11" />
                       </svg>
                     </button>
-                    <span className="w-10 text-center text-[15px] tabular-nums">
+                    <span className="w-10 text-center text-[16px] tabular-nums">
                       {item.quantity}
                     </span>
                     <button
@@ -197,13 +197,13 @@ export default function CartPanel({
                   </div>
 
                   <div className="flex items-center gap-4">
-                    <span className="text-[16px] font-medium text-ink">
+                    <span className="text-[17px] font-medium text-ink">
                       {formatPrice(item.price * item.quantity)}원
                     </span>
                     <button
                       type="button"
                       onClick={() => removeItem(item.key)}
-                      className="tap-target text-[14px] text-muted underline underline-offset-4"
+                      className="tap-target text-[15px] text-muted underline underline-offset-4"
                     >
                       삭제
                     </button>
@@ -217,7 +217,7 @@ export default function CartPanel({
         <button
           type="button"
           onClick={clear}
-          className="tap-target mt-6 text-[14px] text-muted underline underline-offset-4"
+          className="tap-target mt-6 text-[15px] text-muted underline underline-offset-4"
         >
           장바구니 비우기
         </button>
@@ -225,8 +225,8 @@ export default function CartPanel({
 
       <aside className="lg:sticky lg:top-28 lg:self-start">
         <div className="border border-stone p-6 md:p-8">
-          <h2 className="font-serif text-[18px] text-ink">주문 요약</h2>
-          <dl className="mt-6 flex flex-col gap-3 border-t border-stone pt-6 text-[15px]">
+          <h2 className="font-serif text-[19px] text-ink">주문 요약</h2>
+          <dl className="mt-6 flex flex-col gap-3 border-t border-stone pt-6 text-[16px]">
             <div className="flex justify-between">
               <dt className="text-muted">상품 수량</dt>
               <dd className="text-ink">{count}개</dd>
@@ -245,23 +245,23 @@ export default function CartPanel({
 
           {/* ★ 예상 적립 — 적립률 × 상품금액을 화면에서 계산합니다. */}
           {expectedEarn > 0 ? (
-            <p className="mt-4 text-[13px] leading-relaxed text-wine">
+            <p className="mt-4 text-[14px] leading-relaxed text-wine">
               이번 주문으로 {formatPrice(expectedEarn)}P 적립 예정
               <span className="ml-1 text-muted">(배송완료 시점에 지급)</span>
             </p>
           ) : null}
 
           {freeShippingLeft > 0 ? (
-            <p className="mt-4 text-[13px] leading-relaxed text-muted">
+            <p className="mt-4 text-[14px] leading-relaxed text-muted">
               {formatPrice(freeShippingLeft)}원 더 담으시면 배송비가 무료입니다.
             </p>
           ) : null}
 
           <div className="mt-6 flex items-baseline justify-between border-t border-stone pt-6">
-            <span className="text-[13px] tracking-[0.14em] text-muted">합계</span>
-            <span className="font-display text-[28px] font-medium tracking-wide text-ink">
+            <span className="text-[14px] tracking-[0.14em] text-muted">합계</span>
+            <span className="text-[30px] font-semibold tabular-nums tracking-tight text-ink">
               {formatPrice(total + shippingFee)}
-              <span className="ml-1 font-sans text-[15px]">원</span>
+              <span className="ml-1 font-sans text-[16px]">원</span>
             </span>
           </div>
 
@@ -287,7 +287,7 @@ export default function CartPanel({
           */}
           {payNote?.html ? (
             <div
-              className="detail-body mt-3 text-[13px] leading-relaxed text-muted"
+              className="detail-body mt-3 text-[14px] leading-relaxed text-muted"
               dangerouslySetInnerHTML={{ __html: payNote.html }}
             />
           ) : null}
@@ -300,7 +300,7 @@ export default function CartPanel({
             <KakaoChatButton className="mt-3 w-full" />
             {copyNote?.html ? (
               <div
-                className="detail-body mt-3 text-[13px] leading-relaxed text-muted"
+                className="detail-body mt-3 text-[14px] leading-relaxed text-muted"
                 dangerouslySetInnerHTML={{ __html: copyNote.html }}
               />
             ) : null}
@@ -308,8 +308,8 @@ export default function CartPanel({
         </div>
 
         <div className="mt-6 border border-stone p-6 md:p-8">
-          <h2 className="font-serif text-[18px] text-ink">주문 내역</h2>
-          <p className="mt-2 text-[13px] leading-relaxed text-muted">
+          <h2 className="font-serif text-[19px] text-ink">주문 내역</h2>
+          <p className="mt-2 text-[14px] leading-relaxed text-muted">
             복사가 되지 않을 때는 아래 내용을 직접 선택해 복사해 주세요.
           </p>
           <textarea
@@ -317,7 +317,7 @@ export default function CartPanel({
             value={orderText}
             rows={10}
             aria-label="복사할 주문 내역"
-            className="mt-4 w-full resize-none rounded-none border border-stone bg-transparent p-4 text-[13px] leading-relaxed text-ink outline-none focus:border-ink"
+            className="mt-4 w-full resize-none rounded-none border border-stone bg-transparent p-4 text-[14px] leading-relaxed text-ink outline-none focus:border-ink"
           />
         </div>
       </aside>

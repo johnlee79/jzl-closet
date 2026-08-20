@@ -214,8 +214,8 @@ export default function AddToCartButton({ product }: { product: Product }) {
     >
       <div className="flex items-center gap-3 px-5 py-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[12px] text-muted">{product.name}</p>
-          <p className="text-[17px] font-medium tabular-nums text-ink">
+          <p className="truncate text-[13px] text-muted">{product.name}</p>
+          <p className="text-[18px] font-medium tabular-nums text-ink">
             {formatPrice(soldOut ? product.price : unitPrice * quantity)}원
           </p>
         </div>
@@ -231,7 +231,7 @@ export default function AddToCartButton({ product }: { product: Product }) {
                 if (guardOption()) handleAdd();
               }}
               tabIndex={barShown ? 0 : -1}
-              className="btn-secondary min-h-[46px] shrink-0 px-4 text-[14px] tracking-normal"
+              className="btn-secondary min-h-[46px] shrink-0 px-4 text-[15px] tracking-normal"
             >
               장바구니
             </button>
@@ -241,7 +241,7 @@ export default function AddToCartButton({ product }: { product: Product }) {
                 if (guardOption()) handleBuyNow();
               }}
               tabIndex={barShown ? 0 : -1}
-              className="btn-primary min-h-[46px] shrink-0 px-4 text-[14px] tracking-normal"
+              className="btn-primary min-h-[46px] shrink-0 px-4 text-[15px] tracking-normal"
             >
               바로구매
             </button>
@@ -254,7 +254,7 @@ export default function AddToCartButton({ product }: { product: Product }) {
   if (soldOut) {
     return (
       <div className="mt-8 border-t border-stone pt-8">
-        <p className="text-[15px] leading-relaxed text-ink">
+        <p className="text-[16px] leading-relaxed text-ink">
           현재 품절된 상품입니다. 재입고 일정은 고객센터 {store.phone}으로 문의해 주세요.
         </p>
         <div ref={buttonsRef}>
@@ -280,7 +280,7 @@ export default function AddToCartButton({ product }: { product: Product }) {
             }
           />
           {needOption ? (
-            <p role="status" className="mt-3 text-[13px] leading-relaxed text-wine">
+            <p role="status" className="mt-3 text-[14px] leading-relaxed text-wine">
               옵션을 먼저 선택해 주세요.
             </p>
           ) : null}
@@ -292,7 +292,7 @@ export default function AddToCartButton({ product }: { product: Product }) {
           hasOptions ? 'mt-6 border-t pt-6' : ''
         }`}
       >
-        <span className="text-[13px] tracking-[0.14em] text-muted">수량</span>
+        <span className="text-[14px] tracking-[0.14em] text-muted">수량</span>
         <div className="flex items-center border border-stone">
           <button
             type="button"
@@ -304,7 +304,7 @@ export default function AddToCartButton({ product }: { product: Product }) {
               <path d="M0 0.5h11" />
             </svg>
           </button>
-          <span className="w-12 text-center text-[15px] tabular-nums">{quantity}</span>
+          <span className="w-12 text-center text-[16px] tabular-nums">{quantity}</span>
           <button
             type="button"
             onClick={() => setQuantity((q) => Math.min(maxQuantity, q + 1))}
@@ -325,7 +325,7 @@ export default function AddToCartButton({ product }: { product: Product }) {
       </div>
 
       {extraPrice !== 0 ? (
-        <p className="mt-3 text-right text-[13px] text-muted">
+        <p className="mt-3 text-right text-[14px] text-muted">
           기본가 {formatPrice(product.price)}원
           {extraPrice > 0 ? ' + 옵션 ' : ' − 옵션 '}
           {formatPrice(Math.abs(extraPrice))}원
@@ -333,27 +333,27 @@ export default function AddToCartButton({ product }: { product: Product }) {
       ) : null}
 
       <div className="mt-6 flex items-baseline justify-between border-t border-stone pt-6">
-        <span className="text-[13px] tracking-[0.14em] text-muted">합계</span>
-        <span className="font-display text-[26px] font-medium tracking-wide text-ink">
+        <span className="text-[14px] tracking-[0.14em] text-muted">합계</span>
+        <span className="text-[28px] font-semibold tabular-nums tracking-tight text-ink">
           {formatPrice(unitPrice * quantity)}
-          <span className="ml-1 font-sans text-[15px]">원</span>
+          <span className="ml-1 font-sans text-[16px]">원</span>
         </span>
       </div>
 
       {hasOptions && !allSelected ? (
-        <p className="mt-4 text-[13px] leading-relaxed text-muted">
+        <p className="mt-4 text-[14px] leading-relaxed text-muted">
           옵션을 모두 선택하시면 장바구니에 담을 수 있습니다.
         </p>
       ) : null}
 
       {soldOutCombination ? (
-        <p className="mt-4 text-[13px] leading-relaxed text-wine">
+        <p className="mt-4 text-[14px] leading-relaxed text-wine">
           선택하신 옵션은 품절되었습니다. 다른 옵션을 골라 주세요.
         </p>
       ) : null}
 
       {canAdd && combination?.stock !== null && combination?.stock !== undefined ? (
-        <p className="mt-4 text-[13px] leading-relaxed text-muted">
+        <p className="mt-4 text-[14px] leading-relaxed text-muted">
           남은 수량 {combination.stock}개
         </p>
       ) : null}
@@ -391,7 +391,7 @@ export default function AddToCartButton({ product }: { product: Product }) {
       )}
 
       {added ? (
-        <p className="mt-4 text-[15px] leading-relaxed text-ink">
+        <p className="mt-4 text-[16px] leading-relaxed text-ink">
           장바구니에 담았습니다.{' '}
           <Link href="/order" className="link-wine">
             주문 페이지로 이동

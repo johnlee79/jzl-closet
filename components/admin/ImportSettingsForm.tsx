@@ -28,10 +28,10 @@ function BlockEditor({
 }) {
   return (
     <section className="admin-card p-4 md:p-5">
-      <h2 className="text-[16px] font-semibold text-slate-900">{title}</h2>
-      <p className="mt-1 text-[13px] leading-relaxed text-slate-500">{hint}</p>
+      <h2 className="text-[17px] font-semibold text-slate-900">{title}</h2>
+      <p className="mt-1 text-[14px] leading-relaxed text-slate-500">{hint}</p>
 
-      <label className="mt-3 flex items-center gap-2 text-[14px] text-slate-800">
+      <label className="mt-3 flex items-center gap-2 text-[15px] text-slate-800">
         <input
           type="checkbox"
           checked={block.enabled}
@@ -45,7 +45,7 @@ function BlockEditor({
         <>
           <div className="mt-3 flex flex-wrap gap-3">
             {(['image', 'text'] as const).map((kind) => (
-              <label key={kind} className="flex items-center gap-2 text-[14px] text-slate-800">
+              <label key={kind} className="flex items-center gap-2 text-[15px] text-slate-800">
                 <input
                   type="radio"
                   name={`${title}-kind`}
@@ -150,19 +150,19 @@ export default function ImportSettingsForm({ initial }: { initial: ImportSetting
       {/* ── 글 템플릿 ─────────────────────────────────── */}
       <section className="admin-card p-4 md:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-[16px] font-semibold text-slate-900">글 템플릿</h2>
+          <h2 className="text-[17px] font-semibold text-slate-900">글 템플릿</h2>
           <button type="button" onClick={addTemplate} className="admin-btn">
             + 템플릿 추가
           </button>
         </div>
-        <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+        <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
           가져오기 화면의 <strong>+ 글 넣기</strong>에서 한 번에 꺼내 쓸 수 있습니다.{' '}
           <code className="rounded bg-slate-100 px-1 py-0.5">{'{상품명}'}</code> 을 넣으면
           그 상품 이름으로 바뀝니다.
         </p>
 
         {form.templates.length === 0 ? (
-          <p className="mt-4 rounded-md border border-dashed border-slate-300 bg-slate-50 p-5 text-center text-[13px] text-slate-500">
+          <p className="mt-4 rounded-md border border-dashed border-slate-300 bg-slate-50 p-5 text-center text-[14px] text-slate-500">
             아직 등록한 템플릿이 없습니다.
           </p>
         ) : (
@@ -198,7 +198,7 @@ export default function ImportSettingsForm({ initial }: { initial: ImportSetting
                 </div>
 
                 {template.body.includes('{상품명}') ? (
-                  <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[12px] leading-relaxed text-slate-600">
+                  <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[13px] leading-relaxed text-slate-600">
                     미리보기 —{' '}
                     {fillTemplate(
                       template.body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(),
@@ -215,7 +215,7 @@ export default function ImportSettingsForm({ initial }: { initial: ImportSetting
       {message ? (
         <p
           role="status"
-          className={`rounded-md px-3 py-2 text-[14px] ${
+          className={`rounded-md px-3 py-2 text-[15px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >

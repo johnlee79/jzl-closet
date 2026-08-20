@@ -23,10 +23,10 @@ export default function RootNotFound() {
       <p className="font-display text-[64px] font-light leading-none tracking-[0.16em] text-ink md:text-[88px]">
         404
       </p>
-      <h1 className="mt-6 font-serif text-[22px] leading-snug text-ink md:text-[28px]">
+      <h1 className="mt-6 font-serif text-[24px] leading-snug text-ink md:text-[30px]">
         찾으시는 페이지가 없습니다
       </h1>
-      <p className="mt-4 max-w-[520px] text-[16px] leading-[1.9] text-ink md:text-[17px]">
+      <p className="mt-4 max-w-[520px] text-[17px] leading-[1.9] text-ink md:text-[18px]">
         주소가 바뀌었거나 지워진 페이지일 수 있습니다.
       </p>
 

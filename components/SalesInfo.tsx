@@ -13,8 +13,8 @@ function Block({ title, body }: { title: string; body: string }) {
   if (!body.trim()) return null;
   return (
     <div className="border-b border-stone py-7">
-      <h3 className="text-[15px] font-medium text-ink">{title}</h3>
-      <p className="mt-3 whitespace-pre-line text-[15px] leading-[1.9] text-muted">
+      <h3 className="text-[16px] font-medium text-ink">{title}</h3>
+      <p className="mt-3 whitespace-pre-line text-[16px] leading-[1.9] text-muted">
         {body}
       </p>
     </div>
@@ -57,7 +57,7 @@ export default function SalesInfo({
       <p className="label-xs">SALES INFO</p>
       <h2
         id="sales-title"
-        className="mt-3 font-serif text-[22px] leading-snug text-ink md:text-[28px]"
+        className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[30px]"
       >
         판매정보
       </h2>
@@ -72,8 +72,8 @@ export default function SalesInfo({
         <Block title="A/S 안내" body={sales.asInfo} />
 
         <div className="py-7">
-          <h3 className="text-[15px] font-medium text-ink">판매자 정보</h3>
-          <dl className="mt-3 flex flex-col gap-2 text-[15px] leading-relaxed">
+          <h3 className="text-[16px] font-medium text-ink">판매자 정보</h3>
+          <dl className="mt-3 flex flex-col gap-2 text-[16px] leading-relaxed">
             <div className="flex gap-4">
               <dt className="w-[110px] shrink-0 text-muted">상호</dt>
               <dd className="text-ink">{store.business.company}</dd>

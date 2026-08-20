@@ -30,10 +30,10 @@ export default async function TermsPage() {
     <div className="shell py-14 md:py-20">
       <header className="max-w-[720px]">
         <p className="label-xs">TERMS</p>
-        <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
+        <h1 className="mt-3 font-serif text-[28px] leading-snug text-ink md:text-[36px]">
           이용약관
         </h1>
-        <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
+        <p className="mt-4 text-[17px] leading-[1.9] text-ink md:text-[18px]">
           {store.business.company}가 운영하는 {store.name}의 서비스 이용에 관한 사항을
           정합니다.
         </p>

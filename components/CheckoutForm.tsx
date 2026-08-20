@@ -435,7 +435,7 @@ export default function CheckoutForm({
 
   if (!ready) {
     return (
-      <p className="border-t border-stone py-16 text-[16px] text-ink">
+      <p className="border-t border-stone py-16 text-[17px] text-ink">
         장바구니를 불러오는 중입니다.
       </p>
     );
@@ -444,8 +444,8 @@ export default function CheckoutForm({
   if (items.length === 0) {
     return (
       <div className="border-t border-stone py-16">
-        <p className="text-[16px] leading-relaxed text-ink">장바구니가 비어 있습니다.</p>
-        <p className="mt-2 text-[15px] leading-relaxed text-ink">
+        <p className="text-[17px] leading-relaxed text-ink">장바구니가 비어 있습니다.</p>
+        <p className="mt-2 text-[16px] leading-relaxed text-ink">
           상품을 담으신 뒤 다시 주문서를 열어 주세요.
         </p>
         <Link href="/products" className="btn-primary mt-8">
@@ -456,7 +456,7 @@ export default function CheckoutForm({
   }
 
   const inputClass = (field: keyof Form) =>
-    `w-full min-h-[48px] border bg-transparent px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-muted focus:border-ink ${
+    `w-full min-h-[48px] border bg-transparent px-4 py-3 text-[16px] text-ink outline-none transition-colors placeholder:text-muted focus:border-ink ${
       invalid[field] ? 'border-wine' : 'border-stone'
     }`;
 
@@ -466,13 +466,13 @@ export default function CheckoutForm({
         {/* ★ 새로고침·뒤로가기로 날아간 입력을 되살립니다. */}
         {restored ? (
           <div className="mb-8 flex flex-wrap items-center justify-between gap-3 border border-stone px-5 py-4">
-            <p className="text-[14px] leading-relaxed text-ink">
+            <p className="text-[15px] leading-relaxed text-ink">
               이전에 입력하시던 내용을 불러왔습니다.
             </p>
             <button
               type="button"
               onClick={resetDraft}
-              className="btn-secondary min-h-[40px] px-4 py-0 text-[13px]"
+              className="btn-secondary min-h-[40px] px-4 py-0 text-[14px]"
             >
               새로 입력하기
             </button>
@@ -481,7 +481,7 @@ export default function CheckoutForm({
 
         {/* 회원이면 정보가 채워졌음을 알리고, 아니면 로그인을 권하되 강요하지 않습니다. */}
         {member ? (
-          <p className="mb-8 border border-stone px-5 py-4 text-[14px] leading-relaxed text-ink">
+          <p className="mb-8 border border-stone px-5 py-4 text-[15px] leading-relaxed text-ink">
             회원 정보로 미리 채웠습니다. 이번 주문에만 다르게 보내시려면 그대로 고치시면
             됩니다.
           </p>
@@ -491,7 +491,7 @@ export default function CheckoutForm({
             <div className="flex">
               <SignupPointBadge href="/signup?next=/checkout" />
             </div>
-            <p className="mt-3 text-[14px] leading-relaxed text-muted">
+            <p className="mt-3 text-[15px] leading-relaxed text-muted">
               <Link href="/login?next=/checkout" className="link-wine">
                 로그인
               </Link>
@@ -503,11 +503,11 @@ export default function CheckoutForm({
         {error ? (
           <div
             role="alert"
-            className="mb-8 border border-wine bg-wine/5 px-5 py-4 text-[15px] leading-relaxed text-wine"
+            className="mb-8 border border-wine bg-wine/5 px-5 py-4 text-[16px] leading-relaxed text-wine"
           >
             {error}
             {problems.length > 0 ? (
-              <ul className="mt-3 flex flex-col gap-1 text-[14px]">
+              <ul className="mt-3 flex flex-col gap-1 text-[15px]">
                 {problems.map((line) => (
                   <li key={line}>· {line}</li>
                 ))}
@@ -527,7 +527,7 @@ export default function CheckoutForm({
             <section aria-labelledby="items-heading">
               <h2
                 id="items-heading"
-                className="border-b border-stone pb-4 font-serif text-[20px] text-ink"
+                className="border-b border-stone pb-4 font-serif text-[22px] text-ink"
               >
                 주문 상품 {items.length}건
               </h2>
@@ -545,22 +545,22 @@ export default function CheckoutForm({
                     </div>
                     <div className="flex min-w-0 flex-1 flex-col justify-center">
                       {item.brand ? (
-                        <p className="text-[12px] tracking-[0.16em] text-muted">{item.brand}</p>
+                        <p className="text-[13px] tracking-[0.16em] text-muted">{item.brand}</p>
                       ) : null}
-                      <p className="mt-1 font-serif text-[16px] leading-snug text-ink">
+                      <p className="mt-1 text-[17px] font-medium leading-snug text-ink">
                         {item.name}
                       </p>
-                      <p className="mt-1 text-[13px] text-muted">
+                      <p className="mt-1 text-[14px] text-muted">
                         {item.optionKey || '옵션 없음'} · {item.quantity}개
                       </p>
                     </div>
-                    <p className="self-center whitespace-nowrap text-[15px] font-medium text-ink">
+                    <p className="self-center whitespace-nowrap text-[16px] font-medium text-ink">
                       {formatPrice(item.price * item.quantity)}원
                     </p>
                   </li>
                 ))}
               </ul>
-              <p className="mt-4 text-[13px] leading-relaxed text-muted">
+              <p className="mt-4 text-[14px] leading-relaxed text-muted">
                 수량이나 옵션을 바꾸시려면{' '}
                 <Link href="/order" className="link-wine">
                   장바구니
@@ -573,7 +573,7 @@ export default function CheckoutForm({
             <section aria-labelledby="orderer-heading" ref={refs.orderer}>
               <h2
                 id="orderer-heading"
-                className="border-b border-stone pb-4 font-serif text-[20px] text-ink"
+                className="border-b border-stone pb-4 font-serif text-[22px] text-ink"
               >
                 주문자 정보
               </h2>
@@ -605,7 +605,7 @@ export default function CheckoutForm({
                     autoComplete="tel"
                     className={`mt-2 ${inputClass('ordererPhone')}`}
                   />
-                  <p className="mt-2 text-[13px] text-muted">
+                  <p className="mt-2 text-[14px] text-muted">
                     주문 확인과 배송 안내를 이 번호로 보내드립니다.
                   </p>
                 </div>
@@ -629,10 +629,10 @@ export default function CheckoutForm({
             {/* ── 3. 배송지 ──────────────────────────────── */}
             <section aria-labelledby="receiver-heading" ref={refs.receiver}>
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone pb-4">
-                <h2 id="receiver-heading" className="font-serif text-[20px] text-ink">
+                <h2 id="receiver-heading" className="font-serif text-[22px] text-ink">
                   배송지
                 </h2>
-                <label className="flex items-center gap-2 text-[14px] text-ink">
+                <label className="flex items-center gap-2 text-[15px] text-ink">
                   <input
                     type="checkbox"
                     checked={form.sameAsOrderer}
@@ -693,7 +693,7 @@ export default function CheckoutForm({
                       type="button"
                       onClick={openPostcode}
                       disabled={postcode.state === 'loading'}
-                      className="btn-secondary min-h-[48px] shrink-0 px-6 py-0 text-[14px] disabled:opacity-40"
+                      className="btn-secondary min-h-[48px] shrink-0 px-6 py-0 text-[15px] disabled:opacity-40"
                     >
                       {postcode.state === 'ready'
                         ? '주소 검색'
@@ -706,7 +706,7 @@ export default function CheckoutForm({
                   {manualAddress ? (
                     <p
                       role="alert"
-                      className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-wine"
+                      className="mt-2 whitespace-pre-line text-[14px] leading-relaxed text-wine"
                     >
                       {postcodeFallbackNotice(store.phone)}
                     </p>
@@ -760,7 +760,7 @@ export default function CheckoutForm({
                         <button
                           type="button"
                           onClick={() => set('deliveryMemo', preset)}
-                          className="border border-stone px-3 py-2 text-[13px] text-muted transition-colors hover:border-ink hover:text-ink"
+                          className="border border-stone px-3 py-2 text-[14px] text-muted transition-colors hover:border-ink hover:text-ink"
                         >
                           {preset}
                         </button>
@@ -770,7 +770,7 @@ export default function CheckoutForm({
                 </div>
 
                 {fees.remote ? (
-                  <p className="border border-stone px-4 py-3 text-[14px] leading-relaxed text-ink">
+                  <p className="border border-stone px-4 py-3 text-[15px] leading-relaxed text-ink">
                     제주·도서산간 지역입니다. 추가 배송비{' '}
                     {formatPrice(fees.extraShippingFee)}원이 더해집니다.
                   </p>
@@ -782,7 +782,7 @@ export default function CheckoutForm({
             <section aria-labelledby="payment-heading" ref={refs.payment}>
               <h2
                 id="payment-heading"
-                className="border-b border-stone pb-4 font-serif text-[20px] text-ink"
+                className="border-b border-stone pb-4 font-serif text-[22px] text-ink"
               >
                 결제 수단
               </h2>
@@ -792,7 +792,7 @@ export default function CheckoutForm({
                 {methods.map((method) => (
                   <li key={method.key}>
                     <label
-                      className={`flex min-h-[56px] cursor-pointer items-center gap-3 border px-5 py-4 text-[15px] transition-colors ${
+                      className={`flex min-h-[56px] cursor-pointer items-center gap-3 border px-5 py-4 text-[16px] transition-colors ${
                         form.paymentMethod === method.key
                           ? 'border-ink text-ink'
                           : 'border-stone text-ink'
@@ -834,7 +834,7 @@ export default function CheckoutForm({
                       }}
                       className={`mt-2 ${inputClass('depositorName')}`}
                     />
-                    <p className="mt-2 text-[13px] leading-relaxed text-muted">
+                    <p className="mt-2 text-[14px] leading-relaxed text-muted">
                       주문자와 입금자가 다르면 입금하시는 분 이름을 적어 주세요. 입금 확인이
                       빨라집니다. 계좌는 주문 완료 화면에서 안내드립니다.
                     </p>
@@ -849,7 +849,7 @@ export default function CheckoutForm({
                       그래서 "신청 여부와 번호" 를 받아 두는 것이 전부입니다.
                   */}
                   <div className="mt-8 border-t border-stone pt-6">
-                    <label className="flex min-h-[48px] cursor-pointer items-center gap-3 text-[15px] text-ink">
+                    <label className="flex min-h-[48px] cursor-pointer items-center gap-3 text-[16px] text-ink">
                       <input
                         type="checkbox"
                         checked={form.cashReceiptType !== 'none'}
@@ -873,7 +873,7 @@ export default function CheckoutForm({
                           ).map((option) => (
                             <li key={option.key}>
                               <label
-                                className={`flex min-h-[48px] cursor-pointer items-center gap-2 border px-4 py-3 text-[14px] transition-colors ${
+                                className={`flex min-h-[48px] cursor-pointer items-center gap-2 border px-4 py-3 text-[15px] transition-colors ${
                                   form.cashReceiptType === option.key
                                     ? 'border-ink text-ink'
                                     : 'border-stone text-muted hover:border-ink hover:text-ink'
@@ -911,7 +911,7 @@ export default function CheckoutForm({
                             }
                             className={`mt-2 ${inputClass('cashReceiptNo')} max-w-[280px]`}
                           />
-                          <p className="mt-2 text-[13px] leading-relaxed text-muted">
+                          <p className="mt-2 text-[14px] leading-relaxed text-muted">
                             입금이 확인되면 신청하신 정보로 발급해 드립니다.
                           </p>
                         </div>
@@ -920,7 +920,7 @@ export default function CheckoutForm({
                   </div>
                 </>
               ) : (
-                <p className="mt-6 border border-stone px-5 py-4 text-[14px] leading-relaxed text-muted">
+                <p className="mt-6 border border-stone px-5 py-4 text-[15px] leading-relaxed text-muted">
                   [주문하기]를 누르면 결제창이 열립니다. 결제가 끝나면 주문이 완료됩니다.
                   결제창을 닫으셔도 장바구니는 그대로 남아 있습니다.
                 </p>
@@ -931,9 +931,9 @@ export default function CheckoutForm({
           {/* ── 5. 금액 요약 · 6. 동의 · 7. 주문하기 ────── */}
           <aside className="lg:sticky lg:top-28 lg:self-start">
             <div className="border border-stone p-6 md:p-8">
-              <h2 className="font-serif text-[18px] text-ink">결제 금액</h2>
+              <h2 className="font-serif text-[19px] text-ink">결제 금액</h2>
 
-              <dl className="mt-6 flex flex-col gap-3 border-t border-stone pt-6 text-[15px]">
+              <dl className="mt-6 flex flex-col gap-3 border-t border-stone pt-6 text-[16px]">
                 <div className="flex justify-between">
                   <dt className="text-muted">상품 합계</dt>
                   <dd className="text-ink">{formatPrice(total)}원</dd>
@@ -965,7 +965,7 @@ export default function CheckoutForm({
                     <label htmlFor="use-points" className="label-xs">
                       포인트 사용
                     </label>
-                    <span className="text-[13px] text-muted">
+                    <span className="text-[14px] text-muted">
                       보유 {formatPrice(points.balance)}원
                     </span>
                   </div>
@@ -988,17 +988,17 @@ export default function CheckoutForm({
                             setUsePoints(next);
                           }}
                           placeholder="0"
-                          className="min-h-[48px] w-full border border-stone bg-transparent px-4 py-3 text-right text-[15px] tabular-nums text-ink outline-none focus:border-ink"
+                          className="min-h-[48px] w-full border border-stone bg-transparent px-4 py-3 text-right text-[16px] tabular-nums text-ink outline-none focus:border-ink"
                         />
                         <button
                           type="button"
                           onClick={() => setUsePoints(pointLimit)}
-                          className="btn-secondary min-h-[48px] shrink-0 px-4 py-0 text-[14px]"
+                          className="btn-secondary min-h-[48px] shrink-0 px-4 py-0 text-[15px]"
                         >
                           전액
                         </button>
                       </div>
-                      <p className="mt-2 text-[13px] leading-relaxed text-muted">
+                      <p className="mt-2 text-[14px] leading-relaxed text-muted">
                         최대 {formatPrice(pointLimit)}원까지 쓸 수 있습니다.
                         {points.minUse > 0
                           ? ` ${formatPrice(points.minUse)}원 이상부터 사용 가능합니다.`
@@ -1006,7 +1006,7 @@ export default function CheckoutForm({
                       </p>
                     </>
                   ) : (
-                    <p className="mt-2 text-[13px] leading-relaxed text-muted">
+                    <p className="mt-2 text-[14px] leading-relaxed text-muted">
                       {points.balance <= 0
                         ? '아직 사용할 수 있는 포인트가 없습니다.'
                         : `${formatPrice(points.minUse)}원 이상부터 사용하실 수 있습니다.`}
@@ -1017,28 +1017,28 @@ export default function CheckoutForm({
 
               {/* ★ 이번 주문으로 쌓일 예상 적립. 화면에서 계산합니다. */}
               {expectedEarn > 0 ? (
-                <p className="mt-4 border-t border-stone pt-4 text-[13px] leading-relaxed text-wine">
+                <p className="mt-4 border-t border-stone pt-4 text-[14px] leading-relaxed text-wine">
                   이번 주문으로 {formatPrice(expectedEarn)}P 가 적립될 예정입니다.
                   <span className="ml-1 text-muted">(배송완료 시점에 지급)</span>
                 </p>
               ) : null}
 
               {freeShippingLeft > 0 ? (
-                <p className="mt-4 text-[13px] leading-relaxed text-muted">
+                <p className="mt-4 text-[14px] leading-relaxed text-muted">
                   {formatPrice(freeShippingLeft)}원 더 담으시면 배송비가 무료입니다.
                 </p>
               ) : null}
 
               <div className="mt-6 flex items-baseline justify-between border-t border-stone pt-6">
-                <span className="text-[13px] tracking-[0.14em] text-muted">총 결제금액</span>
-                <span className="font-display text-[28px] font-medium tracking-wide text-ink">
+                <span className="text-[14px] tracking-[0.14em] text-muted">총 결제금액</span>
+                <span className="text-[30px] font-semibold tabular-nums tracking-tight text-ink">
                   {formatPrice(totalAmount)}
-                  <span className="ml-1 font-sans text-[15px]">원</span>
+                  <span className="ml-1 font-sans text-[16px]">원</span>
                 </span>
               </div>
 
               <div ref={refs.agree} className="mt-6 border-t border-stone pt-6">
-                <label className="flex cursor-pointer items-start gap-3 text-[14px] leading-relaxed text-ink">
+                <label className="flex cursor-pointer items-start gap-3 text-[15px] leading-relaxed text-ink">
                   <input
                     type="checkbox"
                     checked={form.agreed}
@@ -1048,11 +1048,11 @@ export default function CheckoutForm({
                   <span>
                     주문 내용을 확인했으며, 구매조건 및 결제진행에 동의합니다. (필수)
                     <br />
-                    <Link href="/terms" className="link-wine text-[13px]">
+                    <Link href="/terms" className="link-wine text-[14px]">
                       이용약관
                     </Link>{' '}
                     ·{' '}
-                    <Link href="/privacy" className="link-wine text-[13px]">
+                    <Link href="/privacy" className="link-wine text-[14px]">
                       개인정보처리방침
                     </Link>
                   </span>
@@ -1067,7 +1067,7 @@ export default function CheckoutForm({
                   : `${formatPrice(totalAmount)}원 ${isBank ? '주문하기' : '결제하기'}`}
               </button>
 
-              <p className="mt-4 text-[13px] leading-relaxed text-muted">
+              <p className="mt-4 text-[14px] leading-relaxed text-muted">
                 주문 후 안내되는 계좌로 입금해 주시면 확인 후 발송해 드립니다. 문의는
                 고객센터 {storePhone}.
               </p>

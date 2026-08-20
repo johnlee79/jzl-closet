@@ -38,11 +38,11 @@ export default function AuthCard({
         <div className="border-stone bg-paper px-0 py-2 sm:border sm:px-8 sm:py-10">
           <header className="text-center">
             {eyebrow ? <p className="label-xs">{eyebrow}</p> : null}
-            <h1 className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[28px]">
+            <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[30px]">
               {title}
             </h1>
             {description ? (
-              <div className="mt-4 text-[15px] leading-[1.9] text-ink">{description}</div>
+              <div className="mt-4 text-[16px] leading-[1.9] text-ink">{description}</div>
             ) : null}
           </header>
 
@@ -50,7 +50,7 @@ export default function AuthCard({
         </div>
 
         {footer ? (
-          <div className="mt-8 text-center text-[14px] leading-relaxed text-ink">
+          <div className="mt-8 text-center text-[15px] leading-relaxed text-ink">
             {footer}
           </div>
         ) : null}
@@ -61,8 +61,8 @@ export default function AuthCard({
 
 /** 카드 안에서 공통으로 쓰는 입력칸 클래스 (높이 48px 이상) */
 export const authInputClass =
-  'mt-2 w-full min-h-[48px] border border-stone bg-transparent px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-muted focus:border-ink';
+  'mt-2 w-full min-h-[48px] border border-stone bg-transparent px-4 py-3 text-[16px] text-ink outline-none transition-colors placeholder:text-muted focus:border-ink';
 
 /** 카드 안에서 공통으로 쓰는 주 버튼 클래스 (높이 52px 이상) */
 export const authButtonClass =
-  'inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-ink px-6 text-[15px] tracking-[0.14em] text-paper transition-opacity duration-200 hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30';
+  'inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-ink px-6 text-[16px] tracking-[0.14em] text-paper transition-opacity duration-200 hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30';

@@ -23,13 +23,13 @@ function changeRate(current: number, previous: number): number | null {
 function Delta({ current, previous }: { current: number; previous: number }) {
   const rate = changeRate(current, previous);
   if (rate === null) {
-    return <span className="text-[12px] text-slate-400">비교 대상 없음</span>;
+    return <span className="text-[13px] text-slate-400">비교 대상 없음</span>;
   }
   const up = rate > 0;
   const flat = rate === 0;
   return (
     <span
-      className={`text-[12px] ${
+      className={`text-[13px] ${
         flat ? 'text-slate-500' : up ? 'text-green-700' : 'text-red-600'
       }`}
     >
@@ -55,14 +55,14 @@ function StatCard({
 }) {
   const body = (
     <>
-      <p className="text-[13px] text-slate-600">{label}</p>
+      <p className="text-[14px] text-slate-600">{label}</p>
       <p
-        className={`mt-2 text-[24px] font-semibold tabular-nums ${
+        className={`mt-2 text-[26px] font-semibold tabular-nums ${
           tone === 'alert' && value > 0 ? 'text-amber-700' : 'text-slate-900'
         }`}
       >
         {formatPrice(value)}
-        {suffix ? <span className="ml-1 text-[14px] font-normal">{suffix}</span> : null}
+        {suffix ? <span className="ml-1 text-[15px] font-normal">{suffix}</span> : null}
       </p>
       {children ? <p className="mt-1">{children}</p> : null}
     </>
@@ -153,13 +153,13 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1280px]">
-      <h1 className="text-[20px] font-semibold text-slate-900">대시보드</h1>
-      <p className="mt-1 text-[13px] text-slate-600">
+      <h1 className="text-[22px] font-semibold text-slate-900">대시보드</h1>
+      <p className="mt-1 text-[14px] text-slate-600">
         오늘 처리할 일을 여기서 확인하세요. (한국 시간 기준)
       </p>
 
       {!configured ? (
-        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[14px] leading-relaxed text-amber-900">
+        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[15px] leading-relaxed text-amber-900">
           Supabase 연결 정보가 없습니다. <code>.env.local</code> 을 설정한 뒤 서버를 다시
           시작해 주세요.
         </div>
@@ -172,10 +172,10 @@ export default async function AdminDashboardPage() {
           className="admin-card mt-5 flex flex-wrap items-center justify-between gap-3 border-amber-400 bg-amber-50 p-5 transition-colors hover:bg-amber-100"
         >
           <div>
-            <p className="text-[15px] font-semibold text-amber-900">
+            <p className="text-[16px] font-semibold text-amber-900">
               입금대기 {stats.pendingPaymentCount}건
             </p>
-            <p className="mt-1 text-[13px] text-amber-800">
+            <p className="mt-1 text-[14px] text-amber-800">
               통장을 확인하고 입금된 주문은 결제완료로 바꿔 주세요.
             </p>
           </div>
@@ -192,10 +192,10 @@ export default async function AdminDashboardPage() {
           className="admin-card mt-4 flex flex-wrap items-center justify-between gap-3 border-amber-400 bg-amber-50 p-5 transition-colors hover:bg-amber-100"
         >
           <div>
-            <p className="text-[15px] font-semibold text-amber-900">
+            <p className="text-[16px] font-semibold text-amber-900">
               미답변 문의 {pendingInquiryCount}건
             </p>
-            <p className="mt-1 text-[13px] text-amber-800">
+            <p className="mt-1 text-[14px] text-amber-800">
               영업일 기준 1~2일 안에 답변드린다고 안내하고 있습니다.
             </p>
           </div>
@@ -256,7 +256,7 @@ export default async function AdminDashboardPage() {
 
       {/* 상태별 건수 */}
       <section className="mt-8">
-        <h2 className="text-[16px] font-semibold text-slate-900">상태별 주문</h2>
+        <h2 className="text-[17px] font-semibold text-slate-900">상태별 주문</h2>
         <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {ORDER_STATUSES.map((status) => {
             const count = stats.countByStatus[status] ?? 0;
@@ -273,7 +273,7 @@ export default async function AdminDashboardPage() {
                   <span className={`admin-badge ${statusBadgeClass(status)}`}>
                     {statusLabel(status)}
                   </span>
-                  <span className="mt-2 block text-[20px] font-semibold tabular-nums text-slate-900">
+                  <span className="mt-2 block text-[22px] font-semibold tabular-nums text-slate-900">
                     {count}
                   </span>
                 </Link>
@@ -286,7 +286,7 @@ export default async function AdminDashboardPage() {
       {/* 최근 주문 */}
       <section className="mt-8">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-[16px] font-semibold text-slate-900">최근 주문 10건</h2>
+          <h2 className="text-[17px] font-semibold text-slate-900">최근 주문 10건</h2>
           <Link href="/admin/orders" className="admin-btn">
             전체 보기
           </Link>
@@ -294,17 +294,17 @@ export default async function AdminDashboardPage() {
 
         <div className="admin-card mt-3 overflow-x-auto">
           {stats.recentOrders.length === 0 ? (
-            <p className="px-4 py-14 text-center text-[14px] leading-relaxed text-slate-500">
+            <p className="px-4 py-14 text-center text-[15px] leading-relaxed text-slate-500">
               아직 주문이 없습니다.
               <br />
-              <span className="text-[13px]">
+              <span className="text-[14px]">
                 첫 주문이 들어오면 여기에 바로 나타납니다.
               </span>
             </p>
           ) : (
-            <table className="w-full min-w-[720px] border-collapse text-[14px]">
+            <table className="w-full min-w-[720px] border-collapse text-[15px]">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-left text-[13px] text-slate-600">
+                <tr className="border-b border-slate-200 bg-slate-50 text-left text-[14px] text-slate-600">
                   <th scope="col" className="px-3 py-2 font-medium">주문번호</th>
                   <th scope="col" className="px-3 py-2 font-medium">주문일시</th>
                   <th scope="col" className="px-3 py-2 font-medium">주문자</th>

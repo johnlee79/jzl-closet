@@ -120,12 +120,12 @@ function Problem({
 }) {
   return (
     <div className="shell py-20">
-      <h1 className="font-serif text-[24px] leading-snug text-ink md:text-[30px]">
+      <h1 className="font-serif text-[26px] leading-snug text-ink md:text-[32px]">
         결제를 진행할 수 없습니다
       </h1>
-      <p className="mt-5 max-w-[560px] text-[16px] leading-[1.9] text-ink">{message}</p>
+      <p className="mt-5 max-w-[560px] text-[17px] leading-[1.9] text-ink">{message}</p>
       {orderNo ? (
-        <p className="mt-3 text-[15px] leading-[1.9] text-muted">주문번호 {orderNo}</p>
+        <p className="mt-3 text-[16px] leading-[1.9] text-muted">주문번호 {orderNo}</p>
       ) : null}
       <div className="btn-row mt-8">
         {lookup ? (

@@ -28,7 +28,7 @@ export default function MypageNav() {
               <Link
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
-                className={`inline-flex min-h-[44px] items-center px-4 py-2 text-[15px] transition-colors lg:w-full lg:border-l-2 lg:pl-5 ${
+                className={`inline-flex min-h-[44px] items-center px-4 py-2 text-[16px] transition-colors lg:w-full lg:border-l-2 lg:pl-5 ${
                   active
                     ? 'font-medium text-ink lg:border-ink'
                     : 'text-muted hover:text-ink lg:border-transparent'

@@ -30,7 +30,7 @@ export default function DetailBlocks({ blocks, productName }: DetailBlocksProps)
                   />
                 </div>
                 {block.caption ? (
-                  <figcaption className="mt-4 text-[13px] leading-relaxed text-muted">
+                  <figcaption className="mt-4 text-[14px] leading-relaxed text-muted">
                     {block.caption}
                   </figcaption>
                 ) : null}
@@ -41,7 +41,7 @@ export default function DetailBlocks({ blocks, productName }: DetailBlocksProps)
             return (
               <div key={`text-${index}`} className="w-full">
                 {block.heading ? (
-                  <h3 className="font-serif text-[20px] leading-snug text-ink md:text-[24px]">
+                  <h3 className="font-serif text-[22px] leading-snug text-ink md:text-[26px]">
                     {block.heading}
                   </h3>
                 ) : null}
@@ -49,11 +49,11 @@ export default function DetailBlocks({ blocks, productName }: DetailBlocksProps)
                     허용 태그만 남기고 정리한 뒤 출력하므로 서버 HTML 에 본문이 그대로 실립니다. */}
                 {isHtmlBody(block.body) ? (
                   <div
-                    className="detail-body mt-4 text-[16px] leading-[2] text-ink md:text-[17px]"
+                    className="detail-body mt-4 text-[17px] leading-[2] text-ink md:text-[18px]"
                     dangerouslySetInnerHTML={{ __html: sanitizeRichText(block.body) }}
                   />
                 ) : (
-                  <p className="mt-4 whitespace-pre-line text-[16px] leading-[2] text-ink md:text-[17px]">
+                  <p className="mt-4 whitespace-pre-line text-[17px] leading-[2] text-ink md:text-[18px]">
                     {block.body}
                   </p>
                 )}
@@ -63,7 +63,7 @@ export default function DetailBlocks({ blocks, productName }: DetailBlocksProps)
           case 'spec':
             return (
               <div key={`spec-${index}`} className="w-full">
-                <h3 className="font-serif text-[20px] leading-snug text-ink md:text-[24px]">
+                <h3 className="font-serif text-[22px] leading-snug text-ink md:text-[26px]">
                   제품 정보
                 </h3>
                 <dl className="mt-6 border-t border-stone">
@@ -72,10 +72,10 @@ export default function DetailBlocks({ blocks, productName }: DetailBlocksProps)
                       key={row.label}
                       className="flex flex-col gap-1 border-b border-stone py-4 md:flex-row md:gap-8"
                     >
-                      <dt className="w-full text-[13px] tracking-[0.14em] text-muted md:w-40 md:shrink-0">
+                      <dt className="w-full text-[14px] tracking-[0.14em] text-muted md:w-40 md:shrink-0">
                         {row.label}
                       </dt>
-                      <dd className="text-[16px] leading-relaxed text-ink">{row.value}</dd>
+                      <dd className="text-[17px] leading-relaxed text-ink">{row.value}</dd>
                     </div>
                   ))}
                 </dl>

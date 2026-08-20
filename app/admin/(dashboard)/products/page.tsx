@@ -73,8 +73,8 @@ export default async function AdminProductsPage({
     <div className="mx-auto w-full max-w-[1200px]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-[20px] font-semibold text-slate-900">상품 관리</h1>
-          <p className="mt-1 text-[13px] text-slate-600">
+          <h1 className="text-[22px] font-semibold text-slate-900">상품 관리</h1>
+          <p className="mt-1 text-[14px] text-slate-600">
             {countText}
             {totalPages > 1 ? ` · ${page}/${totalPages} 페이지` : ''}
           </p>
@@ -85,7 +85,7 @@ export default async function AdminProductsPage({
       </div>
 
       {!configured ? (
-        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[14px] text-amber-900">
+        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[15px] text-amber-900">
           Supabase 연결 정보가 없습니다. <code>.env.local</code> 에{' '}
           <code>NEXT_PUBLIC_SUPABASE_URL</code> 과 <code>SUPABASE_SERVICE_ROLE_KEY</code> 를
           넣고 서버를 다시 시작해 주세요.
@@ -127,7 +127,7 @@ export default async function AdminProductsPage({
                 key={number}
                 href={`/admin/products?${params.toString()}`}
                 aria-current={number === page ? 'page' : undefined}
-                className={`min-h-[38px] min-w-[38px] rounded-md border px-3 py-2 text-center text-[14px] ${
+                className={`min-h-[38px] min-w-[38px] rounded-md border px-3 py-2 text-center text-[15px] ${
                   number === page
                     ? 'border-blue-700 bg-blue-700 font-semibold text-white'
                     : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'

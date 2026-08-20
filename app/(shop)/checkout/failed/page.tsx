@@ -48,21 +48,21 @@ export default async function CheckoutFailedPage({ searchParams }: PageProps) {
     <div className="shell py-14 md:py-20">
       <header className="max-w-[680px]">
         <p className="label-xs">PAYMENT</p>
-        <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
+        <h1 className="mt-3 font-serif text-[28px] leading-snug text-ink md:text-[36px]">
           {reason.title}
         </h1>
 
-        <p className="mt-6 text-[16px] leading-[1.9] text-ink md:text-[17px]">{reason.body}</p>
+        <p className="mt-6 text-[17px] leading-[1.9] text-ink md:text-[18px]">{reason.body}</p>
 
         {orderNo ? (
-          <p className="mt-6 border border-stone px-6 py-5 text-[15px] leading-[1.9] text-ink">
-            주문번호 <strong className="font-display tracking-[0.08em]">{orderNo}</strong> 은
+          <p className="mt-6 border border-stone px-6 py-5 text-[16px] leading-[1.9] text-ink">
+            주문번호 <strong className="select-all font-semibold tabular-nums">{orderNo}</strong> 은
             결제대기 상태로 저장되어 있습니다. 장바구니도 그대로 남아 있으니 다시
             주문해 주시면 됩니다.
           </p>
         ) : null}
 
-        <p className="mt-6 text-[15px] leading-[1.9] text-muted">
+        <p className="mt-6 text-[16px] leading-[1.9] text-muted">
           도움이 필요하시면 고객센터 {store.phone}으로 연락 주세요.
           <br />
           {store.hours}

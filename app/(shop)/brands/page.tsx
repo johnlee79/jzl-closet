@@ -102,7 +102,7 @@ export default async function BrandsPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <nav aria-label="현재 위치" className="text-[13px] tracking-[0.14em] text-muted">
+      <nav aria-label="현재 위치" className="text-[14px] tracking-[0.14em] text-muted">
         <ol className="flex flex-wrap items-center gap-2">
           <li>
             <Link href="/" className="hover:text-ink">
@@ -116,14 +116,14 @@ export default async function BrandsPage() {
 
       <header className="mt-8 max-w-[680px]">
         <p className="label-xs">BRANDS</p>
-        <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
+        <h1 className="mt-3 font-serif text-[28px] leading-snug text-ink md:text-[36px]">
           {store.name}이 다루는 브랜드입니다
         </h1>
       </header>
 
       {brands.length === 0 ? (
         <div className="mt-12 border-t border-stone py-16">
-          <p className="text-[16px] leading-relaxed text-ink">
+          <p className="text-[17px] leading-relaxed text-ink">
             아직 소개할 브랜드가 없습니다.
           </p>
           <Link href="/products" className="btn-primary mt-8">
@@ -171,7 +171,7 @@ export default async function BrandsPage() {
                       >
                         <span
                           className={`text-center font-display font-light leading-none tracking-[0.22em] text-ink ${
-                            featured ? 'text-[30px] md:text-[46px]' : 'text-[24px] md:text-[34px]'
+                            featured ? 'text-[32px] md:text-[46px]' : 'text-[26px] md:text-[36px]'
                           }`}
                         >
                           {brand.label}
@@ -185,10 +185,10 @@ export default async function BrandsPage() {
                       <BrandMark
                         brand={brand}
                         size="lg"
-                        className={featured ? '!text-[26px] md:!text-[34px]' : ''}
+                        className={featured ? '!text-[28px] md:!text-[36px]' : ''}
                       />
                       {brand.nameKo ? (
-                        <span className="font-serif text-[15px] text-muted md:text-[16px]">
+                        <span className="font-serif text-[16px] text-muted md:text-[17px]">
                           · {brand.nameKo}
                         </span>
                       ) : null}
@@ -197,7 +197,7 @@ export default async function BrandsPage() {
                     {brand.tagline ? (
                       <p
                         className={`mt-4 leading-[1.9] text-ink ${
-                          featured ? 'text-[17px] md:text-[19px]' : 'text-[15px] md:text-[16px]'
+                          featured ? 'text-[18px] md:text-[20px]' : 'text-[16px] md:text-[17px]'
                         }`}
                       >
                         {brand.tagline}
@@ -205,11 +205,11 @@ export default async function BrandsPage() {
                     ) : null}
 
                     <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-                      <p className="text-[13px] tracking-[0.14em] text-muted">
+                      <p className="text-[14px] tracking-[0.14em] text-muted">
                         {origin ? `${origin} · ` : ''}
                         {count}개 상품
                       </p>
-                      <span className="inline-flex items-center gap-2 text-[13px] tracking-[0.14em] text-ink transition-opacity duration-200 group-hover:opacity-60">
+                      <span className="inline-flex items-center gap-2 text-[14px] tracking-[0.14em] text-ink transition-opacity duration-200 group-hover:opacity-60">
                         상품 보기
                         <svg
                           width="16"

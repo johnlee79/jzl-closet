@@ -71,7 +71,7 @@ function CategoryForm({
       }}
       className="rounded-md border border-blue-200 bg-blue-50/50 p-4"
     >
-      <h3 className="text-[14px] font-semibold text-slate-900">
+      <h3 className="text-[15px] font-semibold text-slate-900">
         {isNew
           ? parentSlug
             ? `${parentSlug} 아래에 소분류 추가`
@@ -110,13 +110,13 @@ function CategoryForm({
               </button>
             ) : null}
           </div>
-          <p className="mt-1 text-[12px] text-slate-500">
+          <p className="mt-1 text-[13px] text-slate-500">
             {isNew
               ? '영문 소문자·숫자·하이픈만 씁니다. 등록 후에는 바꿀 수 없습니다.'
               : '주소에 쓰이므로 변경할 수 없습니다.'}
           </p>
           {slugInvalid ? (
-            <p className="mt-1 text-[12px] text-red-700">
+            <p className="mt-1 text-[13px] text-red-700">
               영문 소문자·숫자·하이픈만 쓸 수 있습니다.
             </p>
           ) : null}
@@ -139,7 +139,7 @@ function CategoryForm({
             placeholder="OUTER"
             className="admin-input"
           />
-          <p className="mt-1 text-[12px] text-slate-500">한글·영문 자유롭게 쓰세요.</p>
+          <p className="mt-1 text-[13px] text-slate-500">한글·영문 자유롭게 쓰세요.</p>
         </div>
 
         <div>
@@ -157,7 +157,7 @@ function CategoryForm({
         </div>
 
         <div className="flex items-end">
-          <label className="flex items-center gap-2 pb-2 text-[14px] text-slate-800">
+          <label className="flex items-center gap-2 pb-2 text-[15px] text-slate-800">
             <input
               type="checkbox"
               checked={draft.isVisible}
@@ -193,7 +193,7 @@ function CategoryForm({
             <span className="admin-label">
               대표 이미지 (선택) — 메인 CATEGORY 카드. 권장 {CATEGORY_IMAGE_SIZE}
             </span>
-            <p className="mb-2 text-[12px] leading-relaxed text-slate-500">
+            <p className="mb-2 text-[13px] leading-relaxed text-slate-500">
               올리지 않으면 카드에 이미지 없이 이름과 상품 수만 나옵니다. 세로로 긴 3:4
               비율로 잘려 나갑니다.
             </p>
@@ -351,7 +351,7 @@ export default function CategoryManager({
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[13px] text-slate-600">
+        <p className="text-[14px] text-slate-600">
           왼쪽 손잡이(≡)를 끌어 순서를 바꿉니다. 대분류를 누르면 소분류가 펼쳐집니다.
         </p>
         <button
@@ -369,7 +369,7 @@ export default function CategoryManager({
       {message ? (
         <p
           role="status"
-          className={`mt-4 rounded-md px-3 py-2 text-[14px] ${
+          className={`mt-4 rounded-md px-3 py-2 text-[15px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >
@@ -392,7 +392,7 @@ export default function CategoryManager({
 
       <div className="admin-card mt-4 overflow-hidden">
         {/* 표 머리 — 모바일에서는 숨기고 카드처럼 보여 줍니다. */}
-        <div className="hidden border-b border-slate-200 bg-slate-50 px-4 py-2 text-[13px] font-medium text-slate-600 md:flex">
+        <div className="hidden border-b border-slate-200 bg-slate-50 px-4 py-2 text-[14px] font-medium text-slate-600 md:flex">
           <span className="w-10">순서</span>
           <span className="flex-1">라벨</span>
           <span className="w-[140px]">한글명</span>
@@ -423,9 +423,9 @@ export default function CategoryManager({
                       dragSlug.current = category.slug;
                     }}
                     title="끌어서 순서 변경"
-                    className="w-10 cursor-move select-none text-[16px] text-slate-400"
+                    className="w-10 cursor-move select-none text-[17px] text-slate-400"
                   >
-                    ≡ <span className="text-[12px] tabular-nums">{index + 1}</span>
+                    ≡ <span className="text-[13px] tabular-nums">{index + 1}</span>
                   </span>
 
                   <button
@@ -434,10 +434,10 @@ export default function CategoryManager({
                     aria-expanded={open}
                     className="flex-1 text-left"
                   >
-                    <span className="text-[14px] font-medium text-slate-900">
+                    <span className="text-[15px] font-medium text-slate-900">
                       {category.label}
                     </span>
-                    <span className="ml-2 text-[12px] text-slate-500">/{category.slug}</span>
+                    <span className="ml-2 text-[13px] text-slate-500">/{category.slug}</span>
                     {category.matchType ? (
                       <span className="admin-badge ml-2 bg-slate-100 text-slate-600">
                         모음
@@ -445,13 +445,13 @@ export default function CategoryManager({
                     ) : null}
                   </button>
 
-                  <span className="w-[140px] text-[14px] text-slate-700">
+                  <span className="w-[140px] text-[15px] text-slate-700">
                     {category.nameKo}
                   </span>
-                  <span className="w-[90px] text-[13px] text-slate-600">
+                  <span className="w-[90px] text-[14px] text-slate-600">
                     {category.children.length}개
                   </span>
-                  <span className="w-[80px] text-[13px] text-slate-600">
+                  <span className="w-[80px] text-[14px] text-slate-600">
                     {productCount}개
                   </span>
 
@@ -536,7 +536,7 @@ export default function CategoryManager({
                 {open ? (
                   <div className="border-t border-slate-100 bg-slate-50 px-4 py-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h3 className="text-[13px] font-semibold text-slate-700">
+                      <h3 className="text-[14px] font-semibold text-slate-700">
                         {category.label} 소분류 {children.length}개
                       </h3>
                       <button
@@ -564,7 +564,7 @@ export default function CategoryManager({
                     ) : null}
 
                     {children.length === 0 ? (
-                      <p className="mt-3 text-[13px] text-slate-500">
+                      <p className="mt-3 text-[14px] text-slate-500">
                         소분류가 없습니다. 소분류가 없으면 헤더 드롭다운과 필터 줄을 그리지
                         않습니다.
                       </p>
@@ -583,20 +583,20 @@ export default function CategoryManager({
                                 dragSub.current = { parent: category.slug, slug: child.slug };
                               }}
                               title="끌어서 순서 변경"
-                              className="w-9 cursor-move select-none text-[15px] text-slate-400"
+                              className="w-9 cursor-move select-none text-[16px] text-slate-400"
                             >
-                              ≡ <span className="text-[12px] tabular-nums">{childIndex + 1}</span>
+                              ≡ <span className="text-[13px] tabular-nums">{childIndex + 1}</span>
                             </span>
-                            <span className="flex-1 text-[14px] text-slate-900">
+                            <span className="flex-1 text-[15px] text-slate-900">
                               {child.label}
-                              <span className="ml-2 text-[12px] text-slate-500">
+                              <span className="ml-2 text-[13px] text-slate-500">
                                 /{child.slug}
                               </span>
                             </span>
-                            <span className="w-[120px] text-[13px] text-slate-600">
+                            <span className="w-[120px] text-[14px] text-slate-600">
                               {child.nameKo}
                             </span>
-                            <span className="w-[70px] text-[13px] text-slate-600">
+                            <span className="w-[70px] text-[14px] text-slate-600">
                               {counts.bySubCategory[child.slug] ?? 0}개
                             </span>
                             <button

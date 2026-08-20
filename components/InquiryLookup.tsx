@@ -50,7 +50,7 @@ export default function InquiryLookup() {
                 setInquiry(null);
                 setPassword('');
               }}
-              className="text-[14px] text-muted underline underline-offset-4"
+              className="text-[15px] text-muted underline underline-offset-4"
             >
               다른 문의 조회하기
             </button>
@@ -66,7 +66,7 @@ export default function InquiryLookup() {
       title="문의 조회"
       description="문의를 등록하실 때 받으신 문의번호와 직접 정하신 비밀번호를 넣어 주세요."
       footer={
-        <p className="text-[13px] leading-relaxed text-muted">
+        <p className="text-[14px] leading-relaxed text-muted">
           회원으로 문의하셨다면{' '}
           <Link href="/mypage/inquiries" className="link-wine">
             마이페이지 &gt; 문의 내역
@@ -105,7 +105,7 @@ export default function InquiryLookup() {
         </div>
 
         {error ? (
-          <p role="alert" className="mt-4 text-[14px] leading-relaxed text-wine">
+          <p role="alert" className="mt-4 text-[15px] leading-relaxed text-wine">
             {error}
           </p>
         ) : null}

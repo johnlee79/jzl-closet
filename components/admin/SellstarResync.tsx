@@ -142,8 +142,8 @@ export default function SellstarResync({
     <section className="admin-card p-4 md:p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-[16px] font-semibold text-slate-900">셀스타 연결</h2>
-          <p className="mt-1 text-[13px] text-slate-500">
+          <h2 className="text-[17px] font-semibold text-slate-900">셀스타 연결</h2>
+          <p className="mt-1 text-[14px] text-slate-500">
             상품번호 {sellstarId}
             {syncedAt ? ` · 마지막 동기화 ${formatDateTime(syncedAt)}` : ''}
           </p>
@@ -159,19 +159,19 @@ export default function SellstarResync({
       </div>
 
       {error ? (
-        <p role="alert" className="mt-3 rounded-md bg-red-50 px-3 py-2 text-[13px] text-red-700">
+        <p role="alert" className="mt-3 rounded-md bg-red-50 px-3 py-2 text-[14px] text-red-700">
           {error}
         </p>
       ) : null}
 
       {diffs !== null ? (
         diffs.length === 0 ? (
-          <p className="mt-3 rounded-md bg-green-50 px-3 py-2 text-[13px] text-green-800">
+          <p className="mt-3 rounded-md bg-green-50 px-3 py-2 text-[14px] text-green-800">
             셀스타 값과 같습니다. 갱신할 것이 없습니다.
           </p>
         ) : (
           <div className="mt-3">
-            <p className="text-[13px] leading-relaxed text-slate-600">
+            <p className="text-[14px] leading-relaxed text-slate-600">
               달라진 항목입니다. <strong>반영할 것만</strong> 골라 주세요. 고르지 않은
               항목은 지금 값을 그대로 둡니다.
             </p>
@@ -180,7 +180,7 @@ export default function SellstarResync({
               {diffs.map((diff, index) => (
                 <li
                   key={diff.key}
-                  className="rounded-md border border-slate-200 p-3 text-[13px]"
+                  className="rounded-md border border-slate-200 p-3 text-[14px]"
                 >
                   <label className="flex cursor-pointer items-center gap-2 font-medium text-slate-900">
                     <input
@@ -202,11 +202,11 @@ export default function SellstarResync({
 
                   <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <div className="rounded bg-slate-50 px-2 py-1.5">
-                      <span className="block text-[12px] text-slate-500">지금</span>
+                      <span className="block text-[13px] text-slate-500">지금</span>
                       <span className="break-words text-slate-800">{diff.now}</span>
                     </div>
                     <div className="rounded bg-blue-50 px-2 py-1.5">
-                      <span className="block text-[12px] text-slate-500">셀스타</span>
+                      <span className="block text-[13px] text-slate-500">셀스타</span>
                       <span className="break-words text-slate-800">{diff.next}</span>
                     </div>
                   </div>
@@ -222,7 +222,7 @@ export default function SellstarResync({
             >
               고른 {chosen}개 반영하기
             </button>
-            <p className="mt-2 text-[12px] text-slate-500">
+            <p className="mt-2 text-[13px] text-slate-500">
               반영해도 아직 저장된 것은 아닙니다. 아래 <strong>저장</strong>을 눌러야
               적용됩니다.
             </p>

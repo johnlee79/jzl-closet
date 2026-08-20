@@ -88,12 +88,12 @@ export default function PopupLayer({ popups }: { popups: Popup[] }) {
                 />
               ) : (
                 <div className="p-6">
-                  <p className="font-serif text-[18px] leading-snug text-ink">
+                  <p className="font-serif text-[19px] leading-snug text-ink">
                     {popup.title}
                   </p>
                   {popup.content ? (
                     <div
-                      className="detail-body mt-3 text-[15px] leading-[1.9] text-ink"
+                      className="detail-body mt-3 text-[16px] leading-[1.9] text-ink"
                       dangerouslySetInnerHTML={{
                         __html: sanitizeRichText(popup.content),
                       }}
@@ -128,7 +128,7 @@ export default function PopupLayer({ popups }: { popups: Popup[] }) {
                 )}
 
                 <div className="flex items-center justify-between border-t border-stone">
-                  <label className="flex cursor-pointer items-center gap-2 py-3 pl-4 text-[13px] text-muted">
+                  <label className="flex cursor-pointer items-center gap-2 py-3 pl-4 text-[14px] text-muted">
                     <input
                       type="checkbox"
                       onChange={(event) => {
@@ -141,7 +141,7 @@ export default function PopupLayer({ popups }: { popups: Popup[] }) {
                   <button
                     type="button"
                     onClick={() => close(popup.id)}
-                    className="min-h-[44px] px-4 text-[13px] tracking-[0.1em] text-ink"
+                    className="min-h-[44px] px-4 text-[14px] tracking-[0.1em] text-ink"
                   >
                     닫기
                   </button>

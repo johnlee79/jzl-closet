@@ -82,7 +82,7 @@ export default function MemberTable({
                   <Link
                     href={buildHref({ status: tab.key === 'all' ? '' : tab.key })}
                     aria-current={active ? 'page' : undefined}
-                    className={`inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-[14px] transition-colors ${
+                    className={`inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-[15px] transition-colors ${
                       active
                         ? 'border-blue-700 font-semibold text-blue-700'
                         : 'border-transparent text-slate-600 hover:text-slate-900'
@@ -166,13 +166,13 @@ export default function MemberTable({
       {/* ── 표 ────────────────────────────────────────── */}
       <div className="admin-card mt-5 overflow-x-auto">
         {members.length === 0 ? (
-          <p className="px-4 py-16 text-center text-[14px] text-slate-500">
+          <p className="px-4 py-16 text-center text-[15px] text-slate-500">
             조건에 맞는 회원이 없습니다.
           </p>
         ) : (
-          <table className="w-full min-w-[900px] border-collapse text-[14px]">
+          <table className="w-full min-w-[900px] border-collapse text-[15px]">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-left text-[13px] text-slate-600">
+              <tr className="border-b border-slate-200 bg-slate-50 text-left text-[14px] text-slate-600">
                 <th scope="col" className="px-3 py-2 font-medium">이름</th>
                 <th scope="col" className="px-3 py-2 font-medium">이메일</th>
                 <th scope="col" className="px-3 py-2 font-medium">연락처</th>
@@ -214,10 +214,10 @@ export default function MemberTable({
                   <td className="px-3 py-2.5 text-right font-medium tabular-nums text-slate-900">
                     {formatPrice(member.totalSpent)}원
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-[13px] text-slate-600">
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[14px] text-slate-600">
                     {member.lastLoginAt ? formatDateTime(member.lastLoginAt) : '—'}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-[13px] text-slate-600">
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[14px] text-slate-600">
                     {formatDate(member.createdAt)}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5">

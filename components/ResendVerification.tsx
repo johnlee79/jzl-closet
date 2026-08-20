@@ -55,8 +55,8 @@ export default function ResendVerification({
         disabled={disabled}
         className={
           compact
-            ? 'inline-flex min-h-[44px] items-center justify-center border border-stone px-5 text-[14px] text-ink transition-colors hover:border-ink disabled:cursor-not-allowed disabled:opacity-40'
-            : 'inline-flex min-h-[52px] w-full items-center justify-center rounded-sm border border-ink px-6 text-[15px] tracking-[0.14em] text-ink transition-colors duration-200 hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:opacity-30'
+            ? 'inline-flex min-h-[44px] items-center justify-center border border-stone px-5 text-[15px] text-ink transition-colors hover:border-ink disabled:cursor-not-allowed disabled:opacity-40'
+            : 'inline-flex min-h-[52px] w-full items-center justify-center rounded-sm border border-ink px-6 text-[16px] tracking-[0.14em] text-ink transition-colors duration-200 hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:opacity-30'
         }
       >
         {pending
@@ -67,12 +67,12 @@ export default function ResendVerification({
       </button>
 
       {message ? (
-        <p role="status" className="mt-3 text-[13px] leading-relaxed text-ink">
+        <p role="status" className="mt-3 text-[14px] leading-relaxed text-ink">
           {message}
         </p>
       ) : null}
       {error ? (
-        <p role="alert" className="mt-3 text-[13px] leading-relaxed text-wine">
+        <p role="alert" className="mt-3 text-[14px] leading-relaxed text-wine">
           {error}
         </p>
       ) : null}
@@ -110,7 +110,7 @@ export function MailboxButton({ email }: { email: string }) {
       href={mailbox.url}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-ink px-6 text-[15px] tracking-[0.14em] text-paper transition-opacity duration-200 hover:opacity-80"
+      className="inline-flex min-h-[52px] w-full items-center justify-center rounded-sm bg-ink px-6 text-[16px] tracking-[0.14em] text-paper transition-opacity duration-200 hover:opacity-80"
     >
       {mailbox.label} 열기 ↗
     </a>

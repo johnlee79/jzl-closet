@@ -43,7 +43,7 @@ export default function PaymentStatusRefresh() {
   });
 
   return (
-    <p className="mt-3 text-[14px] leading-relaxed text-muted">
+    <p className="mt-3 text-[15px] leading-relaxed text-muted">
       {waiting
         ? '결제 결과를 확인하는 중입니다. 이 화면은 자동으로 새로고침됩니다.'
         : '확인이 조금 더 걸리고 있습니다. 주문 조회에서 다시 확인해 주세요.'}

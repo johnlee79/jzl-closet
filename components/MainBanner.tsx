@@ -64,17 +64,17 @@ export default function MainBanner({
               <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/45 via-black/10 to-transparent">
                 <div className="shell pb-10 md:pb-16">
                   {banner.subtitle ? (
-                    <p className="text-[13px] tracking-[0.22em] text-white/85">
+                    <p className="text-[14px] tracking-[0.22em] text-white/85">
                       {banner.subtitle}
                     </p>
                   ) : null}
                   {banner.title ? (
-                    <p className="mt-2 font-serif text-[24px] leading-snug text-white md:text-[34px]">
+                    <p className="mt-2 font-serif text-[26px] leading-snug text-white md:text-[36px]">
                       {banner.title}
                     </p>
                   ) : null}
                   {banner.buttonText ? (
-                    <span className="mt-5 inline-flex min-h-[48px] items-center border border-white px-8 text-[14px] tracking-[0.14em] text-white">
+                    <span className="mt-5 inline-flex min-h-[48px] items-center border border-white px-8 text-[15px] tracking-[0.14em] text-white">
                       {banner.buttonText}
                     </span>
                   ) : null}

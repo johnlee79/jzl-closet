@@ -90,7 +90,7 @@ export default async function SubCategoryPage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
 
-      <nav aria-label="현재 위치" className="text-[13px] tracking-[0.14em] text-muted">
+      <nav aria-label="현재 위치" className="text-[14px] tracking-[0.14em] text-muted">
         <ol className="flex flex-wrap items-center gap-2">
           <li>
             <Link href="/" className="hover:text-ink">
@@ -112,10 +112,10 @@ export default async function SubCategoryPage({ params }: PageProps) {
         <p className="label-xs">
           {category.label} · {sub.label}
         </p>
-        <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
+        <h1 className="mt-3 font-serif text-[28px] leading-snug text-ink md:text-[36px]">
           {sub.nameKo}
         </h1>
-        <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
+        <p className="mt-4 text-[17px] leading-[1.9] text-ink md:text-[18px]">
           {sub.description || `${category.nameKo} 가운데 ${sub.nameKo} 상품입니다. ${category.description}`}
         </p>
       </header>

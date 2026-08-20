@@ -171,7 +171,7 @@ export default function OrderTable({ orders }: { orders: Order[] }) {
       {message ? (
         <p
           role="status"
-          className={`mb-4 rounded-md px-3 py-2 text-[14px] ${
+          className={`mb-4 rounded-md px-3 py-2 text-[15px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >
@@ -189,10 +189,10 @@ export default function OrderTable({ orders }: { orders: Order[] }) {
               한 번에 풀 수 있는 버튼을 같이 둡니다.
           */
           <div className="px-4 py-16 text-center">
-            <p className="text-[14px] text-slate-500">조건에 맞는 주문이 없습니다.</p>
+            <p className="text-[15px] text-slate-500">조건에 맞는 주문이 없습니다.</p>
             {activeFilters.length > 0 ? (
               <>
-                <p className="mt-2 text-[13px] text-amber-800">
+                <p className="mt-2 text-[14px] text-amber-800">
                   지금 걸려 있는 조건: {activeFilters.join(' · ')}
                 </p>
                 <Link href={pathname} className="admin-btn mt-3 inline-flex">
@@ -202,9 +202,9 @@ export default function OrderTable({ orders }: { orders: Order[] }) {
             ) : null}
           </div>
         ) : (
-          <table className="w-full min-w-[1180px] border-collapse text-[14px]">
+          <table className="w-full min-w-[1180px] border-collapse text-[15px]">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-left text-[13px] text-slate-600">
+              <tr className="border-b border-slate-200 bg-slate-50 text-left text-[14px] text-slate-600">
                 <th scope="col" className="w-10 px-3 py-2">
                   <input
                     type="checkbox"
@@ -264,7 +264,7 @@ export default function OrderTable({ orders }: { orders: Order[] }) {
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5 text-slate-800">
                     {order.ordererName}
-                    <span className="block text-[12px] text-slate-500">
+                    <span className="block text-[13px] text-slate-500">
                       {order.ordererPhone}
                     </span>
                   </td>
@@ -277,7 +277,7 @@ export default function OrderTable({ orders }: { orders: Order[] }) {
                   <td className="whitespace-nowrap px-3 py-2.5 text-slate-700">
                     {paymentMethodLabel(order.paymentMethod)}
                     {order.paymentMethod === 'bank_transfer' && order.depositorName ? (
-                      <span className="block text-[12px] text-slate-500">
+                      <span className="block text-[13px] text-slate-500">
                         {order.depositorName}
                       </span>
                     ) : null}
@@ -287,7 +287,7 @@ export default function OrderTable({ orders }: { orders: Order[] }) {
                     ★ 신청은 들어왔는데 아직 발급하지 않은 건을 눈에 띄게 합니다.
                       PG 가 발급해 주지 않아 운영자가 홈택스에서 직접 처리해야 합니다.
                   */}
-                  <td className="whitespace-nowrap px-3 py-2.5 text-[13px]">
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[14px]">
                     {order.cashReceiptType === 'none' ? (
                       <span className="text-slate-400">—</span>
                     ) : order.cashReceiptIssued ? (
@@ -301,7 +301,7 @@ export default function OrderTable({ orders }: { orders: Order[] }) {
                       {statusLabel(order.status)}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-[13px] text-slate-600">
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[14px] text-slate-600">
                     {order.trackingNo ? (
                       <>
                         {courierName(order.courier)}

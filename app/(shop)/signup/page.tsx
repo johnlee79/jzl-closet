@@ -26,7 +26,7 @@ export default function SignupPage() {
               로그인
             </Link>
           </p>
-          <p className="mt-4 text-[13px] leading-relaxed text-muted">
+          <p className="mt-4 text-[14px] leading-relaxed text-muted">
             회원가입 없이도 주문하실 수 있습니다.
           </p>
         </>
@@ -35,7 +35,7 @@ export default function SignupPage() {
       {isAuthConfigured() ? (
         <SignupForm />
       ) : (
-        <p className="border border-wine px-5 py-4 text-[15px] leading-relaxed text-wine">
+        <p className="border border-wine px-5 py-4 text-[16px] leading-relaxed text-wine">
           로그인 기능이 아직 설정되지 않았습니다. 회원가입 없이도 주문하실 수 있습니다.
         </p>
       )}

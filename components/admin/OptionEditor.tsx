@@ -160,7 +160,7 @@ export default function OptionEditor({
               {group.values.map((value) => (
                 <li
                   key={value}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-50 py-1 pl-3 pr-1.5 text-[13px] text-slate-800"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-50 py-1 pl-3 pr-1.5 text-[14px] text-slate-800"
                 >
                   {value}
                   <button
@@ -175,7 +175,7 @@ export default function OptionEditor({
               ))}
             </ul>
           ) : (
-            <p className="mt-3 text-[13px] text-slate-500">
+            <p className="mt-3 text-[14px] text-slate-500">
               옵션값을 입력한 뒤 Enter 를 누르면 칩으로 바뀝니다.
             </p>
           )}
@@ -197,20 +197,20 @@ export default function OptionEditor({
       </div>
 
       {expectedKeys.length === 0 && groups.length > 0 ? (
-        <p className="text-[13px] text-slate-500">
+        <p className="text-[14px] text-slate-500">
           모든 옵션 그룹에 값이 하나 이상 있어야 조합을 만들 수 있습니다.
         </p>
       ) : null}
 
       {stale && expectedKeys.length > 0 ? (
-        <p role="status" className="rounded-md bg-amber-50 px-3 py-2 text-[13px] text-amber-800">
+        <p role="status" className="rounded-md bg-amber-50 px-3 py-2 text-[14px] text-amber-800">
           옵션값이 바뀌었습니다. [조합 생성] 을 눌러 표를 갱신해 주세요. 이미 입력한
           판매상태·재고·추가금액은 그대로 유지됩니다.
         </p>
       ) : null}
 
       {expectedKeys.length >= COMBINATION_WARN_COUNT ? (
-        <p role="status" className="rounded-md bg-amber-50 px-3 py-2 text-[13px] text-amber-800">
+        <p role="status" className="rounded-md bg-amber-50 px-3 py-2 text-[14px] text-amber-800">
           조합이 {expectedKeys.length}개입니다. 재고를 하나하나 관리하기 번거로울 수 있으니
           옵션 그룹을 줄이는 편이 편합니다.
           {expectedKeys.length >= MAX_COMBINATIONS
@@ -223,16 +223,16 @@ export default function OptionEditor({
       {combinations.length > 0 ? (
         <div>
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h3 className="text-[14px] font-semibold text-slate-900">
+            <h3 className="text-[15px] font-semibold text-slate-900">
               조합 {combinations.length}개
             </h3>
-            <span className="text-[13px] text-slate-500">
+            <span className="text-[14px] text-slate-500">
               판매중 {activeCount}개 · 품절 {combinations.length - activeCount}개
             </span>
           </div>
 
           {/* 빈칸과 0 이 헷갈리지 않도록 표 바로 위에 한 줄로 알려 줍니다. */}
-          <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[13px] leading-relaxed text-slate-700">
+          <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[14px] leading-relaxed text-slate-700">
             재고수량을 비워 두면 재고를 세지 않습니다. 0을 넣으면 품절 처리됩니다.
             <br />
             <span className="text-slate-600">
@@ -241,9 +241,9 @@ export default function OptionEditor({
           </p>
 
           <div className="mt-2 overflow-x-auto rounded-md border border-slate-200">
-            <table className="w-full min-w-[560px] border-collapse text-[14px]">
+            <table className="w-full min-w-[560px] border-collapse text-[15px]">
               <thead>
-                <tr className="bg-slate-50 text-left text-[13px] text-slate-600">
+                <tr className="bg-slate-50 text-left text-[14px] text-slate-600">
                   <th scope="col" className="px-3 py-2 font-medium">
                     조합
                   </th>
@@ -302,7 +302,7 @@ export default function OptionEditor({
                           />
                         </span>
                         <span
-                          className={`text-[13px] ${
+                          className={`text-[14px] ${
                             combination.isActive ? 'text-slate-800' : 'text-red-700'
                           }`}
                         >
@@ -352,7 +352,7 @@ export default function OptionEditor({
             </table>
           </div>
 
-          <p className="mt-2 text-[12px] leading-relaxed text-slate-500">
+          <p className="mt-2 text-[13px] leading-relaxed text-slate-500">
             판매상태를 끄면 그 조합만 품절로 표시됩니다. 빈칸은 재고 미관리(항상 판매),
             0은 품절입니다. 추가금액은 판매가에 더해집니다.
           </p>

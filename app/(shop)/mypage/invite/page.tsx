@@ -57,7 +57,7 @@ function ProgressBar({ current, target }: { current: number; target: number }) {
       >
         <div className="h-full bg-ink" style={{ width: `${ratio}%` }} />
       </div>
-      <p className="mt-2 text-[14px] text-ink">
+      <p className="mt-2 text-[15px] text-ink">
         {filled} / {target}
       </p>
     </div>
@@ -102,10 +102,10 @@ function GoalCard({ item }: { item: GoalProgress }) {
         ) : null}
 
         <div className="min-w-0 flex-1">
-          <p className="text-[16px] leading-relaxed text-ink md:text-[17px]">
+          <p className="text-[17px] leading-relaxed text-ink md:text-[18px]">
             {goal.name}
           </p>
-          <p className="mt-2 text-[14px] leading-relaxed text-muted">
+          <p className="mt-2 text-[15px] leading-relaxed text-muted">
             친구 {goal.targetCount}명이{' '}
             {goal.criteria === 'signup' ? '가입하면' : '첫 주문을 마치면'}{' '}
             {goal.rewardType === 'point'
@@ -115,14 +115,14 @@ function GoalCard({ item }: { item: GoalProgress }) {
           </p>
 
           {goal.gift?.description ? (
-            <p className="mt-2 text-[14px] leading-relaxed text-muted">
+            <p className="mt-2 text-[15px] leading-relaxed text-muted">
               {goal.gift.description}
             </p>
           ) : null}
           {goal.gift?.linkUrl ? (
             <Link
               href={goal.gift.linkUrl}
-              className="link-wine mt-2 inline-block text-[14px]"
+              className="link-wine mt-2 inline-block text-[15px]"
             >
               사은품 자세히 보기
             </Link>
@@ -130,7 +130,7 @@ function GoalCard({ item }: { item: GoalProgress }) {
 
           <ProgressBar current={item.current} target={item.target} />
 
-          <p className="mt-2 text-[14px] leading-relaxed text-ink">
+          <p className="mt-2 text-[15px] leading-relaxed text-ink">
             {done
               ? '목표를 채우셨습니다. 처리 상태를 아래에서 확인해 주세요.'
               : `${left}명 더 모으면 받으실 수 있어요`}
@@ -139,7 +139,7 @@ function GoalCard({ item }: { item: GoalProgress }) {
           {item.achievements.length > 0 ? (
             <ul className="mt-4 flex flex-col gap-1 border-t border-stone pt-4">
               {item.achievements.map((achievement) => (
-                <li key={achievement.id} className="text-[14px] text-muted">
+                <li key={achievement.id} className="text-[15px] text-muted">
                   <span className="text-ink">달성 완료</span>{' '}
                   {formatDate(achievement.createdAt)} · {achievementNote(achievement)}
                 </li>
@@ -182,10 +182,10 @@ export default async function MypageInvitePage() {
   if (!settings.enabled || !screen) {
     return (
       <section aria-labelledby="invite-heading">
-        <h2 id="invite-heading" className="font-serif text-[20px] text-ink">
+        <h2 id="invite-heading" className="font-serif text-[22px] text-ink">
           친구 초대
         </h2>
-        <p className="mt-6 text-[15px] leading-relaxed text-muted">
+        <p className="mt-6 text-[16px] leading-relaxed text-muted">
           지금은 친구 초대를 운영하고 있지 않습니다.
         </p>
       </section>
@@ -195,11 +195,11 @@ export default async function MypageInvitePage() {
   return (
     <section aria-labelledby="invite-heading" className="flex flex-col gap-12">
       <div>
-        <h2 id="invite-heading" className="font-serif text-[20px] text-ink">
+        <h2 id="invite-heading" className="font-serif text-[22px] text-ink">
           친구 초대
         </h2>
         {settings.inviteNotice ? (
-          <p className="mt-3 text-[15px] leading-relaxed text-muted">
+          <p className="mt-3 text-[16px] leading-relaxed text-muted">
             {settings.inviteNotice}
           </p>
         ) : null}
@@ -211,7 +211,7 @@ export default async function MypageInvitePage() {
 
       {/* ── 현재까지 ────────────────────────────────── */}
       <div>
-        <h3 className="font-serif text-[18px] text-ink">현재까지</h3>
+        <h3 className="font-serif text-[19px] text-ink">현재까지</h3>
         <dl className="mt-4 grid grid-cols-3 gap-4 border border-stone p-6">
           {[
             { label: '방문', value: screen.visitCount },
@@ -219,16 +219,16 @@ export default async function MypageInvitePage() {
             { label: '구매', value: screen.purchaseCount },
           ].map((item) => (
             <div key={item.label}>
-              <dt className="text-[13px] tracking-[0.14em] text-muted">{item.label}</dt>
-              <dd className="mt-2 font-display text-[28px] leading-none text-ink">
+              <dt className="text-[14px] tracking-[0.14em] text-muted">{item.label}</dt>
+              <dd className="mt-2 text-[30px] font-semibold leading-none tabular-nums text-ink">
                 {item.value}
-                <span className="ml-1 font-sans text-[14px]">명</span>
+                <span className="ml-1 font-sans text-[15px]">명</span>
               </dd>
             </div>
           ))}
         </dl>
         {/* ★ 오해를 미리 막습니다. 방문·가입 자체로는 아무것도 지급하지 않습니다. */}
-        <p className="mt-3 text-[13px] leading-relaxed text-muted">
+        <p className="mt-3 text-[14px] leading-relaxed text-muted">
           방문과 가입만으로는 포인트가 지급되지 않습니다. 아래 목표를 채우셨을 때 보상을
           드립니다.
         </p>
@@ -236,9 +236,9 @@ export default async function MypageInvitePage() {
 
       {/* ── 진행 중인 목표 ──────────────────────────── */}
       <div>
-        <h3 className="font-serif text-[18px] text-ink">진행 중인 목표</h3>
+        <h3 className="font-serif text-[19px] text-ink">진행 중인 목표</h3>
         {screen.goals.length === 0 ? (
-          <p className="mt-4 text-[15px] leading-relaxed text-muted">
+          <p className="mt-4 text-[16px] leading-relaxed text-muted">
             지금 진행 중인 목표가 없습니다. 새 목표가 열리면 이곳에 보여 드립니다.
           </p>
         ) : (
@@ -252,9 +252,9 @@ export default async function MypageInvitePage() {
 
       {/* ── 초대 내역 ──────────────────────────────── */}
       <div>
-        <h3 className="font-serif text-[18px] text-ink">초대 내역</h3>
+        <h3 className="font-serif text-[19px] text-ink">초대 내역</h3>
         {screen.entries.length === 0 ? (
-          <p className="mt-4 text-[15px] leading-relaxed text-muted">
+          <p className="mt-4 text-[16px] leading-relaxed text-muted">
             아직 초대 내역이 없습니다. 위 링크를 친구에게 보내 보세요.
           </p>
         ) : (
@@ -262,16 +262,16 @@ export default async function MypageInvitePage() {
             {screen.entries.map((entry, index) => (
               <li
                 key={`${entry.date}-${index}`}
-                className="flex flex-wrap items-center justify-between gap-3 border-b border-stone py-4 text-[15px]"
+                className="flex flex-wrap items-center justify-between gap-3 border-b border-stone py-4 text-[16px]"
               >
                 <span className="text-ink">{entry.maskedName}</span>
                 <span className="text-muted">{STATE_LABEL[entry.state]}</span>
-                <span className="text-[14px] text-muted">{formatDate(entry.date)}</span>
+                <span className="text-[15px] text-muted">{formatDate(entry.date)}</span>
               </li>
             ))}
           </ul>
         )}
-        <p className="mt-4 text-[13px] leading-relaxed text-muted">
+        <p className="mt-4 text-[14px] leading-relaxed text-muted">
           친구의 이름은 개인정보 보호를 위해 일부만 보여 드립니다.
         </p>
       </div>

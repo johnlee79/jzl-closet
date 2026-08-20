@@ -52,7 +52,7 @@ function StarPicker({
           </svg>
         </button>
       ))}
-      <span className="ml-2 text-[15px] text-ink">{shown > 0 ? `${shown}점` : ''}</span>
+      <span className="ml-2 text-[16px] text-ink">{shown > 0 ? `${shown}점` : ''}</span>
     </div>
   );
 }
@@ -146,8 +146,8 @@ export default function ReviewForm({
   if (done) {
     return (
       <div className="border border-stone p-6 md:p-8">
-        <h2 className="font-serif text-[20px] text-ink">후기를 등록했습니다</h2>
-        <p className="mt-4 text-[15px] leading-relaxed text-ink">
+        <h2 className="font-serif text-[22px] text-ink">후기를 등록했습니다</h2>
+        <p className="mt-4 text-[16px] leading-relaxed text-ink">
           {done.earned > 0
             ? `${formatPrice(done.earned)}원 포인트를 적립해 드렸습니다. 감사합니다.`
             : '소중한 후기 감사합니다.'}
@@ -169,7 +169,7 @@ export default function ReviewForm({
       {error ? (
         <p
           role="alert"
-          className="mb-8 border border-wine bg-wine/5 px-5 py-4 text-[15px] leading-relaxed text-wine"
+          className="mb-8 border border-wine bg-wine/5 px-5 py-4 text-[16px] leading-relaxed text-wine"
         >
           {error}
         </p>
@@ -186,8 +186,8 @@ export default function ReviewForm({
           />
         ) : null}
         <div className="min-w-0">
-          <p className="font-serif text-[16px] leading-snug text-ink">{product.name}</p>
-          <p className="mt-1 text-[13px] text-muted">
+          <p className="text-[17px] font-medium leading-snug text-ink">{product.name}</p>
+          <p className="mt-1 text-[14px] text-muted">
             {product.optionKey || '옵션 없음'} · 주문 {orderNo}
           </p>
         </div>
@@ -214,7 +214,7 @@ export default function ReviewForm({
                     type="button"
                     onClick={() => toggleTag(tag)}
                     aria-pressed={on}
-                    className={`inline-flex min-h-[44px] items-center border px-4 text-[14px] transition-colors ${
+                    className={`inline-flex min-h-[44px] items-center border px-4 text-[15px] transition-colors ${
                       on
                         ? 'border-ink bg-ink text-paper'
                         : 'border-stone text-ink hover:border-ink'
@@ -236,7 +236,7 @@ export default function ReviewForm({
             후기 내용 *
           </label>
           <span
-            className={`text-[13px] ${
+            className={`text-[14px] ${
               content.length > MAX_REVIEW_LENGTH ? 'text-wine' : 'text-muted'
             }`}
           >
@@ -250,7 +250,7 @@ export default function ReviewForm({
           rows={7}
           maxLength={MAX_REVIEW_LENGTH}
           placeholder="사이즈나 색감, 착용감처럼 다른 분들께 도움이 될 내용을 적어 주시면 좋습니다."
-          className="mt-2 w-full resize-none border border-stone bg-transparent p-4 text-[15px] leading-relaxed text-ink outline-none focus:border-ink"
+          className="mt-2 w-full resize-none border border-stone bg-transparent p-4 text-[16px] leading-relaxed text-ink outline-none focus:border-ink"
         />
       </div>
 
@@ -264,7 +264,7 @@ export default function ReviewForm({
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploading !== null || attachments.length >= MAX_REVIEW_ATTACHMENTS}
-            className="btn-secondary min-h-[44px] px-5 py-0 text-[14px] disabled:opacity-40"
+            className="btn-secondary min-h-[44px] px-5 py-0 text-[15px] disabled:opacity-40"
           >
             {uploading !== null ? `올리는 중 ${uploading}%` : '사진 선택'}
           </button>
@@ -276,7 +276,7 @@ export default function ReviewForm({
             onChange={(event) => void handleFiles(event.target.files)}
             className="hidden"
           />
-          <span className="text-[13px] text-muted">
+          <span className="text-[14px] text-muted">
             {attachments.length}/{MAX_REVIEW_ATTACHMENTS}개
           </span>
         </div>
@@ -295,7 +295,7 @@ export default function ReviewForm({
                   type="button"
                   onClick={() => removeAttachment(url)}
                   aria-label="사진 삭제"
-                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center bg-black/60 text-[14px] leading-none text-white"
+                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center bg-black/60 text-[15px] leading-none text-white"
                 >
                   ×
                 </button>
@@ -306,10 +306,10 @@ export default function ReviewForm({
       </div>
 
       {expected > 0 ? (
-        <p className="mt-6 border border-stone px-5 py-4 text-[14px] leading-relaxed text-ink">
+        <p className="mt-6 border border-stone px-5 py-4 text-[15px] leading-relaxed text-ink">
           지금 등록하시면 <strong>{formatPrice(expected)}P</strong> 가 적립됩니다.
           {attachments.length === 0 && pointText.photo > pointText.text ? (
-            <span className="mt-1 block text-[13px] text-muted">
+            <span className="mt-1 block text-[14px] text-muted">
               사진 첨부 시 {formatPrice(pointText.photo)}P 적립
             </span>
           ) : null}
@@ -324,7 +324,7 @@ export default function ReviewForm({
         {pending ? '등록 중…' : '후기 등록'}
       </button>
 
-      <p className="mt-4 text-[13px] leading-relaxed text-muted">
+      <p className="mt-4 text-[14px] leading-relaxed text-muted">
         같은 주문의 같은 상품에는 후기를 한 번만 남기실 수 있습니다.
       </p>
     </form>

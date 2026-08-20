@@ -22,25 +22,25 @@ export default function InquiryDetailView({
     <article>
       <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-stone pb-4">
         <div>
-          <p className="text-[13px] tracking-[0.14em] text-muted">
+          <p className="text-[14px] tracking-[0.14em] text-muted">
             {inquiryCategoryLabel(inquiry.category)} · {inquiry.inquiryNo}
           </p>
-          <h2 className="mt-2 font-serif text-[22px] leading-snug text-ink md:text-[26px]">
+          <h2 className="mt-2 font-serif text-[24px] leading-snug text-ink md:text-[28px]">
             {inquiry.title}
           </h2>
         </div>
         {backHref ? (
-          <Link href={backHref} className="text-[14px] text-muted underline underline-offset-4">
+          <Link href={backHref} className="text-[15px] text-muted underline underline-offset-4">
             목록으로
           </Link>
         ) : null}
       </div>
 
-      <p className="mt-4 text-[14px] text-muted">
+      <p className="mt-4 text-[15px] text-muted">
         {formatDateTime(inquiry.createdAt)} · {inquiryStatusLabel(inquiry.status)}
       </p>
 
-      <div className="mt-8 whitespace-pre-line text-[16px] leading-[1.9] text-ink">
+      <div className="mt-8 whitespace-pre-line text-[17px] leading-[1.9] text-ink">
         {inquiry.content}
       </div>
 
@@ -63,20 +63,20 @@ export default function InquiryDetailView({
 
       {answerHtml ? (
         <section aria-labelledby="answer-heading" className="mt-12 border-t border-stone pt-8">
-          <h3 id="answer-heading" className="font-serif text-[18px] text-ink">
+          <h3 id="answer-heading" className="font-serif text-[19px] text-ink">
             답변
           </h3>
-          <p className="mt-1 text-[13px] text-muted">
+          <p className="mt-1 text-[14px] text-muted">
             {formatDateTime(inquiry.answeredAt)}
           </p>
           <div
-            className="detail-body mt-5 text-[16px] leading-[1.9] text-ink"
+            className="detail-body mt-5 text-[17px] leading-[1.9] text-ink"
             dangerouslySetInnerHTML={{ __html: answerHtml }}
           />
         </section>
       ) : (
         <section className="mt-12 border-t border-stone pt-8">
-          <p className="text-[15px] leading-relaxed text-muted">
+          <p className="text-[16px] leading-relaxed text-muted">
             아직 답변이 등록되지 않았습니다. 영업일 기준 1~2일 안에 답변드립니다.
           </p>
         </section>

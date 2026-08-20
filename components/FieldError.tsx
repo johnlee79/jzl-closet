@@ -22,7 +22,7 @@ export default function FieldError({
   return (
     <p
       role="alert"
-      className={`mt-1.5 text-[13px] leading-relaxed ${admin ? 'text-red-600' : 'text-wine'}`}
+      className={`mt-1.5 text-[14px] leading-relaxed ${admin ? 'text-red-600' : 'text-wine'}`}
     >
       {message}
     </p>

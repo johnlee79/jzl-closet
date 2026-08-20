@@ -32,7 +32,7 @@ function CopyButton({ value, label }: { value: string; label: string }) {
       type="button"
       onClick={copy}
       aria-label={label}
-      className="btn-secondary min-h-[44px] shrink-0 px-4 py-0 text-[13px]"
+      className="btn-secondary min-h-[44px] shrink-0 px-4 py-0 text-[14px]"
     >
       {done ? '복사됨' : '복사'}
     </button>
@@ -82,7 +82,7 @@ export default function InviteLinkBox({
       <div>
         <p className="label-xs">내 추천 코드</p>
         <div className="mt-2 flex items-center gap-3">
-          <p className="font-display text-[30px] leading-none tracking-[0.3em] text-ink">
+          <p className="select-all text-[32px] font-semibold leading-none tracking-[0.18em] text-ink">
             {code || '—'}
           </p>
           {code ? <CopyButton value={code} label="추천 코드 복사" /> : null}
@@ -98,18 +98,18 @@ export default function InviteLinkBox({
             value={link}
             aria-label="내 초대 링크"
             onFocus={(event) => event.currentTarget.select()}
-            className="min-h-[44px] min-w-0 flex-1 border border-stone bg-paper px-3 text-[14px] text-ink"
+            className="min-h-[44px] min-w-0 flex-1 border border-stone bg-paper px-3 text-[15px] text-ink"
           />
           <CopyButton value={link} label="초대 링크 복사" />
           <button
             type="button"
             onClick={share}
-            className="btn-primary min-h-[44px] shrink-0 px-5 py-0 text-[13px]"
+            className="btn-primary min-h-[44px] shrink-0 px-5 py-0 text-[14px]"
           >
             공유
           </button>
         </div>
-        <p aria-live="polite" className="mt-2 text-[13px] text-muted">
+        <p aria-live="polite" className="mt-2 text-[14px] text-muted">
           {note}
         </p>
       </div>

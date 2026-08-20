@@ -53,7 +53,7 @@ export default function InquiryTable({
                   <Link
                     href={buildHref({ status: tab.key === 'all' ? '' : tab.key })}
                     aria-current={active ? 'page' : undefined}
-                    className={`inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-[14px] transition-colors ${
+                    className={`inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-[15px] transition-colors ${
                       active
                         ? 'border-blue-700 font-semibold text-blue-700'
                         : 'border-transparent text-slate-600 hover:text-slate-900'
@@ -109,13 +109,13 @@ export default function InquiryTable({
 
       <div className="admin-card mt-5 overflow-x-auto">
         {inquiries.length === 0 ? (
-          <p className="px-4 py-16 text-center text-[14px] text-slate-500">
+          <p className="px-4 py-16 text-center text-[15px] text-slate-500">
             조건에 맞는 문의가 없습니다.
           </p>
         ) : (
-          <table className="w-full min-w-[880px] border-collapse text-[14px]">
+          <table className="w-full min-w-[880px] border-collapse text-[15px]">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-left text-[13px] text-slate-600">
+              <tr className="border-b border-slate-200 bg-slate-50 text-left text-[14px] text-slate-600">
                 <th scope="col" className="px-3 py-2 font-medium">문의번호</th>
                 <th scope="col" className="px-3 py-2 font-medium">유형</th>
                 <th scope="col" className="px-3 py-2 font-medium">제목</th>
@@ -151,11 +151,11 @@ export default function InquiryTable({
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5 text-slate-700">
                     {inquiry.writerName}
-                    <span className="block text-[12px] text-slate-500">
+                    <span className="block text-[13px] text-slate-500">
                       {inquiry.userId ? '회원' : '비회원'}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-[13px]">
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[14px]">
                     {inquiry.orderId ? (
                       <Link
                         href={`/admin/orders/${inquiry.orderId}`}
@@ -172,7 +172,7 @@ export default function InquiryTable({
                       {inquiryStatusLabel(inquiry.status)}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-[13px] text-slate-600">
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[14px] text-slate-600">
                     {formatDate(inquiry.createdAt)}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5">

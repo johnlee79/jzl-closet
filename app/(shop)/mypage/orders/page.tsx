@@ -25,7 +25,7 @@ export default async function MypageOrdersPage({
 
   return (
     <section aria-labelledby="orders-heading">
-      <h2 id="orders-heading" className="font-serif text-[20px] text-ink">
+      <h2 id="orders-heading" className="font-serif text-[22px] text-ink">
         주문 내역
       </h2>
       <div className="mt-6">

@@ -50,13 +50,13 @@ export default function MemberOrderDetail({
       <div className="flex flex-wrap items-baseline justify-between gap-4 border-b border-stone pb-4">
         <div>
           <p className="label-xs">주문번호</p>
-          <p className="mt-2 font-display text-[22px] tracking-[0.12em] text-ink">
+          <p className="mt-2 select-all text-[24px] font-semibold tabular-nums tracking-[0.02em] text-ink">
             {order.orderNo}
           </p>
         </div>
         <Link
           href="/mypage/orders"
-          className="text-[14px] text-muted underline underline-offset-4"
+          className="text-[15px] text-muted underline underline-offset-4"
         >
           목록으로
         </Link>
@@ -65,7 +65,7 @@ export default function MemberOrderDetail({
       {done ? (
         <p
           role="status"
-          className="mt-6 border border-stone px-5 py-4 text-[15px] leading-relaxed text-ink"
+          className="mt-6 border border-stone px-5 py-4 text-[16px] leading-relaxed text-ink"
         >
           취소 요청을 접수했습니다. 확인 후 고객센터에서 연락드리겠습니다.
         </p>
@@ -76,7 +76,7 @@ export default function MemberOrderDetail({
 
         <aside className="lg:sticky lg:top-28 lg:self-start">
           <div className="border border-stone p-6">
-            <h2 className="font-serif text-[17px] text-ink">주문 내역</h2>
+            <h2 className="font-serif text-[18px] text-ink">주문 내역</h2>
             <div className="mt-4">
               <CopyOrderButton text={orderToText(order, storeName)} />
             </div>
@@ -94,10 +94,10 @@ export default function MemberOrderDetail({
                       onChange={(event) => setReason(event.target.value)}
                       rows={3}
                       placeholder="예: 다른 색상으로 다시 주문하려 합니다."
-                      className="mt-2 w-full resize-none border border-stone bg-transparent p-3 text-[14px] leading-relaxed text-ink outline-none focus:border-ink"
+                      className="mt-2 w-full resize-none border border-stone bg-transparent p-3 text-[15px] leading-relaxed text-ink outline-none focus:border-ink"
                     />
                     {error ? (
-                      <p className="mt-2 text-[13px] text-wine">{error}</p>
+                      <p className="mt-2 text-[14px] text-wine">{error}</p>
                     ) : null}
                     <div className="mt-3 flex gap-2">
                       <button
@@ -126,7 +126,7 @@ export default function MemberOrderDetail({
                     >
                       주문 취소 요청
                     </button>
-                    <p className="mt-3 text-[13px] leading-relaxed text-muted">
+                    <p className="mt-3 text-[14px] leading-relaxed text-muted">
                       요청을 보내시면 확인 후 취소 처리해 드립니다.
                     </p>
                   </>
@@ -136,7 +136,7 @@ export default function MemberOrderDetail({
               /* ★ 전화 걸기 링크를 카카오톡·1:1 문의로 바꿨습니다. */
               <div className="mt-6 border-t border-stone pt-6">
                 {/* 1:1 문의 링크는 바로 아래 문단에 있어 여기서는 겹쳐 걸지 않습니다. */}
-                <p className="text-[13px] leading-relaxed text-muted">
+                <p className="text-[14px] leading-relaxed text-muted">
                   이미 상품 준비가 시작되어 이 화면에서는 취소할 수 없습니다. 카카오톡
                   또는 1:1 문의로 알려 주시면 확인 후 처리해 드립니다.
                 </p>
@@ -144,7 +144,7 @@ export default function MemberOrderDetail({
               </div>
             )}
 
-            <p className="mt-6 border-t border-stone pt-5 text-[13px] leading-relaxed text-muted">
+            <p className="mt-6 border-t border-stone pt-5 text-[14px] leading-relaxed text-muted">
               이 주문에 대해 물어보실 것이 있으면{' '}
               <Link href={`/inquiry/new?order=${order.id}`} className="link-wine">
                 1:1 문의

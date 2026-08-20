@@ -134,7 +134,7 @@ export default function KsnetPayLauncher({
           */}
           <Link
             href="/checkout"
-            className="mt-4 bg-ink px-5 py-3 text-[14px] text-paper underline underline-offset-4"
+            className="mt-4 bg-ink px-5 py-3 text-[15px] text-paper underline underline-offset-4"
           >
             결제를 그만두고 주문서로 돌아가기
           </Link>
@@ -144,14 +144,14 @@ export default function KsnetPayLauncher({
       {/* ── 안내 · 오류 ────────────────────────────────── */}
       <div className="max-w-[520px]">
         <p className="label-xs">PAYMENT</p>
-        <h1 className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[30px]">
+        <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[32px]">
           {error ? '결제창을 열지 못했습니다' : '결제창을 여는 중입니다'}
         </h1>
 
         {error ? (
           <>
-            <p className="mt-5 text-[16px] leading-[1.9] text-ink">{error}</p>
-            <p className="mt-3 text-[15px] leading-[1.9] text-muted">
+            <p className="mt-5 text-[17px] leading-[1.9] text-ink">{error}</p>
+            <p className="mt-3 text-[16px] leading-[1.9] text-muted">
               주문번호 {orderNo} 는 결제대기 상태로 저장되어 있습니다. 아직 결제되지
               않았으니 안심하셔도 됩니다. 다시 시도하시거나 고객센터로 연락해 주세요.
             </p>
@@ -170,10 +170,10 @@ export default function KsnetPayLauncher({
           </>
         ) : (
           <>
-            <p className="mt-5 text-[16px] leading-[1.9] text-ink">
+            <p className="mt-5 text-[17px] leading-[1.9] text-ink">
               잠시만 기다려 주세요. 결제창이 자동으로 열립니다.
             </p>
-            <p className="mt-3 text-[15px] leading-[1.9] text-muted">
+            <p className="mt-3 text-[16px] leading-[1.9] text-muted">
               결제가 끝나기 전에는 이 화면을 닫지 마세요.
             </p>
           </>

@@ -29,10 +29,10 @@ export default async function PrivacyPage() {
     <div className="shell py-14 md:py-20">
       <header className="max-w-[720px]">
         <p className="label-xs">PRIVACY</p>
-        <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
+        <h1 className="mt-3 font-serif text-[28px] leading-snug text-ink md:text-[36px]">
           개인정보처리방침
         </h1>
-        <p className="mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]">
+        <p className="mt-4 text-[17px] leading-[1.9] text-ink md:text-[18px]">
           {store.name}은 이용자의 개인정보를 소중히 다루며, 관련 법령에 따라 아래와 같이
           처리합니다.
         </p>

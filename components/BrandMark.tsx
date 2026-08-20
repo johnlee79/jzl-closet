@@ -23,8 +23,8 @@ const LOGO_HEIGHT: Record<Size, string> = {
 };
 
 const TEXT_CLASS: Record<Size, string> = {
-  sm: 'text-[15px] md:text-[16px]',
-  lg: 'text-[26px] md:text-[32px]',
+  sm: 'text-[16px] md:text-[17px]',
+  lg: 'text-[28px] md:text-[34px]',
 };
 
 export default function BrandMark({

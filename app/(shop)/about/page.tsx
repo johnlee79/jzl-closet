@@ -122,12 +122,12 @@ export default async function AboutPage() {
       {/* ① 제목 · 부제 */}
       <header className="max-w-[760px]">
         <p className="label-xs">ABOUT</p>
-        <h1 className="mt-3 font-display text-[34px] font-light leading-none tracking-[0.24em] text-ink md:text-[48px]">
+        <h1 className="mt-3 font-display text-[36px] font-light leading-none tracking-[0.24em] text-ink md:text-[48px]">
           {hero.heading || store.name}
         </h1>
         {hero.html ? (
           <div
-            className="detail-body mt-5 font-serif text-[18px] leading-relaxed text-ink md:text-[22px]"
+            className="detail-body mt-5 font-serif text-[19px] leading-relaxed text-ink md:text-[24px]"
             dangerouslySetInnerHTML={{ __html: hero.html }}
           />
         ) : null}
@@ -143,7 +143,7 @@ export default async function AboutPage() {
         <section aria-label="편집숍 소개" className="mt-10 max-w-[760px]">
           <div className="flex flex-col gap-6">
             {store.story.map((paragraph, index) => (
-              <p key={index} className="text-[16px] leading-[2.1] text-ink md:text-[17px]">
+              <p key={index} className="text-[17px] leading-[2.1] text-ink md:text-[18px]">
                 {paragraph}
               </p>
             ))}
@@ -160,25 +160,25 @@ export default async function AboutPage() {
           <p className="label-xs">HOW WE CHOOSE</p>
           <h2
             id="principle-heading"
-            className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[30px]"
+            className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[32px]"
           >
             {choose.heading || '고르는 기준'}
           </h2>
           {choose.html ? (
             <div
-              className="detail-body mt-4 max-w-[640px] text-[16px] leading-[1.9] text-ink"
+              className="detail-body mt-4 max-w-[640px] text-[17px] leading-[1.9] text-ink"
               dangerouslySetInnerHTML={{ __html: choose.html }}
             />
           ) : null}
           <ol className="mt-10 grid grid-cols-1 gap-10 md:grid-cols-2 md:gap-x-16">
             {principles.map((item, index) => (
               <li key={index} className="border-t border-stone pt-6">
-                <p className="font-display text-[30px] font-light tracking-[0.1em] text-ink">
+                <p className="font-display text-[32px] font-light tracking-[0.1em] text-ink">
                   {String(index + 1).padStart(2, '0')}
                 </p>
-                <h3 className="mt-3 font-serif text-[18px] text-ink">{item.heading}</h3>
+                <h3 className="mt-3 font-serif text-[19px] text-ink">{item.heading}</h3>
                 <div
-                  className="detail-body mt-3 text-[15px] leading-[1.9] text-ink"
+                  className="detail-body mt-3 text-[16px] leading-[1.9] text-ink"
                   dangerouslySetInnerHTML={{ __html: item.html }}
                 />
               </li>
@@ -201,13 +201,13 @@ export default async function AboutPage() {
           <p className="label-xs">BRANDS</p>
           <h2
             id="about-brands-heading"
-            className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[30px]"
+            className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[32px]"
           >
             {brandsHead.heading || '취급 브랜드'}
           </h2>
           {brandsHead.html ? (
             <div
-              className="detail-body mt-4 max-w-[640px] text-[16px] leading-[1.9] text-ink"
+              className="detail-body mt-4 max-w-[640px] text-[17px] leading-[1.9] text-ink"
               dangerouslySetInnerHTML={{ __html: brandsHead.html }}
             />
           ) : null}
@@ -228,13 +228,13 @@ export default async function AboutPage() {
         <p className="label-xs">CONTACT</p>
         <h2
           id="contact-heading"
-          className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[30px]"
+          className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[32px]"
         >
           {contact.heading || '문의'}
         </h2>
         {contact.html ? (
           <div
-            className="detail-body mt-6 max-w-[560px] text-[16px] leading-[1.9] text-ink md:text-[17px]"
+            className="detail-body mt-6 max-w-[560px] text-[17px] leading-[1.9] text-ink md:text-[18px]"
             dangerouslySetInnerHTML={{ __html: contact.html }}
           />
         ) : null}
@@ -242,10 +242,10 @@ export default async function AboutPage() {
           <KakaoChatButton />
         </div>
         {/* ★ 번호는 정보로만 남깁니다. 전화 걸기 링크를 걸지 않습니다. */}
-        <p className="mt-6 font-display text-[32px] tracking-[0.1em] text-ink">
+        <p className="mt-6 font-display text-[34px] tracking-[0.1em] text-ink">
           {store.phone}
         </p>
-        <p className="mt-2 text-[14px] leading-relaxed text-muted">{store.hours}</p>
+        <p className="mt-2 text-[15px] leading-relaxed text-muted">{store.hours}</p>
         <div className="btn-row mt-8">
           <Link href="/products" className="btn-primary">
             전체 상품 보기

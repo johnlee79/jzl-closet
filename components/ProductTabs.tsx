@@ -88,7 +88,7 @@ export default function ProductTabs({
               aria-selected={active}
               aria-controls={`panel-${item.key}`}
               onClick={() => select(item.key)}
-              className={`-mb-px min-h-[52px] border-b-2 px-1 py-3 text-[13px] tracking-[0.06em] transition-colors md:text-[15px] md:tracking-[0.1em] ${
+              className={`-mb-px min-h-[52px] border-b-2 px-1 py-3 text-[14px] tracking-[0.06em] transition-colors md:text-[16px] md:tracking-[0.1em] ${
                 active
                   ? 'border-ink font-medium text-ink'
                   : 'border-transparent text-muted hover:text-ink'

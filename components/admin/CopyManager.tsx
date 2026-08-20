@@ -86,13 +86,13 @@ function CopyEditor({
 
   return (
     <div className="border-t border-slate-200 bg-slate-50 p-4">
-      <p className="text-[13px] leading-relaxed text-slate-600">{meta.hint}</p>
+      <p className="text-[14px] leading-relaxed text-slate-600">{meta.hint}</p>
 
       <ul className="mt-4 flex flex-col gap-4">
         {blocks.map((block, index) => (
           <li key={index} className="rounded-md border border-slate-200 bg-white p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[13px] font-semibold text-slate-700">
+              <span className="text-[14px] font-semibold text-slate-700">
                 {meta.blockLabel} {index + 1}
               </span>
               <div className="flex gap-1.5">
@@ -154,7 +154,7 @@ function CopyEditor({
         + {meta.blockLabel} 추가
       </button>
 
-      <details className="mt-4 rounded-md bg-white p-3 text-[13px] text-slate-700">
+      <details className="mt-4 rounded-md bg-white p-3 text-[14px] text-slate-700">
         <summary className="cursor-pointer font-medium text-slate-900">
           자동으로 바뀌는 값 (치환자)
         </summary>
@@ -174,7 +174,7 @@ function CopyEditor({
       {message ? (
         <p
           role="status"
-          className={`mt-4 rounded-md px-3 py-2 text-[14px] ${
+          className={`mt-4 rounded-md px-3 py-2 text-[15px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >
@@ -239,7 +239,7 @@ export default function CopyManager({
           <section key={group.key} aria-labelledby={`copy-group-${group.key}`}>
             <h2
               id={`copy-group-${group.key}`}
-              className="mb-2 text-[14px] font-semibold text-slate-900"
+              className="mb-2 text-[15px] font-semibold text-slate-900"
             >
               {group.label}
             </h2>
@@ -255,15 +255,15 @@ export default function CopyManager({
                       className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50"
                     >
                       <span>
-                        <span className="text-[14px] font-medium text-slate-900">
+                        <span className="text-[15px] font-medium text-slate-900">
                           편집숍 소개 · 대표 이미지
                         </span>
-                        <span className="ml-2 text-[12px] text-slate-500">/about</span>
-                        <span className="block text-[12px] text-slate-500">
+                        <span className="ml-2 text-[13px] text-slate-500">/about</span>
+                        <span className="block text-[13px] text-slate-500">
                           맨 위 배너 이미지 (비우면 나오지 않습니다)
                         </span>
                       </span>
-                      <span aria-hidden="true" className="text-[13px] text-slate-500">
+                      <span aria-hidden="true" className="text-[14px] text-slate-500">
                         {imageOpen ? '접기 ▲' : '펼치기 ▼'}
                       </span>
                     </button>
@@ -280,15 +280,15 @@ export default function CopyManager({
                       className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50"
                     >
                       <span>
-                        <span className="text-[14px] font-medium text-slate-900">
+                        <span className="text-[15px] font-medium text-slate-900">
                           메인 히어로 버튼 (문구·링크)
                         </span>
-                        <span className="ml-2 text-[12px] text-slate-500">/</span>
-                        <span className="block text-[12px] text-slate-500">
+                        <span className="ml-2 text-[13px] text-slate-500">/</span>
+                        <span className="block text-[13px] text-slate-500">
                           첫 화면 버튼 두 개 · 두 번째는 비우면 숨김
                         </span>
                       </span>
-                      <span aria-hidden="true" className="text-[13px] text-slate-500">
+                      <span aria-hidden="true" className="text-[14px] text-slate-500">
                         {buttonsOpen ? '접기 ▲' : '펼치기 ▼'}
                       </span>
                     </button>
@@ -308,17 +308,17 @@ export default function CopyManager({
                         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50"
                       >
                         <span>
-                          <span className="text-[14px] font-medium text-slate-900">
+                          <span className="text-[15px] font-medium text-slate-900">
                             {meta.title}
                           </span>
-                          <span className="ml-2 text-[12px] text-slate-500">
+                          <span className="ml-2 text-[13px] text-slate-500">
                             {meta.path}
                           </span>
-                          <span className="block text-[12px] text-slate-500">
+                          <span className="block text-[13px] text-slate-500">
                             {copy[key].length}개 {meta.blockLabel}
                           </span>
                         </span>
-                        <span aria-hidden="true" className="text-[13px] text-slate-500">
+                        <span aria-hidden="true" className="text-[14px] text-slate-500">
                           {expanded ? '접기 ▲' : '펼치기 ▼'}
                         </span>
                       </button>

@@ -59,13 +59,13 @@ export default async function OrderPage() {
       <header className="max-w-[680px]">
         <p className="label-xs">CART &amp; ORDER</p>
         {head?.heading ? (
-          <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
+          <h1 className="mt-3 font-serif text-[28px] leading-snug text-ink md:text-[36px]">
             {head.heading}
           </h1>
         ) : null}
         {head?.html ? (
           <div
-            className="detail-body mt-4 text-[16px] leading-[1.9] text-ink md:text-[17px]"
+            className="detail-body mt-4 text-[17px] leading-[1.9] text-ink md:text-[18px]"
             dangerouslySetInnerHTML={{ __html: head.html }}
           />
         ) : null}
@@ -83,19 +83,19 @@ export default async function OrderPage() {
         <p className="label-xs">HOW TO ORDER</p>
         <h2
           id="step-heading"
-          className="mt-3 font-serif text-[22px] leading-snug text-ink md:text-[28px]"
+          className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[30px]"
         >
           주문 절차
         </h2>
         <ol className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-6">
           {steps.map((step, index) => (
             <li key={index} className="border-t border-stone pt-6">
-              <p className="font-display text-[30px] font-light tracking-[0.1em] text-ink">
+              <p className="font-display text-[32px] font-light tracking-[0.1em] text-ink">
                 {String(index + 1).padStart(2, '0')}
               </p>
-              <h3 className="mt-3 font-serif text-[19px] text-ink">{step.heading}</h3>
+              <h3 className="mt-3 font-serif text-[20px] text-ink">{step.heading}</h3>
               <div
-                className="detail-body mt-3 text-[15px] leading-[1.9] text-ink"
+                className="detail-body mt-3 text-[16px] leading-[1.9] text-ink"
                 dangerouslySetInnerHTML={{ __html: step.html }}
               />
             </li>
@@ -106,8 +106,8 @@ export default async function OrderPage() {
           <CopyBlocks
             blocks={notes}
             headingLevel={3}
-            headingClassName="font-serif text-[19px] text-ink"
-            bodyClassName="detail-body mt-4 text-[15px] leading-[1.9] text-ink"
+            headingClassName="font-serif text-[20px] text-ink"
+            bodyClassName="detail-body mt-4 text-[16px] leading-[1.9] text-ink"
             className="flex flex-col gap-8"
           />
 

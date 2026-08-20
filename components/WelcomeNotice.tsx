@@ -34,7 +34,7 @@ export default function WelcomeNotice({ message }: { message: string }) {
 
   return (
     <div className="relative border border-stone bg-paper px-5 py-4 pr-12">
-      <p className="text-[15px] leading-relaxed text-ink">{message}</p>
+      <p className="text-[16px] leading-relaxed text-ink">{message}</p>
       <button
         type="button"
         onClick={close}

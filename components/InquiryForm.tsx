@@ -22,7 +22,7 @@ export type InquiryFormProps = {
 };
 
 const inputClass =
-  'mt-2 w-full min-h-[48px] border border-stone bg-transparent px-4 py-3 text-[15px] text-ink outline-none transition-colors placeholder:text-muted focus:border-ink';
+  'mt-2 w-full min-h-[48px] border border-stone bg-transparent px-4 py-3 text-[16px] text-ink outline-none transition-colors placeholder:text-muted focus:border-ink';
 
 export default function InquiryForm({
   member,
@@ -112,14 +112,14 @@ export default function InquiryForm({
   if (done) {
     return (
       <div className="mt-12 max-w-[520px] border border-stone p-6 md:p-8">
-        <h2 className="font-serif text-[20px] text-ink">문의를 접수했습니다</h2>
+        <h2 className="font-serif text-[22px] text-ink">문의를 접수했습니다</h2>
         <p className="mt-4 border border-stone px-5 py-4">
-          <span className="text-[13px] tracking-[0.14em] text-muted">문의번호</span>
-          <span className="mt-2 block font-display text-[24px] tracking-[0.12em] text-ink">
+          <span className="text-[14px] tracking-[0.14em] text-muted">문의번호</span>
+          <span className="mt-2 block select-all text-[26px] font-semibold tabular-nums tracking-[0.02em] text-ink">
             {done.inquiryNo}
           </span>
         </p>
-        <p className="mt-5 text-[15px] leading-relaxed text-ink">
+        <p className="mt-5 text-[16px] leading-relaxed text-ink">
           영업일 기준 1~2일 안에 답변드립니다.
           {done.isMember
             ? ' 답변이 등록되면 마이페이지 > 문의 내역에서 확인하실 수 있습니다.'
@@ -148,14 +148,14 @@ export default function InquiryForm({
       {error ? (
         <p
           role="alert"
-          className="mb-8 border border-wine bg-wine/5 px-5 py-4 text-[15px] leading-relaxed text-wine"
+          className="mb-8 border border-wine bg-wine/5 px-5 py-4 text-[16px] leading-relaxed text-wine"
         >
           {error}
         </p>
       ) : null}
 
       {product ? (
-        <p className="mb-8 border border-stone px-5 py-4 text-[15px] leading-relaxed text-ink">
+        <p className="mb-8 border border-stone px-5 py-4 text-[16px] leading-relaxed text-ink">
           <span className="text-muted">상품 문의 · </span>
           {product.name}
         </p>
@@ -168,7 +168,7 @@ export default function InquiryForm({
           {INQUIRY_CATEGORIES.map((item) => (
             <li key={item.key}>
               <label
-                className={`flex min-h-[48px] cursor-pointer items-center gap-2 border px-5 py-3 text-[15px] transition-colors ${
+                className={`flex min-h-[48px] cursor-pointer items-center gap-2 border px-5 py-3 text-[16px] transition-colors ${
                   form.category === item.key
                     ? 'border-ink text-ink'
                     : 'border-stone text-muted hover:border-ink hover:text-ink'
@@ -209,7 +209,7 @@ export default function InquiryForm({
               ))}
             </select>
           ) : (
-            <p className="mt-2 text-[14px] text-muted">주문 내역이 없습니다.</p>
+            <p className="mt-2 text-[15px] text-muted">주문 내역이 없습니다.</p>
           )
         ) : (
           <>
@@ -221,7 +221,7 @@ export default function InquiryForm({
               placeholder="ORD-20260814-0001"
               className={inputClass}
             />
-            <p className="mt-2 text-[13px] leading-relaxed text-muted">
+            <p className="mt-2 text-[14px] leading-relaxed text-muted">
               주문 관련 문의라면 주문번호를 적어 주세요. 아래 연락처와 함께 확인합니다.
             </p>
           </>
@@ -253,7 +253,7 @@ export default function InquiryForm({
           onChange={(event) => set('content', event.target.value)}
           rows={8}
           placeholder="문의하실 내용을 자세히 적어 주시면 더 빠르게 도와드릴 수 있습니다."
-          className="mt-2 w-full resize-none border border-stone bg-transparent p-4 text-[15px] leading-relaxed text-ink outline-none focus:border-ink"
+          className="mt-2 w-full resize-none border border-stone bg-transparent p-4 text-[16px] leading-relaxed text-ink outline-none focus:border-ink"
         />
       </div>
 
@@ -267,7 +267,7 @@ export default function InquiryForm({
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploading !== null || attachments.length >= MAX_ATTACHMENTS}
-            className="btn-secondary min-h-[44px] px-5 py-0 text-[14px] disabled:opacity-40"
+            className="btn-secondary min-h-[44px] px-5 py-0 text-[15px] disabled:opacity-40"
           >
             {uploading !== null ? `올리는 중 ${uploading}%` : '이미지 선택'}
           </button>
@@ -279,7 +279,7 @@ export default function InquiryForm({
             onChange={(event) => void handleFiles(event.target.files)}
             className="hidden"
           />
-          <span className="text-[13px] text-muted">
+          <span className="text-[14px] text-muted">
             {attachments.length}/{MAX_ATTACHMENTS}장
           </span>
         </div>
@@ -298,7 +298,7 @@ export default function InquiryForm({
                   type="button"
                   onClick={() => removeAttachment(url)}
                   aria-label="첨부 이미지 삭제"
-                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center bg-black/60 text-[14px] leading-none text-white"
+                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center bg-black/60 text-[15px] leading-none text-white"
                 >
                   ×
                 </button>
@@ -312,17 +312,17 @@ export default function InquiryForm({
       <section aria-labelledby="writer-heading" className="mt-12">
         <h2
           id="writer-heading"
-          className="border-b border-stone pb-4 font-serif text-[18px] text-ink"
+          className="border-b border-stone pb-4 font-serif text-[19px] text-ink"
         >
           작성자 정보
         </h2>
 
         {member ? (
-          <p className="mt-4 text-[15px] leading-relaxed text-ink">
+          <p className="mt-4 text-[16px] leading-relaxed text-ink">
             {member.name}
             {member.phone ? ` · ${member.phone}` : ''}
             {member.email ? ` · ${member.email}` : ''}
-            <span className="mt-1 block text-[13px] text-muted">
+            <span className="mt-1 block text-[14px] text-muted">
               회원 정보로 등록됩니다. 답변은 마이페이지에서 확인하실 수 있습니다.
             </span>
           </p>
@@ -366,7 +366,7 @@ export default function InquiryForm({
                 placeholder="hello@example.com"
                 className={inputClass}
               />
-              <p className="mt-2 text-[13px] text-muted">
+              <p className="mt-2 text-[14px] text-muted">
                 연락처와 이메일 중 하나는 꼭 남겨 주세요.
               </p>
             </div>
@@ -383,14 +383,14 @@ export default function InquiryForm({
                 autoComplete="new-password"
                 className={`${inputClass} max-w-[240px]`}
               />
-              <p className="mt-2 text-[13px] leading-relaxed text-muted">
+              <p className="mt-2 text-[14px] leading-relaxed text-muted">
                 답변을 확인할 때 문의번호와 함께 씁니다. 잊지 않도록 적어 두세요.
               </p>
             </div>
           </div>
         )}
 
-        <label className="mt-6 flex cursor-pointer items-center gap-3 text-[15px] text-ink">
+        <label className="mt-6 flex cursor-pointer items-center gap-3 text-[16px] text-ink">
           <input
             type="checkbox"
             checked={form.isSecret}
@@ -405,7 +405,7 @@ export default function InquiryForm({
         {pending ? '접수 중…' : '문의 등록'}
       </button>
 
-      <p className="mt-4 text-[13px] leading-relaxed text-muted">
+      <p className="mt-4 text-[14px] leading-relaxed text-muted">
         문의 내용에는 주민등록번호·카드번호 같은 민감한 정보를 적지 말아 주세요.
       </p>
     </form>

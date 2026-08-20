@@ -28,7 +28,7 @@ export default function SignupPointBadge({
   return (
     <Link
       href={href}
-      className={`jzl-breathe inline-flex min-h-[36px] items-center rounded-full bg-wine px-4 text-[13px] tracking-[0.04em] text-paper ${className}`}
+      className={`jzl-breathe inline-flex min-h-[36px] items-center rounded-full bg-wine px-4 text-[14px] tracking-[0.04em] text-paper ${className}`}
     >
       가입하고 {formatPrice(rule.amount)}P 받기
     </Link>

@@ -56,13 +56,13 @@ export default async function AdminReferralsPage({
 
   return (
     <div className="mx-auto w-full max-w-[1100px]">
-      <h1 className="text-[20px] font-semibold text-slate-900">추천 관리</h1>
-      <p className="mt-1 text-[13px] text-slate-600">
+      <h1 className="text-[22px] font-semibold text-slate-900">추천 관리</h1>
+      <p className="mt-1 text-[14px] text-slate-600">
         추천인별 실적과 기간별 전환율을 봅니다. 목표·사은품은 왼쪽 메뉴에서 만듭니다.
       </p>
 
       {!configured ? (
-        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[14px] text-amber-900">
+        <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[15px] text-amber-900">
           Supabase 연결 정보가 없습니다. <code>.env.local</code> 을 설정해 주세요.
         </div>
       ) : null}
@@ -70,14 +70,14 @@ export default async function AdminReferralsPage({
       {/* ── 통계 ────────────────────────────────────── */}
       <section className="admin-card mt-5 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-[15px] font-semibold text-slate-900">
+          <h2 className="text-[16px] font-semibold text-slate-900">
             기간별 추천 통계
           </h2>
           <form method="get" className="flex flex-wrap items-center gap-2">
             {search ? <input type="hidden" name="q" value={search} /> : null}
             <input type="hidden" name="sort" value={sort} />
             <input type="date" name="from" defaultValue={from} className="admin-input" />
-            <span className="text-[13px] text-slate-500">—</span>
+            <span className="text-[14px] text-slate-500">—</span>
             <input type="date" name="to" defaultValue={to} className="admin-input" />
             <button type="submit" className="admin-btn">
               조회
@@ -93,20 +93,20 @@ export default async function AdminReferralsPage({
             { label: '지급 포인트', value: `${stats.paidPoints.toLocaleString('ko-KR')}P` },
           ].map((item) => (
             <div key={item.label} className="border border-slate-200 p-4">
-              <dt className="text-[12px] text-slate-500">{item.label}</dt>
-              <dd className="mt-1 text-[20px] font-semibold text-slate-900">
+              <dt className="text-[13px] text-slate-500">{item.label}</dt>
+              <dd className="mt-1 text-[22px] font-semibold text-slate-900">
                 {item.value}
               </dd>
             </div>
           ))}
         </dl>
 
-        <p className="mt-3 text-[13px] text-slate-600">
+        <p className="mt-3 text-[14px] text-slate-600">
           전환율 — 방문 → 가입 {stats.signupRate}% · 가입 → 첫 구매 {stats.purchaseRate}%
         </p>
 
         {stats.heldCount > 0 ? (
-          <p className="mt-3 text-[13px] text-amber-700">
+          <p className="mt-3 text-[14px] text-amber-700">
             같은 기기·회선으로 보여 확인이 필요한 건이 {stats.heldCount}건 있습니다.{' '}
             <Link href="/admin/referrals/review" className="underline">
               검토하러 가기
@@ -117,14 +117,14 @@ export default async function AdminReferralsPage({
 
       {/* ── 설정 ────────────────────────────────────── */}
       <section className="admin-card mt-5 p-5">
-        <h2 className="text-[15px] font-semibold text-slate-900">추천 설정</h2>
+        <h2 className="text-[16px] font-semibold text-slate-900">추천 설정</h2>
         <ReferralSettingsForm settings={settings} />
       </section>
 
       {/* ── 추천인별 현황 ───────────────────────────── */}
       <section className="admin-card mt-5 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-[15px] font-semibold text-slate-900">추천인별 현황</h2>
+          <h2 className="text-[16px] font-semibold text-slate-900">추천인별 현황</h2>
           <form method="get" className="flex flex-wrap items-center gap-2">
             <input type="hidden" name="from" value={from} />
             <input type="hidden" name="to" value={to} />
@@ -149,16 +149,16 @@ export default async function AdminReferralsPage({
         </div>
 
         {summaries.length === 0 ? (
-          <p className="mt-6 text-[14px] text-slate-600">
+          <p className="mt-6 text-[15px] text-slate-600">
             {search
               ? '조건에 맞는 추천인이 없습니다.'
               : '아직 실적이 있는 추천인이 없습니다. 검색하면 전체 회원에서 찾을 수 있습니다.'}
           </p>
         ) : (
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-[14px]">
+            <table className="w-full min-w-[720px] text-left text-[15px]">
               <thead>
-                <tr className="border-b border-slate-200 text-[13px] text-slate-500">
+                <tr className="border-b border-slate-200 text-[14px] text-slate-500">
                   <th className="px-3 py-2">회원</th>
                   <th className="px-3 py-2">코드</th>
                   <th className="px-3 py-2 text-right">방문</th>
@@ -171,7 +171,7 @@ export default async function AdminReferralsPage({
                   <tr key={row.id} className="border-b border-slate-100">
                     <td className="px-3 py-2.5">
                       <span className="text-slate-900">{row.name || '이름 없음'}</span>
-                      <span className="ml-2 text-[12px] text-slate-500">{row.email}</span>
+                      <span className="ml-2 text-[13px] text-slate-500">{row.email}</span>
                     </td>
                     <td className="px-3 py-2.5 font-mono text-slate-700">{row.code}</td>
                     <td className="px-3 py-2.5 text-right text-slate-700">
@@ -191,7 +191,7 @@ export default async function AdminReferralsPage({
         )}
       </section>
 
-      <p className="mt-6 text-[12px] leading-relaxed text-slate-500">
+      <p className="mt-6 text-[13px] leading-relaxed text-slate-500">
         추천 테이블이 없다는 안내가 나오면 Supabase SQL Editor 에서{' '}
         <code>supabase/schema-3f.sql</code> 을 실행한 뒤{' '}
         <code>supabase/rls-3f.sql</code> 을 실행해 주세요.

@@ -20,8 +20,8 @@ type CopyBlocksProps = {
 export default function CopyBlocks({
   blocks,
   headingLevel = 2,
-  headingClassName = 'border-t border-stone pt-6 font-serif text-[18px] text-ink md:text-[20px]',
-  bodyClassName = 'detail-body mt-4 text-[16px] leading-[2] text-ink md:text-[17px]',
+  headingClassName = 'border-t border-stone pt-6 font-serif text-[19px] text-ink md:text-[22px]',
+  bodyClassName = 'detail-body mt-4 text-[17px] leading-[2] text-ink md:text-[18px]',
   className = 'flex max-w-[860px] flex-col gap-12',
 }: CopyBlocksProps) {
   const Heading = headingLevel === 3 ? 'h3' : 'h2';

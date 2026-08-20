@@ -55,19 +55,19 @@ export default function DepositCountdown({
 
   return (
     <section className="mt-6 border border-stone p-5 md:p-6">
-      <h3 className="text-[13px] tracking-[0.14em] text-muted">입금 기한 안내</h3>
+      <h3 className="text-[14px] tracking-[0.14em] text-muted">입금 기한 안내</h3>
 
-      <p className="mt-3 text-[16px] leading-[1.9] text-ink">
+      <p className="mt-3 text-[17px] leading-[1.9] text-ink">
         <strong>{label}</strong>까지 입금해 주세요.
         <br />
         기한이 지나면 주문이 자동으로 취소됩니다.
       </p>
 
       <div className="mt-5 flex items-baseline gap-4 border-t border-stone pt-5">
-        <span className="text-[13px] tracking-[0.14em] text-muted">남은 시간</span>
+        <span className="text-[14px] tracking-[0.14em] text-muted">남은 시간</span>
         {/* 서버와 브라우저의 시각이 달라 깜박이지 않도록, 계산 전에는 비워 둡니다. */}
         <span
-          className={`font-display text-[24px] tracking-wide ${
+          className={`text-[26px] font-semibold tabular-nums tracking-tight ${
             expired || urgent ? 'text-wine' : 'text-ink'
           }`}
         >

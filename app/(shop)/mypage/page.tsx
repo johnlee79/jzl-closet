@@ -57,7 +57,7 @@ export default async function MypageHomePage() {
       {/* ★ 입금 기한이 1시간 남았습니다. */}
       {soonExpiring.length > 0 ? (
         <div className="flex flex-wrap items-center justify-between gap-3 border border-wine bg-wine/5 px-5 py-4">
-          <p className="text-[15px] leading-relaxed text-wine">
+          <p className="text-[16px] leading-relaxed text-wine">
             입금 기한이 1시간 남았습니다. 기한이 지나면 주문이 자동 취소됩니다.
             {soonExpiring.length > 1 ? ` (${soonExpiring.length}건)` : ''}
           </p>
@@ -67,7 +67,7 @@ export default async function MypageHomePage() {
                 ? `/mypage/orders/${soonExpiring[0].id}`
                 : '/mypage/orders?status=pending_payment'
             }
-            className="btn-secondary min-h-[40px] px-4 py-0 text-[13px]"
+            className="btn-secondary min-h-[40px] px-4 py-0 text-[14px]"
           >
             주문 확인
           </Link>
@@ -77,7 +77,7 @@ export default async function MypageHomePage() {
       {showWelcome ? <WelcomeNotice message={event.mypageWelcome} /> : null}
 
       <section aria-labelledby="summary-heading">
-        <h2 id="summary-heading" className="font-serif text-[20px] text-ink">
+        <h2 id="summary-heading" className="font-serif text-[22px] text-ink">
           주문 요약
         </h2>
 
@@ -88,8 +88,8 @@ export default async function MypageHomePage() {
                 href={item.href}
                 className="block border border-stone p-5 transition-colors hover:border-ink"
               >
-                <span className="text-[13px] text-muted">{statusLabel(item.status)}</span>
-                <span className="mt-2 block font-display text-[26px] text-ink">
+                <span className="text-[14px] text-muted">{statusLabel(item.status)}</span>
+                <span className="mt-2 block text-[28px] font-semibold tabular-nums text-ink">
                   {counts[item.status] ?? 0}
                 </span>
               </Link>
@@ -97,7 +97,7 @@ export default async function MypageHomePage() {
           ))}
         </ul>
 
-        <p className="mt-4 text-[14px] text-muted">
+        <p className="mt-4 text-[15px] text-muted">
           전체 주문 {totalOrders}건 ·{' '}
           <Link href="/mypage/orders" className="link-wine">
             주문 내역 전체 보기
@@ -107,7 +107,7 @@ export default async function MypageHomePage() {
 
       {pendingInquiries > 0 ? (
         <section className="border border-stone p-5">
-          <p className="text-[15px] leading-relaxed text-ink">
+          <p className="text-[16px] leading-relaxed text-ink">
             답변을 기다리는 문의가 {pendingInquiries}건 있습니다.{' '}
             <Link href="/mypage/inquiries" className="link-wine">
               문의 내역 보기
@@ -118,17 +118,17 @@ export default async function MypageHomePage() {
 
       <section aria-labelledby="recent-heading">
         <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-stone pb-4">
-          <h2 id="recent-heading" className="font-serif text-[20px] text-ink">
+          <h2 id="recent-heading" className="font-serif text-[22px] text-ink">
             최근 주문
           </h2>
-          <Link href="/mypage/orders" className="text-[14px] text-muted underline underline-offset-4">
+          <Link href="/mypage/orders" className="text-[15px] text-muted underline underline-offset-4">
             전체 보기
           </Link>
         </div>
 
         {recent.length === 0 ? (
           <div className="py-14">
-            <p className="text-[16px] leading-relaxed text-ink">아직 주문 내역이 없습니다.</p>
+            <p className="text-[17px] leading-relaxed text-ink">아직 주문 내역이 없습니다.</p>
             <div className="btn-row mt-6">
               <Link href="/products" className="btn-primary">
                 상품 둘러보기
@@ -150,15 +150,15 @@ export default async function MypageHomePage() {
                 <li key={order.id} className="border-b border-stone py-5">
                   <Link href={`/mypage/orders/${order.id}`} className="block">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="font-display text-[15px] tracking-[0.1em] text-ink">
+                      <span className="text-[16px] font-semibold tabular-nums tracking-[0.02em] text-ink">
                         {order.orderNo}
                       </span>
-                      <span className="text-[13px] text-muted">
+                      <span className="text-[14px] text-muted">
                         {formatDate(order.createdAt)}
                       </span>
                     </div>
-                    <p className="mt-2 text-[15px] leading-snug text-ink">{summary}</p>
-                    <p className="mt-1 text-[14px] text-muted">
+                    <p className="mt-2 text-[16px] leading-snug text-ink">{summary}</p>
+                    <p className="mt-1 text-[15px] text-muted">
                       {statusLabel(order.status)} · {formatPrice(order.totalAmount)}원
                     </p>
                   </Link>

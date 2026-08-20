@@ -43,7 +43,7 @@ function DistributionBar({
   const percent = total > 0 ? Math.round((count / total) * 100) : 0;
 
   return (
-    <li className="flex items-center gap-3 text-[13px]">
+    <li className="flex items-center gap-3 text-[14px]">
       <span className="w-8 shrink-0 text-muted">{rating}점</span>
       <span className="h-2 flex-1 overflow-hidden bg-stone">
         <span
@@ -258,13 +258,13 @@ export default function ProductReviews({
       <p className="label-xs">REVIEW</p>
       <h2
         id="review-title"
-        className="mt-3 font-serif text-[22px] leading-snug text-ink md:text-[28px]"
+        className="mt-3 font-serif text-[24px] leading-snug text-ink md:text-[30px]"
       >
         상품 후기
       </h2>
 
       {summary.count === 0 ? (
-        <p className="mt-10 border-t border-stone pt-10 text-[16px] leading-relaxed text-ink">
+        <p className="mt-10 border-t border-stone pt-10 text-[17px] leading-relaxed text-ink">
           아직 등록된 후기가 없습니다. 상품을 받아 보신 뒤 첫 후기를 남겨 주세요.
         </p>
       ) : (
@@ -273,7 +273,7 @@ export default function ProductReviews({
            * 미디어가 하나도 없으면 이 영역을 통째로 감춥니다. */}
           {gallery.length > 0 ? (
             <div className="mt-10 border-b border-stone pb-10">
-              <p className="text-[13px] tracking-[0.14em] text-muted">
+              <p className="text-[14px] tracking-[0.14em] text-muted">
                 후기 사진 · 영상 {gallery.length}
               </p>
               <ul className="mt-4 flex gap-2 overflow-x-auto pb-2 md:gap-3">
@@ -312,7 +312,7 @@ export default function ProductReviews({
                           그림자가 아니라 그라데이션이라 규칙에 어긋나지 않습니다. */}
                       <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/90 via-ink/55 to-transparent px-2.5 pb-2.5 pt-9 text-left">
                         <TinyStars value={media.rating} />
-                        <span className="mt-1 line-clamp-2 block text-[12px] leading-[1.4] text-paper">
+                        <span className="mt-1 line-clamp-2 block text-[13px] leading-[1.4] text-paper">
                           {media.excerpt}
                         </span>
                       </span>
@@ -326,13 +326,13 @@ export default function ProductReviews({
           {/* ── 요약 ─────────────────────────────────── */}
           <div className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-[220px_1fr] md:gap-12">
             <div>
-              <p className="font-display text-[44px] leading-none text-ink">
+              <p className="text-[44px] font-semibold leading-none tabular-nums text-ink">
                 {summary.average.toFixed(1)}
               </p>
               <div className="mt-3">
                 <StarRating value={summary.average} size={18} />
               </div>
-              <p className="mt-2 text-[14px] text-muted">후기 {summary.count}개</p>
+              <p className="mt-2 text-[15px] text-muted">후기 {summary.count}개</p>
             </div>
 
             <div>
@@ -349,14 +349,14 @@ export default function ProductReviews({
 
               {summary.topTags.length > 0 ? (
                 <div className="mt-6">
-                  <p className="text-[13px] tracking-[0.14em] text-muted">
+                  <p className="text-[14px] tracking-[0.14em] text-muted">
                     많이 선택한 점
                   </p>
                   <ul className="mt-3 flex flex-wrap gap-2">
                     {summary.topTags.map((item) => (
                       <li
                         key={item.tag}
-                        className="border border-stone px-3 py-1.5 text-[14px] text-ink"
+                        className="border border-stone px-3 py-1.5 text-[15px] text-ink"
                       >
                         {item.tag}
                         <span className="ml-1.5 text-muted">{item.count}</span>
@@ -370,7 +370,7 @@ export default function ProductReviews({
 
           {/* ── 정렬·필터 ────────────────────────────── */}
           <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-b border-stone pb-4">
-            <label className="flex cursor-pointer items-center gap-2 text-[14px] text-ink">
+            <label className="flex cursor-pointer items-center gap-2 text-[15px] text-ink">
               <input
                 type="checkbox"
                 checked={photoOnly}
@@ -387,7 +387,7 @@ export default function ProductReviews({
                   type="button"
                   onClick={() => setSort(option.key)}
                   aria-pressed={sort === option.key}
-                  className={`tap-target text-[14px] tracking-[0.1em] transition-colors duration-200 ${
+                  className={`tap-target text-[15px] tracking-[0.1em] transition-colors duration-200 ${
                     sort === option.key ? 'text-ink' : 'text-muted hover:text-ink'
                   }`}
                 >
@@ -399,7 +399,7 @@ export default function ProductReviews({
 
           {/* ── 목록 ─────────────────────────────────── */}
           {visible.length === 0 ? (
-            <p className="py-14 text-[16px] leading-relaxed text-ink">
+            <p className="py-14 text-[17px] leading-relaxed text-ink">
               사진이 있는 후기가 아직 없습니다.
             </p>
           ) : (
@@ -418,8 +418,8 @@ export default function ProductReviews({
                 >
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                     <StarRating value={review.rating} />
-                    <span className="text-[14px] text-ink">{review.writerName}</span>
-                    <span className="text-[13px] text-muted">
+                    <span className="text-[15px] text-ink">{review.writerName}</span>
+                    <span className="text-[14px] text-muted">
                       {formatDate(review.writtenAt ?? review.createdAt)}
                     </span>
                   </div>
@@ -429,7 +429,7 @@ export default function ProductReviews({
                       {review.tags.map((tag) => (
                         <li
                           key={tag}
-                          className="bg-stone/40 px-2.5 py-1 text-[13px] text-ink"
+                          className="bg-stone/40 px-2.5 py-1 text-[14px] text-ink"
                         >
                           {tag}
                         </li>
@@ -437,7 +437,7 @@ export default function ProductReviews({
                     </ul>
                   ) : null}
 
-                  <p className="mt-4 whitespace-pre-line text-[16px] leading-[1.9] text-ink">
+                  <p className="mt-4 whitespace-pre-line text-[17px] leading-[1.9] text-ink">
                     {review.content}
                   </p>
 
@@ -485,17 +485,17 @@ export default function ProductReviews({
 
                   {/* ★ 체험단·무상제공 후기 표시. 법적으로 요구되는 표시입니다. */}
                   {review.isSponsored ? (
-                    <p className="mt-4 text-[12px] leading-relaxed text-muted">
+                    <p className="mt-4 text-[13px] leading-relaxed text-muted">
                       {SPONSORED_NOTICE}
                     </p>
                   ) : null}
 
                   {review.adminReply ? (
                     <div className="mt-5 border-l-2 border-stone pl-5">
-                      <p className="text-[13px] tracking-[0.14em] text-muted">
+                      <p className="text-[14px] tracking-[0.14em] text-muted">
                         판매자 답변
                       </p>
-                      <p className="mt-2 whitespace-pre-line text-[15px] leading-[1.9] text-ink">
+                      <p className="mt-2 whitespace-pre-line text-[16px] leading-[1.9] text-ink">
                         {review.adminReply}
                       </p>
                     </div>
@@ -564,7 +564,7 @@ export default function ProductReviews({
                   <path d="M1 1l11 11L1 23" />
                 </svg>
               </button>
-              <p className="absolute bottom-6 left-1/2 -translate-x-1/2 text-[13px] tabular-nums text-paper">
+              <p className="absolute bottom-6 left-1/2 -translate-x-1/2 text-[14px] tabular-nums text-paper">
                 {zoom + 1} / {gallery.length}
               </p>
             </>

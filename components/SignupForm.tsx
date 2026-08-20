@@ -156,7 +156,7 @@ export default function SignupForm() {
       {error ? (
         <p
           role="alert"
-          className="mb-8 border border-wine bg-wine/5 px-5 py-4 text-[15px] leading-relaxed text-wine"
+          className="mb-8 border border-wine bg-wine/5 px-5 py-4 text-[16px] leading-relaxed text-wine"
         >
           {error}
         </p>
@@ -166,7 +166,7 @@ export default function SignupForm() {
       <section aria-labelledby="account-heading">
         <h2
           id="account-heading"
-          className="border-b border-stone pb-4 font-serif text-[20px] text-ink"
+          className="border-b border-stone pb-4 font-serif text-[22px] text-ink"
         >
           계정
         </h2>
@@ -194,16 +194,16 @@ export default function SignupForm() {
                 type="button"
                 onClick={checkEmail}
                 disabled={pending || !form.email.trim()}
-                className="btn-secondary mt-2 min-h-[48px] shrink-0 px-5 py-0 text-[14px] disabled:opacity-40"
+                className="btn-secondary mt-2 min-h-[48px] shrink-0 px-5 py-0 text-[15px] disabled:opacity-40"
               >
                 중복 확인
               </button>
             </div>
             {emailState === 'ok' ? (
-              <p className="mt-2 text-[13px] text-ink">사용할 수 있는 이메일입니다.</p>
+              <p className="mt-2 text-[14px] text-ink">사용할 수 있는 이메일입니다.</p>
             ) : null}
             {emailState === 'taken' ? (
-              <p className="mt-2 text-[13px] text-wine">
+              <p className="mt-2 text-[14px] text-wine">
                 이미 가입된 이메일입니다.{' '}
                 <Link href="/login" className="link-wine">
                   로그인하기
@@ -228,7 +228,7 @@ export default function SignupForm() {
               {rules.map((rule) => (
                 <li
                   key={rule.label}
-                  className={`text-[13px] ${rule.ok ? 'text-ink' : 'text-muted'}`}
+                  className={`text-[14px] ${rule.ok ? 'text-ink' : 'text-muted'}`}
                 >
                   {rule.ok ? '✓' : '·'} {rule.label}
                 </li>
@@ -250,7 +250,7 @@ export default function SignupForm() {
             />
             {form.passwordConfirm.length > 0 ? (
               <p
-                className={`mt-2 text-[13px] ${passwordMatches ? 'text-ink' : 'text-wine'}`}
+                className={`mt-2 text-[14px] ${passwordMatches ? 'text-ink' : 'text-wine'}`}
               >
                 {passwordMatches ? '비밀번호가 일치합니다.' : '비밀번호가 서로 다릅니다.'}
               </p>
@@ -263,7 +263,7 @@ export default function SignupForm() {
       <section aria-labelledby="info-heading" className="mt-14">
         <h2
           id="info-heading"
-          className="border-b border-stone pb-4 font-serif text-[20px] text-ink"
+          className="border-b border-stone pb-4 font-serif text-[22px] text-ink"
         >
           기본 정보
         </h2>
@@ -334,7 +334,7 @@ export default function SignupForm() {
             {manualAddress ? (
               <p
                 role="alert"
-                className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-wine"
+                className="mt-2 whitespace-pre-line text-[14px] leading-relaxed text-wine"
               >
                 {postcodeFallbackNotice(store.phone)}
               </p>
@@ -355,7 +355,7 @@ export default function SignupForm() {
               aria-label="상세주소"
               className={inputClass}
             />
-            <p className="mt-2 text-[13px] text-muted">
+            <p className="mt-2 text-[14px] text-muted">
               주소를 넣어 두시면 주문할 때 자동으로 채워집니다.
             </p>
           </div>
@@ -385,7 +385,7 @@ export default function SignupForm() {
             maxLength={6}
             className={`${inputClass} tracking-[0.3em]`}
           />
-          <p className="mt-2 text-[13px] text-muted">
+          <p className="mt-2 text-[14px] text-muted">
             친구에게 받은 6자리 코드를 넣어 주세요. 코드는 대소문자를 가리지 않습니다.
           </p>
         </div>
@@ -395,14 +395,14 @@ export default function SignupForm() {
       <section aria-labelledby="agree-heading" className="mt-14">
         <h2
           id="agree-heading"
-          className="border-b border-stone pb-4 font-serif text-[20px] text-ink"
+          className="border-b border-stone pb-4 font-serif text-[22px] text-ink"
         >
           약관 동의
         </h2>
 
         {/* 항목이 많아 옅은 회색 박스로 묶어 다른 입력과 구분합니다. */}
         <div className="mt-6 bg-stone/25 px-5 py-5">
-        <label className="flex cursor-pointer items-center gap-3 border-b border-stone pb-4 text-[16px] text-ink">
+        <label className="flex cursor-pointer items-center gap-3 border-b border-stone pb-4 text-[17px] text-ink">
           <input
             type="checkbox"
             checked={allAgreed}
@@ -415,7 +415,7 @@ export default function SignupForm() {
         <ul className="mt-4 flex flex-col gap-3">
           {AGREEMENTS.map((item) => (
             <li key={item.key} className="flex items-center justify-between gap-3">
-              <label className="flex cursor-pointer items-center gap-3 text-[15px] text-ink">
+              <label className="flex cursor-pointer items-center gap-3 text-[16px] text-ink">
                 <input
                   type="checkbox"
                   checked={form[item.key]}
@@ -433,7 +433,7 @@ export default function SignupForm() {
                 <Link
                   href={item.href}
                   target="_blank"
-                  className="shrink-0 text-[13px] text-muted underline underline-offset-4"
+                  className="shrink-0 text-[14px] text-muted underline underline-offset-4"
                 >
                   전문 보기
                 </Link>
@@ -442,7 +442,7 @@ export default function SignupForm() {
           ))}
         </ul>
 
-        <p className="mt-4 text-[13px] leading-relaxed text-muted">
+        <p className="mt-4 text-[14px] leading-relaxed text-muted">
           동의하신 시각을 함께 저장합니다. 마케팅 수신 동의는 마이페이지에서 언제든지
           바꾸실 수 있습니다.
         </p>

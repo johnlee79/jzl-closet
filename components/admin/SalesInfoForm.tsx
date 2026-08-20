@@ -40,7 +40,7 @@ function Field({
         onChange={(event) => onChange(event.target.value)}
         className="admin-input leading-relaxed"
       />
-      {hint ? <p className="mt-1 text-[12px] leading-relaxed text-slate-500">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-[13px] leading-relaxed text-slate-500">{hint}</p> : null}
     </div>
   );
 }
@@ -87,8 +87,8 @@ export default function SalesInfoForm({
   return (
     <form onSubmit={submit} className="flex flex-col gap-5">
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[16px] font-semibold text-slate-900">배송</h2>
-        <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+        <h2 className="text-[17px] font-semibold text-slate-900">배송</h2>
+        <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
           줄바꿈은 그대로 화면에 나옵니다. 전 상품에 똑같이 적용됩니다.
         </p>
 
@@ -115,7 +115,7 @@ export default function SalesInfoForm({
       </section>
 
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[16px] font-semibold text-slate-900">교환 · 반품</h2>
+        <h2 className="text-[17px] font-semibold text-slate-900">교환 · 반품</h2>
 
         <div className="mt-4 flex flex-col gap-4">
           <Field
@@ -160,8 +160,8 @@ export default function SalesInfoForm({
 
       {/* ── 판매자 정보 — 여기서는 보여 주기만 합니다 ───── */}
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[16px] font-semibold text-slate-900">판매자 정보</h2>
-        <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+        <h2 className="text-[17px] font-semibold text-slate-900">판매자 정보</h2>
+        <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
           ★ 여기서는 고치지 않습니다.{' '}
           <Link href="/admin/settings?tab=store" className="text-blue-700 underline">
             설정 &gt; 스토어 정보
@@ -170,7 +170,7 @@ export default function SalesInfoForm({
           어긋납니다.
         </p>
 
-        <dl className="mt-4 grid grid-cols-1 gap-2 text-[13px] sm:grid-cols-2">
+        <dl className="mt-4 grid grid-cols-1 gap-2 text-[14px] sm:grid-cols-2">
           <div className="flex gap-3">
             <dt className="w-[104px] shrink-0 text-slate-500">상호</dt>
             <dd className="text-slate-900">{store.business.company}</dd>
@@ -201,7 +201,7 @@ export default function SalesInfoForm({
       {message ? (
         <p
           role="status"
-          className={`rounded-md px-3 py-2 text-[14px] ${
+          className={`rounded-md px-3 py-2 text-[15px] ${
             message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
           }`}
         >
