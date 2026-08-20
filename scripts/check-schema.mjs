@@ -97,6 +97,7 @@ const ROW_TYPES = {
   GiftRow: 'referral_gifts',
   GoalRow: 'referral_goals',
   AchievementRow: 'referral_achievements',
+  PaymentLogRow: 'payment_logs',
 };
 
 /** 조인으로 붙인 이름이라 컬럼이 아닌 것들 */

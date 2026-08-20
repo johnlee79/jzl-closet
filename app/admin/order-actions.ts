@@ -7,14 +7,18 @@ import { canEditAddress, isOrderStatus } from '@/lib/order-status';
 import {
   bulkUpdateStatus,
   cancelOrderItem,
+  completeOrderCancel,
   getOrderById,
   getOrdersByNos,
+  requestOrderCancel,
   setAdminMemo,
   setAutoCancelExcluded,
+  setCashReceiptIssued,
   setTracking,
   updateOrderStatus,
   updateShippingAddress,
 } from '@/lib/orders';
+import { notifyCancelAccepted } from '@/lib/telegram';
 import {
   parseTrackingText,
   type TrackingMatchRow,
@@ -279,6 +283,80 @@ export async function setAutoCancelExcludedAction(
     return { ok: true, data: undefined };
   } catch (error) {
     return fail(error, '자동취소 제외 설정을 바꾸지 못했습니다.');
+  }
+}
+
+/* ── 취소 (4-A) ───────────────────────────────────────────
+ *
+ * ★★ KSNET 은 가맹점에 취소 API 권한을 주지 않습니다.
+ *   여기 버튼을 눌러도 실제 환불은 일어나지 않습니다.
+ *   환불은 대행사를 통해 사람이 처리하고 며칠이 걸립니다.
+ *   그래서 두 단계로 나눕니다.
+ *     [취소 요청 접수] → 상태 '취소요청' · 텔레그램 알림 (아직 환불 전)
+ *     [취소 완료]     → 상태 '취소완료' · 재고와 포인트 되돌림 (환불 끝남)
+ *   이걸 한 버튼으로 합치면 "취소했는데 돈이 안 들어온다" 는 분쟁이 반드시 납니다.
+ * ------------------------------------------------------------------ */
+
+/** 취소 요청 접수 — 아직 환불되지 않았습니다. */
+export async function acceptCancelAction(
+  id: string,
+  memo: string
+): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  try {
+    const order = await requestOrderCancel(id, memo);
+    refresh(id);
+
+    // ★ 알림 실패가 접수를 되돌리면 안 됩니다. 상태는 이미 바뀌었습니다.
+    try {
+      await notifyCancelAccepted(order, memo);
+    } catch (error) {
+      console.warn('[admin/orders] 취소 접수 알림 실패:', error);
+    }
+
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '취소 요청을 접수하지 못했습니다.');
+  }
+}
+
+/**
+ * 취소 완료 — 실제 환불이 끝났을 때만 누르는 버튼입니다.
+ * 재고와 사용 포인트가 되돌아갑니다.
+ */
+export async function completeCancelAction(
+  id: string,
+  memo: string
+): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  try {
+    await completeOrderCancel(id, memo);
+    refresh(id);
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '취소 완료 처리에 실패했습니다.');
+  }
+}
+
+/* ── 현금영수증 (4-A) ─────────────────────────────────────
+ * ★ PG 가 현금영수증을 지원하지 않아 운영자가 홈택스에서 직접 발급합니다.
+ *   이 체크는 "발급했다" 는 기록일 뿐입니다. 실제 발급과는 무관합니다.
+ * ------------------------------------------------------------------ */
+
+export async function setCashReceiptIssuedAction(
+  id: string,
+  issued: boolean
+): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  try {
+    await setCashReceiptIssued(id, issued);
+    refresh(id);
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '현금영수증 발급 표시를 바꾸지 못했습니다.');
   }
 }
 

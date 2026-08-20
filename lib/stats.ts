@@ -3,6 +3,7 @@ import 'server-only';
 import { brandLabel } from '@/lib/brands';
 import { categoryNameKo } from '@/lib/categories';
 import { kstEnd, kstStart } from '@/lib/orders';
+import { isSalesStatus } from '@/lib/order-status';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { getBrands, getCachedCategories } from '@/lib/taxonomy';
 
@@ -16,8 +17,7 @@ import { getBrands, getCachedCategories } from '@/lib/taxonomy';
  *   부분취소된 품목(item_status='cancelled')도 상품 통계에서 뺍니다.
  */
 
-/** 매출에서 빼는 주문 상태 */
-const EXCLUDED = new Set(['cancelled', 'returned', 'failed']);
+/** 매출에서 빼는 주문 상태 — lib/order-status.ts 한 곳에서만 정합니다. (4-A) */
 
 export type SalesStats = {
   totalSales: number;
@@ -105,7 +105,7 @@ export async function getSalesStats(from: string, to: string): Promise<SalesStat
     byStatus[row.status] = (byStatus[row.status] ?? 0) + 1;
     const amount = row.total_amount ?? 0;
 
-    if (EXCLUDED.has(row.status)) {
+    if (!isSalesStatus(row.status)) {
       cancelledAmount += amount;
       cancelledCount += 1;
       continue;
@@ -159,7 +159,7 @@ export async function getProductStats(from: string, to: string): Promise<Product
   if (orderError || !orderRows) return empty;
 
   const liveOrderIds = (orderRows as { id: string; status: string }[])
-    .filter((row) => !EXCLUDED.has(row.status))
+    .filter((row) => isSalesStatus(row.status))
     .map((row) => row.id);
 
   if (liveOrderIds.length === 0) return empty;

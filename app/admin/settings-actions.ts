@@ -39,6 +39,7 @@ import {
   COPY_META,
   DEFAULT_HERO_BUTTONS,
   GA4_ID_PATTERN,
+  PAYMENT_METHODS,
   SNS_ITEMS,
   type AnalyticsSettings,
   type CopyKey,
@@ -161,6 +162,32 @@ export async function savePaymentAction(input: PaymentSettings): Promise<ActionR
   }
   if (input.depositHours < 1) {
     return { ok: false, error: '입금 기한은 1시간 이상으로 넣어 주세요.' };
+  }
+
+  /*
+   * ★ 결제수단을 전부 끄면 주문 자체가 불가능해집니다. (4-A)
+   *   화면에서도 막지만, 여기서 한 번 더 받칩니다.
+   *   저장 버튼 한 번으로 사이트가 주문을 못 받는 상태가 되면 안 됩니다.
+   */
+  const onCount = PAYMENT_METHODS.filter((method) => input.methods?.[method.key]).length;
+  if (onCount === 0) {
+    return {
+      ok: false,
+      error: '결제수단을 전부 끄면 주문을 받을 수 없습니다. 최소 하나는 켜 주세요.',
+    };
+  }
+
+  /*
+   * ★ 무통장입금만 켜 두고 계좌를 비워 두면 아무도 주문할 수 없습니다.
+   *   저장 시점에 알려 주지 않으면 손님이 주문서에서 막히고 나서야 알게 됩니다.
+   */
+  const onlyBank = onCount === 1 && input.methods?.bank_transfer === true;
+  if (onlyBank && bankFilled < 3) {
+    return {
+      ok: false,
+      error:
+        '무통장입금만 켜져 있는데 입금 계좌가 비어 있습니다. 계좌를 채우거나 다른 결제수단을 켜 주세요.',
+    };
   }
 
   // 우편번호 규칙이 형식에 맞는지 확인합니다. (63000-63644 · 63* · 40200)

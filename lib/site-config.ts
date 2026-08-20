@@ -273,6 +273,81 @@ export function emptyBanner(id: string): Banner {
 
 /* ── 결제·주문 (2-A) ──────────────────────────────────────── */
 
+/**
+ * 결제 수단 (4-A).
+ *
+ * ★ key 는 orders.payment_method 에 그대로 저장됩니다. 절대 바꾸지 마세요.
+ *   이미 저장된 주문의 결제수단이 통째로 "알 수 없음" 이 됩니다.
+ * ★ 한 주문은 결제수단 하나입니다.
+ *   KSNET 결제창은 여러 수단을 한 번에 열 수도 있지만, 그러면 손님이 창 안에서
+ *   무엇을 골랐는지 우리가 알 수 없습니다. 정산·현금영수증·분쟁 처리에 전부
+ *   필요한 값이라, 주문서에서 미리 고르게 하고 그 수단 하나만 열어 줍니다.
+ * ★ ready 는 "코드가 준비되었는지" 입니다. 실제로 손님에게 보일지는
+ *   관리자 설정(PaymentSettings.methods)이 정합니다.
+ */
+export const PAYMENT_METHODS = [
+  { key: 'card', label: '신용카드', ready: true },
+  { key: 'kakaopay', label: '카카오페이', ready: true },
+  { key: 'naverpay', label: '네이버페이', ready: true },
+  { key: 'pg_banktransfer', label: '계좌이체 (실시간)', ready: true },
+  { key: 'bank_transfer', label: '무통장입금', ready: true },
+] as const;
+
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number]['key'];
+
+export function paymentMethodLabel(key: string): string {
+  return PAYMENT_METHODS.find((method) => method.key === key)?.label ?? key;
+}
+
+/**
+ * PG(KSNET)를 거치는 결제수단인지.
+ * ★ 무통장입금만 PG 를 안 탑니다. 사장님이 통장을 직접 확인합니다.
+ */
+export function isPgMethod(key: string): boolean {
+  return key !== 'bank_transfer' && PAYMENT_METHODS.some((method) => method.key === key);
+}
+
+/** 현금영수증을 신청받는 결제수단인지 — 무통장입금뿐입니다. */
+export function acceptsCashReceipt(key: string): boolean {
+  return key === 'bank_transfer';
+}
+
+/** 결제수단 켜고 끄기의 기본값. 계좌이체만 꺼 둡니다. */
+export const DEFAULT_PAYMENT_METHOD_FLAGS: Record<PaymentMethod, boolean> = {
+  card: true,
+  kakaopay: true,
+  naverpay: true,
+  // ★ KSNET 오픈이 확인되지 않았습니다. 확인 후 관리자에서 켜세요.
+  pg_banktransfer: false,
+  bank_transfer: true,
+};
+
+/** 관리자 설정 화면에 함께 보여 줄 한 줄 설명 */
+export const PAYMENT_METHOD_HINTS: Record<PaymentMethod, string> = {
+  card: '국내 신용카드. KSNET 에 오픈되어 있습니다.',
+  kakaopay: '카카오페이. KSNET 에 오픈되어 있습니다.',
+  naverpay: '네이버페이. KSNET 에 오픈되어 있습니다.',
+  pg_banktransfer: '계좌이체 — KSNET 오픈 확인 후 켜세요. 확인 전에는 결제창이 열리지 않습니다.',
+  bank_transfer: '무통장입금. PG 를 거치지 않고 통장으로 직접 확인합니다. 현금영수증 신청도 이 수단에서만 받습니다.',
+};
+
+/**
+ * 지금 손님에게 보여 줄 결제수단.
+ * ★ 전부 꺼 버리면 주문 자체가 불가능해집니다.
+ *   저장 단계에서 막지만, 혹시 예전 데이터가 전부 꺼져 있어도
+ *   무통장입금 하나는 남도록 여기서 한 번 더 받칩니다.
+ */
+export function enabledPaymentMethods(
+  flags: Record<string, boolean>
+): { key: PaymentMethod; label: string }[] {
+  const list = PAYMENT_METHODS.filter(
+    (method) => method.ready && flags[method.key] === true
+  ).map((method) => ({ key: method.key, label: method.label }));
+
+  if (list.length > 0) return list;
+  return [{ key: 'bank_transfer', label: '무통장입금' }];
+}
+
 export type PaymentSettings = {
   /** 입금 계좌 — ★ 주문 완료·주문 조회 화면에서만 보여 줍니다. */
   bankName: string;
@@ -303,6 +378,26 @@ export type PaymentSettings = {
   escrowImageUrl: string;
   /** 인증 이미지를 눌렀을 때 열리는 확인 페이지 주소 (선택) */
   escrowLinkUrl: string;
+
+  /* ── 4-A · 카드결제 ───────────────────────────────────── */
+
+  /**
+   * 결제수단 켜고 끄기. key 는 PAYMENT_METHODS 의 key 입니다.
+   * ★ 꺼진 수단은 주문서에 아예 나오지 않고, 서버도 그 수단의 주문을 받지 않습니다.
+   *   화면에서 숨기기만 하면 요청을 직접 만들어 보내는 것을 막지 못합니다.
+   */
+  methods: Record<string, boolean>;
+
+  /**
+   * KSNET 노티(거래내역통보)를 받았을 때 주문을 결제완료로 바꿀지.
+   *
+   * ★ 기본값은 끔입니다. 반드시 끈 채로 시작하세요.
+   *   노티에는 인증이 없습니다. 주소만 알면 누구나 보낼 수 있습니다.
+   *   주문번호와 금액만 맞추면 입금하지 않은 주문을 결제완료로 만들 수 있습니다.
+   *   KSNET 에서 노티 규격과 발신 IP 를 확인받은 뒤에 켜세요.
+   *   꺼 두어도 노티는 원문 그대로 저장되고 텔레그램으로 알려 드립니다.
+   */
+  ksnetNotifyAutoComplete: boolean;
 };
 
 /**
@@ -332,6 +427,8 @@ export const DEFAULT_PAYMENT: PaymentSettings = {
   escrowNotice: '',
   escrowImageUrl: '',
   escrowLinkUrl: '',
+  methods: DEFAULT_PAYMENT_METHOD_FLAGS,
+  ksnetNotifyAutoComplete: false,
 };
 
 /** 입금 계좌를 다 채웠는지 — 안 채웠으면 주문을 받을 수 없습니다. */
@@ -370,13 +467,6 @@ export function isRemoteArea(postcode: string, rules: string[]): boolean {
   });
 }
 
-/** 결제 수단 — 지금은 무통장입금만 씁니다. 카드는 자리만 비워 둡니다. */
-export const PAYMENT_METHODS = [
-  { key: 'bank_transfer', label: '무통장입금 (계좌이체)', ready: true },
-  { key: 'card', label: '신용카드 · 간편결제', ready: false },
-] as const;
-
-export type PaymentMethod = (typeof PAYMENT_METHODS)[number]['key'];
 
 /* ── 리뷰 (3-A) ───────────────────────────────────────────── */
 
@@ -1060,7 +1150,7 @@ export const COPY_META: Record<
   cartPayment: {
     group: 'order',
     title: '결제 수단 안내 (주문하기 버튼 아래)',
-    hint: '★ 결제 수단을 알리는 문구는 이 항목 하나뿐입니다. 장바구니 오른쪽 요약 상자의 [주문하기] 버튼 바로 아래에 나옵니다. 결제 방식이 바뀌면 여기만 고치면 됩니다. 소제목은 쓰지 않습니다.',
+    hint: '★ 결제 수단을 알리는 문구는 이 항목 하나뿐입니다. 장바구니 오른쪽 요약 상자의 [주문하기] 버튼 바로 아래에 나옵니다. 결제 방식이 바뀌면 여기만 고치면 됩니다. 소제목은 쓰지 않습니다. ★ 취소·환불에 걸리는 기간은 KSNET 확인 중이라 기본 문구에 “며칠”로 두었습니다. 정확한 기간을 확인하신 뒤 여기서 고쳐 주세요. 지키지 못할 기간을 적으면 분쟁이 됩니다.',
     path: '/order',
     blockLabel: '문단',
   },

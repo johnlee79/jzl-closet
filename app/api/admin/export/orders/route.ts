@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
 import { courierName } from '@/lib/couriers';
 import { statusLabel } from '@/lib/order-status';
+import { paymentMethodLabel } from '@/lib/site-config';
 import { getOrders } from '@/lib/orders';
 import type { Order } from '@/lib/types';
 
@@ -19,7 +20,7 @@ import type { Order } from '@/lib/types';
  *
  * 범위
  *   ?ids=a,b,c  선택한 주문만
- *   그 밖에는 목록 화면과 같은 필터(status·q·from·to)를 그대로 적용합니다.
+ *   그 밖에는 목록 화면과 같은 필터(status·q·from·to·receipt·method)를 그대로 적용합니다.
  */
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +57,11 @@ const FULL_HEADERS = [
   '입금자명',
   '결제수단',
   '현금영수증',
+  '현금영수증발급',
+  'KSNET거래번호',
+  '승인번호',
+  '승인금액',
+  '거래일시',
   '택배사',
   '송장번호',
   '관리자메모',
@@ -112,11 +118,18 @@ export async function GET(request: NextRequest) {
   const selected = idParam ? new Set(idParam.split(',').filter(Boolean)) : null;
 
   // 선택 항목이 없으면 현재 필터 결과를 그대로 내보냅니다.
+  const receiptParam = params.get('receipt');
+  // ★ 주소로 들어오는 값이라 아는 값만 통과시킵니다.
+  const cashReceipt: 'todo' | 'requested' | undefined =
+    receiptParam === 'todo' ? 'todo' : receiptParam === 'requested' ? 'requested' : undefined;
+
   const { orders } = await getOrders({
     status: params.get('status') ?? undefined,
     search: params.get('q') ?? undefined,
     from: params.get('from') ?? undefined,
     to: params.get('to') ?? undefined,
+    cashReceipt,
+    paymentMethod: params.get('method') ?? undefined,
     // 내보내기는 페이지를 나누지 않습니다. 지나치게 커지지 않도록 상한만 둡니다.
     limit: 2000,
   });
@@ -167,8 +180,13 @@ export async function GET(request: NextRequest) {
           order.extraShippingFee,
           order.totalAmount,
           order.depositorName,
-          order.paymentMethod === 'bank_transfer' ? '무통장입금' : order.paymentMethod,
+          paymentMethodLabel(order.paymentMethod),
           cashReceiptLabel(order),
+          order.cashReceiptType === 'none' ? '' : order.cashReceiptIssued ? '발급완료' : '발급대기',
+          order.pgTid ?? '',
+          order.pgAuthNo,
+          order.pgAmount ?? '',
+          order.pgTradeAt,
           courierName(order.courier),
           order.trackingNo,
           order.adminMemo,

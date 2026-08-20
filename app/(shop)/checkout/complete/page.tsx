@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import CartClearOnComplete from '@/components/CartClearOnComplete';
 import CopyOrderButton from '@/components/CopyOrderButton';
 import DepositCountdown from '@/components/DepositCountdown';
 import OrderReceipt, { orderToText } from '@/components/OrderReceipt';
@@ -54,6 +55,16 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
   }
 
   const payment = await getPaymentSettings();
+
+  /*
+   * ★ 무통장입금과 카드결제는 이 화면에서 보여 줄 것이 완전히 다릅니다. (4-A)
+   *   무통장입금 — 입금 계좌와 입금 기한 (아직 돈이 안 들어왔습니다)
+   *   카드결제   — 결제 완료 안내 (이미 돈이 들어왔습니다)
+   *   카드로 결제한 손님에게 "24시간 안에 입금하세요" 가 보이면
+   *   결제가 안 된 줄 알고 한 번 더 결제합니다. 반드시 갈라야 합니다.
+   */
+  const isBank = order.paymentMethod === 'bank_transfer';
+
   const deadline =
     depositDeadline(order.createdAt, payment.depositHours) ??
     new Date(Date.now() + payment.depositHours * 60 * 60 * 1000);
@@ -73,10 +84,13 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
 
   return (
     <div className="shell py-14 md:py-20">
+      {/* 결제가 끝났으니 장바구니를 비웁니다. 화면에는 아무것도 그리지 않습니다. */}
+      <CartClearOnComplete />
+
       <header className="max-w-[680px]">
         <p className="label-xs">ORDER COMPLETE</p>
         <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
-          주문이 접수되었습니다
+          {isBank ? '주문이 접수되었습니다' : '결제가 완료되었습니다'}
         </h1>
         <p className="mt-6 border border-stone px-6 py-5">
           <span className="text-[13px] tracking-[0.14em] text-muted">주문번호</span>
@@ -85,30 +99,43 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
           </span>
         </p>
         <p className="mt-5 text-[16px] leading-[1.9] text-ink md:text-[17px]">
-          아래 계좌로 <strong>{payment.depositHours}시간</strong> 이내에 입금해 주시면
-          확인 후 발송을 시작합니다. 입금이 확인되면 알려드립니다.
+          {isBank ? (
+            <>
+              아래 계좌로 <strong>{payment.depositHours}시간</strong> 이내에 입금해 주시면
+              확인 후 발송을 시작합니다. 입금이 확인되면 알려드립니다.
+            </>
+          ) : (
+            <>
+              결제가 정상적으로 완료되었습니다. 곧 상품 준비를 시작하며, 출고되면
+              송장번호를 안내드립니다.
+            </>
+          )}
         </p>
       </header>
 
       <div className="mt-12 grid grid-cols-1 gap-12 lg:grid-cols-[1fr_320px] lg:gap-16">
         <OrderReceipt
           order={order}
-          bank={{
-            bankName: payment.bankName,
-            accountNo: payment.accountNo,
-            accountHolder: payment.accountHolder,
-            deadline: deadline.toLocaleString('ko-KR', {
-              timeZone: 'Asia/Seoul',
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            }),
-          }}
+          bank={
+            isBank
+              ? {
+                  bankName: payment.bankName,
+                  accountNo: payment.accountNo,
+                  accountHolder: payment.accountHolder,
+                  deadline: deadline.toLocaleString('ko-KR', {
+                    timeZone: 'Asia/Seoul',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }),
+                }
+              : null
+          }
         />
 
         {/* ★ 입금 계좌 바로 아래. 기한을 모르고 취소당하는 일이 없게 합니다. */}
-        {payment.autoCancelEnabled ? (
+        {isBank && payment.autoCancelEnabled ? (
           <DepositCountdown deadline={deadline.toISOString()} label={deadlineLabel} />
         ) : null}
 
@@ -134,7 +161,7 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
           </div>
 
           {/* 구매안전(에스크로) 서비스 안내 — 설정에 값이 있을 때만 나옵니다. */}
-          {payment.escrowNotice || payment.escrowImageUrl ? (
+          {isBank && (payment.escrowNotice || payment.escrowImageUrl) ? (
             <div className="mt-6 border border-stone p-6">
               <h2 className="label-xs">구매안전서비스</h2>
               {payment.escrowImageUrl ? (

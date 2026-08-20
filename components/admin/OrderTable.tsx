@@ -8,10 +8,12 @@ import { courierName } from '@/lib/couriers';
 import {
   ORDER_STATUSES,
   ORDER_STATUS_META,
+  needsAttention,
   statusBadgeClass,
   statusLabel,
 } from '@/lib/order-status';
 import { formatPrice } from '@/lib/product-utils';
+import { paymentMethodLabel } from '@/lib/site-config';
 import type { Order } from '@/lib/types';
 
 type Message = { tone: 'ok' | 'error'; text: string } | null;
@@ -88,7 +90,7 @@ export default function OrderTable({ orders }: { orders: Order[] }) {
   /** 지금 필터를 그대로 들고 CSV 주소를 만듭니다. */
   const exportHref = (format: 'courier' | 'full'): string => {
     const query = new URLSearchParams();
-    for (const key of ['status', 'q', 'from', 'to']) {
+    for (const key of ['status', 'q', 'from', 'to', 'receipt', 'method']) {
       const value = params.get(key);
       if (value) query.set(key, value);
     }
@@ -162,7 +164,7 @@ export default function OrderTable({ orders }: { orders: Order[] }) {
             조건에 맞는 주문이 없습니다.
           </p>
         ) : (
-          <table className="w-full min-w-[1040px] border-collapse text-[14px]">
+          <table className="w-full min-w-[1180px] border-collapse text-[14px]">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-left text-[13px] text-slate-600">
                 <th scope="col" className="w-10 px-3 py-2">
@@ -179,7 +181,8 @@ export default function OrderTable({ orders }: { orders: Order[] }) {
                 <th scope="col" className="px-3 py-2 font-medium">주문자</th>
                 <th scope="col" className="px-3 py-2 font-medium">상품</th>
                 <th scope="col" className="px-3 py-2 text-right font-medium">결제금액</th>
-                <th scope="col" className="px-3 py-2 font-medium">입금자명</th>
+                <th scope="col" className="px-3 py-2 font-medium">결제수단</th>
+                <th scope="col" className="px-3 py-2 font-medium">현금영수증</th>
                 <th scope="col" className="px-3 py-2 font-medium">상태</th>
                 <th scope="col" className="px-3 py-2 font-medium">송장</th>
                 <th scope="col" className="px-3 py-2 font-medium">관리</th>
@@ -189,8 +192,16 @@ export default function OrderTable({ orders }: { orders: Order[] }) {
               {orders.map((order) => (
                 <tr
                   key={order.id}
+                  /*
+                    ★ 손봐야 하는 주문(검토필요·승인확인실패·취소요청)은 붉게 칠합니다. (4-A)
+                      돈이 걸린 건이라 목록에서 그냥 지나치면 안 됩니다.
+                  */
                   className={`border-b border-slate-100 last:border-b-0 ${
-                    order.status === 'pending_payment' ? 'bg-amber-50/40' : ''
+                    needsAttention(order.status)
+                      ? 'bg-red-50/60'
+                      : order.status === 'pending_payment'
+                        ? 'bg-amber-50/40'
+                        : ''
                   }`}
                 >
                   <td className="px-3 py-2.5">
@@ -226,7 +237,26 @@ export default function OrderTable({ orders }: { orders: Order[] }) {
                     {formatPrice(order.totalAmount)}원
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5 text-slate-700">
-                    {order.depositorName || '—'}
+                    {paymentMethodLabel(order.paymentMethod)}
+                    {order.paymentMethod === 'bank_transfer' && order.depositorName ? (
+                      <span className="block text-[12px] text-slate-500">
+                        {order.depositorName}
+                      </span>
+                    ) : null}
+                  </td>
+                  {/*
+                    현금영수증 (4-A)
+                    ★ 신청은 들어왔는데 아직 발급하지 않은 건을 눈에 띄게 합니다.
+                      PG 가 발급해 주지 않아 운영자가 홈택스에서 직접 처리해야 합니다.
+                  */}
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[13px]">
+                    {order.cashReceiptType === 'none' ? (
+                      <span className="text-slate-400">—</span>
+                    ) : order.cashReceiptIssued ? (
+                      <span className="admin-badge bg-green-100 text-green-800">발급완료</span>
+                    ) : (
+                      <span className="admin-badge bg-amber-100 text-amber-800">발급대기</span>
+                    )}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5">
                     <span className={`admin-badge ${statusBadgeClass(order.status)}`}>

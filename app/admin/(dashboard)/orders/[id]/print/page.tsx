@@ -6,6 +6,7 @@ import { statusLabel } from '@/lib/order-status';
 import { getOrderById } from '@/lib/orders';
 import { formatPrice } from '@/lib/product-utils';
 import { getCachedStore } from '@/lib/settings';
+import { paymentMethodLabel } from '@/lib/site-config';
 
 /**
  * 주문서 인쇄용 화면.
@@ -122,7 +123,7 @@ export default async function OrderPrintPage({ params }: { params: { id: string 
         <div className="mt-6 border-t border-slate-300 pt-4 text-[12px] text-slate-600">
           <p>
             결제수단{' '}
-            {order.paymentMethod === 'bank_transfer' ? '무통장입금' : order.paymentMethod}
+            {paymentMethodLabel(order.paymentMethod)}
             {order.depositorName ? ` · 입금자명 ${order.depositorName}` : ''}
           </p>
           {order.trackingNo ? (

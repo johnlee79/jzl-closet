@@ -19,9 +19,10 @@ import { postcodeFallbackNotice, usePostcodeScript } from '@/lib/postcode';
 import { formatPhone } from '@/lib/format';
 import { formatPrice } from '@/lib/product-utils';
 import {
-  PAYMENT_METHODS,
+  acceptsCashReceipt,
   expectedPurchasePoints,
   maxUsablePoints,
+  type PaymentMethod,
   type ShippingSettings,
 } from '@/lib/site-config';
 import type { CashReceiptType } from '@/lib/types';
@@ -73,6 +74,7 @@ export default function CheckoutForm({
   storePhone,
   member,
   points,
+  methods,
 }: {
   shipping: ShippingSettings;
   storePhone: string;
@@ -80,6 +82,11 @@ export default function CheckoutForm({
   member: MemberPrefill | null;
   /** 비로그인이거나 포인트가 없으면 null */
   points: PointInfo | null;
+  /**
+   * 관리자가 켜 둔 결제수단만 옵니다. (4-A)
+   * ★ 여기 없는 수단은 서버도 받지 않습니다. 화면에서만 감추면 막은 것이 아닙니다.
+   */
+  methods: { key: PaymentMethod; label: string }[];
 }) {
   const router = useRouter();
   const { items, total, ready, clear } = useCart();
@@ -96,10 +103,19 @@ export default function CheckoutForm({
     address1: member?.address1 ?? '',
     address2: member?.address2 ?? '',
     deliveryMemo: '',
-    paymentMethod: 'bank_transfer',
+    /*
+     * ★ 기본값은 관리자가 켜 둔 첫 번째 수단입니다. (4-A)
+     *   'bank_transfer' 를 박아 두면, 무통장입금을 꺼 둔 날
+     *   화면에는 카드만 보이는데 서버로는 무통장입금이 넘어갑니다.
+     */
+    paymentMethod: methods[0]?.key ?? 'bank_transfer',
     depositorName: member?.name ?? '',
     cashReceiptType: 'none',
-    cashReceiptNo: '',
+    /*
+     * 회원이면 가입 시 휴대폰번호를 미리 채워 둡니다.
+     * 손님은 현금영수증 체크만 하면 됩니다. (번호를 다시 칠 필요가 없습니다)
+     */
+    cashReceiptNo: member?.phone ?? '',
     agreed: false,
   });
 
@@ -201,7 +217,7 @@ export default function CheckoutForm({
       address2: member?.address2 ?? '',
       deliveryMemo: '',
       cashReceiptType: 'none',
-      cashReceiptNo: '',
+      cashReceiptNo: member?.phone ?? '',
     }));
   };
 
@@ -239,6 +255,26 @@ export default function CheckoutForm({
       alive = false;
     };
   }, [form.postcode, total]);
+
+  /*
+   * 무통장입금을 골랐는지.
+   * ★ 입금자명·현금영수증은 무통장입금에만 해당합니다.
+   *   카드는 현금영수증 대상이 아닙니다. (카드 매출전표가 그 역할을 합니다)
+   *   서버도 같은 기준으로 막습니다. (checkout/actions.ts)
+   */
+  const isBank = acceptsCashReceipt(form.paymentMethod);
+
+  /*
+   * 결제수단을 카드로 바꾸면 현금영수증 신청을 지웁니다.
+   * ★ 안 지우면 화면에는 안 보이는데 값만 남아, 서버 검사에 걸려
+   *   "카드는 현금영수증 대상이 아닙니다" 로 주문이 막힙니다.
+   */
+  useEffect(() => {
+    if (isBank) return;
+    setForm((prev) =>
+      prev.cashReceiptType === 'none' ? prev : { ...prev, cashReceiptType: 'none' }
+    );
+  }, [isBank]);
 
   /* ── 포인트 사용 ─────────────────────────────────────
    * ★ 화면에서 미리 깎아 보여 주지만, 실제 금액은 서버가 다시 계산합니다. */
@@ -300,17 +336,33 @@ export default function CheckoutForm({
       return { message: '주소를 검색해 주세요.', field: 'postcode', section: 'receiver' };
     if (!form.address1.trim())
       return { message: '주소를 검색해 주세요.', field: 'address1', section: 'receiver' };
-    if (!form.depositorName.trim())
+    if (isBank && !form.depositorName.trim())
       return { message: '입금자명을 입력해 주세요.', field: 'depositorName', section: 'payment' };
-    if (form.cashReceiptType !== 'none' && !form.cashReceiptNo.trim())
-      return {
-        message:
-          form.cashReceiptType === 'personal'
-            ? '현금영수증에 쓸 휴대폰 번호를 입력해 주세요.'
-            : '사업자등록번호를 입력해 주세요.',
-        field: 'cashReceiptNo',
-        section: 'payment',
-      };
+    if (isBank && form.cashReceiptType !== 'none') {
+      const digits = form.cashReceiptNo.replace(/[^0-9]/g, '');
+      if (!digits)
+        return {
+          message:
+            form.cashReceiptType === 'personal'
+              ? '현금영수증에 쓸 휴대폰 번호를 입력해 주세요.'
+              : '사업자등록번호를 입력해 주세요.',
+          field: 'cashReceiptNo',
+          section: 'payment',
+        };
+      // 서버와 같은 기준으로 미리 걸러 냅니다. (주문을 눌렀다가 되돌아오지 않도록)
+      if (form.cashReceiptType === 'personal' && (digits.length < 10 || digits.length > 11))
+        return {
+          message: '휴대폰 번호는 10~11자리 숫자로 입력해 주세요.',
+          field: 'cashReceiptNo',
+          section: 'payment',
+        };
+      if (form.cashReceiptType === 'business' && digits.length !== 10)
+        return {
+          message: '사업자등록번호는 10자리 숫자로 입력해 주세요.',
+          field: 'cashReceiptNo',
+          section: 'payment',
+        };
+    }
     if (!form.agreed)
       return { message: '구매조건 확인 및 결제진행에 동의해 주세요.', field: 'agreed', section: 'agree' };
     return null;
@@ -341,10 +393,11 @@ export default function CheckoutForm({
         address1: form.address1,
         address2: form.address2,
         deliveryMemo: form.deliveryMemo,
-        depositorName: form.depositorName,
+        // 입금자명은 무통장입금에만 씁니다.
+        depositorName: isBank ? form.depositorName : '',
         paymentMethod: form.paymentMethod,
-        cashReceiptType: form.cashReceiptType,
-        cashReceiptNo: form.cashReceiptNo,
+        cashReceiptType: isBank ? form.cashReceiptType : 'none',
+        cashReceiptNo: isBank ? form.cashReceiptNo : '',
         // 가격은 보내지 않습니다. 서버가 상품 테이블에서 다시 읽습니다.
         items: items.map((item) => ({
           productSlug: item.productId,
@@ -363,14 +416,21 @@ export default function CheckoutForm({
         return;
       }
 
-      // 주문이 저장되었으니 장바구니를 비우고 임시저장본도 지웁니다.
-      clear();
-      clearDraft();
-      const query = new URLSearchParams({
-        no: result.data.orderNo,
-        k: result.data.token,
-      });
-      router.replace(`/checkout/complete?${query.toString()}`);
+      /*
+       * ★ 장바구니는 결제가 끝난 뒤에 비웁니다. (4-A)
+       *   카드결제는 여기서 주문만 저장된 상태입니다. 결제창에서 취소하거나
+       *   카드가 거절될 수 있습니다. 그때 장바구니가 비어 있으면 손님이
+       *   상품을 처음부터 다시 담아야 합니다.
+       *   무통장입금은 지금이 곧 완료라 여기서 비웁니다.
+       *   카드결제는 주문 완료 화면의 CartClearOnComplete 가 비웁니다.
+       */
+      if (!result.data.needsPayment) {
+        clear();
+        clearDraft();
+      }
+
+      // ★ 어디로 갈지는 서버가 정합니다. (무통장 → 완료 화면 / 카드 → 결제창)
+      router.replace(result.data.nextUrl);
     });
   };
 
@@ -728,15 +788,16 @@ export default function CheckoutForm({
                 결제 수단
               </h2>
 
+              {/* ★ 관리자가 켜 둔 수단만 나옵니다. 꺼진 수단은 서버도 받지 않습니다. */}
               <ul className="mt-6 flex flex-col gap-3">
-                {PAYMENT_METHODS.map((method) => (
+                {methods.map((method) => (
                   <li key={method.key}>
                     <label
                       className={`flex min-h-[56px] cursor-pointer items-center gap-3 border px-5 py-4 text-[15px] transition-colors ${
                         form.paymentMethod === method.key
                           ? 'border-ink text-ink'
                           : 'border-stone text-ink'
-                      } ${method.ready ? '' : 'cursor-not-allowed border-stone text-muted'}`}
+                      }`}
                     >
                       <input
                         type="radio"
@@ -744,96 +805,127 @@ export default function CheckoutForm({
                         value={method.key}
                         checked={form.paymentMethod === method.key}
                         onChange={() => set('paymentMethod', method.key)}
-                        disabled={!method.ready}
                         className="h-4 w-4"
                       />
                       {method.label}
-                      {!method.ready ? (
-                        <span className="ml-auto text-[13px] tracking-[0.14em] text-muted">
-                          준비 중
-                        </span>
-                      ) : null}
                     </label>
                   </li>
                 ))}
               </ul>
 
-              <div className="mt-6">
-                <label htmlFor="depositorName" className="label-xs block">
-                  입금자명 *
-                </label>
-                <input
-                  id="depositorName"
-                  type="text"
-                  value={form.depositorName}
-                  onChange={(event) => {
-                    depositorTouched.current = true;
-                    set('depositorName', event.target.value);
-                  }}
-                  className={`mt-2 ${inputClass('depositorName')}`}
-                />
-                <p className="mt-2 text-[13px] leading-relaxed text-muted">
-                  주문자와 입금자가 다르면 입금하시는 분 이름을 적어 주세요. 입금 확인이
-                  빨라집니다. 계좌는 주문 완료 화면에서 안내드립니다.
-                </p>
-              </div>
-
-              {/* 현금영수증 */}
-              <div className="mt-8 border-t border-stone pt-6">
-                <p className="label-xs">현금영수증</p>
-                <ul className="mt-4 flex flex-wrap gap-3">
-                  {(
-                    [
-                      { key: 'none', label: '신청 안 함' },
-                      { key: 'personal', label: '소득공제 (휴대폰번호)' },
-                      { key: 'business', label: '지출증빙 (사업자번호)' },
-                    ] as { key: CashReceiptType; label: string }[]
-                  ).map((option) => (
-                    <li key={option.key}>
-                      <label
-                        className={`flex min-h-[48px] cursor-pointer items-center gap-2 border px-4 py-3 text-[14px] transition-colors ${
-                          form.cashReceiptType === option.key
-                            ? 'border-ink text-ink'
-                            : 'border-stone text-muted hover:border-ink hover:text-ink'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="cashReceiptType"
-                          checked={form.cashReceiptType === option.key}
-                          onChange={() => set('cashReceiptType', option.key)}
-                          className="h-4 w-4"
-                        />
-                        {option.label}
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-
-                {form.cashReceiptType !== 'none' ? (
-                  <div className="mt-4">
-                    <label htmlFor="cashReceiptNo" className="label-xs block">
-                      {form.cashReceiptType === 'personal'
-                        ? '휴대폰 번호 *'
-                        : '사업자등록번호 *'}
+              {/*
+                ★ 입금자명과 현금영수증은 무통장입금에만 나옵니다. (4-A)
+                  카드·간편결제는 현금영수증 대상이 아닙니다.
+                  카드로 결제하는 손님에게 "입금자명" 을 물으면 무엇을 적어야 할지
+                  모른 채 주문이 막힙니다.
+              */}
+              {isBank ? (
+                <>
+                  <div className="mt-6">
+                    <label htmlFor="depositorName" className="label-xs block">
+                      입금자명 *
                     </label>
                     <input
-                      id="cashReceiptNo"
+                      id="depositorName"
                       type="text"
-                      inputMode="numeric"
-                      value={form.cashReceiptNo}
-                      onChange={(event) => set('cashReceiptNo', event.target.value)}
-                      placeholder={
-                        form.cashReceiptType === 'personal' ? '010-1234-5678' : '123-45-67890'
-                      }
-                      className={`mt-2 ${inputClass('cashReceiptNo')} max-w-[280px]`}
+                      value={form.depositorName}
+                      onChange={(event) => {
+                        depositorTouched.current = true;
+                        set('depositorName', event.target.value);
+                      }}
+                      className={`mt-2 ${inputClass('depositorName')}`}
                     />
                     <p className="mt-2 text-[13px] leading-relaxed text-muted">
-                      입금이 확인되면 신청하신 정보로 발급해 드립니다.
+                      주문자와 입금자가 다르면 입금하시는 분 이름을 적어 주세요. 입금 확인이
+                      빨라집니다. 계좌는 주문 완료 화면에서 안내드립니다.
                     </p>
                   </div>
-                ) : null}
-              </div>
+
+                  {/*
+                    현금영수증 (4-A)
+                    ★ 기본값은 미체크입니다. 체크하지 않으면 아무 정보도 받지 않습니다.
+                    ★ 체크하면 소득공제가 기본이고, 회원이면 가입 시 휴대폰번호가
+                      이미 채워져 있어 체크만 하면 끝납니다.
+                    ★ PG 가 현금영수증을 지원하지 않아 운영자가 홈택스에서 직접 발급합니다.
+                      그래서 "신청 여부와 번호" 를 받아 두는 것이 전부입니다.
+                  */}
+                  <div className="mt-8 border-t border-stone pt-6">
+                    <label className="flex min-h-[48px] cursor-pointer items-center gap-3 text-[15px] text-ink">
+                      <input
+                        type="checkbox"
+                        checked={form.cashReceiptType !== 'none'}
+                        onChange={(event) => {
+                          // 체크를 켜면 소득공제가 기본입니다.
+                          set('cashReceiptType', event.target.checked ? 'personal' : 'none');
+                        }}
+                        className="h-4 w-4"
+                      />
+                      현금영수증 신청
+                    </label>
+
+                    {form.cashReceiptType !== 'none' ? (
+                      <div className="mt-5 border-l border-stone pl-5">
+                        <ul className="flex flex-wrap gap-3">
+                          {(
+                            [
+                              { key: 'personal', label: '소득공제 (휴대폰번호)' },
+                              { key: 'business', label: '지출증빙 (사업자번호)' },
+                            ] as { key: CashReceiptType; label: string }[]
+                          ).map((option) => (
+                            <li key={option.key}>
+                              <label
+                                className={`flex min-h-[48px] cursor-pointer items-center gap-2 border px-4 py-3 text-[14px] transition-colors ${
+                                  form.cashReceiptType === option.key
+                                    ? 'border-ink text-ink'
+                                    : 'border-stone text-muted hover:border-ink hover:text-ink'
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="cashReceiptType"
+                                  checked={form.cashReceiptType === option.key}
+                                  onChange={() => set('cashReceiptType', option.key)}
+                                  className="h-4 w-4"
+                                />
+                                {option.label}
+                              </label>
+                            </li>
+                          ))}
+                        </ul>
+
+                        <div className="mt-4">
+                          <label htmlFor="cashReceiptNo" className="label-xs block">
+                            {form.cashReceiptType === 'personal'
+                              ? '휴대폰 번호 *'
+                              : '사업자등록번호 *'}
+                          </label>
+                          <input
+                            id="cashReceiptNo"
+                            type="text"
+                            inputMode="numeric"
+                            value={form.cashReceiptNo}
+                            onChange={(event) => set('cashReceiptNo', event.target.value)}
+                            placeholder={
+                              form.cashReceiptType === 'personal'
+                                ? '010-1234-5678'
+                                : '123-45-67890'
+                            }
+                            className={`mt-2 ${inputClass('cashReceiptNo')} max-w-[280px]`}
+                          />
+                          <p className="mt-2 text-[13px] leading-relaxed text-muted">
+                            입금이 확인되면 신청하신 정보로 발급해 드립니다.
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </>
+              ) : (
+                <p className="mt-6 border border-stone px-5 py-4 text-[14px] leading-relaxed text-muted">
+                  [주문하기]를 누르면 결제창이 열립니다. 결제가 끝나면 주문이 완료됩니다.
+                  결제창을 닫으셔도 장바구니는 그대로 남아 있습니다.
+                </p>
+              )}
             </section>
           </div>
 
@@ -969,7 +1061,11 @@ export default function CheckoutForm({
               </div>
 
               <button type="submit" disabled={pending} className="btn-primary mt-6 w-full">
-                {pending ? '주문 접수 중…' : `${formatPrice(totalAmount)}원 주문하기`}
+                {pending
+                  ? isBank
+                    ? '주문 접수 중…'
+                    : '결제창을 여는 중…'
+                  : `${formatPrice(totalAmount)}원 ${isBank ? '주문하기' : '결제하기'}`}
               </button>
 
               <p className="mt-4 text-[13px] leading-relaxed text-muted">

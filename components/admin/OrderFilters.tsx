@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { STATUS_TABS } from '@/lib/order-status';
+import { PAYMENT_METHODS } from '@/lib/site-config';
 import { useNavTransition } from '@/lib/use-nav-transition';
 
 /**
@@ -25,6 +26,9 @@ export default function OrderFilters({
   const params = useSearchParams();
 
   const status = params.get('status') ?? 'all';
+  /** 현금영수증 빠른 보기 (4-A) — '' | 'todo' | 'requested' */
+  const receipt = params.get('receipt') ?? '';
+  const method = params.get('method') ?? '';
   const [search, setSearch] = useState(params.get('q') ?? '');
   const [from, setFrom] = useState(params.get('from') ?? '');
   const [to, setTo] = useState(params.get('to') ?? '');
@@ -92,6 +96,57 @@ export default function OrderFilters({
           })}
         </ul>
       </nav>
+
+      {/*
+        현금영수증 · 결제수단 필터 (4-A)
+        ★ 현금영수증은 PG 가 발급해 주지 않습니다. 운영자가 홈택스에서 직접 발급합니다.
+          그래서 "신청은 들어왔는데 아직 발급 안 한 건" 을 모아 보는 자리가 꼭 필요합니다.
+          이 필터가 없으면 주문을 한 건씩 열어 보며 찾아야 합니다.
+      */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[13px] text-slate-500">빠른 보기</span>
+        {(
+          [
+            { key: '', label: '전체' },
+            { key: 'todo', label: '현금영수증 미발급' },
+            { key: 'requested', label: '현금영수증 신청 전체' },
+          ] as { key: string; label: string }[]
+        ).map((item) => {
+          const active = receipt === item.key;
+          return (
+            <button
+              key={item.key || 'all'}
+              type="button"
+              onClick={() => apply({ receipt: item.key })}
+              aria-pressed={active}
+              className={`min-h-[36px] rounded-md border px-3 py-1.5 text-[13px] transition-colors ${
+                active
+                  ? 'border-blue-700 bg-blue-50 font-semibold text-blue-700'
+                  : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+
+        <label className="ml-2 flex items-center gap-2 text-[13px] text-slate-500">
+          결제수단
+          <select
+            value={method}
+            onChange={(event) => apply({ method: event.target.value })}
+            aria-label="결제수단으로 거르기"
+            className="admin-input w-[150px]"
+          >
+            <option value="">전체</option>
+            {PAYMENT_METHODS.map((item) => (
+              <option key={item.key} value={item.key}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       {/* 검색 · 기간 */}
       <div className="flex flex-wrap items-end gap-3">

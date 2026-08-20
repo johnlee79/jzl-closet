@@ -4,13 +4,17 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import {
+  acceptCancelAction,
   cancelItemAction,
+  completeCancelAction,
   setAutoCancelExcludedAction,
+  setCashReceiptIssuedAction,
   setMemoAction,
   setTrackingAction,
   updateAddressAction,
   updateStatusAction,
 } from '@/app/admin/order-actions';
+import CopyValue from '@/components/admin/CopyValue';
 import { COURIERS, courierName, trackingUrl } from '@/lib/couriers';
 import {
   ORDER_STATUSES,
@@ -20,6 +24,7 @@ import {
   statusLabel,
 } from '@/lib/order-status';
 import { formatPrice } from '@/lib/product-utils';
+import { paymentMethodLabel } from '@/lib/site-config';
 import type { Order } from '@/lib/types';
 
 type Message = { tone: 'ok' | 'error'; text: string } | null;
@@ -50,6 +55,10 @@ export default function OrderDetail({ order }: { order: Order }) {
   const [memo, setMemo] = useState(order.adminMemo);
   /** 자동취소 제외 — 공급처에 발송 요청이 나간 주문을 잠급니다. */
   const [autoCancelExcluded, setAutoCancelExcluded] = useState(order.autoCancelExcluded);
+  /** 취소 처리 메모 — 대행사 접수번호 등을 남깁니다. (4-A) */
+  const [cancelMemo, setCancelMemo] = useState(order.cancelMemo);
+  /** 현금영수증 발급 완료 표시 (4-A) */
+  const [receiptIssued, setReceiptIssued] = useState(order.cashReceiptIssued);
 
   const [addressOpen, setAddressOpen] = useState(false);
   const [address, setAddress] = useState({
@@ -62,6 +71,10 @@ export default function OrderDetail({ order }: { order: Order }) {
   });
 
   const editable = canEditAddress(order.status);
+  /** 무통장입금인지 — 입금자명·현금영수증은 이때만 보여 줍니다. (4-A) */
+  const isBank = order.paymentMethod === 'bank_transfer';
+  /** 취소 요청을 접수했지만 아직 환불하지 않은 상태 (4-A) */
+  const cancelPending = order.status === 'cancel_requested';
   const liveItems = order.items.filter((item) => item.itemStatus === 'normal');
   const tracking = trackingUrl(order.courier, order.trackingNo);
 
@@ -260,27 +273,123 @@ export default function OrderDetail({ order }: { order: Order }) {
             <section className="admin-card p-4 md:p-5">
               <h2 className="text-[16px] font-semibold text-slate-900">결제</h2>
               <dl className="mt-3 divide-y divide-slate-100">
-                <Row label="수단">
-                  {order.paymentMethod === 'bank_transfer'
-                    ? '무통장입금'
-                    : order.paymentMethod}
-                </Row>
-                <Row label="입금자명">{order.depositorName || '—'}</Row>
-                <Row label="입금 확인">
+                <Row label="수단">{paymentMethodLabel(order.paymentMethod)}</Row>
+                {isBank ? <Row label="입금자명">{order.depositorName || '—'}</Row> : null}
+                <Row label="결제 확인">
                   {order.paidAt ? formatDateTime(order.paidAt) : '아직 확인 전'}
                 </Row>
-                <Row label="현금영수증">
-                  {order.cashReceiptType === 'none'
-                    ? '신청 안 함'
-                    : `${order.cashReceiptType === 'personal' ? '소득공제' : '지출증빙'} · ${order.cashReceiptNo}`}
-                </Row>
-                {order.pgTid ? <Row label="PG 거래번호">{order.pgTid}</Row> : null}
+                {order.pgAmount !== null ? (
+                  <Row label="승인 금액">
+                    <span
+                      className={
+                        order.pgAmount === order.totalAmount
+                          ? 'tabular-nums'
+                          : 'font-semibold tabular-nums text-red-700'
+                      }
+                    >
+                      {formatPrice(order.pgAmount)}원
+                      {order.pgAmount === order.totalAmount ? '' : ' — 주문 금액과 다릅니다'}
+                    </span>
+                  </Row>
+                ) : null}
+                {order.pgTradeAt ? (
+                  <Row label="거래일시">
+                    <span className="font-mono tabular-nums">{order.pgTradeAt}</span>
+                  </Row>
+                ) : null}
+                {order.pgInstallment !== null ? (
+                  <Row label="할부">
+                    {order.pgInstallment === 0 ? '일시불' : `${order.pgInstallment}개월`}
+                  </Row>
+                ) : null}
+                {order.pgIssuerCode || order.pgAcquirerCode ? (
+                  <Row label="발급·매입">
+                    {order.pgIssuerCode || '—'} / {order.pgAcquirerCode || '—'}
+                  </Row>
+                ) : null}
+                {order.pgMessage ? (
+                  <Row label="응답 메시지">
+                    {order.pgMessage}
+                    {order.pgResultCode ? ` (${order.pgResultCode})` : ''}
+                  </Row>
+                ) : null}
               </dl>
-              {order.cashReceiptType !== 'none' ? (
-                <p className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-[12px] leading-relaxed text-slate-600">
-                  현금영수증은 자동 발급되지 않습니다. 입금 확인 후 홈택스에서 위 정보로
-                  직접 발급해 주세요.
-                </p>
+
+              {/*
+                ★ KSNET 거래번호와 승인번호 (4-A)
+                  취소를 대행사에 요청할 때 반드시 필요한 값입니다.
+                  취소요청 상태에서는 크게 보여 줍니다. 눈으로 옮겨 적다 틀리면
+                  접수가 며칠 밀립니다. 그래서 복사 버튼을 둡니다.
+              */}
+              {order.pgTid || order.pgAuthNo ? (
+                <div
+                  className={`mt-4 flex flex-col gap-3 rounded-md p-3 ${
+                    cancelPending ? 'bg-amber-50' : 'bg-slate-50'
+                  }`}
+                >
+                  {cancelPending ? (
+                    <p className="text-[13px] font-medium leading-relaxed text-amber-900">
+                      취소 접수 중입니다. 아래 두 번호를 대행사에 알려 주세요.
+                    </p>
+                  ) : null}
+                  <CopyValue label="KSNET 거래번호 (trno)" value={order.pgTid ?? ''} large={cancelPending} />
+                  <CopyValue label="승인번호" value={order.pgAuthNo} large={cancelPending} />
+                </div>
+              ) : null}
+
+              {/* ── 현금영수증 (무통장입금만) ─────────────── */}
+              {isBank ? (
+                <div className="mt-4 border-t border-slate-200 pt-4">
+                  <span className="admin-label">현금영수증</span>
+                  {order.cashReceiptType === 'none' ? (
+                    <p className="text-[14px] text-slate-500">신청 안 함</p>
+                  ) : (
+                    <>
+                      <div className="mt-1">
+                        <CopyValue
+                          label={
+                            order.cashReceiptType === 'personal'
+                              ? '소득공제 · 휴대폰번호'
+                              : '지출증빙 · 사업자번호'
+                          }
+                          value={order.cashReceiptNo}
+                        />
+                      </div>
+
+                      <label className="mt-3 flex cursor-pointer items-start gap-2 text-[14px] text-slate-800">
+                        <input
+                          type="checkbox"
+                          checked={receiptIssued}
+                          disabled={pending}
+                          onChange={(event) => {
+                            const next = event.target.checked;
+                            setReceiptIssued(next);
+                            run(
+                              () => setCashReceiptIssuedAction(order.id, next),
+                              next
+                                ? '현금영수증 발급 완료로 표시했습니다.'
+                                : '발급 완료 표시를 해제했습니다.'
+                            );
+                          }}
+                          className="mt-0.5 h-4 w-4"
+                        />
+                        <span>
+                          홈택스에서 발급을 마쳤습니다
+                          {order.cashReceiptIssuedAt ? (
+                            <span className="mt-0.5 block text-[12px] text-slate-500">
+                              {formatDateTime(order.cashReceiptIssuedAt)} 표시
+                            </span>
+                          ) : null}
+                        </span>
+                      </label>
+
+                      <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[12px] leading-relaxed text-slate-600">
+                        현금영수증은 PG 에서 자동 발급되지 않습니다. 입금 확인 후 홈택스에서
+                        위 정보로 직접 발급한 뒤 체크해 주세요.
+                      </p>
+                    </>
+                  )}
+                </div>
               ) : null}
             </section>
           </div>
@@ -491,6 +600,101 @@ export default function OrderDetail({ order }: { order: Order }) {
             {status === 'cancelled' || status === 'returned' ? (
               <p className="mt-2 text-[12px] leading-relaxed text-slate-500">
                 취소·반품으로 바꾸면 남아 있는 상품의 재고가 자동으로 되돌아갑니다.
+              </p>
+            ) : null}
+          </section>
+
+          {/* ── 취소 처리 (4-A) ─────────────────────────── */}
+          <section className="admin-card p-4 md:p-5">
+            <h2 className="text-[16px] font-semibold text-slate-900">취소 처리</h2>
+
+            {/*
+              ★★ 여기 버튼으로는 실제 환불이 되지 않습니다.
+                KSNET 이 가맹점에 취소 권한을 주지 않습니다.
+                환불은 대행사를 통해 사람이 처리하고 며칠이 걸립니다.
+                이 안내를 지우면 "취소 눌렀는데 왜 돈이 안 들어오냐" 는
+                분쟁이 반드시 납니다.
+            */}
+            <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-[12px] leading-relaxed text-amber-900">
+              <strong>이 버튼으로 실제 환불이 되지 않습니다.</strong> KSNET 은 가맹점에
+              취소 권한을 주지 않아, 취소는 대행사를 통해 사람이 처리하고 영업일 기준
+              며칠이 걸립니다. 접수 → 대행사 연락 → 환불 확인 → [취소 완료] 순서로
+              진행해 주세요.
+            </p>
+
+            <div className="mt-3">
+              <label className="admin-label" htmlFor="cancel-memo">
+                취소 메모 (대행사 접수번호 등)
+              </label>
+              <textarea
+                id="cancel-memo"
+                value={cancelMemo}
+                onChange={(event) => setCancelMemo(event.target.value)}
+                rows={2}
+                placeholder="예: 대행사 접수 2026-08-20, 담당 홍길동"
+                className="admin-input leading-relaxed"
+              />
+            </div>
+
+            {order.status === 'cancelled' ? (
+              <p className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-[13px] leading-relaxed text-slate-700">
+                취소가 완료된 주문입니다.
+                {order.cancelDoneAt ? ` (${formatDateTime(order.cancelDoneAt)})` : ''}
+                {order.cancelMemo ? (
+                  <span className="mt-1 block text-[12px] text-slate-500">
+                    메모: {order.cancelMemo}
+                  </span>
+                ) : null}
+              </p>
+            ) : (
+              <div className="mt-3 flex flex-col gap-2">
+                <button
+                  type="button"
+                  disabled={pending || cancelPending}
+                  onClick={() => {
+                    if (
+                      !window.confirm(
+                        '취소 요청으로 접수할까요?\n\n실제 환불은 되지 않습니다. 재고도 아직 되돌아가지 않습니다.\n대행사에 연락해 주세요.'
+                      )
+                    ) {
+                      return;
+                    }
+                    run(
+                      () => acceptCancelAction(order.id, cancelMemo),
+                      '취소 요청으로 접수했습니다. 대행사에 연락해 주세요.'
+                    );
+                  }}
+                  className="admin-btn w-full"
+                >
+                  {cancelPending ? '이미 접수됨' : '취소 요청 접수'}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => {
+                    if (
+                      !window.confirm(
+                        '환불이 실제로 끝났습니까?\n\n[취소 완료] 를 누르면 재고와 사용 포인트가 되돌아갑니다.\n환불 전에 누르면 되돌리기 번거롭습니다.'
+                      )
+                    ) {
+                      return;
+                    }
+                    run(
+                      () => completeCancelAction(order.id, cancelMemo),
+                      '취소 완료로 처리했습니다. 재고와 포인트를 되돌렸습니다.'
+                    );
+                  }}
+                  className="admin-btn-danger w-full"
+                >
+                  취소 완료 (환불 끝남)
+                </button>
+              </div>
+            )}
+
+            {order.cancelRequestedAt ? (
+              <p className="mt-2 text-[12px] text-slate-500">
+                취소 요청 접수 {formatDateTime(order.cancelRequestedAt)}
               </p>
             ) : null}
           </section>

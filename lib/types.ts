@@ -255,11 +255,42 @@ export type Order = {
 
   cashReceiptType: CashReceiptType;
   cashReceiptNo: string;
+  /**
+   * 홈택스에서 직접 발급을 마쳤는지 (4-A).
+   * ★ PG 가 현금영수증을 지원하지 않아 운영자가 직접 발급합니다.
+   *   발급했는지 표시할 자리가 없으면 빠뜨리거나 두 번 발급하게 됩니다.
+   */
+  cashReceiptIssued: boolean;
+  cashReceiptIssuedAt: string | null;
 
-  /** PG 연동 자리 — 무통장입금이면 비어 있습니다. */
+  /** PG 연동 — 무통장입금이면 비어 있습니다. */
   pgProvider: string | null;
+  /** ★ KSNET 거래번호(trno). 취소를 대행사에 요청할 때 반드시 필요한 값입니다. */
   pgTid: string | null;
   paidAt: string | null;
+
+  /* ── KSNET 승인 결과 (4-A) ─────────────────────────────
+   * 취소·정산·분쟁 처리에 전부 필요합니다. 하나라도 빠지면 나중에 못 찾습니다. */
+  /** 승인번호. 실패면 에러코드가 들어옵니다. */
+  pgAuthNo: string;
+  /** 거래일시 원문 (YYYYMMDDHHMMSS) */
+  pgTradeAt: string;
+  /** PG 가 알려 준 승인 금액. totalAmount 와 다르면 검토필요입니다. */
+  pgAmount: number | null;
+  pgIssuerCode: string;
+  pgAcquirerCode: string;
+  /** 할부개월. 0 이면 일시불 */
+  pgInstallment: number | null;
+  pgResultCode: string;
+  /** 응답 메시지 (EUC-KR → UTF-8) */
+  pgMessage: string;
+
+  /* ── 취소 (4-A) ────────────────────────────────────────
+   * KSNET 취소 API 를 쓸 수 없어 사람이 대행사를 통해 처리합니다.
+   * "요청 접수" 와 "환불 완료" 를 반드시 나눠 기록합니다. */
+  cancelRequestedAt: string | null;
+  cancelDoneAt: string | null;
+  cancelMemo: string;
 
   courier: string;
   trackingNo: string;
@@ -312,6 +343,14 @@ export type OrderFilter = {
   from?: string;
   /** ISO 날짜 (yyyy-mm-dd). 이 날짜 23:59 까지 */
   to?: string;
+  /**
+   * 현금영수증 신청 건만 보기 (4-A).
+   *   'requested' 신청한 것 전부
+   *   'todo'      신청했는데 아직 발급하지 않은 것 — 운영자가 홈택스에서 처리할 목록
+   */
+  cashReceipt?: 'requested' | 'todo';
+  /** 결제수단으로 거르기 (4-A) */
+  paymentMethod?: string;
   limit?: number;
   offset?: number;
 };

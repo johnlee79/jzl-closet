@@ -13,6 +13,8 @@ import {
   DEFAULT_HERO_BUTTONS,
   DEFAULT_MAIN_SECTIONS,
   DEFAULT_IMPORT,
+  DEFAULT_PAYMENT_METHOD_FLAGS,
+  PAYMENT_METHODS,
   DEFAULT_REFERRAL,
   DEFAULT_REMOTE_AREA_RULES,
   DEFAULT_REVIEW,
@@ -521,7 +523,33 @@ export function normalizePayment(value: unknown): PaymentSettings {
     escrowNotice: optionalText(raw.escrowNotice, '').trim(),
     escrowImageUrl: optionalText(raw.escrowImageUrl, '').trim(),
     escrowLinkUrl: optionalText(raw.escrowLinkUrl, '').trim(),
+    methods: normalizeMethodFlags(raw.methods),
+    // ★ 기본값은 반드시 false 입니다. 명시적으로 true 일 때만 켭니다. (lib/site-config.ts 주석 참고)
+    ksnetNotifyAutoComplete: raw.ksnetNotifyAutoComplete === true,
   };
+}
+
+/**
+ * 결제수단 켜고 끄기 값 정리 (4-A).
+ *
+ * ★ 아직 저장한 적이 없는 항목(예: 4-A 이전에 저장된 설정)은 기본값을 씁니다.
+ *   여기서 기본값이 아니라 false 로 채우면, 이 코드를 올리는 순간
+ *   결제수단이 전부 사라져 주문을 못 받게 됩니다.
+ * ★ 전부 꺼진 값이 저장되어 있어도 무통장입금 하나는 살려 둡니다.
+ *   주문 자체가 불가능한 상태로 사이트가 떠 있는 것이 가장 나쁩니다.
+ */
+function normalizeMethodFlags(value: unknown): Record<string, boolean> {
+  const raw = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  const flags: Record<string, boolean> = {};
+
+  for (const method of PAYMENT_METHODS) {
+    const saved = raw[method.key];
+    flags[method.key] =
+      typeof saved === 'boolean' ? saved : DEFAULT_PAYMENT_METHOD_FLAGS[method.key];
+  }
+
+  if (!Object.values(flags).some(Boolean)) flags.bank_transfer = true;
+  return flags;
 }
 
 /**

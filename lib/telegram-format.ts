@@ -12,6 +12,29 @@ export const TELEGRAM_MAX_LENGTH = 4096;
 
 const DIVIDER = '──────────────';
 
+/**
+ * 결제수단 이름.
+ * ★ lib/site-config.ts 의 paymentMethodLabel 을 쓰지 않고 여기 따로 둡니다.
+ *   이 파일은 순수 함수만 두는 자리라 다른 모듈에 의존을 늘리지 않습니다.
+ *   목록이 늘면 두 곳 다 손봐야 하므로, 모르는 값은 그대로 내보냅니다.
+ */
+function paymentMethodText(method: string): string {
+  switch (method) {
+    case 'bank_transfer':
+      return '무통장입금';
+    case 'card':
+      return '신용카드';
+    case 'kakaopay':
+      return '카카오페이';
+    case 'naverpay':
+      return '네이버페이';
+    case 'pg_banktransfer':
+      return '계좌이체';
+    default:
+      return method;
+  }
+}
+
 /** 숫자만 비교해 두 연락처가 같은지 봅니다. (010-1234-5678 == 01012345678) */
 function samePhone(a: string, b: string): boolean {
   return a.replace(/[^0-9]/g, '') === b.replace(/[^0-9]/g, '');
@@ -104,12 +127,29 @@ export function buildNewOrderMessage(order: Order, depositHours = 0): string {
 
   const deadline = depositDeadlineLabel(order.createdAt, depositHours);
 
+  /*
+   * ★ 무통장입금과 카드결제는 알려야 할 것이 다릅니다. (4-A)
+   *   무통장입금 — 입금자명과 입금기한 (통장을 보고 대조해야 합니다)
+   *   카드결제   — 결제수단과 승인번호 (이미 돈이 들어왔습니다)
+   *   카드 주문에 "입금자명 (미입력)" 이 찍히면 입금을 기다려야 하는 건으로 오해합니다.
+   */
+  const isBank = order.paymentMethod === 'bank_transfer';
+
+  const paymentLines = isBank
+    ? [
+        `입금자명 ${order.depositorName || '(미입력)'}`,
+        // ★ 기한을 모르고 자동취소되는 일이 없도록 알림에도 남깁니다.
+        ...(deadline ? [`입금기한 ${deadline}`] : []),
+      ]
+    : [
+        `결제수단 ${paymentMethodText(order.paymentMethod)}`,
+        ...(order.pgAuthNo ? [`승인번호 ${order.pgAuthNo}`] : []),
+      ];
+
   const tail = [
     DIVIDER,
     `결제금액 ${formatPrice(order.totalAmount)}원`,
-    `입금자명 ${order.depositorName || '(미입력)'}`,
-    // ★ 기한을 모르고 자동취소되는 일이 없도록 알림에도 남깁니다.
-    ...(deadline ? [`입금기한 ${deadline}`] : []),
+    ...paymentLines,
     DIVIDER,
     `관리자: ${SITE_URL}/admin/orders/${order.id}`,
   ];

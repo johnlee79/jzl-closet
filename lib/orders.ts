@@ -5,6 +5,8 @@ import {
   ORDER_STATUSES,
   UNSHIPPED_STATUSES,
   isOrderStatus,
+  isPaidStatus,
+  isSalesStatus,
   isStockReleasing,
   type OrderStatus,
 } from '@/lib/order-status';
@@ -97,6 +99,20 @@ type OrderRow = {
   pg_provider: string | null;
   pg_tid: string | null;
   paid_at: string | null;
+  /** 4-A 에서 추가한 컬럼. 아직 없을 수 있어 선택 항목으로 둡니다. */
+  cash_receipt_issued?: boolean | null;
+  cash_receipt_issued_at?: string | null;
+  pg_auth_no?: string | null;
+  pg_trade_at?: string | null;
+  pg_amount?: number | null;
+  pg_issuer_code?: string | null;
+  pg_acquirer_code?: string | null;
+  pg_installment?: number | null;
+  pg_result_code?: string | null;
+  pg_message?: string | null;
+  cancel_requested_at?: string | null;
+  cancel_done_at?: string | null;
+  cancel_memo?: string | null;
   courier: string | null;
   tracking_no: string | null;
   admin_memo: string | null;
@@ -188,9 +204,22 @@ function rowToOrder(
     totalAmount: row.total_amount,
     cashReceiptType: toCashReceiptType(row.cash_receipt_type),
     cashReceiptNo: row.cash_receipt_no ?? '',
+    cashReceiptIssued: row.cash_receipt_issued === true,
+    cashReceiptIssuedAt: row.cash_receipt_issued_at ?? null,
     pgProvider: row.pg_provider,
     pgTid: row.pg_tid,
     paidAt: row.paid_at,
+    pgAuthNo: row.pg_auth_no ?? '',
+    pgTradeAt: row.pg_trade_at ?? '',
+    pgAmount: row.pg_amount ?? null,
+    pgIssuerCode: row.pg_issuer_code ?? '',
+    pgAcquirerCode: row.pg_acquirer_code ?? '',
+    pgInstallment: row.pg_installment ?? null,
+    pgResultCode: row.pg_result_code ?? '',
+    pgMessage: row.pg_message ?? '',
+    cancelRequestedAt: row.cancel_requested_at ?? null,
+    cancelDoneAt: row.cancel_done_at ?? null,
+    cancelMemo: row.cancel_memo ?? '',
     courier: row.courier ?? '',
     trackingNo: row.tracking_no ?? '',
     adminMemo: row.admin_memo ?? '',
@@ -275,6 +304,11 @@ export async function getOrders(
     }
     if (filter.from) countQuery = countQuery.gte('created_at', kstStart(filter.from));
     if (filter.to) countQuery = countQuery.lte('created_at', kstEnd(filter.to));
+    if (filter.paymentMethod) countQuery = countQuery.eq('payment_method', filter.paymentMethod);
+    if (filter.cashReceipt) {
+      countQuery = countQuery.neq('cash_receipt_type', 'none');
+      if (filter.cashReceipt === 'todo') countQuery = countQuery.not('cash_receipt_issued', 'is', true);
+    }
     if (searchExpression) countQuery = countQuery.or(searchExpression);
 
     let listQuery = supabase.from(ORDERS).select('*');
@@ -283,6 +317,18 @@ export async function getOrders(
     }
     if (filter.from) listQuery = listQuery.gte('created_at', kstStart(filter.from));
     if (filter.to) listQuery = listQuery.lte('created_at', kstEnd(filter.to));
+    if (filter.paymentMethod) listQuery = listQuery.eq('payment_method', filter.paymentMethod);
+    /*
+     * 현금영수증 필터 (4-A).
+     * ★ 'todo' 는 아직 발급하지 않은 건입니다.
+     *   cash_receipt_issued 는 나중에 추가한 컬럼이라 예전 주문에는 null 입니다.
+     *   eq('cash_receipt_issued', false) 로 걸면 null 인 예전 주문이 통째로 빠집니다.
+     *   그래서 "true 가 아닌 것" 으로 겁니다.
+     */
+    if (filter.cashReceipt) {
+      listQuery = listQuery.neq('cash_receipt_type', 'none');
+      if (filter.cashReceipt === 'todo') listQuery = listQuery.not('cash_receipt_issued', 'is', true);
+    }
     if (searchExpression) listQuery = listQuery.or(searchExpression);
 
     listQuery = listQuery.order('created_at', { ascending: false });
@@ -1171,6 +1217,322 @@ export async function cancelOrderItem(orderId: string, itemId: string): Promise<
   return (await getOrderById(orderId)) ?? order;
 }
 
+/* ==================================================================
+ * KSNET 승인 결과 반영 (4-A)
+ * ==================================================================
+ *
+ * ★ 이 구역이 4-A 의 심장입니다. 고칠 때는 반드시 아래 네 가지를 다시 확인하세요.
+ *
+ *   1) authyn 이 'O' 인가
+ *   2) PG 가 알려 준 금액이 우리 DB 의 결제금액과 정확히 일치하는가
+ *   3) PG 가 알려 준 주문번호가 우리가 보낸 주문번호와 일치하는가
+ *   4) 그 주문이 이미 결제완료 상태는 아닌가 (중복 처리 방지)
+ *
+ *   하나라도 어긋나면 결제완료로 바꾸지 않습니다.
+ *   금액이 다른 승인을 그대로 완료 처리하는 것이 가장 위험합니다.
+ *
+ * ★ 금액은 반드시 DB 에서 다시 읽습니다. 클라이언트가 보낸 값을 쓰지 않습니다.
+ * ------------------------------------------------------------------ */
+
+/** 승인 결과를 반영하고 나서 무슨 일이 있었는지 */
+export type KsnetApplyOutcome =
+  /** 결제완료로 바꿨습니다 */
+  | 'paid'
+  /** 이미 처리된 주문이었습니다 — 아무것도 바꾸지 않았습니다 */
+  | 'already'
+  /** 금액·주문번호가 어긋나 검토필요로 두었습니다 */
+  | 'review'
+  /** 카드사가 거절했습니다 — 주문은 결제대기 그대로입니다 */
+  | 'declined';
+
+/** 승인 결과 중 주문에 저장할 값 */
+export type KsnetApprovalFacts = {
+  authyn: string;
+  trno: string;
+  authno: string;
+  amount: number | null;
+  ordno: string;
+  tradeAt: string;
+  issuerCode: string;
+  acquirerCode: string;
+  installment: number | null;
+  resultCode: string;
+  message: string;
+};
+
+/** 승인 결과에서 주문에 그대로 옮겨 적는 칸들 */
+function pgPatch(facts: KsnetApprovalFacts): Record<string, unknown> {
+  return {
+    pg_provider: 'ksnet',
+    pg_tid: facts.trno || null,
+    pg_auth_no: facts.authno || null,
+    pg_trade_at: facts.tradeAt || null,
+    pg_amount: typeof facts.amount === 'number' ? facts.amount : null,
+    pg_issuer_code: facts.issuerCode || null,
+    pg_acquirer_code: facts.acquirerCode || null,
+    pg_installment: typeof facts.installment === 'number' ? facts.installment : null,
+    pg_result_code: facts.resultCode || null,
+    pg_message: facts.message || null,
+  };
+}
+
+/**
+ * 승인 결과를 주문에 반영합니다.
+ *
+ * @param orderNo 우리가 결제창에 넘긴 주문번호
+ * @param facts   recv_post.jsp 가 돌려준 값 (이미 EUC-KR → UTF-8 변환된 상태)
+ */
+export async function applyKsnetApproval(
+  orderNo: string,
+  facts: KsnetApprovalFacts
+): Promise<{ outcome: KsnetApplyOutcome; order: Order | null; reason: string }> {
+  const supabase = requireSupabaseAdmin();
+
+  const order = await getOrderByNo(orderNo);
+  if (!order) {
+    return { outcome: 'review', order: null, reason: `주문번호 ${orderNo} 를 찾지 못했습니다.` };
+  }
+
+  /* ── 4) 중복 처리 방지 ──────────────────────────────────
+   * 새로고침·뒤로가기·노티 중복으로 같은 승인이 두 번 들어올 수 있습니다.
+   * 이미 결제 확인이 끝난 주문이면 아무것도 하지 않고 조용히 넘어갑니다.
+   * 재고·포인트를 다시 차감하면 안 됩니다. */
+  if (isPaidStatus(order.status)) {
+    return { outcome: 'already', order, reason: '이미 처리된 주문입니다.' };
+  }
+
+  /* ── 1) 승인 여부 ───────────────────────────────────── */
+  if (facts.authyn !== 'O') {
+    /*
+     * 카드사가 거절했습니다. 돈은 빠져나가지 않았습니다.
+     * ★ 주문 상태는 '결제대기' 그대로 둡니다.
+     *   '결제실패' 로 바꿔 버리면 손님이 다시 결제할 수 없고,
+     *   재고를 되돌렸다가 다시 담는 사이에 품절이 날 수 있습니다.
+     *   거절 사유만 남기고 손님이 다시 시도할 수 있게 둡니다.
+     */
+    await supabase
+      .from(ORDERS)
+      .update(pgPatch(facts))
+      .eq('id', order.id)
+      .eq('status', 'pending_payment');
+
+    await addHistory(
+      order.id,
+      order.status,
+      order.status,
+      `카드 결제 거절 (${facts.authno || facts.resultCode || '코드없음'}) ${facts.message}`.trim()
+    );
+
+    return {
+      outcome: 'declined',
+      order,
+      reason: facts.message || '카드사가 결제를 거절했습니다.',
+    };
+  }
+
+  /* ── 2) 금액 대조 · 3) 주문번호 대조 ─────────────────
+   * ★ 여기가 가장 위험한 자리입니다.
+   *   금액이 다른 승인을 완료로 넘기면 물건만 나가고 돈은 덜 들어옵니다. */
+  const problems: string[] = [];
+  if (facts.amount !== order.totalAmount) {
+    problems.push(
+      `승인 금액(${facts.amount ?? '없음'})이 주문 금액(${order.totalAmount})과 다릅니다.`
+    );
+  }
+  if (facts.ordno && facts.ordno !== order.orderNo) {
+    problems.push(`승인 주문번호(${facts.ordno})가 우리 주문번호(${order.orderNo})와 다릅니다.`);
+  }
+
+  if (problems.length > 0) {
+    const reason = problems.join(' ');
+    /*
+     * ★ 절대 결제완료로 바꾸지 않습니다.
+     *   승인은 이미 났을 수 있으므로 '결제실패' 도 아닙니다.
+     *   사람이 KSNET 거래내역과 대조해야 하는 '검토필요' 로 둡니다.
+     *
+     * ★ 여기서도 상태 조건을 붙입니다.
+     *   0건이면 그 사이 다른 요청이 먼저 처리한 것입니다. 중복이므로
+     *   이력을 또 남기지 않고 조용히 넘어갑니다.
+     *   (assertWritten 을 쓰면 이 경우에 예외가 나고, 호출부가 그것을
+     *    "승인 확인 실패" 로 잘못 알아듣습니다)
+     */
+    const marked = await supabase
+      .from(ORDERS)
+      .update({ ...pgPatch(facts), status: 'payment_review' })
+      .eq('id', order.id)
+      .eq('status', 'pending_payment')
+      .select('id');
+
+    if (marked.error) {
+      throw new Error(`검토필요로 바꾸지 못했습니다: ${marked.error.message}`);
+    }
+    if (!marked.data || marked.data.length === 0) {
+      return {
+        outcome: 'already',
+        order: await getOrderById(order.id),
+        reason: '다른 요청이 먼저 처리했습니다.',
+      };
+    }
+
+    await addHistory(order.id, order.status, 'payment_review', `금액·주문번호 불일치 — ${reason}`);
+
+    return { outcome: 'review', order: await getOrderById(order.id), reason };
+  }
+
+  /* ── 전부 통과 — 결제완료로 ──────────────────────────
+   * ★ 상태 조건을 붙여 갱신합니다. (DB 수준의 조건부 갱신)
+   *   같은 승인이 동시에 두 번 들어와도 한 번만 통과합니다.
+   *   조건을 빼고 갱신하면 두 요청이 모두 "내가 바꿨다" 고 여겨
+   *   알림이 두 번 가고 이후 처리도 두 번 돕니다. */
+  const claimed = await supabase
+    .from(ORDERS)
+    .update({
+      ...pgPatch(facts),
+      status: 'paid',
+      paid_at: new Date().toISOString(),
+    })
+    .eq('id', order.id)
+    .eq('status', 'pending_payment')
+    .select('id');
+
+  if (claimed.error) {
+    throw new Error(`결제완료로 바꾸지 못했습니다: ${claimed.error.message}`);
+  }
+
+  // 0건이면 그 사이 다른 요청이 먼저 처리한 것입니다. 중복이므로 조용히 넘어갑니다.
+  if (!claimed.data || claimed.data.length === 0) {
+    return {
+      outcome: 'already',
+      order: await getOrderById(order.id),
+      reason: '다른 요청이 먼저 처리했습니다.',
+    };
+  }
+
+  await addHistory(
+    order.id,
+    order.status,
+    'paid',
+    `카드 결제 승인 (승인번호 ${facts.authno} · 거래번호 ${facts.trno})`
+  );
+
+  return { outcome: 'paid', order: await getOrderById(order.id), reason: '' };
+}
+
+/**
+ * 승인 확인 자체를 못 했을 때 — '승인확인실패' 로 둡니다.
+ *
+ * ★ 절대 '결제실패' 로 두지 마세요.
+ *   실제로는 승인이 났는데 우리만 모르는 상황일 수 있습니다.
+ *   그 상태에서 손님에게 "실패했으니 다시 결제하세요" 라고 하면 이중결제가 납니다.
+ * ★ 이미 결제 처리가 끝난 주문이면 건드리지 않습니다.
+ */
+export async function markPaymentUnconfirmed(
+  orderNo: string,
+  reason: string
+): Promise<Order | null> {
+  const supabase = requireSupabaseAdmin();
+
+  const order = await getOrderByNo(orderNo);
+  if (!order) return null;
+  if (isPaidStatus(order.status)) return order;
+
+  const { data, error } = await supabase
+    .from(ORDERS)
+    .update({ status: 'payment_unconfirmed', pg_provider: 'ksnet', pg_message: reason || null })
+    .eq('id', order.id)
+    .eq('status', 'pending_payment')
+    .select('id');
+
+  if (error) {
+    console.error('[orders] 승인확인실패 처리 실패:', error.message);
+    return order;
+  }
+  if (!data || data.length === 0) return await getOrderById(order.id);
+
+  await addHistory(order.id, order.status, 'payment_unconfirmed', `승인 확인 실패 — ${reason}`);
+  return await getOrderById(order.id);
+}
+
+/* ------------------------------------------------------------------
+ * 취소 (4-A)
+ * ------------------------------------------------------------------
+ * ★ KSNET 은 가맹점에 취소 API 권한을 주지 않습니다.
+ *   실제 환불은 대행사를 통해 사람이 처리하고 며칠이 걸립니다.
+ *   그래서 "요청 접수" 와 "환불 완료" 를 반드시 나눕니다.
+ *   버튼 하나로 바로 취소완료가 되게 만들면
+ *   "취소했다고 했는데 돈이 안 들어온다" 는 분쟁이 반드시 납니다.
+ * ------------------------------------------------------------------ */
+
+/** 취소 요청 접수 — 아직 환불되지 않았습니다. 재고도 되돌리지 않습니다. */
+export async function requestOrderCancel(id: string, memo: string): Promise<Order> {
+  const supabase = requireSupabaseAdmin();
+  const before = await getOrderById(id);
+  if (!before) throw new Error('주문을 찾을 수 없습니다.');
+  if (before.status === 'cancelled') {
+    throw new Error('이미 취소가 끝난 주문입니다.');
+  }
+
+  assertWritten(
+    await supabase
+      .from(ORDERS)
+      .update({
+        status: 'cancel_requested',
+        cancel_requested_at: new Date().toISOString(),
+        cancel_memo: memo.trim() || null,
+      })
+      .eq('id', id)
+      .select('id'),
+    '취소 요청을 접수하지 못했습니다'
+  );
+
+  await addHistory(id, before.status, 'cancel_requested', memo.trim() || '취소 요청 접수');
+  return (await getOrderById(id)) ?? before;
+}
+
+/**
+ * 취소 완료 — 실제 환불까지 끝났을 때만 누르는 버튼입니다.
+ * 재고와 사용 포인트는 updateOrderStatus 가 되돌립니다.
+ */
+export async function completeOrderCancel(id: string, memo: string): Promise<Order> {
+  const supabase = requireSupabaseAdmin();
+  const before = await getOrderById(id);
+  if (!before) throw new Error('주문을 찾을 수 없습니다.');
+  if (before.status === 'cancelled') return before;
+
+  // 취소 처리일과 메모를 먼저 남깁니다. 상태 변경이 실패해도 기록은 남습니다.
+  await supabase
+    .from(ORDERS)
+    .update({
+      cancel_done_at: new Date().toISOString(),
+      cancel_memo: memo.trim() || before.cancelMemo || null,
+    })
+    .eq('id', id);
+
+  // ★ 재고 되돌리기·포인트 반환은 updateOrderStatus 안에 이미 있습니다.
+  //   같은 로직을 여기서 다시 쓰면 언젠가 어긋납니다.
+  return await updateOrderStatus(id, 'cancelled', memo.trim() || '환불 완료');
+}
+
+/**
+ * 현금영수증 발급 완료 표시 (4-A).
+ * ★ PG 가 현금영수증을 지원하지 않아 운영자가 홈택스에서 직접 발급합니다.
+ *   여기 체크는 "발급했다" 는 기록일 뿐, 실제 발급과는 무관합니다.
+ */
+export async function setCashReceiptIssued(id: string, issued: boolean): Promise<void> {
+  const supabase = requireSupabaseAdmin();
+  assertWritten(
+    await supabase
+      .from(ORDERS)
+      .update({
+        cash_receipt_issued: issued,
+        cash_receipt_issued_at: issued ? new Date().toISOString() : null,
+      })
+      .eq('id', id)
+      .select('id'),
+    '현금영수증 발급 표시를 바꾸지 못했습니다'
+  );
+}
+
 /** 손님의 취소 요청 — 상태는 바꾸지 않고 이력에만 남깁니다. */
 export async function requestCancel(orderId: string, reason: string): Promise<void> {
   const order = await getOrderById(orderId);
@@ -1241,7 +1603,7 @@ async function sumAmount(fromIso: string, toIso: string): Promise<number> {
   if (error || !data) return 0;
 
   return (data as { total_amount: number; status: string }[])
-    .filter((row) => !['cancelled', 'returned', 'failed'].includes(row.status))
+    .filter((row) => isSalesStatus(row.status))
     .reduce((sum, row) => sum + (row.total_amount ?? 0), 0);
 }
 
@@ -1381,11 +1743,21 @@ export async function autoCancelUnpaidOrders(
 
   const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 
-  // ★ 후보만 가볍게 뽑습니다. select('*') 로 전체를 끌어오지 않습니다.
+  /*
+   * ★ 후보만 가볍게 뽑습니다. select('*') 로 전체를 끌어오지 않습니다.
+   *
+   * ★★ 무통장입금 주문만 자동취소합니다. (4-A)
+   *   카드·간편결제 주문은 절대 자동으로 취소하지 마세요.
+   *   손님이 결제를 마쳤는데 우리가 승인 결과를 못 받은 경우가 있을 수 있습니다.
+   *   그 주문을 자동으로 취소해 버리면 돈은 빠져나갔는데 주문은 사라집니다.
+   *   손님은 결제했다고 하고 우리 기록에는 없는, 가장 풀기 어려운 분쟁이 됩니다.
+   *   카드 주문이 결제대기로 남아 있으면 관리자가 직접 확인하고 처리합니다.
+   */
   const { data, error } = await supabase
     .from(ORDERS)
     .select('id')
     .eq('status', 'pending_payment')
+    .eq('payment_method', 'bank_transfer')
     .lt('created_at', cutoff)
     .order('created_at', { ascending: true })
     .limit(limit);
@@ -1465,7 +1837,7 @@ export type OrdererSummary = {
 };
 
 /** 매출에서 빼는 상태 — 통계와 같은 기준입니다. */
-const NOT_SALES = new Set(['cancelled', 'returned', 'failed']);
+// 목록은 lib/order-status.ts 의 NON_SALES_STATUSES 하나만 씁니다.
 
 /**
  * 주문자별 요약.
@@ -1524,7 +1896,7 @@ export async function getOrdererSummaries(
       } satisfies OrdererSummary);
 
     current.orderCount += 1;
-    if (NOT_SALES.has(row.status)) {
+    if (!isSalesStatus(row.status)) {
       current.cancelledCount += 1;
     } else {
       current.totalAmount += row.total_amount ?? 0;

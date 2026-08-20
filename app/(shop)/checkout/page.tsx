@@ -8,7 +8,7 @@ import {
   getPaymentSettings,
   getPointSettings,
 } from '@/lib/settings';
-import { hasBankAccount } from '@/lib/site-config';
+import { enabledPaymentMethods, hasBankAccount } from '@/lib/site-config';
 
 /**
  * 주문서.
@@ -34,7 +34,20 @@ export default async function CheckoutPage() {
     getPointSettings(),
   ]);
 
-  const ready = hasBankAccount(payment);
+  /*
+   * 손님에게 보여 줄 결제수단 (4-A).
+   * ★ 관리자가 켜 둔 것만 내려보냅니다. 꺼진 수단은 서버도 받지 않습니다.
+   */
+  const methods = enabledPaymentMethods(payment.methods);
+
+  /*
+   * 주문을 받을 수 있는지.
+   * ★ 예전에는 "입금 계좌가 있는지" 하나로 판단했습니다.
+   *   카드결제가 붙은 뒤로는 계좌가 없어도 카드로 주문할 수 있어야 합니다.
+   *   그래서 "무통장입금만 켜져 있는데 계좌가 없는 경우" 에만 막습니다.
+   */
+  const onlyBank = methods.length === 1 && methods[0].key === 'bank_transfer';
+  const ready = !onlyBank || hasBankAccount(payment);
 
   // 로그인 회원이면 저장된 정보로 주문서를 채웁니다. (탈퇴 계정은 제외)
   const member =
@@ -87,6 +100,7 @@ export default async function CheckoutPage() {
             storePhone={store.phone}
             member={member}
             points={points}
+            methods={methods}
           />
         </div>
       )}

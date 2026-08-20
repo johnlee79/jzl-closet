@@ -20,6 +20,10 @@ type SearchParams = {
   from?: string;
   to?: string;
   page?: string;
+  /** 현금영수증 신청 건만 보기 (4-A) — 'requested' | 'todo' */
+  receipt?: string;
+  /** 결제수단으로 거르기 (4-A) */
+  method?: string;
 };
 
 export default async function AdminOrdersPage({
@@ -35,11 +39,21 @@ export default async function AdminOrdersPage({
 
   const page = Math.max(1, Number(searchParams.page ?? '1') || 1);
 
+  // ★ 주소로 들어오는 값이라 아는 값만 통과시킵니다.
+  const receipt: 'todo' | 'requested' | undefined =
+    searchParams.receipt === 'todo'
+      ? 'todo'
+      : searchParams.receipt === 'requested'
+        ? 'requested'
+        : undefined;
+
   const filter = {
     status: searchParams.status,
     search: searchParams.q,
     from: searchParams.from,
     to: searchParams.to,
+    cashReceipt: receipt,
+    paymentMethod: searchParams.method || undefined,
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
   };
@@ -58,6 +72,8 @@ export default async function AdminOrdersPage({
     if (searchParams.q) query.set('q', searchParams.q);
     if (searchParams.from) query.set('from', searchParams.from);
     if (searchParams.to) query.set('to', searchParams.to);
+    if (searchParams.receipt) query.set('receipt', searchParams.receipt);
+    if (searchParams.method) query.set('method', searchParams.method);
     query.set('page', String(number));
     return `/admin/orders?${query.toString()}`;
   };

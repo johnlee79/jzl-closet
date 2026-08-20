@@ -3,8 +3,11 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { savePaymentAction } from '@/app/admin/settings-actions';
+import { KSNET_ADMIN_URL } from '@/lib/payments/ksnet/config';
 import {
   DEFAULT_REMOTE_AREA_RULES,
+  PAYMENT_METHODS,
+  PAYMENT_METHOD_HINTS,
   isRemoteArea,
   type PaymentSettings,
 } from '@/lib/site-config';
@@ -19,10 +22,18 @@ type Message = { tone: 'ok' | 'error'; text: string } | null;
 export default function PaymentForm({
   initial,
   telegramConfigured,
+  ksnet,
 }: {
   initial: PaymentSettings;
   /** TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID 가 채워져 있는지 */
   telegramConfigured: boolean;
+  /**
+   * KSNET 연결 상태 (4-A).
+   * ★ 값은 환경변수에서만 옵니다. 여기서 고칠 수 없습니다.
+   *   운영 상점아이디를 관리자 화면에서 바꿀 수 있게 하면,
+   *   실수로 한 번 눌러 진짜 결제가 열리는 사고가 납니다.
+   */
+  ksnet: { mode: string; modeLabel: string; mid: string; problem: string | null };
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -57,8 +68,159 @@ export default function PaymentForm({
     });
   };
 
+  /** 결제수단 하나를 켜고 끕니다. */
+  const toggleMethod = (key: string, on: boolean) =>
+    setForm((prev) => ({ ...prev, methods: { ...prev.methods, [key]: on } }));
+
+  const onCount = PAYMENT_METHODS.filter((method) => form.methods[method.key]).length;
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      {/* ── 결제수단 켜고 끄기 (4-A) ──────────────────── */}
+      <section className="admin-card p-4 md:p-5">
+        <h2 className="text-[16px] font-semibold text-slate-900">결제수단</h2>
+        <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+          꺼진 결제수단은 주문서에 나오지 않습니다. 화면에서만 감추는 것이 아니라
+          서버도 그 수단의 주문을 받지 않습니다.
+        </p>
+
+        <ul className="mt-4 flex flex-col gap-3">
+          {PAYMENT_METHODS.map((method) => {
+            const on = form.methods[method.key] === true;
+            // 마지막 하나를 끄려는 순간을 막습니다. (주문을 못 받게 됩니다)
+            const lastOne = on && onCount <= 1;
+            return (
+              <li key={method.key} className="border-b border-slate-100 pb-3 last:border-b-0">
+                <label className="flex items-start gap-2 text-[14px] text-slate-800">
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    disabled={lastOne}
+                    onChange={(event) => toggleMethod(method.key, event.target.checked)}
+                    className="mt-0.5 h-4 w-4"
+                  />
+                  <span>
+                    <strong className="font-medium">{method.label}</strong>
+                    <span className="mt-1 block text-[12px] leading-relaxed text-slate-500">
+                      {PAYMENT_METHOD_HINTS[method.key]}
+                    </span>
+                    {lastOne ? (
+                      <span className="mt-1 block text-[12px] leading-relaxed text-amber-800">
+                        마지막으로 남은 결제수단입니다. 이것까지 끄면 주문을 받을 수 없어
+                        끌 수 없게 해 두었습니다.
+                      </span>
+                    ) : null}
+                  </span>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+
+        <p className="mt-4 rounded-md bg-slate-50 px-3 py-2 text-[13px] leading-relaxed text-slate-700">
+          지금 켜져 있는 수단 {onCount}개. 무통장입금만 켜 둔 경우에는 아래 입금 계좌를
+          반드시 채워야 주문을 받을 수 있습니다.
+        </p>
+      </section>
+
+      {/* ── KSNET 연결 상태 (4-A) ─────────────────────── */}
+      <section className="admin-card p-4 md:p-5">
+        <h2 className="text-[16px] font-semibold text-slate-900">KSNET 카드결제</h2>
+        <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
+          상점아이디와 모드는 환경변수(Vercel 프로젝트 설정)에서만 바꿉니다. 여기서는
+          지금 어떤 값으로 동작하는지 확인만 합니다.
+        </p>
+
+        <dl className="mt-4 grid grid-cols-1 gap-3 text-[14px] md:grid-cols-2">
+          <div className="rounded-md bg-slate-50 px-3 py-2">
+            <dt className="text-[12px] text-slate-500">모드 (KSNET_MODE)</dt>
+            <dd
+              className={`mt-0.5 font-semibold ${
+                ksnet.mode === 'live' ? 'text-red-700' : 'text-slate-900'
+              }`}
+            >
+              {ksnet.modeLabel}
+              {ksnet.mode === 'live' ? ' — 실제 결제가 이루어집니다' : ' — 실제 결제가 아닙니다'}
+            </dd>
+          </div>
+          <div className="rounded-md bg-slate-50 px-3 py-2">
+            <dt className="text-[12px] text-slate-500">상점아이디 (KSNET_MID)</dt>
+            <dd className="mt-0.5 font-mono font-semibold text-slate-900">{ksnet.mid}</dd>
+          </div>
+        </dl>
+
+        {ksnet.problem ? (
+          <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-[13px] leading-relaxed text-red-700">
+            {ksnet.problem}
+          </p>
+        ) : null}
+
+        {ksnet.mode !== 'live' ? (
+          <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-[13px] leading-relaxed text-amber-900">
+            지금은 <strong>테스트 상점아이디</strong>로 동작합니다. 테스트 결제는 수 초 뒤
+            자동으로 취소되며, 국민카드와 계좌이체는 테스트할 수 없습니다. 운영으로
+            바꾸려면 Vercel 환경변수에 <code className="rounded bg-white px-1">KSNET_MID</code>
+            를 운영 상점아이디로, <code className="rounded bg-white px-1">KSNET_MODE</code> 를{' '}
+            <code className="rounded bg-white px-1">live</code> 로 넣고 재배포하세요.
+          </p>
+        ) : null}
+
+        {/* ── 노티 자동 완료 ─────────────────────────── */}
+        <div className="mt-5 border-t border-slate-200 pt-5">
+          <label className="flex items-start gap-2 text-[14px] text-slate-800">
+            <input
+              type="checkbox"
+              checked={form.ksnetNotifyAutoComplete}
+              onChange={(event) => set('ksnetNotifyAutoComplete', event.target.checked)}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>
+              KSNET 노티로 주문을 자동 완료 처리하기
+              <span className="mt-1 block text-[12px] leading-relaxed text-slate-500">
+                노티(거래내역통보)는 KSNET 이 결제 결과를 우리 서버로 알려 주는 기능입니다.
+                꺼 두어도 결제는 정상 동작합니다. 노티는 항상 원문 그대로 저장되고
+                텔레그램으로 알려 드립니다.
+              </span>
+              <span className="mt-1 block text-[12px] leading-relaxed text-red-700">
+                ★ 노티에는 인증이 없습니다. 주소만 알면 누구나 보낼 수 있습니다.
+                주문번호와 금액을 맞춘 가짜 노티로 입금하지 않은 주문이 결제완료가 될 수
+                있습니다. KSNET 에서 노티 규격과 발신 IP 를 확인받은 뒤에만 켜세요.
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <details className="mt-3 rounded-md bg-slate-50 p-3 text-[13px] leading-relaxed text-slate-700">
+          <summary className="cursor-pointer font-medium text-slate-900">
+            거래 확인 · 취소는 어떻게 하나요
+          </summary>
+          <ul className="mt-2 flex list-disc flex-col gap-1 pl-5">
+            <li>
+              거래 확인:{' '}
+              <a
+                href={KSNET_ADMIN_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="text-blue-700 underline"
+              >
+                {KSNET_ADMIN_URL}
+              </a>{' '}
+              (접속 계정은 영업담당자에게 문의하세요)
+            </li>
+            <li>
+              <strong>취소는 관리자에서 직접 되지 않습니다.</strong> KSNET 이 가맹점에
+              취소 권한을 주지 않습니다. 주문 상세에서 [취소 요청 접수] 를 누른 뒤,
+              화면에 표시되는 KSNET 거래번호와 승인번호로 대행사에 연락해 주세요.
+              환불이 실제로 끝나면 [취소 완료] 를 누르시면 됩니다.
+            </li>
+            <li>
+              현금영수증은 PG 에서 발급되지 않습니다. 무통장입금 주문의 신청 건을
+              주문 목록의 <strong>현금영수증</strong> 필터로 모아 홈택스에서 발급하세요.
+            </li>
+          </ul>
+        </details>
+      </section>
+
       {/* ── 입금 계좌 ─────────────────────────────────── */}
       <section className="admin-card p-4 md:p-5">
         <h2 className="text-[16px] font-semibold text-slate-900">입금 계좌</h2>

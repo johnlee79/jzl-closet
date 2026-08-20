@@ -144,6 +144,142 @@ export async function notifyAutoCancel(orders: Order[], hours: number): Promise<
   await sendTelegramMessage([...head, ...rows, ...tail].join('\n'));
 }
 
+/* ------------------------------------------------------------------
+ * 결제 (4-A)
+ * ------------------------------------------------------------------
+ * ★ 아래 알림들은 관리자 설정의 "새 주문 알림" 토글과 무관하게 항상 보냅니다.
+ *   돈이 어긋난 상황이라 놓치면 안 됩니다.
+ *   알림을 꺼 두었다는 이유로 금액 불일치를 며칠 뒤에 알게 되면 이미 늦습니다.
+ * ------------------------------------------------------------------ */
+
+/**
+ * 🚨 금액·주문번호가 어긋난 승인 — 결제완료로 넘기지 않고 검토필요로 두었습니다.
+ * ★ 이 알림이 오면 즉시 KSNET 거래내역(ksta.ksnet.co.kr)과 대조해야 합니다.
+ */
+export async function notifyPaymentReview(
+  order: Order,
+  reason: string,
+  facts: { trno?: string; authno?: string; amount?: number | null }
+): Promise<void> {
+  const lines = [
+    '🚨 <b>결제 검토 필요</b> — 자동으로 처리하지 않았습니다',
+    '',
+    `주문번호 ${escapeHtml(order.orderNo)}`,
+    `${escapeHtml(order.ordererName)} · ${escapeHtml(order.ordererPhone)}`,
+    '',
+    `우리 주문 금액  ${formatPrice(order.totalAmount)}원`,
+    `PG 승인 금액   ${
+      typeof facts.amount === 'number' ? `${formatPrice(facts.amount)}원` : '확인 불가'
+    }`,
+    '',
+    `사유: ${escapeHtml(reason)}`,
+    ...(facts.trno ? [`KSNET 거래번호 ${escapeHtml(facts.trno)}`] : []),
+    ...(facts.authno ? [`승인번호 ${escapeHtml(facts.authno)}`] : []),
+    '',
+    '★ 주문은 결제완료로 바꾸지 않았습니다. 발송하지 마세요.',
+    `확인: ${SITE_URL}/admin/orders/${order.id}`,
+  ];
+
+  await sendTelegramMessage(lines.join('\n'));
+}
+
+/**
+ * ⏳ 승인 확인 실패 — 승인은 났을 수 있는데 우리가 확인하지 못했습니다.
+ * ★ 손님에게 "실패" 라고 말하면 안 되는 상황입니다. 이중결제가 납니다.
+ */
+export async function notifyPaymentUnconfirmed(
+  order: Order | null,
+  orderNo: string,
+  reason: string
+): Promise<void> {
+  const lines = [
+    '⏳ <b>승인 확인 실패</b> — 사람이 확인해야 합니다',
+    '',
+    `주문번호 ${escapeHtml(orderNo)}`,
+    ...(order
+      ? [
+          `${escapeHtml(order.ordererName)} · ${escapeHtml(order.ordererPhone)}`,
+          `결제금액 ${formatPrice(order.totalAmount)}원`,
+        ]
+      : ['(주문을 찾지 못했습니다)']),
+    '',
+    `사유: ${escapeHtml(reason)}`,
+    '',
+    '★ 카드 승인이 이미 났을 수 있습니다. KSNET 거래내역(ksta.ksnet.co.kr)에서',
+    '  이 주문번호를 확인한 뒤 처리해 주세요. 손님에게 재결제를 안내하지 마세요.',
+    ...(order ? [`확인: ${SITE_URL}/admin/orders/${order.id}`] : []),
+  ];
+
+  await sendTelegramMessage(lines.join('\n'));
+}
+
+/** 💳 카드 결제가 완료되었습니다. */
+export async function notifyPaymentPaid(
+  order: Order,
+  facts: { trno?: string; authno?: string }
+): Promise<void> {
+  const lines = [
+    `💳 <b>결제 완료</b> (${escapeHtml(order.orderNo)})`,
+    '',
+    `${escapeHtml(order.ordererName)} · ${escapeHtml(order.ordererPhone)}`,
+    `${escapeHtml(order.paymentMethod)} · ${formatPrice(order.totalAmount)}원`,
+    ...(facts.authno ? [`승인번호 ${escapeHtml(facts.authno)}`] : []),
+    ...(facts.trno ? [`거래번호 ${escapeHtml(facts.trno)}`] : []),
+    '',
+    `관리자: ${SITE_URL}/admin/orders/${order.id}`,
+  ];
+
+  await sendTelegramMessage(lines.join('\n'));
+}
+
+/**
+ * 📩 KSNET 노티(거래내역통보) 수신.
+ *
+ * ★ 노티에는 인증이 없습니다. 아무나 보낼 수 있습니다.
+ *   그래서 노티만으로 주문을 완료 처리하지 않습니다. (관리자 설정에서 켤 수 있습니다)
+ *   대신 받은 사실을 반드시 알려 사람이 확인하게 합니다.
+ */
+export async function notifyKsnetNotify(
+  summary: string,
+  detail: string
+): Promise<void> {
+  const lines = [
+    '📩 <b>KSNET 노티 수신</b>',
+    '',
+    escapeHtml(summary),
+    '',
+    escapeHtml(detail.slice(0, 600)),
+    '',
+    `관리자: ${SITE_URL}/admin/orders`,
+  ];
+
+  await sendTelegramMessage(lines.join('\n'));
+}
+
+/**
+ * ↩️ 취소 요청 접수 (관리자가 누름).
+ * ★ 실제 환불은 대행사를 통해 사람이 처리합니다. 며칠 걸립니다.
+ *   대행사에 연락할 때 필요한 거래번호·승인번호를 함께 보냅니다.
+ */
+export async function notifyCancelAccepted(order: Order, memo: string): Promise<void> {
+  const lines = [
+    `↩️ <b>취소 요청 접수</b> (${escapeHtml(order.orderNo)})`,
+    '',
+    `${escapeHtml(order.ordererName)} · ${escapeHtml(order.ordererPhone)}`,
+    `${escapeHtml(order.paymentMethod)} · ${formatPrice(order.totalAmount)}원`,
+    '',
+    ...(order.pgTid ? [`KSNET 거래번호 ${escapeHtml(order.pgTid)}`] : []),
+    ...(order.pgAuthNo ? [`승인번호 ${escapeHtml(order.pgAuthNo)}`] : []),
+    ...(memo ? ['', `메모: ${escapeHtml(memo)}`] : []),
+    '',
+    '★ 취소는 대행사를 통해 사람이 처리합니다. 위 번호로 접수해 주세요.',
+    '  환불이 실제로 끝나면 관리자에서 [취소 완료] 를 눌러 주세요.',
+    `확인: ${SITE_URL}/admin/orders/${order.id}`,
+  ];
+
+  await sendTelegramMessage(lines.join('\n'));
+}
+
 /** 💬 새 1:1 문의 */
 export async function notifyNewInquiry(
   inquiry: Inquiry,
