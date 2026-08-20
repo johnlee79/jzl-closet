@@ -5,7 +5,12 @@ import KakaoChatButton from '@/components/KakaoChatButton';
 import SafeImage from '@/components/SafeImage';
 import { visibleBrands } from '@/lib/brands';
 import { copyToPlainText, resolveCopy } from '@/lib/copy';
-import { getCachedAboutPage, getCachedCopy, getCachedStore } from '@/lib/settings';
+import {
+  getCachedAboutPage,
+  getCachedCopy,
+  getCachedStore,
+  getOgImage,
+} from '@/lib/settings';
 import { getCachedBrands } from '@/lib/taxonomy';
 
 /**
@@ -69,8 +74,15 @@ export async function generateMetadata(): Promise<Metadata> {
       title: `${title} | ${store.name}`,
       description,
       url: '/about',
-      // 대표 이미지를 올려 두었으면 공유 카드에도 그대로 씁니다.
-      images: aboutPage.imageUrl ? [{ url: aboutPage.imageUrl, alt: title }] : undefined,
+      /*
+       * 대표 이미지를 올려 두었으면 공유 카드에도 그대로 씁니다.
+       * ★ 없으면 관리자가 정한 공유 미리보기 이미지(없으면 자동 생성)로 갑니다.
+       *   undefined 로 두면 og:image 가 통째로 빠집니다.
+       *   (페이지가 openGraph 를 정의하는 순간 부모 것이 갈아 끼워지기 때문입니다 — 3-J)
+       */
+      images: aboutPage.imageUrl
+        ? [{ url: aboutPage.imageUrl, alt: title }]
+        : [await getOgImage()],
     },
   };
 }

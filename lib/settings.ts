@@ -24,6 +24,8 @@ import {
   DEFAULT_SNS,
   DEFAULT_STORE,
   MAX_BANNERS,
+  OG_IMAGE_HEIGHT,
+  OG_IMAGE_WIDTH,
   SNS_ITEMS,
   MAX_BANNER_INTERVAL,
   MIN_BANNER_INTERVAL,
@@ -53,6 +55,7 @@ import {
   type SnsSettings,
   type StoreSettings,
 } from '@/lib/site-config';
+import { DEFAULT_OG_IMAGE } from '@/lib/store';
 import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
 import type { Branding, BrandingIcon } from '@/lib/types';
 
@@ -430,6 +433,37 @@ export function normalizeDesign(value: unknown): DesignSettings {
     banners,
     interval: Math.min(MAX_BANNER_INTERVAL, Math.max(MIN_BANNER_INTERVAL, interval)),
     sections,
+    // 예전에 저장된 design 설정에는 이 값이 없습니다. 없으면 빈 문자열(= 자동 생성 사용).
+    ogImageUrl: optionalText(raw.ogImageUrl, '').trim(),
+  };
+}
+
+/* ── 공유 미리보기 이미지 (og:image) ────────────────────────
+ *
+ * ★★ 3-J 에서 겪은 함정을 그대로 지킵니다.
+ *   페이지가 generateMetadata 에서 openGraph 를 정의하면 Next 는 부모(layout)의
+ *   openGraph 객체를 통째로 갈아 끼웁니다. 일부만 덮는 것이 아닙니다.
+ *   그래서 각 페이지가 images 를 "직접" 넣어 주지 않으면 og:image 가 사라집니다.
+ *   여태 DEFAULT_OG_IMAGE 를 각 페이지에 명시적으로 넣어 둔 이유가 그것입니다.
+ *   이 함수는 그 자리에 그대로 들어갑니다. 구조는 하나도 바뀌지 않습니다.
+ *
+ * ★ 운영자가 올린 이미지가 있으면 그것을, 없으면 자동 생성 이미지를 돌려줍니다.
+ * ★ 상품 상세·브랜드 상세는 자기 대표 사진을 쓰므로 이 함수를 부르지 않습니다.
+ */
+export async function getOgImage(): Promise<{
+  url: string;
+  width: number;
+  height: number;
+  alt: string;
+}> {
+  const [design, store] = await Promise.all([getCachedDesign(), getCachedStore()]);
+  if (!design.ogImageUrl) return DEFAULT_OG_IMAGE;
+
+  return {
+    url: design.ogImageUrl,
+    width: OG_IMAGE_WIDTH,
+    height: OG_IMAGE_HEIGHT,
+    alt: store.name,
   };
 }
 

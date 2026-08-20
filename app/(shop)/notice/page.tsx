@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
-import { DEFAULT_OG_IMAGE } from '@/lib/store';
 import Link from 'next/link';
 import { formatDate } from '@/lib/format';
 import { getVisibleNotices } from '@/lib/notices';
-import { getCachedStore } from '@/lib/settings';
+import {
+  getCachedStore,
+  getOgImage,
+} from '@/lib/settings';
 
 export const revalidate = 60;
 
@@ -17,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: `공지사항 | ${store.name}`,
       description: `${store.name}의 공지사항입니다.`,
       url: '/notice',
-      images: [DEFAULT_OG_IMAGE],
+      images: [await getOgImage()],
     },
   };
 }

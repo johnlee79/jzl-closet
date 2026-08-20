@@ -4,6 +4,7 @@ import AboutImageForm from '@/components/admin/AboutImageForm';
 import CopyManager from '@/components/admin/CopyManager';
 import HeroButtonsForm from '@/components/admin/HeroButtonsForm';
 import MainSectionsForm from '@/components/admin/MainSectionsForm';
+import OgImageForm from '@/components/admin/OgImageForm';
 import {
   getAboutPageSettings,
   getCopySettings,
@@ -19,6 +20,7 @@ const TABS = [
   { key: 'banner', label: '메인 배너' },
   { key: 'sections', label: '메인 섹션 노출' },
   { key: 'copy', label: '사이트 문구' },
+  { key: 'share', label: '공유 미리보기' },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
@@ -72,6 +74,15 @@ export default async function AdminDesignPage({
 
       <div className="mt-5">
         {tab === 'banner' ? <BannerManager initial={design} /> : null}
+        {tab === 'share' ? (
+          <>
+            <p className="mb-4 text-[15px] leading-relaxed text-slate-600">
+              카카오톡·메신저로 사이트 주소를 공유했을 때 뜨는 그림을 정합니다.
+              올리지 않으면 브랜드명을 얹은 자동 생성 이미지가 그대로 나갑니다.
+            </p>
+            <OgImageForm imageUrl={design.ogImageUrl} />
+          </>
+        ) : null}
         {tab === 'sections' ? (
           <>
             <p className="mb-4 text-[15px] leading-relaxed text-slate-600">

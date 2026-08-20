@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { DEFAULT_OG_IMAGE } from '@/lib/store';
 import Link from 'next/link';
 import BrandStrip from '@/components/BrandStrip';
 import CategoryList from '@/components/CategoryList';
@@ -16,6 +15,7 @@ import {
   getCachedDesign,
   getCachedHeroButtons,
   getCachedStore,
+  getOgImage,
 } from '@/lib/settings';
 import { getTaxonomy } from '@/lib/taxonomy';
 
@@ -32,7 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: `${store.name} — ${store.slogan}`,
       description: store.intro,
       url: '/',
-      images: [DEFAULT_OG_IMAGE],
+      images: [await getOgImage()],
     },
   };
 }

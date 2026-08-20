@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
-import { DEFAULT_OG_IMAGE } from '@/lib/store';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { formatDate } from '@/lib/format';
 import { getNoticeById, getVisibleNotices, increaseViewCount } from '@/lib/notices';
 import { sanitizeRichText } from '@/lib/product-utils';
-import { getCachedStore } from '@/lib/settings';
+import {
+  getCachedStore,
+  getOgImage,
+} from '@/lib/settings';
 
 type PageProps = { params: { id: string } };
 
@@ -36,7 +38,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title: `${notice.title} | ${store.name}`,
       description,
       url: `/notice/${notice.id}`,
-      images: [DEFAULT_OG_IMAGE],
+      images: [await getOgImage()],
     },
   };
 }

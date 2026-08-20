@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
-import { DEFAULT_OG_IMAGE } from '@/lib/store';
 import CopyBlocks from '@/components/CopyBlocks';
 import { resolveCopy } from '@/lib/copy';
-import { getCachedCopy, getCachedStore } from '@/lib/settings';
+import {
+  getCachedCopy,
+  getCachedStore,
+  getOgImage,
+} from '@/lib/settings';
 
 export const revalidate = 60;
 
@@ -16,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: `개인정보처리방침 | ${store.name}`,
       description: '개인정보 수집 항목과 이용 목적, 보유 기간을 안내합니다.',
       url: '/privacy',
-      images: [DEFAULT_OG_IMAGE],
+      images: [await getOgImage()],
     },
   };
 }

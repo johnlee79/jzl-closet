@@ -398,6 +398,37 @@ export async function saveMainSectionsAction(
   }
 }
 
+/**
+ * 공유 미리보기 이미지(og:image)만 따로 저장합니다.
+ *
+ * ★ 배너·섹션 설정은 건드리지 않습니다. 지금 저장된 값을 먼저 읽어 그대로 다시 씁니다.
+ *   design 은 한 덩어리로 저장되는 설정이라, 일부만 넘기면 나머지가 사라집니다.
+ *
+ * ★ 저장하면 즉시 반영되어야 합니다.
+ *   공유 카드는 메신저가 우리 HTML 의 og:image 를 읽어 가는 방식이라
+ *   페이지가 다시 구워지지 않으면 예전 주소가 계속 나갑니다.
+ *   그래서 설정 태그를 무효화하고 레이아웃까지 통째로 다시 굽습니다.
+ *   (og:image 를 내보내는 페이지가 메인·목록·약관 등 여러 곳에 흩어져 있습니다)
+ */
+export async function saveOgImageAction(imageUrl: string): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  try {
+    const current = await getDesignSettings();
+    await writeSetting(
+      DESIGN_KEY,
+      normalizeDesign({ ...current, ogImageUrl: imageUrl.trim() })
+    );
+    revalidateTag(SETTINGS_TAG);
+    // ★ og:image 를 쓰는 페이지가 여러 곳이라 레이아웃째 다시 굽습니다.
+    revalidatePath('/', 'layout');
+    revalidatePath('/admin/design');
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '공유 미리보기 이미지를 저장하지 못했습니다.');
+  }
+}
+
 /* ── 5-2. 사이트 문구 ─────────────────────────────────────── */
 
 export async function saveCopyAction(

@@ -58,9 +58,18 @@ export default function BannerManager({ initial }: { initial: DesignSettings }) 
   const save = () => {
     setMessage(null);
     startTransition(async () => {
-      // ★ 섹션 노출은 이 화면에서 다루지 않습니다. 지금 값을 그대로 다시 저장해
-      //   배너만 고쳐도 섹션 설정이 초기화되지 않게 합니다.
-      const result = await saveDesignAction({ banners, interval, sections: initial.sections });
+      /*
+       * ★ 이 화면에서 다루지 않는 값(섹션 노출·공유 미리보기 이미지)은
+       *   지금 값을 그대로 다시 저장합니다. 배너만 고쳤는데 다른 설정이
+       *   초기화되면 안 됩니다. design 은 한 덩어리로 저장되는 설정이라
+       *   빠뜨린 항목은 그대로 사라집니다.
+       */
+      const result = await saveDesignAction({
+        banners,
+        interval,
+        sections: initial.sections,
+        ogImageUrl: initial.ogImageUrl,
+      });
       if (!result.ok) {
         setMessage({ tone: 'error', text: result.error });
         return;

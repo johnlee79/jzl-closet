@@ -1,11 +1,14 @@
 import type { Metadata } from 'next';
-import { DEFAULT_OG_IMAGE } from '@/lib/store';
 import Link from 'next/link';
 import CartPanel from '@/components/CartPanel';
 import CopyBlocks from '@/components/CopyBlocks';
 import KakaoChatButton from '@/components/KakaoChatButton';
 import { resolveCopy } from '@/lib/copy';
-import { getCachedCopy, getCachedStore } from '@/lib/settings';
+import {
+  getCachedCopy,
+  getCachedStore,
+  getOgImage,
+} from '@/lib/settings';
 
 export const revalidate = 60;
 
@@ -35,7 +38,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: `${title} | ${store.name}`,
       description,
       url: '/order',
-      images: [DEFAULT_OG_IMAGE],
+      images: [await getOgImage()],
     },
   };
 }

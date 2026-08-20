@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
-import { DEFAULT_OG_IMAGE } from '@/lib/store';
 import Link from 'next/link';
 import ProductList from '@/components/ProductList';
 import { visibleCategories } from '@/lib/categories';
 import { getProducts } from '@/lib/products';
-import { getCachedStore } from '@/lib/settings';
+import {
+  getCachedStore,
+  getOgImage,
+} from '@/lib/settings';
 import { getCachedCategories } from '@/lib/taxonomy';
 
 export const revalidate = 60;
@@ -19,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: `전체 상품 | ${store.name}`,
       description: `${store.name}의 의류, 가방·지갑, 슈즈, 액세서리 전체 목록입니다.`,
       url: '/products',
-      images: [DEFAULT_OG_IMAGE],
+      images: [await getOgImage()],
     },
   };
 }

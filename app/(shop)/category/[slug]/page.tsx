@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { DEFAULT_OG_IMAGE } from '@/lib/store';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ProductList from '@/components/ProductList';
@@ -9,7 +8,10 @@ import {
   visibleSubCategories,
 } from '@/lib/categories';
 import { getProductsByCategory } from '@/lib/products';
-import { getCachedStore } from '@/lib/settings';
+import {
+  getCachedStore,
+  getOgImage,
+} from '@/lib/settings';
 import { getCachedCategories } from '@/lib/taxonomy';
 
 type PageProps = { params: { slug: string } };
@@ -41,7 +43,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title: `${category.nameKo} | ${store.name}`,
       description,
       url: `/category/${category.slug}`,
-      images: [DEFAULT_OG_IMAGE],
+      images: [await getOgImage()],
     },
   };
 }

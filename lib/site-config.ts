@@ -238,7 +238,22 @@ export type DesignSettings = {
   interval: number;
   /** 메인 섹션 노출 (3-K). 기존 design 설정을 확장했습니다. */
   sections: MainSections;
+  /**
+   * 공유 미리보기 이미지 (og:image).
+   *
+   * ★ 카카오톡·메신저에 주소를 붙여 넣었을 때 뜨는 그림입니다.
+   * ★ 비워 두면 app/opengraph-image.tsx 가 그려 주는 자동 생성 이미지를 씁니다.
+   *   올려 두면 그 이미지가 대신 나갑니다.
+   * ★ 상품 상세·브랜드·소개처럼 제 대표 이미지가 있는 페이지는 그대로 자기 사진을
+   *   씁니다. 이 값은 내세울 이미지가 없는 페이지에만 쓰입니다.
+   */
+  ogImageUrl: string;
 };
+
+/** 공유 미리보기 권장 크기 — 카카오톡·페이스북·트위터가 모두 이 비율을 씁니다. */
+export const OG_IMAGE_SIZE = '1200 × 630';
+export const OG_IMAGE_WIDTH = 1200;
+export const OG_IMAGE_HEIGHT = 630;
 
 /** 배너 최대 개수 */
 export const MAX_BANNERS = 5;
@@ -256,6 +271,7 @@ export const DEFAULT_DESIGN: DesignSettings = {
   banners: [],
   interval: DEFAULT_BANNER_INTERVAL,
   sections: DEFAULT_MAIN_SECTIONS,
+  ogImageUrl: '',
 };
 
 export function emptyBanner(id: string): Banner {
