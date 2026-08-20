@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import ProductFilterProvider from '@/components/ProductFilterProvider';
 import ProductList from '@/components/ProductList';
 import BrandMark from '@/components/BrandMark';
 import KakaoChatButton from '@/components/KakaoChatButton';
@@ -207,7 +208,9 @@ export default async function BrandDetailPage({ params }: PageProps) {
               </div>
             </div>
           ) : (
-            <ProductList products={items} showBrandFilter={false} />
+            <ProductFilterProvider>
+              <ProductList products={items} showBrandFilter={false} />
+            </ProductFilterProvider>
           )}
         </div>
       </section>

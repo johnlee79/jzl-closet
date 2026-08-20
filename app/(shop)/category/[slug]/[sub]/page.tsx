@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import CategoryNav from '@/components/CategoryNav';
 import ProductList from '@/components/ProductList';
 import {
   findSubCategory,
@@ -64,6 +65,7 @@ export default async function SubCategoryPage({ params }: PageProps) {
   }
 
   const items = await getProductsByCategory(category.slug, sub.slug);
+  const menu = visibleCategories(categories);
   const subs = visibleSubCategories(categories, category.slug);
 
   const breadcrumbJsonLd = {
@@ -122,6 +124,13 @@ export default async function SubCategoryPage({ params }: PageProps) {
           {sub.description || `${category.nameKo} 가운데 ${sub.nameKo} 상품입니다. ${category.description}`}
         </p>
       </header>
+
+      {/*
+        ★ 소분류에서도 대분류 줄을 그대로 둡니다.
+          전에는 이 줄이 없어서, 소분류로 들어오면 다른 대분류로 갈 길이
+          뒤로가기나 맨 위 헤더밖에 없었습니다.
+      */}
+      <CategoryNav items={menu} activeSlug={category.slug} />
 
       <section aria-label={`${sub.nameKo} 상품 목록`} className="mt-10">
         <ProductList

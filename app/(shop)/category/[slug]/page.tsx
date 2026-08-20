@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import CategoryNav from '@/components/CategoryNav';
 import ProductList from '@/components/ProductList';
 import {
   findVisibleCategory,
@@ -83,25 +84,7 @@ export default async function CategoryPage({ params }: PageProps) {
         </p>
       </header>
 
-      <nav aria-label="카테고리" className="mt-10">
-        <ul className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          {menu.map((item) => (
-            <li key={item.slug}>
-              <Link
-                href={`/category/${item.slug}`}
-                aria-current={item.slug === category.slug ? 'page' : undefined}
-                className={`text-[16px] tracking-[0.1em] transition-colors duration-200 ${
-                  item.slug === category.slug
-                    ? 'text-ink underline decoration-wine underline-offset-[6px]'
-                    : 'text-muted hover:text-ink'
-                }`}
-              >
-                {item.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <CategoryNav items={menu} activeSlug={category.slug} />
 
       <section aria-label={`${category.nameKo} 상품 목록`} className="mt-10">
         <ProductList

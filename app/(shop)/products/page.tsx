@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import ProductFilterProvider from '@/components/ProductFilterProvider';
 import ProductList from '@/components/ProductList';
 import { visibleCategories } from '@/lib/categories';
 import { getProducts } from '@/lib/products';
@@ -63,7 +64,10 @@ export default async function ProductsPage() {
       </nav>
 
       <section aria-label="상품 목록" className="mt-10">
-        <ProductList products={products} />
+        {/* 이 화면은 소분류로 옮겨 다니지 않지만, 목록이 필터를 상자에서 꺼내 씁니다. */}
+        <ProductFilterProvider>
+          <ProductList products={products} />
+        </ProductFilterProvider>
       </section>
     </div>
   );

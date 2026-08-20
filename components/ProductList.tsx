@@ -1,15 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import BrandMark from '@/components/BrandMark';
 import ProductCard from '@/components/ProductCard';
+import {
+  useProductFilters,
+  type SortKey,
+} from '@/components/ProductFilterProvider';
 import { useSite } from '@/components/SiteProvider';
 import { visibleBrands } from '@/lib/brands';
 import { genderFilters } from '@/lib/product-utils';
 import type { Gender, Product } from '@/lib/types';
-
-type SortKey = 'new' | 'low' | 'high';
 
 const sortOptions: { key: SortKey; label: string }[] = [
   { key: 'new', label: '신상품순' },
@@ -71,102 +73,18 @@ function RowLabel({ children }: { children: string }) {
 const CHIP_ROW =
   'flex min-w-0 flex-nowrap items-end gap-x-6 gap-y-3 overflow-x-auto pb-1 md:flex-wrap md:gap-x-8 md:overflow-x-visible md:pb-0';
 
-/**
- * ============================================================
- * 필터를 주소(쿼리)에 담습니다
- * ============================================================
- *
- * ★★ 왜 이렇게 하는가 — 브랜드와 분류를 같이 걸 수 없던 문제
- *   브랜드·성별·정렬은 이 컴포넌트의 state 였고, 분류는 진짜 페이지 이동입니다.
- *   (/category/clothing → /category/clothing/outer)
- *   분류를 누르면 페이지가 바뀌면서 컴포넌트가 새로 뜨고, state 로만 들고 있던
- *   브랜드가 통째로 초기화됐습니다. 브랜드 GANNI 를 고른 뒤 OUTER 를 누르면
- *   브랜드가 ALL 로 돌아가 버렸습니다.
- *
- * ★★ 왜 useSearchParams 를 쓰지 않는가
- *   이 목록은 상품·분류 페이지에 들어갑니다. 그 페이지들은 SEO 때문에 반드시
- *   정적으로 구워져야 합니다. 클라이언트 컴포넌트에서 useSearchParams 를 쓰면
- *   Next 가 그 자리를 정적 생성에서 제외해, 상품 격자가 정적 HTML 에서 빠집니다.
- *   (검색엔진이 상품을 못 읽게 됩니다)
- *   그래서 훅 대신 주소를 직접 읽고 씁니다.
- *     읽기 — 처음 뜰 때 window.location.search 를 한 번 봅니다
- *     쓰기 — history.replaceState 로 주소만 바꿉니다 (페이지를 다시 부르지 않습니다)
- *   서버가 내려보내는 첫 HTML 은 늘 "필터 없음" 이라 모든 상품이 그대로 실립니다.
- *
- * ★ 분류 링크에는 지금 필터를 쿼리로 붙여 보냅니다. 그래야 페이지를 옮겨도
- *   브랜드·성별·정렬이 따라갑니다.
- */
-
-/** 기본값은 주소에 넣지 않습니다. 주소가 짧아야 공유하기 좋습니다. */
-function buildQuery(next: {
-  brand: string;
-  gender: 'all' | Gender;
-  sort: SortKey;
-}): string {
-  const query = new URLSearchParams();
-  if (next.brand !== 'all') query.set('brand', next.brand);
-  if (next.gender !== 'all') query.set('gender', next.gender);
-  if (next.sort !== 'new') query.set('sort', next.sort);
-  const text = query.toString();
-  return text ? `?${text}` : '';
-}
-
 export default function ProductList({
   products,
   subFilter,
   showBrandFilter = true,
 }: ProductListProps) {
-  const [gender, setGender] = useState<'all' | Gender>('all');
-  const [brand, setBrand] = useState<string>('all');
-  const [sort, setSort] = useState<SortKey>('new');
-
   /*
-   * 주소에 적힌 필터를 읽어 옵니다.
-   * ★ 처음 뜰 때 한 번만 봅니다. 분류를 눌러 페이지가 바뀌면 이 컴포넌트가
-   *   새로 뜨므로 그때 또 읽습니다. 그래서 필터가 따라옵니다.
+   * ★ 필터는 이 컴포넌트가 아니라 ProductFilterProvider 가 들고 있습니다.
+   *   소분류를 누르면 이 컴포넌트는 새로 뜨지만 상자는 그대로 남아 있어서
+   *   브랜드·성별·정렬이 유지됩니다. (밑줄이 깜빡이지 않는 이유)
+   *   주소를 읽고 쓰는 일도 전부 상자가 합니다.
    */
-  useEffect(() => {
-    const query = new URLSearchParams(window.location.search);
-    const nextBrand = query.get('brand');
-    const nextGender = query.get('gender');
-    const nextSort = query.get('sort');
-
-    if (nextBrand) setBrand(nextBrand);
-    if (nextGender === 'women' || nextGender === 'men' || nextGender === 'unisex') {
-      setGender(nextGender);
-    }
-    if (nextSort === 'low' || nextSort === 'high' || nextSort === 'new') setSort(nextSort);
-  }, []);
-
-  /**
-   * 필터를 바꿉니다. 상태를 고치고 주소도 같이 맞춰 둡니다.
-   *
-   * ★ history.replaceState 를 씁니다. router 를 부르면 페이지를 다시 가져오면서
-   *   화면이 깜빡이는데, 걸러 내는 일은 전부 브라우저에서 끝나므로 그럴 이유가 없습니다.
-   * ★ 주소를 맞춰 두는 이유 — 새로고침하거나 링크를 보냈을 때 같은 화면이 나와야 하고,
-   *   분류를 누를 때 붙여 보낼 쿼리도 여기서 나옵니다.
-   */
-  const applyFilter = (patch: {
-    brand?: string;
-    gender?: 'all' | Gender;
-    sort?: SortKey;
-  }) => {
-    const next = {
-      brand: patch.brand ?? brand,
-      gender: patch.gender ?? gender,
-      sort: patch.sort ?? sort,
-    };
-    if (patch.brand !== undefined) setBrand(patch.brand);
-    if (patch.gender !== undefined) setGender(patch.gender);
-    if (patch.sort !== undefined) setSort(patch.sort);
-
-    if (typeof window !== 'undefined') {
-      window.history.replaceState(null, '', `${window.location.pathname}${buildQuery(next)}`);
-    }
-  };
-
-  /** 분류 링크에 붙일 쿼리 — 지금 걸린 브랜드·성별·정렬을 그대로 물고 갑니다. */
-  const filterQuery = buildQuery({ brand, gender, sort });
+  const { brand, gender, sort, apply, query } = useProductFilters();
 
   const { brands } = useSite();
   const brandChips = visibleBrands(brands);
@@ -194,7 +112,7 @@ export default function ProductList({
   const resetFilters = () => {
     // 주소에서도 같이 지웁니다. 초기화했는데 주소에 필터가 남아 있으면
     // 새로고침할 때 되살아납니다.
-    applyFilter({ gender: 'all', brand: 'all' });
+    apply({ gender: 'all', brand: 'all' });
   };
 
   return (
@@ -219,7 +137,7 @@ export default function ProductList({
               <li className="shrink-0">
                 <button
                   type="button"
-                  onClick={() => applyFilter({ brand: 'all' })}
+                  onClick={() => apply({ brand: 'all' })}
                   aria-pressed={brand === 'all'}
                   className={filterChipClass(brand === 'all')}
                 >
@@ -230,7 +148,7 @@ export default function ProductList({
                 <li key={item.slug} className="shrink-0">
                   <button
                     type="button"
-                    onClick={() => applyFilter({ brand: item.slug })}
+                    onClick={() => apply({ brand: item.slug })}
                     aria-pressed={brand === item.slug}
                     aria-label={item.label}
                     className={filterChipClass(brand === item.slug)}
@@ -271,7 +189,9 @@ export default function ProductList({
               <li className="shrink-0">
                 <Link
                   // ★ 분류를 옮겨도 브랜드·성별·정렬이 따라가도록 쿼리를 붙입니다.
-                  href={`${subFilter.basePath}${filterQuery}`}
+                  href={`${subFilter.basePath}${query}`}
+                  // ★ 걸러 보기일 뿐이니 화면을 맨 위로 끌어올리지 않습니다.
+                  scroll={false}
                   aria-current={subFilter.activeSlug ? undefined : 'page'}
                   className={filterChipClass(!subFilter.activeSlug)}
                 >
@@ -282,7 +202,8 @@ export default function ProductList({
               {subFilter.items.map((item) => (
                 <li key={item.slug} className="shrink-0">
                   <Link
-                    href={`${subFilter.basePath}/${item.slug}${filterQuery}`}
+                    href={`${subFilter.basePath}/${item.slug}${query}`}
+                    scroll={false}
                     aria-current={subFilter.activeSlug === item.slug ? 'page' : undefined}
                     className={filterChipClass(subFilter.activeSlug === item.slug)}
                   >
@@ -300,12 +221,12 @@ export default function ProductList({
               <li key={item.key}>
                 <button
                   type="button"
-                  onClick={() => applyFilter({ gender: item.key })}
+                  onClick={() => apply({ gender: item.key })}
                   aria-pressed={gender === item.key}
-                  className={`tap-target text-[16px] tracking-[0.12em] transition-colors duration-200 ${
+                  className={`tap-target border-b-2 pb-2 pt-3 text-[16px] tracking-[0.12em] transition-colors duration-200 ${
                     gender === item.key
-                      ? 'text-ink underline decoration-wine underline-offset-[6px]'
-                      : 'text-muted hover:text-ink'
+                      ? 'border-wine text-ink'
+                      : 'border-transparent text-muted hover:text-ink'
                   }`}
                 >
                   {item.label}
@@ -322,7 +243,7 @@ export default function ProductList({
               <button
                 key={option.key}
                 type="button"
-                onClick={() => applyFilter({ sort: option.key })}
+                onClick={() => apply({ sort: option.key })}
                 aria-pressed={sort === option.key}
                 className={`tap-target text-[16px] tracking-[0.1em] transition-colors duration-200 ${
                   sort === option.key ? 'text-ink' : 'text-muted hover:text-ink'
@@ -348,7 +269,7 @@ export default function ProductList({
               필터 초기화
             </button>
             {subFilter?.activeSlug ? (
-              <Link href={subFilter.basePath} className="btn-secondary">
+              <Link href={`${subFilter.basePath}${query}`} className="btn-secondary">
                 카테고리 전체 보기
               </Link>
             ) : null}
