@@ -300,6 +300,35 @@ export function paymentMethodLabel(key: string): string {
 }
 
 /**
+ * 승인 응답 메시지에서 카드사(또는 간편결제사) 이름을 뽑습니다.
+ *
+ * ★ KSNET 은 카드사명을 따로 된 항목으로 주지 않습니다.
+ *   응답 메시지(msg1)에 섞여 옵니다. 실제로 들어온 값:
+ *     "현대카드 OK: 00007641"   → 현대카드
+ *   그래서 "…카드 / …페이 / …은행" 으로 끝나는 낱말을 찾아 씁니다.
+ *
+ * ★ 못 찾으면 빈 문자열을 돌려줍니다. 화면은 그냥 결제수단 이름만 보여 줍니다.
+ *   억지로 짜맞추지 않습니다. 틀린 카드사명을 보여 주는 것이 안 보여 주는 것보다 나쁩니다.
+ */
+export function cardIssuerFromMessage(message: string): string {
+  const found = /([가-힣A-Za-z]{2,10}(?:카드|페이|은행))/.exec(message ?? '');
+  return found ? found[1] : '';
+}
+
+/**
+ * 손님·관리자 화면에 보여 줄 결제수단.
+ *   신용카드 + "현대카드 OK: …"  →  "신용카드 (현대카드)"
+ *   카카오페이 + "카카오페이 …"   →  "카카오페이"      (같은 말을 두 번 쓰지 않습니다)
+ *   무통장입금                    →  "무통장입금"      (승인 메시지가 없습니다)
+ */
+export function paymentMethodDetail(key: string, pgMessage: string): string {
+  const label = paymentMethodLabel(key);
+  const issuer = cardIssuerFromMessage(pgMessage);
+  if (!issuer || issuer === label || label.includes(issuer)) return label;
+  return `${label} (${issuer})`;
+}
+
+/**
  * PG(KSNET)를 거치는 결제수단인지.
  * ★ 무통장입금만 PG 를 안 탑니다. 사장님이 통장을 직접 확인합니다.
  */

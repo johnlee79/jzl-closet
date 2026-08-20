@@ -33,6 +33,8 @@ type CartContextValue = {
   ready: boolean;
   addItem: (item: Omit<CartItem, 'key'>) => void;
   removeItem: (key: string) => void;
+  /** 여러 개를 한 번에 뺍니다. 주문한 상품만 골라 뺄 때 씁니다. */
+  removeMany: (keys: string[]) => void;
   updateQuantity: (key: string, quantity: number) => void;
   clear: () => void;
 };
@@ -144,13 +146,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  /**
+   * 주문에 들어간 상품만 골라 뺍니다.
+   * ★ clear() 로 통째로 비우지 않는 이유 — 손님이 결제창에 가 있는 동안
+   *   다른 창에서 상품을 더 담았을 수 있습니다. 그건 주문에 없으니 남겨야 합니다.
+   */
+  const removeMany = useCallback((keys: string[]) => {
+    if (keys.length === 0) return;
+    const drop = new Set(keys);
+    setItems((prev) => prev.filter((item) => !drop.has(item.key)));
+  }, []);
+
   const clear = useCallback(() => setItems([]), []);
 
   const value = useMemo<CartContextValue>(() => {
     const count = items.reduce((sum, item) => sum + item.quantity, 0);
     const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    return { items, count, total, ready, addItem, removeItem, updateQuantity, clear };
-  }, [items, ready, addItem, removeItem, updateQuantity, clear]);
+    return { items, count, total, ready, addItem, removeItem, removeMany, updateQuantity, clear };
+  }, [items, ready, addItem, removeItem, removeMany, updateQuantity, clear]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

@@ -24,7 +24,7 @@ import {
   statusLabel,
 } from '@/lib/order-status';
 import { formatPrice } from '@/lib/product-utils';
-import { paymentMethodLabel } from '@/lib/site-config';
+import { paymentMethodDetail } from '@/lib/site-config';
 import type { Order } from '@/lib/types';
 
 type Message = { tone: 'ok' | 'error'; text: string } | null;
@@ -273,7 +273,10 @@ export default function OrderDetail({ order }: { order: Order }) {
             <section className="admin-card p-4 md:p-5">
               <h2 className="text-[16px] font-semibold text-slate-900">결제</h2>
               <dl className="mt-3 divide-y divide-slate-100">
-                <Row label="수단">{paymentMethodLabel(order.paymentMethod)}</Row>
+                {/* ★ 카드사명까지 — 정산·분쟁 때 어느 카드사인지 바로 알아야 합니다. */}
+                <Row label="수단">
+                  {paymentMethodDetail(order.paymentMethod, order.pgMessage)}
+                </Row>
                 {isBank ? <Row label="입금자명">{order.depositorName || '—'}</Row> : null}
                 <Row label="결제 확인">
                   {order.paidAt ? formatDateTime(order.paidAt) : '아직 확인 전'}

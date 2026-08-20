@@ -89,7 +89,7 @@ export default function CheckoutForm({
   methods: { key: PaymentMethod; label: string }[];
 }) {
   const router = useRouter();
-  const { items, total, ready, clear } = useCart();
+  const { items, total, ready } = useCart();
   const [pending, startTransition] = useTransition();
 
   const [form, setForm] = useState<Form>({
@@ -417,17 +417,16 @@ export default function CheckoutForm({
       }
 
       /*
-       * ★ 장바구니는 결제가 끝난 뒤에 비웁니다. (4-A)
-       *   카드결제는 여기서 주문만 저장된 상태입니다. 결제창에서 취소하거나
-       *   카드가 거절될 수 있습니다. 그때 장바구니가 비어 있으면 손님이
-       *   상품을 처음부터 다시 담아야 합니다.
-       *   무통장입금은 지금이 곧 완료라 여기서 비웁니다.
-       *   카드결제는 주문 완료 화면의 CartClearOnComplete 가 비웁니다.
+       * ★ 장바구니는 여기서 건드리지 않습니다. (4-A)
+       *   주문이 확정된 뒤에 주문 완료 화면의 CartCleanupOnComplete 가
+       *   "주문에 들어간 상품만" 골라 뺍니다.
+       *
+       *   여기서 비우면 안 되는 이유
+       *     카드결제는 아직 결제창에 가기도 전입니다. 취소하거나 거절되면
+       *     장바구니가 비어 있어 손님이 상품을 처음부터 다시 담아야 합니다.
+       *     무통장입금도 완료 화면에서 빼면 되므로 굳이 두 곳에서 지울 이유가 없습니다.
+       *     (두 곳에서 지우면 한쪽만 고쳤을 때 어긋납니다)
        */
-      if (!result.data.needsPayment) {
-        clear();
-        clearDraft();
-      }
 
       // ★ 어디로 갈지는 서버가 정합니다. (무통장 → 완료 화면 / 카드 → 결제창)
       router.replace(result.data.nextUrl);

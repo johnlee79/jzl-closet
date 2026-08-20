@@ -93,7 +93,13 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
           {brandLabel ? (
             <p className="text-[13px] tracking-[0.16em] text-muted">{brandLabel}</p>
           ) : null}
-          <h3 className="mt-1.5 font-serif text-[17px] leading-snug text-ink">
+          {/*
+            ★ 상품명은 두 줄까지만 보여 줍니다.
+              줄 수를 막아 두지 않으면 이름이 길거나 손님이 글자 크기를 키워 둔
+              기기에서 세 줄로 늘어나고, 그만큼 가격과 할인율이 아래로 밀립니다.
+              목록에서 카드마다 높이가 달라져 줄이 어긋나 보입니다.
+          */}
+          <h3 className="mt-1.5 line-clamp-2 font-serif text-[17px] leading-snug text-ink">
             {product.name}
           </h3>
           <p className="mt-1.5 line-clamp-2 text-[15px] leading-relaxed text-ink">
@@ -101,15 +107,20 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
           </p>
           <p className="mt-3 flex flex-wrap items-baseline gap-2 text-[16px]">
             <span className="font-medium text-ink">{formatPrice(product.price)}원</span>
+            {/*
+              ★ 정가와 할인율은 한 덩어리로 묶어 둡니다.
+                따로 두면 글자가 조금만 커져도 할인율만 다음 줄로 떨어져
+                "50,000원 / 30%" 가 위아래로 갈라집니다.
+            */}
             {product.originalPrice ? (
-              <>
+              <span className="inline-flex items-baseline gap-2 whitespace-nowrap">
                 <span className="text-[14px] text-muted line-through">
                   {formatPrice(product.originalPrice)}원
                 </span>
                 {discount > 0 ? (
                   <span className="text-[14px] text-wine">{discount}%</span>
                 ) : null}
-              </>
+              </span>
             ) : null}
           </p>
           {earn > 0 ? (

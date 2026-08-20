@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { courierName, trackingUrl } from '@/lib/couriers';
 import { orderPaymentText } from '@/lib/order-status';
 import { formatPrice } from '@/lib/product-utils';
-import { paymentMethodLabel } from '@/lib/site-config';
+import { paymentMethodDetail } from '@/lib/site-config';
 import type { Order } from '@/lib/types';
 
 /**
@@ -51,7 +51,7 @@ export default function OrderReceipt({
           <p className="mt-3 font-serif text-[22px] text-ink md:text-[26px]">
             {payment.title}
           </p>
-          <p className="mt-2 text-[15px] leading-relaxed text-ink">{payment.body}</p>
+          <p className="mt-2 text-[16px] leading-[1.8] text-ink">{payment.body}</p>
 
           {/*
             카드 승인 정보 (4-A)
@@ -60,14 +60,19 @@ export default function OrderReceipt({
             ★ 무통장입금에는 나오지 않습니다. (승인번호가 없습니다)
           */}
           {payment.view === 'paid' && order.pgAuthNo ? (
-            <dl className="mt-6 flex flex-col gap-2 border-t border-stone pt-5 text-[15px]">
+            <dl className="mt-6 flex flex-col gap-2.5 border-t border-stone pt-5 text-[16px]">
               <div className="flex justify-between gap-4">
                 <dt className="text-muted">결제수단</dt>
-                <dd className="text-ink">{paymentMethodLabel(order.paymentMethod)}</dd>
+                {/* ★ 카드사명까지 보여 줍니다. 손님이 어느 카드로 결제했는지 바로 압니다. */}
+                <dd className="text-ink">
+                  {paymentMethodDetail(order.paymentMethod, order.pgMessage)}
+                </dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-muted">승인번호</dt>
-                <dd className="font-mono tabular-nums text-ink">{order.pgAuthNo}</dd>
+                <dd className="font-sans font-semibold tabular-nums text-ink">
+                  {order.pgAuthNo}
+                </dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-muted">결제금액</dt>
@@ -105,12 +110,12 @@ export default function OrderReceipt({
           <h2 id="bank-heading" className="label-xs">
             입금 계좌
           </h2>
-          <p className="mt-3 font-serif text-[20px] leading-snug text-ink md:text-[24px]">
+          <p className="mt-3 font-sans text-[22px] font-semibold leading-snug tabular-nums text-ink md:text-[26px]">
             {bank.bankName} {bank.accountNo}
           </p>
-          <p className="mt-1 text-[15px] text-ink">예금주 {bank.accountHolder}</p>
+          <p className="mt-1.5 text-[16px] text-ink">예금주 {bank.accountHolder}</p>
 
-          <dl className="mt-6 flex flex-col gap-2 border-t border-stone pt-5 text-[15px]">
+          <dl className="mt-6 flex flex-col gap-2.5 border-t border-stone pt-5 text-[16px]">
             <div className="flex justify-between gap-4">
               <dt className="text-muted">입금 금액</dt>
               <dd className="font-medium text-ink">{formatPrice(order.totalAmount)}원</dd>
@@ -125,7 +130,7 @@ export default function OrderReceipt({
             </div>
           </dl>
 
-          <p className="mt-5 text-[13px] leading-relaxed text-muted">
+          <p className="mt-5 text-[14px] leading-[1.8] text-muted">
             기한 안에 입금이 확인되지 않으면 주문이 자동으로 취소될 수 있습니다. 입금자명이
             주문자와 다르면 고객센터로 알려 주세요.
           </p>
@@ -151,15 +156,15 @@ export default function OrderReceipt({
                 ) : null}
                 <Link
                   href={`/products/${item.productSlug}`}
-                  className="mt-1 font-serif text-[16px] leading-snug text-ink"
+                  className="mt-1 text-[16px] font-medium leading-snug text-ink"
                 >
                   {item.productName}
                 </Link>
-                <p className="mt-1 text-[13px] text-muted">
+                <p className="mt-1 text-[14px] text-muted">
                   {item.optionKey || '옵션 없음'} · {item.quantity}개
                 </p>
               </div>
-              <p className="self-center whitespace-nowrap text-[15px] font-medium text-ink">
+              <p className="self-center whitespace-nowrap text-[16px] font-medium tabular-nums text-ink">
                 {formatPrice(item.lineTotal)}원
               </p>
             </li>

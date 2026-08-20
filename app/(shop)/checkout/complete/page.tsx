@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import CartClearOnComplete from '@/components/CartClearOnComplete';
+import CartCleanupOnComplete from '@/components/CartCleanupOnComplete';
 import PaymentStatusRefresh from '@/components/PaymentStatusRefresh';
 import CopyOrderButton from '@/components/CopyOrderButton';
 import DepositCountdown from '@/components/DepositCountdown';
@@ -40,7 +40,7 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
         <h1 className="font-serif text-[24px] leading-snug text-ink md:text-[30px]">
           주문 정보를 확인할 수 없습니다
         </h1>
-        <p className="mt-4 max-w-[560px] text-[16px] leading-[1.9] text-ink">
+        <p className="mt-4 max-w-[560px] text-[17px] leading-[1.9] text-ink">
           주문 완료 화면은 주문 직후에만 열립니다. 이미 지난 주문은 아래에서 주문번호와
           연락처로 조회해 주세요.
         </p>
@@ -99,8 +99,20 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
 
   return (
     <div className="shell py-14 md:py-20">
-      {/* 결제가 끝났으니 장바구니를 비웁니다. 화면에는 아무것도 그리지 않습니다. */}
-      <CartClearOnComplete />
+      {/*
+        주문이 확정되면 장바구니에서 그 상품을 뺍니다. 화면에는 아무것도 그리지 않습니다.
+        ★ 확정된 상태에서만 뺍니다.
+            결제완료           → 뺍니다
+            무통장 접수        → 뺍니다 (주문은 이미 들어갔습니다)
+            결제 확인 중       → 두었다가, 확인이 끝나 결제완료가 되면 그때 뺍니다
+            취소 · 결제실패    → 그대로 둡니다 (손님이 다시 시도할 수 있어야 합니다)
+      */}
+      <CartCleanupOnComplete
+        ordered={order.items
+          .filter((item) => item.itemStatus === 'normal')
+          .map((item) => ({ productSlug: item.productSlug, optionKey: item.optionKey }))}
+        confirmed={view === 'paid' || view === 'bank_pending'}
+      />
 
       <header className="max-w-[680px]">
         <p className="label-xs">
@@ -110,12 +122,12 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
           {payment_.title}
         </h1>
         <p className="mt-6 border border-stone px-6 py-5">
-          <span className="text-[13px] tracking-[0.14em] text-muted">주문번호</span>
-          <span className="mt-2 block font-display text-[30px] tracking-[0.12em] text-ink md:text-[38px]">
+          <span className="text-[14px] tracking-[0.14em] text-muted">주문번호</span>
+          <span className="mt-2 block select-all font-sans text-[28px] font-semibold tracking-[0.02em] tabular-nums text-ink md:text-[34px]">
             {order.orderNo}
           </span>
         </p>
-        <p className="mt-5 text-[16px] leading-[1.9] text-ink md:text-[17px]">
+        <p className="mt-5 text-[17px] leading-[1.9] text-ink md:text-[18px]">
           {isBank ? (
             <>
               아래 계좌로 <strong>{payment.depositHours}시간</strong> 이내에 입금해 주시면
@@ -163,7 +175,7 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
         <aside className="lg:sticky lg:top-28 lg:self-start">
           <div className="border border-stone p-6 md:p-8">
             <h2 className="font-serif text-[18px] text-ink">주문 내역 보관</h2>
-            <p className="mt-2 text-[13px] leading-relaxed text-muted">
+            <p className="mt-2 text-[14px] leading-[1.8] text-muted">
               주문번호는 조회할 때 필요합니다. 아래 버튼으로 복사해 두세요.
             </p>
             <div className="mt-5">
@@ -174,7 +186,7 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
               주문 조회 페이지
             </Link>
 
-            <p className="mt-6 border-t border-stone pt-5 text-[13px] leading-relaxed text-muted">
+            <p className="mt-6 border-t border-stone pt-5 text-[14px] leading-[1.8] text-muted">
               문의는 고객센터 {store.phone}
               <br />
               {store.hours}
