@@ -106,7 +106,7 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
             {product.summary}
           </p>
           <p className="mt-3 flex flex-wrap items-baseline gap-2 text-[17px]">
-            <span className="price">{formatPrice(product.price)}원</span>
+            <span className="font-medium text-ink">{formatPrice(product.price)}원</span>
             {/*
               ★ 정가와 할인율은 한 덩어리로 묶어 둡니다.
                 따로 두면 글자가 조금만 커져도 할인율만 다음 줄로 떨어져
@@ -114,7 +114,7 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
             */}
             {product.originalPrice ? (
               <span className="inline-flex items-baseline gap-2 whitespace-nowrap">
-                <span className="price text-[15px] font-normal text-muted line-through">
+                <span className="text-[15px] text-muted line-through">
                   {formatPrice(product.originalPrice)}원
                 </span>
                 {discount > 0 ? (

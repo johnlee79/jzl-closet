@@ -129,7 +129,7 @@ export default function RecentlyViewed({
                   <p className="mt-1 break-keep text-[15px] leading-snug text-ink">
                     {item.name}
                   </p>
-                  <p className="price mt-1 text-[15px]">
+                  <p className="mt-1 text-[15px] tabular-nums text-ink">
                     {formatPrice(item.price)}원
                   </p>
                 </Link>

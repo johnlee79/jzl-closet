@@ -104,30 +104,6 @@
 }
 
 @layer components {
-  /*
-   * 가격 표시 — 명조(Gowun Batang)
-   *
-   * ★ 왜 명조인가
-   *   한때 가격을 Pretendard 로 바꿔 봤는데 너무 무겁게 느껴졌습니다.
-   *   편집숍 분위기에는 세리프 숫자가 더 맞습니다.
-   *
-   * ★ 대신 읽기 힘들지 않게 세 가지를 함께 겁니다
-   *   1) 색은 본문색(ink #14141A). 보조색(muted)을 쓰면 금액이 흐려 보입니다.
-   *   2) 굵기 700. Gowun Batang 은 400 과 700 만 있습니다.
-   *      기본 400 은 획이 얇아 숫자가 흐릿합니다.
-   *   3) tabular-nums. 자릿수가 바뀌어도 숫자 폭이 같아 자리가 흔들리지 않습니다.
-   *
-   * ★ 상품명·설명에는 쓰지 마세요. 그건 Pretendard 가 훨씬 읽기 좋습니다.
-   *   이 클래스는 "금액 숫자" 전용입니다.
-   *
-   * ★ @layer base 의 ".font-serif { font-weight: 400 }" 보다 뒤에 오는
-   *   components 레이어라 굵기 700 이 이깁니다.
-   */
-  .price {
-    @apply font-serif tabular-nums text-ink;
-    font-weight: 700;
-  }
-
   .shell {
     @apply mx-auto w-full max-w-[1400px] px-5 md:px-10;
   }

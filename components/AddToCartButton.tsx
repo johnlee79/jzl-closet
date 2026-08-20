@@ -215,7 +215,7 @@ export default function AddToCartButton({ product }: { product: Product }) {
       <div className="flex items-center gap-3 px-5 py-3">
         <div className="min-w-0 flex-1">
           <p className="truncate text-[13px] text-muted">{product.name}</p>
-          <p className="price text-[18px]">
+          <p className="text-[18px] font-medium tabular-nums text-ink">
             {formatPrice(soldOut ? product.price : unitPrice * quantity)}원
           </p>
         </div>
@@ -334,9 +334,9 @@ export default function AddToCartButton({ product }: { product: Product }) {
 
       <div className="mt-6 flex items-baseline justify-between border-t border-stone pt-6">
         <span className="text-[14px] tracking-[0.14em] text-muted">합계</span>
-        <span className="price text-[28px]">
+        <span className="font-display text-[28px] font-medium tracking-wide text-ink">
           {formatPrice(unitPrice * quantity)}
-          <span className="ml-1 font-sans text-[16px] font-medium">원</span>
+          <span className="ml-1 font-sans text-[16px]">원</span>
         </span>
       </div>
 

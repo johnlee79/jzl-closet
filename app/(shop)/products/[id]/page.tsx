@@ -383,17 +383,17 @@ export default async function ProductDetailPage({ params }: PageProps) {
           ) : null}
 
           <div className="mt-8 flex flex-wrap items-baseline gap-3">
-            <span className="price text-[34px] md:text-[40px]">
+            <span className="font-display text-[34px] font-medium tracking-wide text-ink md:text-[40px]">
               {formatPrice(product.price)}
-              <span className="ml-1 font-sans text-[17px] font-medium">원</span>
+              <span className="ml-1 font-sans text-[17px]">원</span>
             </span>
             {product.originalPrice ? (
-              <span className="price text-[17px] font-normal text-muted line-through">
+              <span className="text-[17px] text-muted line-through">
                 {formatPrice(product.originalPrice)}원
               </span>
             ) : null}
             {discount > 0 ? (
-              <span className="price border border-wine px-2 py-1 text-[14px] tracking-[0.14em] text-wine">
+              <span className="border border-wine px-2 py-1 text-[14px] tracking-[0.14em] text-wine">
                 {discount}% OFF
               </span>
             ) : null}

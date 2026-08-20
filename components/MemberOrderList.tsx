@@ -192,7 +192,7 @@ export default function MemberOrderList({
                       ? ` · ${deadlineLabel(order.createdAt, depositHours)}까지`
                       : ''}
                   </span>
-                  <span className="price text-[16px]">
+                  <span className="text-[16px] text-ink">
                     {formatPrice(order.totalAmount)}원
                   </span>
                   <Link
