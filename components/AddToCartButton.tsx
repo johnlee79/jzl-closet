@@ -215,7 +215,7 @@ export default function AddToCartButton({ product }: { product: Product }) {
       <div className="flex items-center gap-3 px-5 py-3">
         <div className="min-w-0 flex-1">
           <p className="truncate text-[13px] text-muted">{product.name}</p>
-          <p className="text-[18px] font-medium tabular-nums text-ink">
+          <p className="price text-[18px]">
             {formatPrice(soldOut ? product.price : unitPrice * quantity)}원
           </p>
         </div>

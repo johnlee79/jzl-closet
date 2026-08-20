@@ -384,7 +384,7 @@ export default function PopupManager({ popups }: { popups: Popup[] }) {
                       className="h-12 w-12 rounded-md border border-slate-200 object-cover"
                     />
                   ) : (
-                    <span className="flex h-12 w-12 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-[13px] text-slate-400">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-[14px] text-slate-500">
                       글
                     </span>
                   )}

@@ -233,7 +233,7 @@ export default function ImageUploader({
                         className="h-full w-full object-cover"
                       />
                     </div>
-                    <span className="absolute inset-x-0 bottom-0 bg-slate-900/70 py-0.5 text-center text-[13px] text-white">
+                    <span className="absolute inset-x-0 bottom-0 bg-slate-900/70 py-0.5 text-center text-[14px] text-white">
                       고객 화면
                     </span>
                   </div>
@@ -247,14 +247,14 @@ export default function ImageUploader({
                         className="max-h-full max-w-full object-contain"
                       />
                     </div>
-                    <span className="absolute inset-x-0 bottom-0 bg-slate-900/70 py-0.5 text-center text-[13px] text-white">
+                    <span className="absolute inset-x-0 bottom-0 bg-slate-900/70 py-0.5 text-center text-[14px] text-white">
                       원본 전체
                     </span>
                   </div>
                 </div>
                 )}
 
-                <p className="flex items-center justify-between gap-2 px-2 py-1.5 text-[13px] tabular-nums text-slate-500">
+                <p className="flex items-center justify-between gap-2 px-2 py-1.5 text-[14px] tabular-nums text-slate-600">
                   <span>
                     {info?.width
                       ? `${info.width} × ${info.height}px`

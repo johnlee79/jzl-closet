@@ -237,7 +237,7 @@ export default function CartPanel({
             </div>
             <div className="flex justify-between">
               <dt className="text-muted">배송비</dt>
-              <dd className="text-ink">
+              <dd className="price">
                 {shippingFee === 0 ? '무료' : `${formatPrice(shippingFee)}원`}
               </dd>
             </div>

@@ -388,12 +388,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
               <span className="ml-1 font-sans text-[17px] font-medium">원</span>
             </span>
             {product.originalPrice ? (
-              <span className="text-[17px] text-muted line-through">
+              <span className="price text-[17px] font-normal text-muted line-through">
                 {formatPrice(product.originalPrice)}원
               </span>
             ) : null}
             {discount > 0 ? (
-              <span className="border border-wine px-2 py-1 text-[14px] tracking-[0.14em] text-wine">
+              <span className="price border border-wine px-2 py-1 text-[14px] tracking-[0.14em] text-wine">
                 {discount}% OFF
               </span>
             ) : null}

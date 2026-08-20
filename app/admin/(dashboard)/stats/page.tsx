@@ -230,7 +230,7 @@ export default async function AdminStatsPage({
               {sales.daily.map((entry) => (
                 <span
                   key={entry.day}
-                  className="w-[26px] text-center text-[10px] tabular-nums text-slate-400"
+                  className="w-[26px] text-center text-[12px] tabular-nums text-slate-500"
                 >
                   {entry.day.slice(8)}
                 </span>

@@ -940,20 +940,20 @@ export default function CheckoutForm({
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-muted">배송비</dt>
-                  <dd className="text-ink">
+                  <dd className="price">
                     {fees.shippingFee === 0 ? '무료' : `${formatPrice(fees.shippingFee)}원`}
                   </dd>
                 </div>
                 {fees.extraShippingFee > 0 ? (
                   <div className="flex justify-between">
                     <dt className="text-muted">도서산간 추가</dt>
-                    <dd className="text-ink">{formatPrice(fees.extraShippingFee)}원</dd>
+                    <dd className="price">{formatPrice(fees.extraShippingFee)}원</dd>
                   </div>
                 ) : null}
                 {appliedPoints > 0 ? (
                   <div className="flex justify-between">
                     <dt className="text-muted">포인트 사용</dt>
-                    <dd className="text-wine">− {formatPrice(appliedPoints)}원</dd>
+                    <dd className="price text-wine">− {formatPrice(appliedPoints)}원</dd>
                   </div>
                 ) : null}
               </dl>

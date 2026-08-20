@@ -181,7 +181,7 @@ export default function OrderReceipt({
                   {item.optionKey || '옵션 없음'} · {item.quantity}개 · 취소됨
                 </p>
               </div>
-              <p className="self-center whitespace-nowrap text-[16px]">
+              <p className="price self-center whitespace-nowrap text-[16px]">
                 {formatPrice(item.lineTotal)}원
               </p>
             </li>
@@ -195,20 +195,20 @@ export default function OrderReceipt({
           </div>
           <div className="flex justify-between">
             <dt className="text-muted">배송비</dt>
-            <dd className="text-ink">
+            <dd className="price">
               {order.shippingFee === 0 ? '무료' : `${formatPrice(order.shippingFee)}원`}
             </dd>
           </div>
           {order.extraShippingFee > 0 ? (
             <div className="flex justify-between">
               <dt className="text-muted">도서산간 추가</dt>
-              <dd className="text-ink">{formatPrice(order.extraShippingFee)}원</dd>
+              <dd className="price">{formatPrice(order.extraShippingFee)}원</dd>
             </div>
           ) : null}
           {order.discount > 0 ? (
             <div className="flex justify-between">
               <dt className="text-muted">할인</dt>
-              <dd className="text-ink">− {formatPrice(order.discount)}원</dd>
+              <dd className="price text-wine">− {formatPrice(order.discount)}원</dd>
             </div>
           ) : null}
         </dl>
