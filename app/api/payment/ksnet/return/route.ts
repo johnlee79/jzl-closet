@@ -39,10 +39,27 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-/** 결제창이 돌려주는 값 중 결제 Key 가 담길 수 있는 이름들 */
+/**
+ * 결제창이 돌려주는 값.
+ *
+ * ★ 이름은 KSNET 결제창(KSPayPWeb.jsp)의 payForm 에서 확인했습니다.
+ *     reCommConId  결제 Key — 승인 확인에 쓰는 값
+ *     reCommType   결제 구분
+ *     reHash       검증값
+ *     reEncData    암호화 데이터
+ *     reCnclType   1 이면 손님이 결제창을 닫은 것 (취소)
+ *   혹시 다른 이름으로 올 경우를 대비해 몇 가지를 더 받아 둡니다.
+ */
 const COMM_ID_KEYS = ['reCommConId', 'sndCommConId', 'commConId', 'CommConId'];
 /** 주문번호가 담길 수 있는 이름들 */
 const ORDER_NO_KEYS = ['reOrdernumber', 'sndOrdernumber', 'ordno', 'reOrdNo'];
+/**
+ * 취소 표시.
+ * ★ 결제창의 [닫기] 버튼은 payClose() 를 부릅니다.
+ *   그 함수는 reCommConId 를 비우고 reCnclType 에 1 을 넣은 뒤
+ *   이 주소로 POST 합니다. 즉 취소도 우리가 받습니다.
+ */
+const CANCEL_KEYS = ['reCnclType'];
 
 export async function POST(request: NextRequest) {
   return handle(request);
@@ -78,6 +95,7 @@ async function handle(request: NextRequest): Promise<Response> {
 
   const orderNo = pick(payload, ORDER_NO_KEYS);
   const commConId = pick(payload, COMM_ID_KEYS);
+  const cancelled = pick(payload, CANCEL_KEYS) === '1';
 
   // ★ 무엇보다 먼저 원문을 남깁니다. 이 아래에서 무슨 일이 나든 근거는 남아야 합니다.
   await writePaymentLog({
@@ -86,17 +104,23 @@ async function handle(request: NextRequest): Promise<Response> {
     raw: rawBody,
     parsed: payload,
     remoteIp: ip,
-    note: commConId ? '' : '결제 Key(reCommConId)가 없습니다.',
+    note: cancelled
+      ? '손님이 결제창을 닫았습니다. (reCnclType=1)'
+      : commConId
+        ? ''
+        : '결제 Key(reCommConId)가 없습니다.',
   });
 
   if (!orderNo) {
     return htmlRedirect(`${SITE_URL}/checkout/failed?reason=noorder`);
   }
 
-  /* ── 결제 Key 가 없으면 승인 확인 자체를 할 수 없습니다 ──
-   * 손님이 결제창에서 취소를 눌렀을 때도 이리로 옵니다.
-   * 그 경우 주문은 결제대기 그대로 두고 손님을 주문서로 돌려보냅니다. */
-  if (!commConId) {
+  /* ── 손님이 결제창을 닫았거나 결제 Key 가 없는 경우 ──────
+   * ★ 결제창의 [닫기] 는 reCnclType=1 로 이리 옵니다. 돈은 오가지 않았습니다.
+   *   결제 Key 가 없으면 승인 확인 자체를 할 수 없으므로 같이 처리합니다.
+   *   주문은 결제대기 그대로 두어 손님이 다시 시도할 수 있게 합니다.
+   *   (여기서 주문을 취소해 버리면 다시 결제하려는 손님이 처음부터 담아야 합니다) */
+  if (cancelled || !commConId) {
     return htmlRedirect(
       `${SITE_URL}/checkout/failed?no=${encodeURIComponent(orderNo)}&reason=cancelled`
     );

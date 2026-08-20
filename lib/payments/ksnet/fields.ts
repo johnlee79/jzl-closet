@@ -8,6 +8,7 @@ import {
   KSNET_SHOWCARD,
   KSNET_STORE_CEO_FALLBACK,
   KSPAY_MOBILE_ACTION,
+  KSPAY_PC_ACTION,
   ksnetConfigProblem,
   ksnetMid,
   ksnetPaymethodCode,
@@ -38,8 +39,14 @@ export type KsnetFormFields = Record<string, string>;
 
 export type KsnetFormResult = {
   fields: KsnetFormFields;
-  /** 모바일에서 폼을 그대로 보낼 주소 */
-  mobileAction: string;
+  /**
+   * 폼을 보낼 주소.
+   * ★ PC 와 모바일이 다릅니다. 경로 자체가 다릅니다.
+   *   PC     /store/KSPayWebV1.4/KSPayPWeb.jsp     (아이프레임 안에서 엶)
+   *   모바일  /store/KSPayMobileV1.4/KSPayPWeb.jsp  (페이지째 이동)
+   *   섞어 쓰면 결제창이 열리지 않거나 화면이 깨집니다.
+   */
+  action: string;
   /** 결제창을 열 수 없는 이유. 있으면 절대 열지 마세요. */
   problem: string | null;
 };
@@ -47,9 +54,13 @@ export type KsnetFormResult = {
 export function buildKsnetForm(
   order: Order,
   store: StoreSettings,
+  /** ★ User-Agent 로 판단한 값입니다. 화면 폭으로 정하지 마세요. */
+  isMobile: boolean,
   /** 결제 결과를 받을 절대경로 */
   replyUrl = `${SITE_URL}/api/payment/ksnet/return`
 ): KsnetFormResult {
+  const action = isMobile ? KSPAY_MOBILE_ACTION : KSPAY_PC_ACTION;
+
   const configProblem = ksnetConfigProblem();
   if (configProblem) return empty(configProblem);
 
@@ -109,13 +120,13 @@ export function buildKsnetForm(
   };
 
   const problems = assertKsnetLimits(fields);
-  if (problems.length > 0) return empty(problems.join(' '));
+  if (problems.length > 0) return empty(problems.join(' '), action);
 
-  return { fields, mobileAction: KSPAY_MOBILE_ACTION, problem: null };
+  return { fields, action, problem: null };
 }
 
-function empty(problem: string): KsnetFormResult {
-  return { fields: {}, mobileAction: KSPAY_MOBILE_ACTION, problem };
+function empty(problem: string, action = KSPAY_PC_ACTION): KsnetFormResult {
+  return { fields: {}, action, problem };
 }
 
 /**

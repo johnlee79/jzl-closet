@@ -4,7 +4,11 @@ import { headers } from 'next/headers';
 import KsnetPayLauncher from '@/components/KsnetPayLauncher';
 import { getOrderByNo } from '@/lib/orders';
 import { verifyOrderToken } from '@/lib/order-token';
-import { KSPAY_PC_SCRIPT } from '@/lib/payments/ksnet/config';
+import {
+  KSPAY_FRAME_HEIGHT,
+  KSPAY_FRAME_NAME,
+  KSPAY_FRAME_WIDTH,
+} from '@/lib/payments/ksnet/config';
 import { buildKsnetForm, isMobileUserAgent } from '@/lib/payments/ksnet/fields';
 import { getCachedStore, getPaymentSettings } from '@/lib/settings';
 import { isPgMethod } from '@/lib/site-config';
@@ -70,8 +74,15 @@ export default async function CheckoutPayPage({ searchParams }: PageProps) {
     );
   }
 
+  /*
+   * ★ PC 인지 모바일인지 여기서 정합니다. User-Agent 헤더는 서버에만 있습니다.
+   *   결제창 주소가 기기에 따라 다르기 때문에(경로 자체가 다릅니다)
+   *   폼을 만들기 전에 알아야 합니다.
+   */
+  const isMobile = isMobileUserAgent(headers().get('user-agent') ?? '');
+
   const store = await getCachedStore();
-  const built = buildKsnetForm(order, store);
+  const built = buildKsnetForm(order, store, isMobile);
 
   if (built.problem) {
     // ★ 규격에 안 맞는 값으로 결제창을 열면 KSNET 이 거절합니다.
@@ -85,13 +96,13 @@ export default async function CheckoutPayPage({ searchParams }: PageProps) {
     );
   }
 
-  const isMobile = isMobileUserAgent(headers().get('user-agent') ?? '');
-
   return (
     <KsnetPayLauncher
       fields={built.fields}
-      mobileAction={built.mobileAction}
-      scriptUrl={KSPAY_PC_SCRIPT}
+      action={built.action}
+      frameName={KSPAY_FRAME_NAME}
+      frameWidth={KSPAY_FRAME_WIDTH}
+      frameHeight={KSPAY_FRAME_HEIGHT}
       isMobile={isMobile}
       orderNo={order.orderNo}
     />

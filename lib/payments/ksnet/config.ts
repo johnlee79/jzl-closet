@@ -55,19 +55,81 @@ export function ksnetConfigProblem(): string | null {
 
 /* ------------------------------------------------------------------
  * 결제창 주소
+ * ------------------------------------------------------------------
+ *
+ * ★★ 전부 https 입니다. http 를 쓰지 마세요.
+ *   우리 사이트는 https 입니다. https 페이지에서 http 로 폼을 보내면
+ *   브라우저가 Mixed Content 로 막습니다. 결제창이 아예 열리지 않습니다.
+ *   통합모듈 문서에는 모바일 주소가 http 로 적혀 있지만,
+ *   실제로 확인해 보니 세 주소 모두 https 로 정상 응답합니다. (인증서도 정상)
  * ------------------------------------------------------------------ */
 
-/** PC — 폼을 만들고 이 스크립트의 _pay(form) 을 부릅니다. (레이어/팝업) */
-export const KSPAY_PC_SCRIPT =
-  'https://kspay.ksnet.to/store/KSPayWebV1.4/js/kspay_web_ssl.js';
+/**
+ * PC 결제창.
+ *
+ * ★ 이 주소는 KSNET 의 kspay_web_ssl.js 안에 있는 _KSPAY_URL 과 같은 값입니다.
+ *   (그 파일 첫 줄: var _KSPAY_URL = "https://kspay.ksnet.to/store/KSPayWebV1.4/KSPayPWeb.jsp")
+ * ★ 모바일 주소(KSPayMobileV1.4)와 경로가 다릅니다. 헷갈리지 마세요.
+ *   PC 는 KSPayWebV1.4, 모바일은 KSPayMobileV1.4 입니다.
+ */
+export const KSPAY_PC_ACTION =
+  'https://kspay.ksnet.to/store/KSPayWebV1.4/KSPayPWeb.jsp';
 
 /** 모바일 — 폼 action 으로 두고 target=_self 로 페이지째 이동합니다. */
 export const KSPAY_MOBILE_ACTION =
-  'http://kspay.ksnet.to/store/KSPayMobileV1.4/KSPayPWeb.jsp';
+  'https://kspay.ksnet.to/store/KSPayMobileV1.4/KSPayPWeb.jsp';
 
 /** 서버가 최종 승인을 확인하는 곳 */
 export const KSPAY_APPROVE_URL =
-  'http://kspay.ksnet.to/store/KSPayWebV1.4/web_host/recv_post.jsp';
+  'https://kspay.ksnet.to/store/KSPayWebV1.4/web_host/recv_post.jsp';
+
+/**
+ * ============================================================
+ * ★★ KSNET 의 kspay_web_ssl.js 를 왜 쓰지 않는가
+ * ============================================================
+ *
+ * 통합모듈 안내는 그 스크립트를 불러 _pay(form) 을 부르라고 되어 있습니다.
+ * 실제로 붙여 보니 PC 결제창이 열리지 않았고, 원인은 세 가지였습니다.
+ *
+ *   1) 그 스크립트는 document.writeln 으로 자기 jQuery 를 불러옵니다.
+ *      요즘 브라우저는 "비동기로 불러온 스크립트의 document.write" 를 무시합니다.
+ *      (Failed to execute 'write' on 'Document')
+ *      그래서 jQuery 가 끝내 로드되지 않고, 스크립트 안에서 $ 를 쓰는 순간
+ *      ReferenceError: $ is not defined 로 멈춥니다.
+ *   2) _pay() 는 문제가 생기면 alert() 을 띄웁니다.
+ *      결제 흐름 중에 모달이 뜨면 그 뒤 아무것도 진행되지 않습니다.
+ *   3) 창 크기를 822x630 으로 고정합니다. 화면이 작은 노트북에서 잘립니다.
+ *
+ * 그 스크립트가 실제로 하는 일은 submitI() 하나뿐이고, 내용은 이렇습니다.
+ *      오버레이 div + iframe(name=payment-frame) 을 만들고
+ *      form.method=post / form.target=payment-frame / form.action=_KSPAY_URL
+ *      form.submit()
+ * 이게 전부입니다. 그래서 jQuery 108KB 와 document.write 를 끌어들이는 대신
+ * components/KsnetPayLauncher.tsx 에서 같은 일을 직접 합니다.
+ *
+ * ★ 이렇게 해도 되는 근거 (실제로 파일을 열어 확인했습니다)
+ *   · 결제창(iframe)은 자기 jQuery 를 따로 불러옵니다. 부모의 jQuery 를 쓰지 않습니다.
+ *   · main.js 안의 parent.closeEvent / parent.closeFormEvent 호출은 전부 주석 처리되어
+ *     있습니다. 즉 결제창이 부모의 함수를 부르지 않습니다.
+ *   · 결제창의 [닫기] 버튼은 payClose() → payForm 을 sndReply(우리 주소)로 POST 합니다.
+ *     이때 reCommConId 는 비우고 reCnclType 에 1 을 넣습니다.
+ *     그래서 취소도 우리 서버가 받아서 처리합니다.
+ *
+ * ★ 나중에 KSNET 이 규격을 바꾸면 이 파일의 주소 상수와
+ *   KsnetPayLauncher.tsx 두 곳만 보면 됩니다.
+ */
+
+/** 결제창(iframe) 이름 — KSNET 문서·스크립트가 쓰는 이름 그대로입니다. */
+export const KSPAY_FRAME_NAME = 'payment-frame';
+
+/**
+ * 결제창 크기. KSNET 스크립트가 쓰는 값과 같습니다.
+ * ★ 결제창은 우리와 다른 도메인이라 스스로 높이를 바꾸지 못합니다.
+ *   (main.js 의 update_iframe_height 가 window.parent.document 를 만지는데,
+ *    교차 출처라 막힙니다) 그래서 우리가 크기를 정해 줘야 합니다.
+ */
+export const KSPAY_FRAME_WIDTH = 822;
+export const KSPAY_FRAME_HEIGHT = 630;
 
 /** 거래 확인 사이트 — 관리자 화면 안내에 씁니다. */
 export const KSNET_ADMIN_URL = 'https://ksta.ksnet.co.kr';
