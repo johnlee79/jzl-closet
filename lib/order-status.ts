@@ -137,6 +137,119 @@ export function statusHint(status: string): string {
   return ORDER_STATUS_META[status as OrderStatus]?.hint ?? '';
 }
 
+/* ==================================================================
+ * 손님에게 보여 줄 결제 안내 — ★ 이 함수 하나만 씁니다
+ * ==================================================================
+ *
+ * ★★ 왜 따로 두는가 (4-A 에서 실제로 사고가 났습니다)
+ *   주문 완료 화면은 제목을 결제수단으로 정하고, 상태 카드는 status 로 정했습니다.
+ *   그 둘이 서로 다른 값을 보다 보니 한 화면에서
+ *     제목  "결제가 완료되었습니다"
+ *     상태  "결제대기 — 무통장입금을 고르셨다면 계좌로 입금해 주세요"
+ *   가 동시에 나왔습니다. 카드로 결제한 손님이 이걸 보면 결제가 안 된 줄 압니다.
+ *
+ *   그래서 손님에게 나가는 결제 관련 문구는 전부 이 함수 하나에서 나옵니다.
+ *   완료 화면·주문 조회·마이페이지가 같은 함수를 부르므로 서로 다른 말을 할 수 없습니다.
+ *   문구를 고칠 일이 생기면 여기만 고치세요.
+ *
+ * ★ 두 가지 원칙
+ *   1) 카드 주문에는 절대 "입금해 주세요" 라고 하지 않습니다.
+ *   2) 승인 여부가 확실하지 않은 상태(승인확인실패·검토필요)를 실패로 단정하지 않습니다.
+ *      손님에게는 내부 상태명 대신 "결제를 확인하고 있습니다" 로만 보여 줍니다.
+ *      여기서 재결제를 유도하면 이중결제가 납니다.
+ */
+
+/** 손님 화면에서 구분하는 결제 상태 */
+export type CustomerPaymentView =
+  /** 결제가 끝났습니다 */
+  | 'paid'
+  /** 무통장입금 — 아직 입금 전 */
+  | 'bank_pending'
+  /** 확인 중 (카드 결제대기 · 승인확인실패 · 검토필요) */
+  | 'checking'
+  | 'cancelled'
+  | 'failed'
+  /** 배송 단계 등 그 밖의 상태 */
+  | 'other';
+
+export function customerPaymentView(
+  status: string,
+  paymentMethod: string
+): CustomerPaymentView {
+  const isBank = paymentMethod === 'bank_transfer';
+
+  switch (status) {
+    case 'pending_payment':
+      /*
+       * ★ 같은 '결제대기' 라도 결제수단에 따라 뜻이 다릅니다.
+       *   무통장입금 — 손님이 입금할 차례입니다 (계좌를 안내해야 합니다)
+       *   카드       — 우리가 승인 결과를 확인하는 중입니다 (입금 안내를 하면 안 됩니다)
+       *   카드 주문이 잠깐 이 상태로 보이는 것은 승인 확인이 끝나기 전 몇 초입니다.
+       */
+      return isBank ? 'bank_pending' : 'checking';
+    case 'payment_unconfirmed':
+    case 'payment_review':
+      return 'checking';
+    case 'failed':
+      return 'failed';
+    case 'cancelled':
+    case 'cancel_requested':
+      return 'cancelled';
+    case 'paid':
+      return 'paid';
+    default:
+      return 'other';
+  }
+}
+
+/**
+ * 손님에게 보여 줄 제목과 설명.
+ * ★ 완료 화면의 큰 제목과 주문 내역의 상태 카드가 이 값을 함께 씁니다.
+ */
+export function customerPaymentText(
+  view: CustomerPaymentView,
+  status: string
+): { title: string; body: string } {
+  switch (view) {
+    case 'paid':
+      return {
+        title: '결제가 완료되었습니다',
+        body: '곧 상품 준비를 시작하며, 출고되면 송장번호를 안내드립니다.',
+      };
+    case 'bank_pending':
+      return {
+        title: '주문이 접수되었습니다',
+        body: '안내드린 계좌로 입금해 주시면 확인 후 발송 준비를 시작합니다.',
+      };
+    case 'checking':
+      return {
+        title: '결제를 확인하고 있습니다',
+        body: '잠시 후 주문 조회에서 확인하실 수 있습니다.',
+      };
+    case 'cancelled':
+      return {
+        title: statusLabel(status),
+        body: statusHint(status),
+      };
+    case 'failed':
+      return {
+        title: '결제가 완료되지 않았습니다',
+        body: '결제된 금액은 없습니다. 다시 주문해 주세요.',
+      };
+    default:
+      return { title: statusLabel(status), body: statusHint(status) };
+  }
+}
+
+/** 주문 하나를 그대로 넘겨 쓰는 짧은 형태 */
+export function orderPaymentText(order: {
+  status: string;
+  paymentMethod: string;
+}): { view: CustomerPaymentView; title: string; body: string } {
+  const view = customerPaymentView(order.status, order.paymentMethod);
+  return { view, ...customerPaymentText(view, order.status) };
+}
+
 export function isOrderStatus(value: string): value is OrderStatus {
   return (ORDER_STATUSES as readonly string[]).includes(value);
 }

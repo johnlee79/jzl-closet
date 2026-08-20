@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { courierName, trackingUrl } from '@/lib/couriers';
-import { statusHint, statusLabel } from '@/lib/order-status';
+import { orderPaymentText } from '@/lib/order-status';
 import { formatPrice } from '@/lib/product-utils';
+import { paymentMethodLabel } from '@/lib/site-config';
 import type { Order } from '@/lib/types';
 
 /**
@@ -28,6 +29,13 @@ export default function OrderReceipt({
   bank?: BankInfo | null;
   showStatus?: boolean;
 }) {
+  /*
+   * ★ 상태 문구는 lib/order-status.ts 한 곳에서만 나옵니다.
+   *   완료 화면의 큰 제목도 같은 함수를 씁니다. 그래서 두 곳이 다른 말을 할 수 없습니다.
+   *   (예전에는 제목은 결제수단으로, 여기는 status 로 각자 정해서 서로 어긋났습니다)
+   */
+  const payment = orderPaymentText(order);
+
   const liveItems = order.items.filter((item) => item.itemStatus === 'normal');
   const cancelledItems = order.items.filter((item) => item.itemStatus === 'cancelled');
   const tracking = trackingUrl(order.courier, order.trackingNo);
@@ -41,11 +49,32 @@ export default function OrderReceipt({
             주문 상태
           </h2>
           <p className="mt-3 font-serif text-[22px] text-ink md:text-[26px]">
-            {statusLabel(order.status)}
+            {payment.title}
           </p>
-          <p className="mt-2 text-[15px] leading-relaxed text-ink">
-            {statusHint(order.status)}
-          </p>
+          <p className="mt-2 text-[15px] leading-relaxed text-ink">{payment.body}</p>
+
+          {/*
+            카드 승인 정보 (4-A)
+            ★ 손님이 가장 불안해하는 지점입니다. 승인번호가 눈에 보이면 안심합니다.
+              카드사에 문의할 때도 이 번호가 필요합니다.
+            ★ 무통장입금에는 나오지 않습니다. (승인번호가 없습니다)
+          */}
+          {payment.view === 'paid' && order.pgAuthNo ? (
+            <dl className="mt-6 flex flex-col gap-2 border-t border-stone pt-5 text-[15px]">
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted">결제수단</dt>
+                <dd className="text-ink">{paymentMethodLabel(order.paymentMethod)}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted">승인번호</dt>
+                <dd className="font-mono tabular-nums text-ink">{order.pgAuthNo}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted">결제금액</dt>
+                <dd className="text-ink">{formatPrice(order.totalAmount)}원</dd>
+              </div>
+            </dl>
+          ) : null}
 
           {order.trackingNo ? (
             <div className="mt-6 border-t border-stone pt-5">
@@ -236,7 +265,8 @@ export function orderToText(order: Order, storeName: string): string {
     '',
     `주문번호: ${order.orderNo}`,
     `주문일시: ${order.createdAt ? new Date(order.createdAt).toLocaleString('ko-KR') : '-'}`,
-    `주문상태: ${statusLabel(order.status)}`,
+    // ★ 화면과 같은 문구를 씁니다. 복사한 글과 화면이 다른 말을 하면 안 됩니다.
+    `주문상태: ${orderPaymentText(order).title}`,
     '',
     ...order.items
       .filter((item) => item.itemStatus === 'normal')

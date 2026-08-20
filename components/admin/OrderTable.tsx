@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { bulkStatusAction } from '@/app/admin/order-actions';
 import { courierName } from '@/lib/couriers';
@@ -41,6 +41,28 @@ function formatDateTime(value: string | null): string {
 export default function OrderTable({ orders }: { orders: Order[] }) {
   const router = useRouter();
   const params = useSearchParams();
+  const pathname = usePathname();
+
+  /**
+   * 지금 걸려 있는 필터를 사람이 읽는 말로 바꿉니다.
+   * ★ 목록이 비었을 때 "왜 비었는지" 를 알려 주는 데 씁니다.
+   *   필터를 켜 둔 것을 잊고 주문이 사라졌다고 오해하는 일이 실제로 있었습니다.
+   */
+  const activeFilters = [
+    params.get('status') ? `상태=${statusLabel(params.get('status') as string)}` : '',
+    params.get('q') ? `검색=${params.get('q')}` : '',
+    params.get('from') || params.get('to')
+      ? `기간=${params.get('from') ?? ''}~${params.get('to') ?? ''}`
+      : '',
+    params.get('receipt') === 'todo'
+      ? '현금영수증 미발급'
+      : params.get('receipt') === 'requested'
+        ? '현금영수증 신청 전체'
+        : '',
+    params.get('method')
+      ? `결제수단=${paymentMethodLabel(params.get('method') as string)}`
+      : '',
+  ].filter(Boolean);
   const [pending, startTransition] = useTransition();
   const [selected, setSelected] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState<string>('paid');
@@ -160,9 +182,25 @@ export default function OrderTable({ orders }: { orders: Order[] }) {
       {/* ── 표 ────────────────────────────────────────── */}
       <div className="admin-card overflow-x-auto">
         {orders.length === 0 ? (
-          <p className="px-4 py-16 text-center text-[14px] text-slate-500">
-            조건에 맞는 주문이 없습니다.
-          </p>
+          /*
+            ★ 왜 비었는지 알려 줍니다. (4-A)
+              현금영수증·결제수단 필터를 켜 둔 것을 잊고 "주문이 사라졌다" 고
+              오해하는 일이 실제로 있었습니다. 필터가 걸려 있으면 그것을 말해 주고
+              한 번에 풀 수 있는 버튼을 같이 둡니다.
+          */
+          <div className="px-4 py-16 text-center">
+            <p className="text-[14px] text-slate-500">조건에 맞는 주문이 없습니다.</p>
+            {activeFilters.length > 0 ? (
+              <>
+                <p className="mt-2 text-[13px] text-amber-800">
+                  지금 걸려 있는 조건: {activeFilters.join(' · ')}
+                </p>
+                <Link href={pathname} className="admin-btn mt-3 inline-flex">
+                  조건 모두 지우고 전체 보기
+                </Link>
+              </>
+            ) : null}
+          </div>
         ) : (
           <table className="w-full min-w-[1180px] border-collapse text-[14px]">
             <thead>

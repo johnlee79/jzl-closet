@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import CartClearOnComplete from '@/components/CartClearOnComplete';
+import PaymentStatusRefresh from '@/components/PaymentStatusRefresh';
 import CopyOrderButton from '@/components/CopyOrderButton';
 import DepositCountdown from '@/components/DepositCountdown';
 import OrderReceipt, { orderToText } from '@/components/OrderReceipt';
 import { depositDeadline, getOrderByNo } from '@/lib/orders';
 import { verifyOrderToken } from '@/lib/order-token';
+import { orderPaymentText } from '@/lib/order-status';
 import { getCachedStore, getPaymentSettings } from '@/lib/settings';
 
 /**
@@ -57,13 +59,26 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
   const payment = await getPaymentSettings();
 
   /*
-   * ★ 무통장입금과 카드결제는 이 화면에서 보여 줄 것이 완전히 다릅니다. (4-A)
-   *   무통장입금 — 입금 계좌와 입금 기한 (아직 돈이 안 들어왔습니다)
-   *   카드결제   — 결제 완료 안내 (이미 돈이 들어왔습니다)
-   *   카드로 결제한 손님에게 "24시간 안에 입금하세요" 가 보이면
-   *   결제가 안 된 줄 알고 한 번 더 결제합니다. 반드시 갈라야 합니다.
+   * ★★ 이 화면의 모든 문구는 orderPaymentText 하나에서 나옵니다. (4-A)
+   *   아래 OrderReceipt 의 상태 카드도 같은 함수를 씁니다.
+   *   그래서 큰 제목과 상태 카드가 서로 다른 말을 할 수 없습니다.
+   *
+   *   예전에는 제목을 결제수단으로, 상태 카드를 status 로 각자 정했습니다.
+   *   승인 확인이 끝나기 전 몇 초 사이에 화면이 그려지면
+   *     제목  "결제가 완료되었습니다"
+   *     상태  "결제대기 — 무통장입금을 고르셨다면 계좌로 입금해 주세요"
+   *   가 한 화면에 같이 나왔습니다. 카드 손님에게는 최악의 안내입니다.
+   *
+   *   view 가 갈리는 기준
+   *     paid         결제가 끝남 — 승인번호까지 보여 줍니다
+   *     bank_pending 무통장입금, 입금 전 — 계좌와 기한을 안내합니다
+   *     checking     카드인데 아직 확인 중 — 실패라고 말하지 않습니다
    */
-  const isBank = order.paymentMethod === 'bank_transfer';
+  const payment_ = orderPaymentText(order);
+  const view = payment_.view;
+
+  /** 계좌·입금기한·에스크로는 "무통장입금이고 아직 입금 전" 일 때만 보여 줍니다. */
+  const isBank = view === 'bank_pending';
 
   const deadline =
     depositDeadline(order.createdAt, payment.depositHours) ??
@@ -88,9 +103,11 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
       <CartClearOnComplete />
 
       <header className="max-w-[680px]">
-        <p className="label-xs">ORDER COMPLETE</p>
+        <p className="label-xs">
+          {view === 'paid' ? 'PAYMENT COMPLETE' : 'ORDER COMPLETE'}
+        </p>
         <h1 className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[34px]">
-          {isBank ? '주문이 접수되었습니다' : '결제가 완료되었습니다'}
+          {payment_.title}
         </h1>
         <p className="mt-6 border border-stone px-6 py-5">
           <span className="text-[13px] tracking-[0.14em] text-muted">주문번호</span>
@@ -105,12 +122,16 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
               확인 후 발송을 시작합니다. 입금이 확인되면 알려드립니다.
             </>
           ) : (
-            <>
-              결제가 정상적으로 완료되었습니다. 곧 상품 준비를 시작하며, 출고되면
-              송장번호를 안내드립니다.
-            </>
+            payment_.body
           )}
         </p>
+
+        {/*
+          ★ 확인 중일 때만 잠깐 기다렸다 다시 읽습니다.
+            승인 확인은 보통 1~2초면 끝납니다. 그 사이에 화면이 그려졌을 뿐인데
+            손님이 결제가 안 된 줄 알고 다시 결제하는 것을 막습니다.
+        */}
+        {view === 'checking' ? <PaymentStatusRefresh /> : null}
       </header>
 
       <div className="mt-12 grid grid-cols-1 gap-12 lg:grid-cols-[1fr_320px] lg:gap-16">
