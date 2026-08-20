@@ -1,15 +1,18 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
+import FieldError from '@/components/FieldError';
 import PostcodeSearch from '@/components/PostcodeSearch';
+import SaveFeedback from '@/components/SaveFeedback';
 import { useSite } from '@/components/SiteProvider';
 import { changePasswordAction } from '@/app/(shop)/auth-actions';
 import { updateProfileAction } from '@/app/(shop)/mypage/actions';
 import { formatPhone } from '@/lib/format';
 import { postcodeFallbackNotice } from '@/lib/postcode';
-
-type Message = { tone: 'ok' | 'error'; text: string } | null;
+import { notifyProfileUpdated } from '@/lib/profile-events';
+import { useFieldProblems } from '@/lib/use-field-problems';
+import { useSave } from '@/lib/use-save';
 
 /** 생년월일에 미래 날짜를 고르지 못하게 막습니다. */
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -43,9 +46,12 @@ export default function ProfileForm({
   const isSocial = provider !== 'email';
   const router = useRouter();
   const { store } = useSite();
-  const [pending, startTransition] = useTransition();
+  /** 저장 중 표시 · 저장 결과 안내 · 자동 사라짐을 한꺼번에 (lib/use-save.ts) */
+  const save_ = useSave();
+  const pending = save_.pending;
+  /** 빈 칸 표시 · 안내 · 스크롤 (lib/use-field-problems.ts) */
+  const problems = useFieldProblems();
   const [form, setForm] = useState(initial);
-  const [message, setMessage] = useState<Message>(null);
   /** 주소 검색을 못 불러왔을 때 직접 입력으로 전환합니다. */
   const [manualAddress, setManualAddress] = useState(false);
 
@@ -53,43 +59,63 @@ export default function ProfileForm({
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [nextConfirm, setNextConfirm] = useState('');
-  const [pwMessage, setPwMessage] = useState<Message>(null);
+  const password = useSave();
 
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
-    setMessage(null);
+    save_.setFeedback(null);
+    // 고치기 시작하면 빨간 표시를 지웁니다. 고치는 중에 계속 빨간 것은 잔소리입니다.
+    problems.clear();
   };
 
   const save = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (pending) return;
-    setMessage(null);
-    startTransition(async () => {
-      const result = await updateProfileAction(form);
-      if (!result.ok) {
-        setMessage({ tone: 'error', text: result.error });
-        return;
-      }
-      setMessage({ tone: 'ok', text: '회원 정보를 저장했습니다.' });
+
+    /*
+     * ★ 필수 항목부터 봅니다. 문제가 있으면 그 칸으로 화면을 옮기고 멈춥니다.
+     *   예전에는 아무 말 없이 멈춰서 왜 저장이 안 되는지 알 수 없었습니다.
+     * ★ 연락처는 주문·배송에 꼭 필요합니다. 없으면 헤더에 안내 배너가 계속 뜹니다.
+     */
+    if (
+      problems.check([
+        { field: 'name', ok: form.name.trim().length > 0, message: '이름을 입력해 주세요.' },
+        {
+          field: 'phone',
+          ok: form.phone.trim().length > 0,
+          message: '연락처를 입력해 주세요. 배송 안내를 받으실 번호입니다.',
+        },
+        {
+          field: 'phone',
+          ok: /^0\d{1,2}-?\d{3,4}-?\d{4}$/.test(form.phone.trim()),
+          message: '연락처를 010-1234-5678 형식으로 입력해 주세요.',
+        },
+      ])
+    ) {
+      return;
+    }
+
+    save_.run(() => updateProfileAction(form), '회원 정보가 저장되었습니다.', () => {
       router.refresh();
+      /*
+       * ★ 헤더의 "연락처를 입력해 주세요" 배너에 알립니다.
+       *   그 배너는 클라이언트 컴포넌트라 router.refresh() 로는 갱신되지 않습니다.
+       *   이 신호가 없으면 저장이 됐는데도 배너가 계속 떠 있습니다.
+       */
+      notifyProfileUpdated();
     });
   };
 
   const changePassword = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (pending) return;
-    setPwMessage(null);
-    startTransition(async () => {
-      const result = await changePasswordAction(current, next, nextConfirm);
-      if (!result.ok) {
-        setPwMessage({ tone: 'error', text: result.error });
-        return;
+    password.run(
+      () => changePasswordAction(current, next, nextConfirm),
+      '비밀번호가 변경되었습니다.',
+      () => {
+        setCurrent('');
+        setNext('');
+        setNextConfirm('');
       }
-      setPwMessage({ tone: 'ok', text: '비밀번호를 바꿨습니다.' });
-      setCurrent('');
-      setNext('');
-      setNextConfirm('');
-    });
+    );
   };
 
   return (
@@ -118,11 +144,14 @@ export default function ProfileForm({
             </label>
             <input
               id="profile-name"
+              ref={problems.ref('name')}
               type="text"
               value={form.name}
               onChange={(event) => set('name', event.target.value)}
-              className={inputClass}
+              aria-invalid={problems.has('name') || undefined}
+              className={problems.inputClass('name', inputClass)}
             />
+            <FieldError message={problems.messageFor('name')} />
           </div>
 
           <div>
@@ -131,13 +160,16 @@ export default function ProfileForm({
             </label>
             <input
               id="profile-phone"
+              ref={problems.ref('phone')}
               type="tel"
               inputMode="numeric"
               value={form.phone}
               onChange={(event) => set('phone', formatPhone(event.target.value))}
               placeholder="010-1234-5678"
-              className={inputClass}
+              aria-invalid={problems.has('phone') || undefined}
+              className={problems.inputClass('phone', inputClass)}
             />
+            <FieldError message={problems.messageFor('phone')} />
           </div>
 
           <div>
@@ -226,17 +258,9 @@ export default function ProfileForm({
           </label>
         </div>
 
-        {message ? (
-          <p
-            role="status"
-            className={`mt-6 text-[14px] leading-relaxed ${
-              message.tone === 'ok' ? 'text-ink' : 'text-wine'
-            }`}
-          >
-            {message.text}
-          </p>
-        ) : null}
+        <SaveFeedback feedback={save_.feedback} className="mt-6" />
 
+        {/* ★ 저장 중에는 눌리지 않습니다. 두 번 눌러도 한 번만 나갑니다. */}
         <button type="submit" disabled={pending} className="btn-primary mt-8">
           {pending ? '저장 중…' : '회원 정보 저장'}
         </button>
@@ -309,23 +333,14 @@ export default function ProfileForm({
           </div>
         </div>
 
-        {pwMessage ? (
-          <p
-            role="status"
-            className={`mt-6 text-[14px] leading-relaxed ${
-              pwMessage.tone === 'ok' ? 'text-ink' : 'text-wine'
-            }`}
-          >
-            {pwMessage.text}
-          </p>
-        ) : null}
+        <SaveFeedback feedback={password.feedback} className="mt-6" />
 
         <button
           type="submit"
-          disabled={pending || !current || !next}
+          disabled={password.pending || !current || !next}
           className="btn-secondary mt-8"
         >
-          {pending ? '변경 중…' : '비밀번호 변경'}
+          {password.pending ? '변경 중…' : '비밀번호 변경'}
         </button>
       </form>
       )}

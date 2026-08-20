@@ -340,7 +340,7 @@ export default function ReviewManager({
                       onClick={() => remove(review)}
                       className="admin-btn-danger"
                     >
-                      삭제
+                      {pending ? '삭제 중…' : '삭제'}
                     </button>
                   </div>
                 </div>
@@ -404,7 +404,7 @@ export default function ReviewManager({
                         onClick={() => saveReply(review)}
                         className="admin-btn-primary"
                       >
-                        답변 저장
+                        {pending ? '저장 중…' : '답변 저장'}
                       </button>
                       <button
                         type="button"

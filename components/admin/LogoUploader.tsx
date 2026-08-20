@@ -82,7 +82,7 @@ export default function LogoUploader({
           onClick={() => save('')}
           className="admin-btn-danger mt-4"
         >
-          텍스트 로고로 되돌리기
+          {pending ? '되돌리는 중…' : '텍스트 로고로 되돌리기'}
         </button>
       ) : null}
 

@@ -93,7 +93,7 @@ export default function HeldLinkList({ items }: { items: HeldLink[] }) {
                 disabled={pending}
                 className="admin-btn-primary disabled:opacity-50"
               >
-                인정
+                {pending ? '처리 중…' : '인정'}
               </button>
               <button
                 type="button"
@@ -101,7 +101,7 @@ export default function HeldLinkList({ items }: { items: HeldLink[] }) {
                 disabled={pending}
                 className="admin-btn-danger disabled:opacity-50"
               >
-                거절
+                {pending ? '처리 중…' : '거절'}
               </button>
             </div>
           </li>

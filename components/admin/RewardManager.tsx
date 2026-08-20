@@ -121,7 +121,7 @@ function ShippingForm({
           disabled={busy}
           className="admin-btn disabled:opacity-50"
         >
-          받는 분 정보 저장
+          {busy ? '저장 중…' : '받는 분 정보 저장'}
         </button>
       </div>
 
@@ -153,7 +153,7 @@ function ShippingForm({
           disabled={busy}
           className="admin-btn-primary disabled:opacity-50"
         >
-          발송 완료 처리
+          {busy ? '처리 중…' : '발송 완료 처리'}
         </button>
       </div>
     </div>
@@ -249,7 +249,7 @@ export default function RewardManager({ items }: { items: Achievement[] }) {
                     disabled={pending}
                     className="admin-btn-primary disabled:opacity-50"
                   >
-                    지급하기
+                    {pending ? '지급 중…' : '지급하기'}
                   </button>
                 ) : null}
 
@@ -278,7 +278,7 @@ export default function RewardManager({ items }: { items: Achievement[] }) {
                     disabled={pending}
                     className="admin-btn-danger disabled:opacity-50"
                   >
-                    거절
+                    {pending ? '처리 중…' : '거절'}
                   </button>
                 ) : null}
               </div>

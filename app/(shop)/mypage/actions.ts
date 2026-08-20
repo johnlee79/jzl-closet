@@ -40,7 +40,17 @@ export async function updateProfileAction(patch: {
   const member = await getActiveMember();
   if (!member) return needLogin();
 
+  /*
+   * ★ 화면에서도 막지만 여기서 한 번 더 봅니다.
+   *   화면 검사는 안내를 위한 것이고, 실제로 막는 것은 서버입니다.
+   * ★ 연락처는 주문·배송에 반드시 필요합니다. 없으면 발송 사고가 납니다.
+   *   구글 로그인은 연락처를 주지 않아 비어 있는 회원이 생깁니다.
+   */
   if (!patch.name.trim()) return { ok: false, error: '이름을 입력해 주세요.' };
+  if (!patch.phone.trim()) return { ok: false, error: '연락처를 입력해 주세요.' };
+  if (!/^0\d{1,2}-?\d{3,4}-?\d{4}$/.test(patch.phone.trim())) {
+    return { ok: false, error: '연락처를 010-1234-5678 형식으로 입력해 주세요.' };
+  }
 
   // 생년월일에 미래 날짜가 들어오면 생일 포인트가 영원히 지급되지 않습니다.
   if (patch.birthday && patch.birthday > new Date().toISOString().slice(0, 10)) {
