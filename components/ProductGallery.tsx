@@ -167,8 +167,15 @@ export default function ProductGallery({
        * ★ 데스크탑에서는 absolute 로 띄웁니다.
        *   그래야 썸네일이 아무리 많아도 이 목록이 갤러리 전체 높이를 밀어 올리지 않습니다.
        *   높이는 오른쪽 큰 이미지가 정하고, 목록은 그 높이 안에서 스크롤됩니다.
+       *
+       * ★ 썸네일 비율을 aspect-[3/4] 로 못 박습니다. (예전에는 높이 110px 고정이었습니다)
+       *   세로만 고정해 두면 세로 스크롤바가 가로를 먹는 만큼 칸이 좁아져
+       *   3:4 인 상품 사진의 좌우가 잘렸습니다. 스크롤바 두께는 기기마다 달라서
+       *   폭을 아무리 맞춰도 어딘가에서는 어긋납니다.
+       *   비율로 두면 남는 폭이 얼마든 사진이 잘리지 않습니다.
+       * ★ 모바일은 그대로 가로 스크롤(h-[100px] w-[76px])입니다. md 부터만 바뀝니다.
        */}
-      <div className="shrink-0 md:relative md:w-[84px]">
+      <div className="shrink-0 md:relative md:w-[104px]">
       <ul className="flex gap-3 overflow-x-auto md:absolute md:inset-0 md:flex-col md:overflow-y-auto md:overflow-x-hidden">
         {list.map((src, index) => (
           <li key={`${src}-${index}`} className="shrink-0">
@@ -177,7 +184,7 @@ export default function ProductGallery({
               onClick={() => show(index)}
               aria-label={`${productName} ${index + 1}번째 이미지 보기`}
               aria-current={index === active}
-              className={`block h-[100px] w-[76px] overflow-hidden border bg-stone transition-colors duration-200 md:h-[110px] md:w-full ${
+              className={`block h-[100px] w-[76px] overflow-hidden border bg-stone transition-colors duration-200 md:aspect-[3/4] md:h-auto md:w-full ${
                 index === active ? 'border-ink' : 'border-transparent'
               }`}
             >
