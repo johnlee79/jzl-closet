@@ -3,11 +3,13 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import CartChangeNotice from '@/components/CartChangeNotice';
 import SafeImage from '@/components/SafeImage';
 import SignupPointBadge from '@/components/SignupPointBadge';
 import { useSite } from '@/components/SiteProvider';
-import { placeOrderAction, quoteShippingAction } from '@/app/(shop)/checkout/actions';
+import { placeOrderAction } from '@/app/(shop)/checkout/actions';
 import { useCart } from '@/lib/cart';
+import { useCartLive } from '@/lib/cart-live';
 import {
   clearDraft,
   loadDraft,
@@ -89,7 +91,7 @@ export default function CheckoutForm({
   methods: { key: PaymentMethod; label: string }[];
 }) {
   const router = useRouter();
-  const { items, total, ready } = useCart();
+  const { items, ready } = useCart();
   const [pending, startTransition] = useTransition();
 
   const [form, setForm] = useState<Form>({
@@ -121,11 +123,18 @@ export default function CheckoutForm({
 
   const [error, setError] = useState('');
   const [problems, setProblems] = useState<string[]>([]);
-  const [fees, setFees] = useState({
-    shippingFee: shipping.baseFee,
-    extraShippingFee: 0,
-    remote: false,
-  });
+
+  /*
+   * ★★ 금액은 전부 여기서 나옵니다. 담을 때 적어 둔 값으로 계산하지 않습니다.
+   *   상품 합계 · 배송비 · 도서산간 추가비를 서버가 한 번에 냅니다.
+   *   예전에는 화면이 들고 있던 옛 합계를 서버에 보내 배송비만 물어봤습니다.
+   *   옛 합계가 무료배송 문턱을 넘고 실제 금액은 못 넘으면, 손님은 "무료" 를 보고
+   *   주문했는데 배송비가 붙어 청구됐습니다.
+   * ★ 우편번호는 숫자만 넘깁니다. 도서산간 판별이 숫자로 되어 있습니다.
+   */
+  const live = useCartLive(form.postcode.replace(/[^0-9]/g, ''));
+  const total = live.itemsTotal;
+
   /**
    * 주소 검색 스크립트.
    * ★ 화면에 들어오는 순간 미리 받아 둡니다. 실패하면 자동으로 두 번 더 시도하고,
@@ -238,24 +247,6 @@ export default function CheckoutForm({
     setForm((prev) => ({ ...prev, depositorName: prev.ordererName }));
   }, [form.ordererName]);
 
-  /**
-   * 우편번호가 정해지면 서버에 배송비를 물어봅니다.
-   * ★ 화면에 보여 주기 위한 값일 뿐이고, 실제 청구 금액은 주문 시 서버가 다시 계산합니다.
-   */
-  useEffect(() => {
-    let alive = true;
-    const postcode = form.postcode.replace(/[^0-9]/g, '');
-
-    void (async () => {
-      const quote = await quoteShippingAction(total, postcode);
-      if (alive) setFees(quote);
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, [form.postcode, total]);
-
   /*
    * 무통장입금을 골랐는지.
    * ★ 입금자명·현금영수증은 무통장입금에만 해당합니다.
@@ -297,7 +288,7 @@ export default function CheckoutForm({
 
   const totalAmount = Math.max(
     0,
-    total + fees.shippingFee + fees.extraShippingFee - appliedPoints
+    total + live.shippingFee + live.extraShippingFee - appliedPoints
   );
 
   const freeShippingLeft = useMemo(() => {
@@ -368,9 +359,28 @@ export default function CheckoutForm({
     return null;
   };
 
+  /**
+   * 이번 주문에 실제로 들어갈 줄.
+   * ★ 체크를 푼 것과 지금 살 수 없는 것은 뺍니다.
+   *   장바구니에서는 지우지 않습니다. 여기서만 빠집니다.
+   */
+  const orderLines = live.lines.filter((line) => line.orderable);
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (pending) return;
+
+    /*
+     * ★★ 금액을 확인하지 못했으면 여기서 멈춥니다.
+     *   버튼도 잠가 두지만, 엔터로도 보낼 수 있으니 한 번 더 막습니다.
+     *   손님이 본 적 없는 금액이 결제되면 안 됩니다.
+     */
+    if (!live.canOrder) {
+      setProblems([]);
+      setError(live.blockReason);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
 
     setProblems([]);
     const problem = findProblem();
@@ -398,11 +408,15 @@ export default function CheckoutForm({
         paymentMethod: form.paymentMethod,
         cashReceiptType: isBank ? form.cashReceiptType : 'none',
         cashReceiptNo: isBank ? form.cashReceiptNo : '',
-        // 가격은 보내지 않습니다. 서버가 상품 테이블에서 다시 읽습니다.
-        items: items.map((item) => ({
-          productSlug: item.productId,
-          optionKey: item.optionKey,
-          quantity: item.quantity,
+        /*
+         * 가격은 보내지 않습니다. 서버가 상품 테이블에서 다시 읽습니다.
+         * ★ 손님이 고른 것 중 지금 살 수 있는 줄만 보냅니다.
+         *   품절된 줄까지 보내면 주문 전체가 막힙니다.
+         */
+        items: orderLines.map((line) => ({
+          productSlug: line.productSlug,
+          optionKey: line.optionKey,
+          quantity: line.quantity,
         })),
         agreed: form.agreed,
         // 서버가 잔액·설정으로 다시 깎습니다. 여기 값은 요청일 뿐입니다.
@@ -521,6 +535,14 @@ export default function CheckoutForm({
           </div>
         ) : null}
 
+        {/*
+          담아 두신 뒤 값이 바뀌었거나 못 사게 된 상품을 알립니다.
+          ★ 장바구니 화면과 같은 안내를 씁니다. 두 화면이 다른 말을 하면 안 됩니다.
+          ★ 값이 오른 경우 여기서도 [확인했습니다] 를 눌러야 결제로 넘어갑니다.
+            장바구니를 건너뛰고 주문서로 바로 들어오는 길이 있기 때문입니다.
+        */}
+        <CartChangeNotice live={live} />
+
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1fr_360px] lg:gap-16">
           <div className="flex flex-col gap-14">
             {/* ── 1. 주문 상품 ───────────────────────────── */}
@@ -529,33 +551,49 @@ export default function CheckoutForm({
                 id="items-heading"
                 className="border-b border-stone pb-4 font-serif text-[22px] text-ink"
               >
-                주문 상품 {items.length}건
+                주문 상품 {orderLines.length}건
               </h2>
               <ul>
-                {items.map((item) => (
-                  <li key={item.key} className="flex gap-4 border-b border-stone py-5">
+                {/*
+                  ★ 주문에 들어가지 않는 줄도 그대로 보여 줍니다. 흐리게 두고 이유를 답니다.
+                    말없이 빼 버리면 손님이 담았던 것을 잃은 줄 압니다.
+                */}
+                {live.lines.map((line) => (
+                  <li
+                    key={line.key}
+                    className={`flex gap-4 border-b border-stone py-5 ${
+                      line.orderable ? '' : 'opacity-45'
+                    }`}
+                  >
                     <div className="h-[88px] w-[68px] shrink-0 overflow-hidden bg-stone">
                       <SafeImage
-                        src={item.thumbnail}
-                        alt={`${item.brand} ${item.name}`}
-                        label={item.name}
+                        src={line.thumbnailUrl}
+                        alt={`${line.brandLabel} ${line.productName}`}
+                        label={line.productName}
                         width={160}
                         height={208}
                       />
                     </div>
                     <div className="flex min-w-0 flex-1 flex-col justify-center">
-                      {item.brand ? (
-                        <p className="text-[13px] tracking-[0.16em] text-muted">{item.brand}</p>
+                      {line.brandLabel ? (
+                        <p className="text-[13px] tracking-[0.16em] text-muted">
+                          {line.brandLabel}
+                        </p>
                       ) : null}
                       <p className="mt-1 text-[17px] font-medium leading-snug text-ink">
-                        {item.name}
+                        {line.productName}
                       </p>
                       <p className="mt-1 text-[14px] text-muted">
-                        {item.optionKey || '옵션 없음'} · {item.quantity}개
+                        {line.optionKey || '옵션 없음'} · {line.quantity}개
                       </p>
+                      {line.orderable ? null : (
+                        <p className="mt-1 text-[14px] font-medium text-wine">
+                          {line.ok ? '이번 주문에서 뺐습니다' : line.reason}
+                        </p>
+                      )}
                     </div>
                     <p className="self-center whitespace-nowrap text-[16px] font-medium text-ink">
-                      {formatPrice(item.price * item.quantity)}원
+                      {formatPrice(line.unitPrice * line.quantity)}원
                     </p>
                   </li>
                 ))}
@@ -769,10 +807,10 @@ export default function CheckoutForm({
                   </ul>
                 </div>
 
-                {fees.remote ? (
+                {live.remote ? (
                   <p className="border border-stone px-4 py-3 text-[15px] leading-relaxed text-ink">
                     제주·도서산간 지역입니다. 추가 배송비{' '}
-                    {formatPrice(fees.extraShippingFee)}원이 더해집니다.
+                    {formatPrice(live.extraShippingFee)}원이 더해집니다.
                   </p>
                 ) : null}
               </div>
@@ -941,13 +979,13 @@ export default function CheckoutForm({
                 <div className="flex justify-between">
                   <dt className="text-muted">배송비</dt>
                   <dd className="text-ink">
-                    {fees.shippingFee === 0 ? '무료' : `${formatPrice(fees.shippingFee)}원`}
+                    {live.shippingFee === 0 ? '무료' : `${formatPrice(live.shippingFee)}원`}
                   </dd>
                 </div>
-                {fees.extraShippingFee > 0 ? (
+                {live.extraShippingFee > 0 ? (
                   <div className="flex justify-between">
                     <dt className="text-muted">도서산간 추가</dt>
-                    <dd className="text-ink">{formatPrice(fees.extraShippingFee)}원</dd>
+                    <dd className="text-ink">{formatPrice(live.extraShippingFee)}원</dd>
                   </div>
                 ) : null}
                 {appliedPoints > 0 ? (
@@ -1059,13 +1097,31 @@ export default function CheckoutForm({
                 </label>
               </div>
 
-              <button type="submit" disabled={pending} className="btn-primary mt-6 w-full">
+              {/*
+                ★★ 금액을 확인하지 못한 채로는 결제로 넘어가지 못하게 잠급니다.
+                  아직 확인 중 · 확인 실패 · 값이 오른 상품을 아직 확인하지 않음 ·
+                  주문할 상품이 하나도 없음 — 네 가지입니다.
+              */}
+              <button
+                type="submit"
+                disabled={pending || !live.canOrder}
+                className="btn-primary mt-6 w-full"
+              >
                 {pending
                   ? isBank
                     ? '주문 접수 중…'
                     : '결제창을 여는 중…'
                   : `${formatPrice(totalAmount)}원 ${isBank ? '주문하기' : '결제하기'}`}
               </button>
+
+              {live.canOrder ? null : (
+                <p
+                  role="status"
+                  className="mt-3 text-center text-[14px] leading-relaxed text-wine"
+                >
+                  {live.blockReason}
+                </p>
+              )}
 
               <p className="mt-4 text-[14px] leading-relaxed text-muted">
                 주문 후 안내되는 계좌로 입금해 주시면 확인 후 발송해 드립니다. 문의는

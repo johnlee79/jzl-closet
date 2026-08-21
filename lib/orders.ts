@@ -695,6 +695,10 @@ export class CheckoutError extends Error {
 /**
  * 장바구니 내용을 서버에서 다시 검증하고 가격을 매깁니다.
  * ★ 여기서 품절·재고 부족을 걸러 냅니다. 클라이언트 가격은 쳐다보지 않습니다.
+ *
+ * ★★ 아래 readCartLines 가 같은 규칙을 봅니다. 한쪽을 고치면 다른 쪽도 고치세요.
+ *   일부러 합치지 않았습니다. 이 함수는 주문을 만드는 길목이라, 화면 때문에
+ *   여기를 건드리다 실수하면 손님에게 청구되는 금액이 틀어집니다.
  */
 async function priceLines(
   items: CheckoutInput['items']
@@ -778,6 +782,128 @@ async function priceLines(
 
   const itemsTotal = lines.reduce((sum, line) => sum + line.lineTotal, 0);
   return { lines, itemsTotal, allFreeShipping };
+}
+
+/* ------------------------------------------------------------------
+ * 장바구니의 "지금" 상태 읽기
+ * ------------------------------------------------------------------ */
+
+/** 장바구니 한 줄이 지금 어떤 상태인지 */
+export type CartLineState = {
+  productSlug: string;
+  optionKey: string;
+  /** 지금 이 줄을 주문에 넣을 수 있는지 */
+  ok: boolean;
+  /** 넣을 수 없는 이유. ok 면 빈 문자열입니다. */
+  reason: string;
+  productName: string;
+  brandLabel: string;
+  thumbnailUrl: string;
+  /** 옵션 추가금까지 더한 개당 가격 */
+  unitPrice: number;
+  extraPrice: number;
+  /** null 이면 재고를 세지 않는 상품입니다 */
+  stock: number | null;
+  freeShipping: boolean;
+};
+
+/**
+ * 장바구니에 담긴 것들이 지금 어떤 상태인지 읽어 옵니다. 아무것도 바꾸지 않습니다.
+ *
+ * ★★ 왜 필요한가
+ *   장바구니는 손님 브라우저에만 있고, 담을 때의 가격이 숫자로 박혀 있습니다.
+ *   그래서 세일가가 바뀌면 손님은 옛 금액을 보면서 주문하게 되고,
+ *   실제로는 주문을 만드는 순간 서버가 새로 매긴 금액이 청구됩니다.
+ *   화면이 열릴 때 이 함수로 물어보고 그 값으로 다시 그립니다.
+ *
+ * ★★ 위 priceLines 와 같은 규칙을 봅니다. 한쪽을 고치면 다른 쪽도 고치세요.
+ *   두 함수가 보는 것 — 판매중지 · 품절 · 옵션 사라짐 · 재고 부족 ·
+ *   개당가격 = 상품가 + 옵션추가금
+ *
+ * ★ 이 함수는 던지지 않습니다. 못 파는 줄도 이유를 달아 그대로 돌려줍니다.
+ *   장바구니는 못 사는 물건도 담긴 채로 보여 주어야 하기 때문입니다.
+ *   손님이 담아 둔 것을 우리가 지우지 않습니다.
+ */
+export async function readCartLines(
+  items: { productSlug: string; optionKey: string; quantity: number }[]
+): Promise<CartLineState[]> {
+  const supabase = requireSupabaseAdmin();
+
+  const slugs = Array.from(new Set(items.map((item) => item.productSlug)));
+  const { data, error } = await supabase.from('products').select('*').in('slug', slugs);
+  if (error) throw new Error(`상품을 확인하지 못했습니다: ${error.message}`);
+
+  const rows = (data ?? []) as ProductRow[];
+  const bySlug = new Map(rows.map((row) => [row.slug, row]));
+  const brands = await getBrands();
+
+  return items.map((item) => {
+    /** 상품을 못 찾았을 때도 모양은 갖춰 돌려줍니다. */
+    const blank = {
+      productSlug: item.productSlug,
+      optionKey: item.optionKey,
+      productName: '',
+      brandLabel: '',
+      thumbnailUrl: '',
+      unitPrice: 0,
+      extraPrice: 0,
+      stock: null as number | null,
+      freeShipping: false,
+    };
+
+    const row = bySlug.get(item.productSlug);
+    /*
+     * ★ 상품 주소(slug)가 바뀌어도 여기로 옵니다.
+     *   실제로는 팔고 있는데 못 찾는 경우인데, 지금 구조로는 구분할 방법이 없습니다.
+     *   장바구니가 상품을 주소로 기억하기 때문입니다. 따로 다루기로 한 건입니다.
+     */
+    if (!row) return { ...blank, ok: false, reason: '판매가 종료된 상품입니다.' };
+
+    const base = {
+      ...blank,
+      productName: row.name,
+      brandLabel: row.brand_slug ? brandLabel(brands, row.brand_slug) : '',
+      thumbnailUrl: Array.isArray(row.thumbnails) ? String(row.thumbnails[0] ?? '') : '',
+      unitPrice: row.price,
+      freeShipping: row.free_shipping === true,
+    };
+
+    if (row.is_visible === false) {
+      return { ...base, ok: false, reason: '지금은 판매하지 않는 상품입니다.' };
+    }
+    if (row.is_sold_out) {
+      return { ...base, ok: false, reason: '품절되었습니다.' };
+    }
+
+    const quantity = Math.max(1, Math.trunc(item.quantity));
+    const options = normalizeOptions(row.options);
+
+    // 옵션이 없는 상품은 재고를 조합으로 세지 않습니다. (priceLines 와 같습니다)
+    if (options.groups.length === 0) {
+      return { ...base, ok: true, reason: '' };
+    }
+
+    const combination = options.combinations.find((entry) => entry.key === item.optionKey);
+    if (!combination) {
+      return { ...base, ok: false, reason: '선택하신 옵션이 없어졌습니다.' };
+    }
+
+    /* 조합을 찾았으면 그 추가금까지 반영한 값을 돌려줍니다. 품절이어도 마찬가지입니다. */
+    const priced = {
+      ...base,
+      extraPrice: combination.extraPrice,
+      unitPrice: row.price + combination.extraPrice,
+      stock: combination.stock,
+    };
+
+    if (!isCombinationAvailable(combination)) {
+      return { ...priced, ok: false, reason: '품절되었습니다.' };
+    }
+    if (combination.stock !== null && combination.stock < quantity) {
+      return { ...priced, ok: false, reason: `재고가 ${combination.stock}개 남았습니다.` };
+    }
+    return { ...priced, ok: true, reason: '' };
+  });
 }
 
 /**

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import CartChangeNotice from '@/components/CartChangeNotice';
 import CopyOrderButton from '@/components/CopyOrderButton';
 import KakaoChatButton from '@/components/KakaoChatButton';
 import RecentlyViewed from '@/components/RecentlyViewed';
@@ -9,6 +10,7 @@ import SignupPointBadge from '@/components/SignupPointBadge';
 import SafeImage from '@/components/SafeImage';
 import { useSite } from '@/components/SiteProvider';
 import { useCart } from '@/lib/cart';
+import { useCartLive } from '@/lib/cart-live';
 import type { ResolvedBlock } from '@/lib/copy';
 import { formatPrice } from '@/lib/product-utils';
 import { expectedPurchasePoints } from '@/lib/site-config';
@@ -51,37 +53,50 @@ export default function CartPanel({
     };
   }, []);
 
-  const { items, total, count, ready, removeItem, updateQuantity, clear } = useCart();
+  const { items, count, ready, removeItem, updateQuantity, setSelected, clear } = useCart();
   // 브랜드명·고객센터 번호·배송비는 관리자 설정 값을 씁니다.
   const { store, shipping, points } = useSite();
+
+  /*
+   * ★★ 금액은 전부 여기서 나옵니다. 담을 때 적어 둔 값으로 계산하지 않습니다.
+   *   배송비도 서버가 낸 값을 그대로 씁니다. 예전에는 이 화면이 직접 어림잡았는데
+   *   상품별 무료배송 설정을 화면이 몰라서 실제 청구액과 어긋났습니다.
+   */
+  const live = useCartLive();
+  const total = live.itemsTotal;
+  const shippingFee = live.shippingFee;
+
   // 배송비를 뺀 상품금액 기준으로 계산합니다. (서버 지급 기준과 같습니다)
   const expectedEarn = expectedPurchasePoints(total, points);
 
-  /**
-   * 장바구니에서 보여 주는 배송비는 어림값입니다.
-   * 도서산간 추가비는 주소를 받아야 알 수 있어 주문서에서 확정됩니다.
-   */
-  const freeByThreshold = shipping.freeThreshold > 0 && total >= shipping.freeThreshold;
-  const shippingFee = freeByThreshold ? 0 : shipping.baseFee;
   const freeShippingLeft =
     shipping.freeThreshold > 0 ? Math.max(0, shipping.freeThreshold - total) : 0;
 
+  /** 주문에 실제로 들어갈 개수 (줄 수가 아니라 수량 합계) */
+  const orderableQuantity = live.lines
+    .filter((line) => line.orderable)
+    .reduce((sum, line) => sum + line.quantity, 0);
+
+  /** 주문에 들어갈 줄만 골라 옮겨 적습니다. 못 사는 것은 뺍니다. */
   const orderText = [
     `[${store.name} 주문 문의]`,
     '',
-    ...items.map((item) => {
-      const options =
-        Object.entries(item.options)
-          .map(([name, value]) => `${name}: ${value}`)
-          .join(' / ') || item.optionKey;
-      const extra =
-        item.extraPrice !== 0
-          ? ` (옵션 ${item.extraPrice > 0 ? '+' : '−'}${formatPrice(Math.abs(item.extraPrice))}원)`
-          : '';
-      return `· ${item.name} (${item.brand})${options ? ` — ${options}` : ''}${extra} — ${item.quantity}개 — ${formatPrice(item.price * item.quantity)}원`;
-    }),
+    ...live.lines
+      .filter((line) => line.orderable)
+      .map((line) => {
+        const item = items.find((entry) => entry.key === line.key);
+        const options =
+          Object.entries(item?.options ?? {})
+            .map(([name, value]) => `${name}: ${value}`)
+            .join(' / ') || line.optionKey;
+        const extra =
+          line.extraPrice !== 0
+            ? ` (옵션 ${line.extraPrice > 0 ? '+' : '−'}${formatPrice(Math.abs(line.extraPrice))}원)`
+            : '';
+        return `· ${line.productName} (${line.brandLabel})${options ? ` — ${options}` : ''}${extra} — ${line.quantity}개 — ${formatPrice(line.unitPrice * line.quantity)}원`;
+      }),
     '',
-    `합계: ${formatPrice(total)}원 (총 ${count}개)`,
+    `합계: ${formatPrice(total)}원 (총 ${orderableQuantity}개)`,
     '',
     '받는 분 성함:',
     '연락처:',
@@ -128,90 +143,134 @@ export default function CartPanel({
   return (
     <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1fr_360px] lg:gap-16">
       <div>
+        {/* 담아 두신 뒤 값이 바뀌었거나 못 사게 된 상품을 알립니다. */}
+        <CartChangeNotice live={live} />
+
         <ul className="border-t border-stone">
-          {items.map((item) => (
-            <li
-              key={item.key}
-              className="flex gap-4 border-b border-stone py-6 md:gap-6"
-            >
-              <Link
-                href={`/products/${item.productId}`}
-                className="h-[104px] w-[80px] shrink-0 overflow-hidden bg-stone md:h-[130px] md:w-[100px]"
+          {items.map((item, index) => {
+            const line = live.lines[index];
+            /* 살 수 없는 줄 — 흐리게 그리고 체크를 풀어 둡니다. 지우지는 않습니다. */
+            const unavailable = Boolean(line && !line.ok);
+            const name = line?.productName || item.name;
+            const brand = line?.brandLabel || item.brand;
+            const unitPrice = line?.unitPrice ?? item.price;
+            const extraPrice = line?.extraPrice ?? item.extraPrice;
+
+            return (
+              <li
+                key={item.key}
+                className="flex gap-3 border-b border-stone py-6 md:gap-4"
               >
-                <SafeImage
-                  src={item.thumbnail}
-                  alt={`${item.brand} ${item.name} 장바구니 썸네일`}
-                  label={item.name}
-                  width={200}
-                  height={260}
-                />
-              </Link>
+                {/*
+                  ★ 주문에 넣을지 고르는 칸입니다.
+                    살 수 없는 상품은 꺼진 채로 두어 손님이 켤 수 없게 합니다.
+                    체크가 풀려 있어도 장바구니에서 사라지지는 않습니다.
+                */}
+                <div className="flex shrink-0 items-start pt-1">
+                  <input
+                    type="checkbox"
+                    checked={item.selected && !unavailable}
+                    disabled={unavailable}
+                    onChange={(event) => setSelected(item.key, event.target.checked)}
+                    aria-label={`${name} 주문에 포함`}
+                    className="h-5 w-5 accent-[#6A2E3C] disabled:opacity-40"
+                  />
+                </div>
 
-              <div className="flex min-w-0 flex-1 flex-col">
-                <p className="text-[14px] tracking-[0.16em] text-muted">{item.brand}</p>
-                <Link
-                  href={`/products/${item.productId}`}
-                  className="mt-1 text-[18px] font-medium leading-snug text-ink"
+                <div
+                  className={`flex min-w-0 flex-1 gap-4 md:gap-6 ${
+                    unavailable ? 'opacity-45' : ''
+                  }`}
                 >
-                  {item.name}
-                </Link>
-                <p className="mt-1.5 text-[14px] leading-relaxed text-muted">
-                  {Object.entries(item.options)
-                    .map(([name, value]) => `${name} · ${value}`)
-                    .join(' / ') ||
-                    item.optionKey ||
-                    '옵션 없음'}
-                  {item.extraPrice !== 0 ? (
-                    <span className="ml-1.5 text-ink">
-                      (옵션 {item.extraPrice > 0 ? '+' : '−'}
-                      {formatPrice(Math.abs(item.extraPrice))}원)
-                    </span>
-                  ) : null}
-                </p>
+                  <Link
+                    href={`/products/${item.productId}`}
+                    className="h-[104px] w-[80px] shrink-0 overflow-hidden bg-stone md:h-[130px] md:w-[100px]"
+                  >
+                    <SafeImage
+                      src={line?.thumbnailUrl || item.thumbnail}
+                      alt={`${brand} ${name} 장바구니 썸네일`}
+                      label={name}
+                      width={200}
+                      height={260}
+                    />
+                  </Link>
 
-                <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-4">
-                  <div className="flex items-center border border-stone">
-                    <button
-                      type="button"
-                      onClick={() => updateQuantity(item.key, item.quantity - 1)}
-                      aria-label={`${item.name} 수량 줄이기`}
-                      className="flex h-11 w-11 items-center justify-center transition-colors duration-200 hover:bg-stone"
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <p className="text-[14px] tracking-[0.16em] text-muted">{brand}</p>
+                    <Link
+                      href={`/products/${item.productId}`}
+                      className="mt-1 text-[18px] font-medium leading-snug text-ink"
                     >
-                      <svg width="11" height="1" viewBox="0 0 11 1" stroke="#14141A" aria-hidden="true">
-                        <path d="M0 0.5h11" />
-                      </svg>
-                    </button>
-                    <span className="w-10 text-center text-[16px] tabular-nums">
-                      {item.quantity}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => updateQuantity(item.key, item.quantity + 1)}
-                      aria-label={`${item.name} 수량 늘리기`}
-                      className="flex h-11 w-11 items-center justify-center transition-colors duration-200 hover:bg-stone"
-                    >
-                      <svg width="11" height="11" viewBox="0 0 11 11" stroke="#14141A" aria-hidden="true">
-                        <path d="M0 5.5h11M5.5 0v11" />
-                      </svg>
-                    </button>
-                  </div>
+                      {name}
+                    </Link>
+                    <p className="mt-1.5 text-[14px] leading-relaxed text-muted">
+                      {Object.entries(item.options)
+                        .map(([optionName, value]) => `${optionName} · ${value}`)
+                        .join(' / ') ||
+                        item.optionKey ||
+                        '옵션 없음'}
+                      {extraPrice !== 0 ? (
+                        <span className="ml-1.5 text-ink">
+                          (옵션 {extraPrice > 0 ? '+' : '−'}
+                          {formatPrice(Math.abs(extraPrice))}원)
+                        </span>
+                      ) : null}
+                    </p>
 
-                  <div className="flex items-center gap-4">
-                    <span className="text-[17px] font-medium text-ink">
-                      {formatPrice(item.price * item.quantity)}원
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removeItem(item.key)}
-                      className="tap-target text-[15px] text-muted underline underline-offset-4"
-                    >
-                      삭제
-                    </button>
+                    <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-4">
+                      <div className="flex items-center border border-stone">
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.key, item.quantity - 1)}
+                          aria-label={`${name} 수량 줄이기`}
+                          className="flex h-11 w-11 items-center justify-center transition-colors duration-200 hover:bg-stone"
+                        >
+                          <svg width="11" height="1" viewBox="0 0 11 1" stroke="#14141A" aria-hidden="true">
+                            <path d="M0 0.5h11" />
+                          </svg>
+                        </button>
+                        <span className="w-10 text-center text-[16px] tabular-nums">
+                          {item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.key, item.quantity + 1)}
+                          aria-label={`${name} 수량 늘리기`}
+                          className="flex h-11 w-11 items-center justify-center transition-colors duration-200 hover:bg-stone"
+                        >
+                          <svg width="11" height="11" viewBox="0 0 11 11" stroke="#14141A" aria-hidden="true">
+                            <path d="M0 5.5h11M5.5 0v11" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      <span className="text-[17px] font-medium text-ink">
+                        {formatPrice(unitPrice * item.quantity)}원
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </li>
-          ))}
+
+                {/* 살 수 없는 이유와 삭제는 흐리게 하지 않습니다. 읽고 눌러야 하는 것입니다. */}
+                <div className="flex shrink-0 flex-col items-end justify-between">
+                  {unavailable ? (
+                    <span className="whitespace-nowrap text-[14px] font-medium text-wine">
+                      {line?.reason}
+                    </span>
+                  ) : (
+                    <span />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeItem(item.key)}
+                    className="tap-target text-[15px] text-muted underline underline-offset-4"
+                  >
+                    삭제
+                  </button>
+                </div>
+              </li>
+            );
+          })}
         </ul>
 
         <button
@@ -228,8 +287,20 @@ export default function CartPanel({
           <h2 className="font-serif text-[19px] text-ink">주문 요약</h2>
           <dl className="mt-6 flex flex-col gap-3 border-t border-stone pt-6 text-[16px]">
             <div className="flex justify-between">
-              <dt className="text-muted">상품 수량</dt>
-              <dd className="text-ink">{count}개</dd>
+              <dt className="text-muted">주문할 상품</dt>
+              {/*
+                ★ 담긴 개수가 아니라 주문에 들어갈 개수입니다. 아래 금액과 짝이 맞아야 합니다.
+                ★ 둘 다 "개" 로 셉니다. 한쪽은 건, 한쪽은 개로 세면 2개짜리 한 줄이
+                  "1건 (담긴 것 2개)" 로 나와 무엇이 빠졌다는 말처럼 읽힙니다.
+              */}
+              <dd className="text-ink">
+                {orderableQuantity}개
+                {orderableQuantity < count ? (
+                  <span className="ml-1.5 text-[14px] text-muted">
+                    (담긴 것 {count}개)
+                  </span>
+                ) : null}
+              </dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted">상품 합계</dt>
@@ -237,8 +308,15 @@ export default function CartPanel({
             </div>
             <div className="flex justify-between">
               <dt className="text-muted">배송비</dt>
+              {/* ★ 주문할 것이 없으면 "무료" 가 아니라 "—" 입니다. 낼 배송비 자체가 없습니다. */}
               <dd className="text-ink">
-                {shippingFee === 0 ? '무료' : `${formatPrice(shippingFee)}원`}
+                {live.status !== 'ok'
+                  ? '확인 중'
+                  : live.orderableCount === 0
+                    ? '—'
+                    : shippingFee === 0
+                      ? '무료'
+                      : `${formatPrice(shippingFee)}원`}
               </dd>
             </div>
           </dl>
@@ -251,7 +329,9 @@ export default function CartPanel({
             </p>
           ) : null}
 
-          {freeShippingLeft > 0 ? (
+          {/* ★ 주문할 것이 하나도 없을 때는 안내하지 않습니다.
+              "0원인데 5만원을 더 담으라" 는 말이 되어 위 배송비 줄과 어긋납니다. */}
+          {freeShippingLeft > 0 && live.orderableCount > 0 ? (
             <p className="mt-4 text-[14px] leading-relaxed text-muted">
               {formatPrice(freeShippingLeft)}원 더 담으시면 배송비가 무료입니다.
             </p>
@@ -272,12 +352,38 @@ export default function CartPanel({
             </div>
           )}
 
-          <Link
-            href="/checkout"
-            className={`btn-primary w-full ${isMember ? 'mt-8' : 'mt-4'}`}
-          >
-            주문하기
-          </Link>
+          {/*
+            ★★ 값을 확인하기 전에는 주문서로 보내지 않습니다.
+              값을 모르는 채로 결제까지 가면 손님이 본 적 없는 금액이 청구됩니다.
+              막는 경우는 세 가지입니다 — 아직 확인 중 · 확인 실패 ·
+              값이 오른 상품을 손님이 아직 확인하지 않음.
+            ★ 링크가 아니라 버튼으로 둡니다. 링크는 잠글 수가 없어서
+              눌리지 않는 척만 하고 실제로는 넘어갑니다.
+          */}
+          {live.canOrder ? (
+            <Link
+              href="/checkout"
+              className={`btn-primary w-full ${isMember ? 'mt-8' : 'mt-4'}`}
+            >
+              주문하기
+            </Link>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled
+                className={`btn-primary w-full ${isMember ? 'mt-8' : 'mt-4'}`}
+              >
+                주문하기
+              </button>
+              <p
+                role="status"
+                className="mt-3 text-center text-[14px] leading-relaxed text-wine"
+              >
+                {live.blockReason}
+              </p>
+            </>
+          )}
 
           {/*
             ★ 결제 수단 안내는 관리자 문구 한 곳(copy.cartPayment)에서만 옵니다. (3-L)

@@ -7,7 +7,9 @@ import {
   calcShipping,
   createOrder,
   getOrderForLookup,
+  readCartLines,
   requestCancel,
+  type CartLineState,
 } from '@/lib/orders';
 import { getCurrentUser } from '@/lib/auth';
 import { canRequestCancel } from '@/lib/order-status';
@@ -113,15 +115,78 @@ function toCashReceiptType(value: string): CashReceiptType {
 }
 
 /* ------------------------------------------------------------------
- * 배송비 미리 보기 — 우편번호를 고르면 화면 금액을 맞춰 줍니다.
+ * 장바구니 다시 확인 — 화면 금액을 실제와 맞춥니다.
  * ------------------------------------------------------------------ */
 
-export async function quoteShippingAction(
-  itemsTotal: number,
+/** 한 번에 확인해 줄 최대 줄 수. 이보다 많이 보내면 잘라 냅니다. */
+const MAX_CART_LINES = 50;
+
+export type CartRefreshResult = {
+  /** 보낸 순서 그대로. 화면은 상품주소+옵션으로 맞춰 찾습니다. */
+  lines: CartLineState[];
+  /** 손님이 고른 것 중 지금 살 수 있는 것들의 합계 */
+  itemsTotal: number;
+  shippingFee: number;
+  extraShippingFee: number;
+  remote: boolean;
+};
+
+/**
+ * 장바구니에 담긴 것들의 지금 값을 돌려줍니다.
+ *
+ * ★★ 배송비도 여기서 함께 돌려줍니다. 예전에는 화면이 직접 어림잡아 계산했는데
+ *   상품별 무료배송 설정을 화면이 모릅니다. 그래서 무료배송 상품만 담은 손님에게
+ *   배송비 3,000원이 붙어 보이고 실제로는 0원이 청구됐습니다.
+ *   숫자를 두 곳에서 내면 반드시 어긋납니다. 서버 한 곳에서만 냅니다.
+ *
+ * ★ 여기서 나온 금액은 화면에 보여 주기 위한 것입니다.
+ *   실제 청구액은 주문을 만들 때 createOrder 가 다시 계산합니다.
+ *   그래서 손님이 보낸 selected 를 그대로 믿어도 안전합니다.
+ */
+export async function refreshCartAction(
+  items: {
+    productSlug: string;
+    optionKey: string;
+    quantity: number;
+    selected: boolean;
+  }[],
   postcode: string
-): Promise<{ shippingFee: number; extraShippingFee: number; remote: boolean }> {
-  const safeTotal = Number.isFinite(itemsTotal) ? Math.max(0, Math.trunc(itemsTotal)) : 0;
-  return calcShipping(safeTotal, postcode);
+): Promise<CartRefreshResult> {
+  const empty = {
+    itemsTotal: 0,
+    shippingFee: 0,
+    extraShippingFee: 0,
+    remote: false,
+  };
+
+  const safe = (Array.isArray(items) ? items : []).slice(0, MAX_CART_LINES).map((item) => ({
+    productSlug: String(item?.productSlug ?? ''),
+    optionKey: String(item?.optionKey ?? ''),
+    quantity: Number.isFinite(item?.quantity) ? Math.max(1, Math.trunc(item.quantity)) : 1,
+    selected: item?.selected !== false,
+  }));
+
+  if (safe.length === 0) return { lines: [], ...empty };
+
+  const lines = await readCartLines(safe);
+
+  /* 주문에 실제로 들어갈 줄 — 손님이 고른 것 중 지금 살 수 있는 것만 */
+  const ordered = lines
+    .map((line, index) => ({ line, input: safe[index] }))
+    .filter((entry) => entry.line.ok && entry.input.selected);
+
+  if (ordered.length === 0) return { lines, ...empty };
+
+  const itemsTotal = ordered.reduce(
+    (sum, entry) => sum + entry.line.unitPrice * entry.input.quantity,
+    0
+  );
+
+  // 담은 것이 전부 무료배송 상품이면 배송비가 없습니다. (createOrder 와 같은 규칙)
+  const allFreeShipping = ordered.every((entry) => entry.line.freeShipping);
+  const fees = await calcShipping(itemsTotal, String(postcode ?? ''), allFreeShipping);
+
+  return { lines, itemsTotal, ...fees };
 }
 
 /* ------------------------------------------------------------------
