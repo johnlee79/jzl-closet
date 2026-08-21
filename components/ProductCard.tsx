@@ -121,24 +121,41 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
           <p className="mt-1.5 line-clamp-2 text-[16px] leading-relaxed text-ink">
             {product.summary}
           </p>
-          <p className="mt-3 flex flex-wrap items-baseline gap-2 text-[17px]">
-            <span className="font-medium text-ink">{formatPrice(product.price)}원</span>
-            {/*
-              ★ 정가와 할인율은 한 덩어리로 묶어 둡니다.
-                따로 두면 글자가 조금만 커져도 할인율만 다음 줄로 떨어져
-                "50,000원 / 30%" 가 위아래로 갈라집니다.
-            */}
-            {product.originalPrice ? (
-              <span className="inline-flex items-baseline gap-2 whitespace-nowrap">
-                <span className="text-[15px] text-muted line-through">
-                  {formatPrice(product.originalPrice)}원
-                </span>
-                {discount > 0 ? (
-                  <span className="text-[15px] text-wine">{discount}%</span>
-                ) : null}
-              </span>
+          {/*
+            ── 가격 ─────────────────────────────────────
+            정가를 판매가 위로 올려 두 줄로 쌓습니다.
+
+              219,000원          ← 정가 (작고 흐리게)
+              87,800원  60%      ← 판매가와 할인율
+
+            ★★ 예전에는 넷이 한 줄이었습니다. 좁은 화면에서 할인율이 밀려 내려가
+              "87,800원 219,000원 / 60%" 처럼 갈라졌습니다.
+
+            ★★ 높이를 min-h 로 잡아 두는 이유
+              정가 줄은 세일 상품에만 있습니다. 그대로 두면 세일 상품만 한 줄
+              길어져서, 한 줄에 나란히 놓인 카드들의 판매가 높이가 어긋납니다.
+              칸 높이를 고정하고 아래로 붙이면(justify-end) 판매가가 늘 같은
+              자리에 옵니다. 세일이 아닌 상품에는 빈 줄을 그리지 않습니다.
+              (20px 정가 + 24px 판매가 = 44px)
+
+            ★ 세일이 아니면 정가를 아예 그리지 않습니다.
+              판단 기준은 originalPrice 가 있는지가 아니라 실제로 깎였는지입니다.
+              정가가 판매가보다 낮게 잘못 들어간 상품에 줄 그은 값이 나오던 것도
+              함께 없어집니다.
+          */}
+          <div className="mt-3 flex min-h-[44px] flex-col justify-end">
+            {discount > 0 && product.originalPrice ? (
+              <p className="text-[15px] leading-[20px] text-muted line-through">
+                {formatPrice(product.originalPrice)}원
+              </p>
             ) : null}
-          </p>
+            <p className="flex flex-wrap items-baseline gap-2 text-[17px] leading-[24px]">
+              <span className="font-medium text-ink">{formatPrice(product.price)}원</span>
+              {discount > 0 ? (
+                <span className="text-[15px] text-wine">{discount}%</span>
+              ) : null}
+            </p>
+          </div>
           {earn > 0 ? (
             <p className="mt-1.5 text-[14px] text-wine">
               {fillTokens(event.earnNotice, { points: formatPrice(earn) })}

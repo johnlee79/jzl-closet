@@ -384,26 +384,44 @@ export default async function ProductDetailPage({ params }: PageProps) {
             </div>
           ) : null}
 
-          <div className="mt-8 flex flex-wrap items-baseline gap-3">
-            <span className="font-display text-[34px] font-medium tracking-wide text-ink md:text-[40px]">
-              {formatPrice(product.price)}
-              <span className="ml-1 font-sans text-[17px]">원</span>
-            </span>
-            {product.originalPrice ? (
-              <span className="text-[17px] text-muted line-through">
+          {/*
+            ── 가격 ─────────────────────────────────────
+            정가를 판매가 위로 올려 두 줄로 쌓습니다.
+
+              219,000원                    ← 정가 (작고 흐리게)
+              87,800원  [60% OFF] [NEW]    ← 판매가와 배지
+
+            ★★ 예전에는 넷이 한 줄이었습니다. 좁은 화면에서 배지가 밀려 내려가
+              값과 따로 놀았습니다. 정가만 위로 빼면 아랫줄이 짧아져
+              배지가 값 옆에 그대로 붙습니다.
+            ★ 배지 자리는 그대로입니다. 옮긴 것은 정가뿐입니다.
+            ★ 세일이 아니면 정가 줄을 아예 그리지 않습니다.
+              판단 기준은 originalPrice 가 있는지가 아니라 실제로 깎였는지입니다.
+            ★ 여백은 정가 줄에 붙여 둡니다. 아랫줄에 붙이면 정가가 없을 때
+              값이 4px 만큼 아래로 내려갑니다.
+          */}
+          <div className="mt-8">
+            {discount > 0 && product.originalPrice ? (
+              <p className="mb-1 text-[17px] text-muted line-through">
                 {formatPrice(product.originalPrice)}원
-              </span>
+              </p>
             ) : null}
-            {discount > 0 ? (
-              <span className="border border-wine px-2 py-1 text-[14px] tracking-[0.14em] text-wine">
-                {discount}% OFF
+            <div className="flex flex-wrap items-baseline gap-3">
+              <span className="font-display text-[34px] font-medium tracking-wide text-ink md:text-[40px]">
+                {formatPrice(product.price)}
+                <span className="ml-1 font-sans text-[17px]">원</span>
               </span>
-            ) : null}
-            {product.isNew ? (
-              <span className="border border-ink px-2 py-1 text-[14px] tracking-[0.14em] text-ink">
-                NEW
-              </span>
-            ) : null}
+              {discount > 0 ? (
+                <span className="border border-wine px-2 py-1 text-[14px] tracking-[0.14em] text-wine">
+                  {discount}% OFF
+                </span>
+              ) : null}
+              {product.isNew ? (
+                <span className="border border-ink px-2 py-1 text-[14px] tracking-[0.14em] text-ink">
+                  NEW
+                </span>
+              ) : null}
+            </div>
           </div>
 
           <dl className="mt-8 flex flex-col gap-2 border-t border-stone pt-6 text-[14px]">

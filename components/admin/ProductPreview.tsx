@@ -87,21 +87,27 @@ export default function ProductPreview({
             {draft.summary}
           </p>
 
-          <div className="mt-8 flex flex-wrap items-baseline gap-3">
-            <span className="font-display text-[36px] font-medium tracking-wide text-ink md:text-[42px]">
-              {formatPrice(draft.price)}
-              <span className="ml-1 font-sans text-[18px]">원</span>
-            </span>
-            {draft.originalPrice ? (
-              <span className="text-[18px] text-muted line-through">
+          {/*
+            ★ 손님 상품 상세와 같은 모양이어야 합니다. 정가를 판매가 위로 올립니다.
+              미리보기가 실제 화면과 다르면 미리보기를 볼 이유가 없어집니다.
+          */}
+          <div className="mt-8">
+            {discount > 0 && draft.originalPrice ? (
+              <p className="mb-1 text-[18px] text-muted line-through">
                 {formatPrice(draft.originalPrice)}원
-              </span>
+              </p>
             ) : null}
-            {discount > 0 ? (
-              <span className="border border-wine px-2 py-1 text-[15px] tracking-[0.14em] text-wine">
-                {discount}% OFF
+            <div className="flex flex-wrap items-baseline gap-3">
+              <span className="font-display text-[36px] font-medium tracking-wide text-ink md:text-[42px]">
+                {formatPrice(draft.price)}
+                <span className="ml-1 font-sans text-[18px]">원</span>
               </span>
-            ) : null}
+              {discount > 0 ? (
+                <span className="border border-wine px-2 py-1 text-[15px] tracking-[0.14em] text-wine">
+                  {discount}% OFF
+                </span>
+              ) : null}
+            </div>
           </div>
 
           <dl className="mt-8 flex flex-col gap-2 border-t border-stone pt-6 text-[15px]">
