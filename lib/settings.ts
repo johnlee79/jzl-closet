@@ -563,6 +563,12 @@ export function normalizePayment(value: unknown): PaymentSettings {
       1440,
       Math.max(10, count(raw.cardPendingMinutes, DEFAULT_PAYMENT.cardPendingMinutes))
     ),
+    /*
+     * ★ 기본값은 켬입니다. 명시적으로 false 일 때만 끕니다.
+     *   이 설정이 없던 시절에 저장된 값을 읽어도 켜진 채로 동작해야 합니다.
+     *   (무통장 autoCancelEnabled 와 같은 방식)
+     */
+    cardSweepEnabled: raw.cardSweepEnabled !== false,
     remoteAreaRules: rules,
     telegramEnabled: raw.telegramEnabled !== false,
     inquiryTelegramEnabled: raw.inquiryTelegramEnabled !== false,

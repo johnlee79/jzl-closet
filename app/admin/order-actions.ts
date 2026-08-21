@@ -19,7 +19,8 @@ import {
   updateShippingAddress,
   confirmUncertainPayment,
 } from '@/lib/orders';
-import { notifyCancelAccepted } from '@/lib/telegram';
+import { getPaymentSettings } from '@/lib/settings';
+import { notifyCancelAccepted, notifyStockShortage } from '@/lib/telegram';
 import {
   parseTrackingText,
   type TrackingMatchRow,
@@ -393,16 +394,52 @@ export async function cancelItemAction(
  *   KSNET 은 가맹점에 취소 권한을 주지 않습니다.
  * ------------------------------------------------------------------ */
 
+/** 화면에 그대로 보여 줄 재고 부족 내역 */
+export type ShortageLine = {
+  productName: string;
+  optionKey: string;
+  wanted: number;
+  available: number;
+};
+
 export async function confirmPaymentAction(
   id: string,
   decision: 'paid' | 'failed'
-): Promise<ActionResult> {
+): Promise<ActionResult<{ shortages: ShortageLine[] }>> {
   if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
-    await confirmUncertainPayment(id, decision);
+    const { order, shortages } = await confirmUncertainPayment(id, decision);
     refresh(id);
-    return { ok: true, data: undefined };
+
+    /*
+     * ★★ 재고가 모자라도 막지 않습니다.
+     *   운영자는 이미 KSNET 에서 승인을 확인하고 누른 것이라 주문을 되돌릴 수 없습니다.
+     *   대신 반드시 알립니다 — 화면에도, 텔레그램에도.
+     *   모르고 지나가면 보낼 물건이 없는 주문을 준비 중으로 넘기게 됩니다.
+     */
+    if (shortages.length > 0) {
+      const payment = await getPaymentSettings();
+      if (payment.telegramEnabled) {
+        try {
+          await notifyStockShortage(order, shortages);
+        } catch (error) {
+          console.warn('[admin/orders] 재고 부족 알림 실패:', error);
+        }
+      }
+    }
+
+    return {
+      ok: true,
+      data: {
+        shortages: shortages.map((x) => ({
+          productName: x.productName ?? x.productSlug ?? '(상품 이름 없음)',
+          optionKey: x.optionKey,
+          wanted: x.wanted,
+          available: x.available,
+        })),
+      },
+    };
   } catch (error) {
     return fail(error, '결제 상태를 확정하지 못했습니다.');
   }

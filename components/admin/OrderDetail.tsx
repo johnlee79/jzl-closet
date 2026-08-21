@@ -8,6 +8,7 @@ import {
   cancelItemAction,
   completeCancelAction,
   confirmPaymentAction,
+  type ShortageLine,
   setAutoCancelExcludedAction,
   setCashReceiptIssuedAction,
   setMemoAction,
@@ -56,6 +57,12 @@ export default function OrderDetail({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<Message>(null);
+  /**
+   * 결제완료로 확정했는데 재고가 모자랐던 내역. (4-B)
+   * ★ 막지 않고 진행하므로, 화면에 남겨 두지 않으면 아무도 모르고 지나갑니다.
+   *   토스트처럼 사라지게 하지 않고 자리에 남깁니다.
+   */
+  const [shortages, setShortages] = useState<ShortageLine[]>([]);
 
   const [status, setStatus] = useState(order.status);
   const [statusMemo, setStatusMemo] = useState('');
@@ -105,6 +112,33 @@ export default function OrderDetail({
         return;
       }
       setMessage({ tone: 'ok', text: okText });
+      router.refresh();
+    });
+  };
+
+  /**
+   * 결제완료·결제실패 확정.
+   * ★ run() 을 쓰지 않는 이유 — 그 도우미는 성공하면 메시지만 띄우고 끝납니다.
+   *   여기서는 돌려받은 재고 부족 내역을 화면에 남겨야 합니다.
+   */
+  const confirmPayment = (decision: 'paid' | 'failed', okText: string) => {
+    setMessage(null);
+    setShortages([]);
+    startTransition(async () => {
+      const result = await confirmPaymentAction(order.id, decision);
+      if (!result.ok) {
+        setMessage({ tone: 'error', text: result.error ?? '처리하지 못했습니다.' });
+        return;
+      }
+      const found = result.data?.shortages ?? [];
+      setShortages(found);
+      setMessage({
+        tone: found.length > 0 ? 'error' : 'ok',
+        text:
+          found.length > 0
+            ? `${okText} 다만 재고가 모자랍니다. 아래를 확인해 주세요.`
+            : okText,
+      });
       router.refresh();
     });
   };
@@ -421,10 +455,7 @@ export default function OrderDetail({
                           ) {
                             return;
                           }
-                          run(
-                            () => confirmPaymentAction(order.id, 'paid'),
-                            '결제완료로 확정했습니다.'
-                          );
+                          confirmPayment('paid', '결제완료로 확정했습니다.');
                         }}
                         className="admin-btn-primary"
                       >
@@ -441,10 +472,7 @@ export default function OrderDetail({
                           ) {
                             return;
                           }
-                          run(
-                            () => confirmPaymentAction(order.id, 'failed'),
-                            '결제실패로 확정했습니다.'
-                          );
+                          confirmPayment('failed', '결제실패로 확정했습니다.');
                         }}
                         className="admin-btn"
                       >
@@ -458,6 +486,37 @@ export default function OrderDetail({
                     ) : (
                       <p className="mt-2 text-[14px] text-slate-600">재고는 아직 잡아 둔 상태입니다.</p>
                     )}
+
+                    {/*
+                      ★★ 재고가 모자랐다면 자리에 남깁니다.
+                        막지 않고 진행했기 때문에, 여기서 안 보여 주면 아무도 모릅니다.
+                        보낼 물건이 없는 주문을 준비 중으로 넘기게 됩니다.
+                    */}
+                    {shortages.length > 0 ? (
+                      <div
+                        role="alert"
+                        className="mt-3 rounded-md border border-red-200 bg-red-50 p-3"
+                      >
+                        <p className="text-[15px] font-semibold text-red-800">
+                          재고가 모자랍니다 — 결제완료 처리는 그대로 진행했습니다
+                        </p>
+                        <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-[15px] leading-relaxed text-red-800">
+                          {shortages.map((x) => (
+                            <li key={`${x.productName}-${x.optionKey}`}>
+                              <strong>{x.productName}</strong>
+                              {x.optionKey ? ` (${x.optionKey})` : ''} — {x.wanted}개 필요,{' '}
+                              <strong className="tabular-nums">{x.available}개</strong>만 있었습니다
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="mt-2 text-[14px] leading-relaxed text-red-800">
+                          자동정리가 재고를 되돌린 사이에 그 물건이 팔린 것으로 보입니다.
+                          손님 돈은 이미 승인된 상태라 주문을 되돌릴 수 없습니다.
+                          공급처에 확보가 되는지 먼저 확인해 주세요. 같은 내용을 텔레그램으로도
+                          보냈습니다.
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               ) : null}

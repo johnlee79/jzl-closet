@@ -99,11 +99,11 @@ export async function runCardSweep(force = false): Promise<CardSweepResult> {
   const payment = await getPaymentSettings();
 
   /*
-   * ★ 자동취소 스위치를 그대로 씁니다.
-   *   "자동으로 주문을 정리하지 마세요" 라고 꺼 두었는데 카드만 정리하면
-   *   운영자의 뜻과 어긋납니다.
+   * ★★ 카드 전용 스위치입니다. 무통장 자동취소(autoCancelEnabled)와 별개입니다.
+   *   두 일은 성격이 다릅니다. 무통장은 "취소", 카드는 "승인 여부 확인" 입니다.
+   *   한쪽만 끄고 싶은 경우가 실제로 있어 스위치를 나눴습니다.
    */
-  if (!payment.autoCancelEnabled) return emptyResult();
+  if (!payment.cardSweepEnabled) return emptyResult();
 
   if (!force && Date.now() - lastRun < IDLE_MINUTES * 60 * 1000) {
     return { ...emptyResult(), skippedByCooldown: true };
@@ -148,7 +148,8 @@ export async function runCardDailyCheck(): Promise<CardDailyResult> {
   const base = emptyResult();
   const result: CardDailyResult = { ...base, expired: [] };
 
-  if (!payment.autoCancelEnabled) return result;
+  // ★ 자정 점검도 카드 쪽 일이라 카드 스위치를 봅니다.
+  if (!payment.cardSweepEnabled) return result;
 
   const { today, older } = await findTodayPendingCardOrders();
   result.checked = today.length + older.length;

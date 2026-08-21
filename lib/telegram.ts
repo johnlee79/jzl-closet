@@ -408,3 +408,50 @@ export async function notifyCardSweepDigest(
 
   await sendTelegramMessage(lines.join('\n'));
 }
+
+/**
+ * ⚠️ 결제완료로 확정했는데 재고가 모자랐습니다 (4-B).
+ *
+ * ★★ 왜 알려야 하는가
+ *   승인확인실패 주문을 결제완료로 확정하면, 자동정리가 되돌려 놓았던 재고를
+ *   다시 잡습니다. 그런데 되돌린 사이에 그 물건이 팔렸을 수 있습니다.
+ *   재고는 0 에서 멈추지만, 그 사실을 아무도 모르면 보낼 물건이 없는 주문을
+ *   준비 중으로 넘기게 됩니다. 손님은 기다리다 뒤늦게 취소 연락을 받습니다.
+ *
+ * ★ 막지 않고 알리기만 합니다.
+ *   운영자는 이미 KSNET 에서 승인을 확인하고 누른 것이라 주문을 되돌릴 수 없습니다.
+ *   재고를 어떻게 맞출지는 공급처와 사람이 풀어야 할 문제입니다.
+ */
+export async function notifyStockShortage(
+  order: Order,
+  shortages: {
+    productName?: string;
+    productSlug: string | null;
+    optionKey: string;
+    wanted: number;
+    available: number;
+  }[]
+): Promise<void> {
+  if (shortages.length === 0) return;
+
+  const lines = [
+    '⚠️ <b>재고 부족</b> — 결제완료로 확정했는데 물건이 모자랍니다',
+    '',
+    `주문번호 ${escapeHtml(order.orderNo)}`,
+    `${escapeHtml(order.ordererName)} · ${escapeHtml(order.ordererPhone)}`,
+    '',
+    '<b>모자란 품목</b>',
+    ...shortages.map(
+      (x) =>
+        `· ${escapeHtml(x.productName ?? x.productSlug ?? '')} (${escapeHtml(x.optionKey)}) — ${x.wanted}개 필요, ${x.available}개만 있었습니다`
+    ),
+    '',
+    '★ 주문은 결제완료로 처리했습니다. 손님 돈은 이미 승인된 상태라 되돌릴 수 없습니다.',
+    '  자동정리가 재고를 되돌린 사이에 그 물건이 팔린 것으로 보입니다.',
+    '  공급처에 확보가 되는지 먼저 확인해 주세요.',
+    '',
+    `확인: ${SITE_URL}/admin/orders/${order.id}`,
+  ];
+
+  await sendTelegramMessage(lines.join('\n'));
+}

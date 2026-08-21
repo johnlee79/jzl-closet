@@ -307,12 +307,34 @@ export default function PaymentForm({
         </div>
 
         {/* ── 결제대기 카드 주문 정리 (4-B) ───────────────
-          ★ 무통장입금 자동취소 바로 아래에 둡니다.
-            둘 다 "결제대기로 남은 주문을 언제 정리할까" 를 정하는 값이라,
+          ★ 무통장입금 자동취소 바로 아래에 나란히 둡니다.
+            둘 다 "결제대기로 남은 주문을 어떻게 할까" 를 정하는 값이라,
             떨어뜨려 두면 운영자가 하나만 보고 다른 쪽을 잊습니다.
+          ★★ 스위치는 따로입니다. 무통장은 "취소", 카드는 "승인 여부 확인" 이라
+            성격이 다릅니다. 한쪽만 끄고 싶은 경우가 실제로 있습니다.
         */}
         <div className="mt-5 border-t border-slate-200 pt-5">
-          <label className="admin-label" htmlFor="card-pending-minutes">
+          <label className="flex items-start gap-2 text-[16px] text-slate-800">
+            <input
+              type="checkbox"
+              checked={form.cardSweepEnabled}
+              onChange={(event) => set('cardSweepEnabled', event.target.checked)}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>
+              결제대기로 남은 카드 주문을 자동으로 정리하기
+              <span className="mt-1 block text-[14px] leading-relaxed text-slate-500">
+                아래 시간이 지난 <strong>카드·간편결제</strong> 결제대기 주문을 KSNET 에
+                확인해 정리합니다. <strong>무통장입금은 위 스위치가 따로 맡습니다.</strong>
+              </span>
+              <span className="mt-1 block text-[14px] leading-relaxed text-amber-800">
+                ★ 끄면 결제되지 않은 카드 주문의 재고가 계속 묶입니다. 승인 여부 확인도
+                멈추므로 권하지 않습니다.
+              </span>
+            </span>
+          </label>
+
+          <label className="admin-label mt-4 block" htmlFor="card-pending-minutes">
             카드 결제대기 정리 시간 (분)
           </label>
           <input

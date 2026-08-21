@@ -436,6 +436,19 @@ export type PaymentSettings = {
    *   (lib/card-sweep.ts)
    */
   cardPendingMinutes: number;
+  /**
+   * 결제대기로 남은 카드·간편결제 주문을 자동으로 정리할지.
+   *
+   * ★★ 무통장 자동취소(autoCancelEnabled)와 따로 둡니다.
+   *   예전에는 스위치 하나를 같이 썼습니다. 그런데 두 일은 성격이 다릅니다.
+   *     무통장 — 손님이 입금을 안 한 주문을 "취소" 합니다
+   *     카드   — KSNET 에 승인 여부를 "확인" 하고 그 결과대로 정리합니다
+   *   한쪽만 끄고 싶은 경우가 실제로 있는데 스위치가 하나면 그럴 수 없습니다.
+   *
+   * ★ 기본값은 켬입니다. 끄면 결제되지 않은 카드 주문의 재고가 계속 묶이고,
+   *   우리가 놓친 승인을 찾아내는 일도 멈춥니다.
+   */
+  cardSweepEnabled: boolean;
   /** 새 주문이 들어오면 텔레그램으로 알릴지 */
   telegramEnabled: boolean;
   /** 새 1:1 문의가 들어오면 텔레그램으로 알릴지 */
@@ -490,6 +503,7 @@ export const DEFAULT_PAYMENT: PaymentSettings = {
   depositHours: 24,
   autoCancelEnabled: true,
   cardPendingMinutes: 40,
+  cardSweepEnabled: true,
   remoteAreaRules: DEFAULT_REMOTE_AREA_RULES,
   telegramEnabled: true,
   inquiryTelegramEnabled: true,

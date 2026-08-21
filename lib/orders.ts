@@ -801,6 +801,28 @@ type StockMoveContext = {
   reason: string;
 };
 
+/**
+ * 재고가 모자라 다 깎지 못한 내역.
+ *
+ * ★★ 왜 필요한가
+ *   승인확인실패 주문을 결제완료로 확정할 때, 자동정리가 되돌려 놓았던 재고를
+ *   다시 잡습니다. 그런데 되돌린 사이에 그 물건이 팔렸을 수 있습니다.
+ *   그때 재고는 0 밑으로 내려가지 않게 막지만, 그 사실을 아무도 모르면
+ *   보낼 물건이 없는 주문을 준비 중으로 넘기게 됩니다.
+ *   막지는 않되 반드시 알려야 합니다.
+ */
+export type StockShortage = {
+  productId: string | null;
+  productSlug: string | null;
+  /** 사람이 읽을 상품명. 주문 품목에서 채웁니다. */
+  productName?: string;
+  optionKey: string;
+  /** 깎으려던 수량 */
+  wanted: number;
+  /** 실제로 있던 수량 */
+  available: number;
+};
+
 type StockMoveRow = {
   productId: string | null;
   productSlug: string | null;
@@ -860,12 +882,13 @@ async function adjustStock(
   }[],
   delta: -1 | 1,
   context?: StockMoveContext
-): Promise<void> {
+): Promise<StockShortage[]> {
   const supabase = getSupabaseAdmin();
-  if (!supabase) return;
+  if (!supabase) return [];
 
   const moved: StockMoveRow[] = [];
   const skippedRows: StockMoveRow[] = [];
+  const shortages: StockShortage[] = [];
 
   for (const entry of entries) {
     if (!entry.productId || !entry.optionKey) continue;
@@ -891,6 +914,19 @@ async function adjustStock(
         touched = true;
         before = combination.stock;
         after = Math.max(0, combination.stock + delta * entry.quantity);
+        /*
+         * ★ 깎으려는데 있는 것보다 많으면 0 에서 멈춥니다.
+         *   막지는 않되 얼마나 모자랐는지 남깁니다. 호출부가 사람에게 알립니다.
+         */
+        if (delta === -1 && combination.stock < entry.quantity) {
+          shortages.push({
+            productId: entry.productId ?? null,
+            productSlug: entry.productSlug ?? null,
+            optionKey: entry.optionKey,
+            wanted: entry.quantity,
+            available: combination.stock,
+          });
+        }
         return { ...combination, stock: after };
       });
 
@@ -958,6 +994,8 @@ async function adjustStock(
       );
     }
   }
+
+  return shortages;
 }
 
 /**
@@ -2435,7 +2473,7 @@ export async function getOrdererSummaries(
 export async function confirmUncertainPayment(
   id: string,
   decision: 'paid' | 'failed'
-): Promise<Order> {
+): Promise<{ order: Order; shortages: StockShortage[] }> {
   const supabase = requireSupabaseAdmin();
   const before = await getOrderById(id);
   if (!before) throw new Error('주문을 찾을 수 없습니다.');
@@ -2454,8 +2492,9 @@ export async function confirmUncertainPayment(
      *   운영자는 이미 승인을 확인하고 누른 것이라 주문을 되돌릴 수 없습니다.
      *   재고가 모자라면 그건 사람이 공급처와 풀어야 할 문제입니다.
      */
+    let shortages: StockShortage[] = [];
     if (before.stockReleasedAt) {
-      await adjustStock(
+      shortages = await adjustStock(
         before.items
           .filter((item) => item.itemStatus === 'normal')
           .map((item) => ({
@@ -2482,13 +2521,37 @@ export async function confirmUncertainPayment(
         .select('id'),
       '결제완료로 바꾸지 못했습니다'
     );
+    /* ★ 알림·화면·이력에 쓰려고 상품명을 채워 둡니다. slug+옵션으로 주문 품목과 맞춥니다. */
+    shortages = shortages.map((x) => ({
+      ...x,
+      productName:
+        before.items.find(
+          (item) => item.productSlug === x.productSlug && item.optionKey === x.optionKey
+        )?.productName ?? x.productSlug ?? '(상품 이름 없음)',
+    }));
+
+    /*
+     * ★ 재고가 모자랐다면 이력에도 남깁니다.
+     *   나중에 "왜 재고가 0인데 준비 중이지" 를 되짚는 유일한 단서입니다.
+     *   상품명까지 적습니다. 옵션 키만 적으면 어느 상품인지 알 수 없습니다.
+     */
+    const shortageNote =
+      shortages.length > 0
+        ? ` (재고 부족 — ${shortages
+            .map(
+              (x) =>
+                `${x.productName ?? x.productSlug}${x.optionKey ? ` (${x.optionKey})` : ''} ${x.wanted}개 필요 · ${x.available}개만 있었음`
+            )
+            .join(', ')})`
+        : '';
+
     await addHistory(
       id,
       before.status,
       'paid',
-      '운영자가 KSNET 거래내역에서 승인을 확인하고 결제완료로 확정했습니다.'
+      `운영자가 KSNET 거래내역에서 승인을 확인하고 결제완료로 확정했습니다.${shortageNote}`
     );
-    return (await getOrderById(id)) as Order;
+    return { order: (await getOrderById(id)) as Order, shortages };
   }
 
   /* ── 결제실패로 확정 ── */
@@ -2515,5 +2578,5 @@ export async function confirmUncertainPayment(
     }
   }
 
-  return (await getOrderById(id)) as Order;
+  return { order: (await getOrderById(id)) as Order, shortages: [] };
 }
