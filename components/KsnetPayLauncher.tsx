@@ -23,11 +23,17 @@ import { useEffect, useRef, useState } from 'react';
  * ★ 아이프레임 이름은 반드시 'payment-frame' 이어야 합니다.
  *   KSNET 결제창이 그 이름을 찾습니다. 바꾸지 마세요.
  *
- * ★ 결제 결과는 이 컴포넌트가 받지 않습니다.
+ * ★ 결제 결과는 이 컴포넌트가 만들지 않습니다.
  *   결제창이 우리 서버(sndReply = /api/payment/ksnet/return)로 직접 POST 하고,
- *   그 응답 페이지가 최상위 창을 결과 화면으로 옮깁니다.
+ *   그 응답 페이지가 결과 화면 주소를 알려 줍니다.
  *   손님이 결제창의 [닫기] 를 눌러도 같은 주소로 갑니다. (reCnclType=1)
- *   그래서 여기서 결과를 기다리거나 폴링할 필요가 없습니다.
+ *
+ * ★★ 다만 그 응답은 아이프레임 안에서 그려집니다.
+ *   넘어가야 하는 것은 프레임이 아니라 이 바깥 창입니다.
+ *   응답 페이지가 top 을 직접 만지려 하지만 그 길이 막히는 경우가 있고,
+ *   그러면 손님이 프레임 안 안내 화면에 갇혀 새로고침해야 했습니다.
+ *   그래서 응답 페이지가 postMessage 로도 알려 주고, 여기서 받아 우리가 옮깁니다.
+ *   길이 둘이면 하나가 막혀도 손님은 결과를 봅니다.
  *
  * ★ 이모지·그림자를 쓰지 않습니다. 아이콘은 SVG 로 직접 그립니다.
  */
@@ -54,6 +60,37 @@ export default function KsnetPayLauncher({
   /** 두 번 보내지 않게 막습니다. (React 개발 모드는 effect 를 두 번 실행합니다) */
   const sent = useRef(false);
   const [error, setError] = useState('');
+
+  /*
+   * 결제창 응답 페이지가 보내는 결과 주소를 받아 이 창을 옮깁니다.
+   *
+   * ★★ 아무 메시지나 따르면 안 됩니다. 결제창은 다른 도메인이고,
+   *   그 안에서 열린 페이지가 우리에게 아무 주소나 보낼 수 있습니다.
+   *   그래서 우리 사이트 안쪽 주소만 따릅니다. 열린 리다이렉트를 막습니다.
+   */
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data as { type?: string; url?: string } | null;
+      if (!data || data.type !== 'ksnet-payment-result') return;
+
+      const raw = typeof data.url === 'string' ? data.url : '';
+      if (!raw) return;
+
+      let target: URL;
+      try {
+        target = new URL(raw, window.location.origin);
+      } catch {
+        return;
+      }
+      // ★ 우리 사이트가 아니면 무시합니다.
+      if (target.origin !== window.location.origin) return;
+
+      window.location.replace(target.toString());
+    };
+
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
 
   useEffect(() => {
     if (sent.current) return;

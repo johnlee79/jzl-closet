@@ -41,6 +41,15 @@ import {
  *   그래서 최상위 창을 옮기는 스크립트를 담은 페이지를 돌려줍니다.
  *   모바일은 페이지째 이동한 상태라 같은 스크립트가 그냥 현재 창을 옮깁니다.
  */
+/**
+ * 손님이 기다리는 길에서 승인 확인에 쓸 수 있는 시간.
+ *
+ * ★ 실제 승인 확인은 1~2초면 끝납니다. (실측: 결제창 복귀 후 1.5초)
+ *   6초는 느린 회선까지 감안한 값이고, 그 이상은 손님을 붙잡는 것입니다.
+ * ★ 이 시간을 넘겨도 잃는 것이 없습니다. 정리 작업이 끝을 냅니다.
+ */
+const CUSTOMER_APPROVE_TIMEOUT_MS = 6000;
+
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -268,10 +277,24 @@ async function handle(request: NextRequest, context: RouteContext): Promise<Resp
     return htmlRedirect(await resultUrl(order.status, orderNo));
   }
 
-  /* ── 승인 확인 (실패하면 한 번 더) ────────────────────── */
+  /*
+   * ── 승인 확인 ────────────────────────────────────────
+   *
+   * ★★ 손님이 기다리는 길입니다. 짧게 한 번만 묻습니다.
+   *   예전에는 20초 타임아웃으로 두 번 물었습니다. KSNET 이 답을 안 주면
+   *   손님은 결제창 안 빈 화면을 최대 41초 동안 보게 됩니다.
+   *   그 사이 창을 닫으면 우리는 결과를 영영 못 받습니다.
+   *
+   * ★ 못 받아도 손해가 없습니다. 결제 Key 를 이미 주문에 적어 두었으므로
+   *   10분마다 도는 정리가 넉넉한 시간으로 다시 물어 끝을 냅니다.
+   *   손님에게는 그동안 "확인 중" 으로만 안내합니다.
+   */
   let approval;
   try {
-    approval = await approveKsnetPayment(commConId, order.totalAmount);
+    approval = await approveKsnetPayment(commConId, order.totalAmount, {
+      timeoutMs: CUSTOMER_APPROVE_TIMEOUT_MS,
+      attempts: 1,
+    });
   } catch (error) {
     approval = null;
     console.error('[ksnet/return] 승인 확인 중 오류:', error);
@@ -290,10 +313,26 @@ async function handle(request: NextRequest, context: RouteContext): Promise<Resp
     });
 
     /*
-     * ★ 여기서 '결제실패' 로 단정하면 안 됩니다.
+     * ★★ 어떤 경우에도 '결제실패' 로 단정하지 않습니다.
      *   실제로는 승인이 났는데 우리만 모르는 상황일 수 있습니다.
-     *   '승인확인실패' 로 두고 사람이 KSNET 거래내역과 대조하게 합니다.
+     *
+     * ★★ 다만 "우리가 기다리다 끊은 것" 과 "물어봤는데 답이 이상한 것" 은 나눕니다.
+     *
+     *   끊긴 경우 — 주문을 결제대기 그대로 둡니다.
+     *     답이 아직 안 왔을 뿐입니다. 결제 Key 가 주문에 있으니
+     *     10분마다 도는 정리가 넉넉한 시간으로 다시 물어 끝을 냅니다.
+     *     여기서 승인확인실패로 보내고 사람을 부르면, 몇 초 뒤 저절로 풀릴 일에
+     *     매번 알림이 울려 정작 중요한 알림을 놓칩니다.
+     *
+     *   답이 이상한 경우 — 지금까지처럼 승인확인실패로 두고 사람을 부릅니다.
+     *     저절로 풀리지 않습니다.
      */
+    if (approval?.result.timedOut) {
+      return htmlRedirect(
+        `${SITE_URL}/checkout/pending?no=${encodeURIComponent(orderNo)}`
+      );
+    }
+
     const marked = await markPaymentUnconfirmed(orderNo, reason);
     await safeNotify(() => notifyPaymentUnconfirmed(marked.order, orderNo, reason));
 
@@ -485,14 +524,29 @@ async function resultUrl(status: string, orderNo: string): Promise<string> {
  * ★ alert 을 쓰지 않습니다. 결제창 안에서 모달이 뜨면 아무것도 못 하게 됩니다.
  */
 function htmlRedirect(url: string): Response {
+  /*
+   * 두 가지로 다르게 감쌉니다.
+   *   safe     — <script> 안의 문자열용. & 를 그대로 두어야 주소가 살아 있습니다.
+   *   attrSafe — HTML 속성용. & 를 &amp; 로 바꿔야 규격에 맞습니다.
+   * 한 가지로 뭉뚱그리면 한쪽이 반드시 깨집니다.
+   */
   const safe = url.replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  const attrSafe = safe.replace(/&(?!amp;|quot;|lt;)/g, '&amp;');
   const body = `<!doctype html>
 <html lang="ko">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>결제 결과 확인 중</title>
+<title>결과 화면으로 이동합니다</title>
+<!--
+  ★ 자바스크립트가 꺼져 있을 때만 쓰이는 마지막 길입니다.
+    0초로 두면 아래 스크립트보다 먼저 움직여, 바깥 창이 아니라
+    이 작은 프레임만 결과 화면으로 바뀝니다. 손님은 결제창 크기의
+    상자 안에서 주문 완료를 보게 됩니다.
+    스크립트가 먼저 끝낼 시간을 주려고 3초 뒤로 미룹니다.
+-->
+<meta http-equiv="refresh" content="3;url=${attrSafe}">
 <style>
   body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
          background:#F6F5F2; color:#14141A;
@@ -504,19 +558,46 @@ function htmlRedirect(url: string): Response {
 </head>
 <body>
   <div class="box">
-    <p>결제 결과를 확인하고 있습니다.<br>잠시만 기다려 주세요.</p>
-    <a href="${safe}">화면이 넘어가지 않으면 여기를 눌러 주세요</a>
+    <!--
+      ★ "확인하고 있습니다" 라고 적지 않습니다.
+        이 화면이 그려지는 시점에는 승인 확인이 이미 끝났습니다.
+        확인 중이라고 하면 손님이 결과를 기다리는 중으로 오해하고,
+        정말 확인이 필요한 화면(/checkout/pending)과 구분이 안 됩니다.
+    -->
+    <p>결과 화면으로 이동합니다.</p>
+    <a href="${attrSafe}" target="_top">화면이 넘어가지 않으면 여기를 눌러 주세요</a>
   </div>
   <script>
     (function () {
       var url = "${safe}";
+
+      /*
+       * ★★ PC 결제는 우리 페이지(/checkout/pay) 위에 띄운 아이프레임 안에서 돕니다.
+       *   결과 화면으로 넘어가야 하는 것은 이 프레임이 아니라 바깥 창입니다.
+       *   바깥 창을 옮기는 길을 세 갈래로 두고 하나라도 되면 넘어가게 합니다.
+       *   예전에는 top 을 직접 만지는 한 갈래뿐이라, 그것이 막히면 손님이
+       *   이 화면에 갇혀 새로고침해야 했습니다.
+       */
+
+      // ① 바깥 창에게 알립니다. 바깥 창이 스스로 옮겨 갑니다.
+      //    top 에 손을 못 대는 상황에서도 이 길은 열려 있습니다.
       try {
-        if (window.top && window.top !== window.self) { window.top.location.href = url; }
-        else { window.location.replace(url); }
-      } catch (e) {
-        // 다른 출처의 프레임이라 top 을 만질 수 없는 경우입니다.
-        window.location.replace(url);
-      }
+        if (window.parent && window.parent !== window.self) {
+          window.parent.postMessage({ type: "ksnet-payment-result", url: url }, "*");
+        }
+      } catch (e) {}
+
+      // ② 바깥 창을 직접 옮깁니다. 같은 출처면 이 길이 가장 빠릅니다.
+      try {
+        if (window.top && window.top !== window.self) {
+          window.top.location.replace(url);
+          return;
+        }
+      } catch (e) {}
+
+      // ③ 그래도 안 되면 최소한 이 화면이라도 결과로 바꿉니다.
+      //    (모바일은 애초에 프레임이 없어 여기로 옵니다)
+      try { window.location.replace(url); } catch (e) { window.location.href = url; }
     })();
   </script>
 </body>

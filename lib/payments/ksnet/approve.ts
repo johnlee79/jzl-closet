@@ -57,6 +57,16 @@ export type KsnetApproveResult = {
   fields: Partial<Record<KsnetReplyKey, string>>;
   /** 통신·파싱이 실패한 이유 */
   error?: string;
+  /**
+   * 우리가 기다리다 끊었는지.
+   *
+   * ★★ 이 구분이 중요합니다.
+   *   끊긴 것은 "답이 아직 안 왔다" 이지 "승인이 없다" 가 아닙니다.
+   *   손님을 붙잡아 둘 수 없어 우리가 먼저 놓은 것뿐이라,
+   *   주문을 승인확인실패로 보내거나 사람을 부를 이유가 없습니다.
+   *   결제 Key 가 주문에 남아 있으므로 10분마다 도는 정리가 다시 물어봅니다.
+   */
+  timedOut?: boolean;
 };
 
 /** 결제창이 돌려주는 값 중 우리가 쓰는 것 */
@@ -77,7 +87,8 @@ const TIMEOUT_MS = 20_000;
  */
 async function requestApprove(
   commConId: string,
-  amount: number
+  amount: number,
+  timeoutMs: number
 ): Promise<KsnetApproveResult> {
   const body = euckrFormBody({
     sndCommConId: commConId,
@@ -95,7 +106,7 @@ async function requestApprove(
     body,
     // 승인 확인은 캐시되면 안 됩니다.
     cache: 'no-store',
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   // ★ text() 를 쓰면 안 됩니다. UTF-8 로 읽어 한글이 깨집니다.
@@ -120,32 +131,52 @@ async function requestApprove(
  *   호출부가 주문을 '승인확인실패' 로 두고 사람에게 알립니다.
  *   절대 '결제실패' 로 단정하지 마세요. 돈은 빠져나갔을 수 있습니다.
  */
+/**
+ * ★ 기다리는 시간을 부르는 쪽이 정합니다.
+ *
+ *   손님이 결제창에서 돌아오는 길 — 짧게 한 번만.
+ *     손님을 붙잡아 두면 안 됩니다. 못 받으면 "확인 중" 으로 안내하고,
+ *     10분마다 도는 정리가 끈질기게 다시 묻습니다.
+ *
+ *   자동 정리(card-sweep) — 지금까지처럼 넉넉하게 두 번.
+ *     기다리는 사람이 없으므로 확실히 알아내는 쪽이 낫습니다.
+ *
+ * ★ 기본값은 예전 그대로입니다. 옵션을 안 주면 동작이 바뀌지 않습니다.
+ */
 export async function approveKsnetPayment(
   commConId: string,
-  amount: number
+  amount: number,
+  options: { timeoutMs?: number; attempts?: number } = {}
 ): Promise<{ result: KsnetApproveResult; attempts: number }> {
+  const timeoutMs = options.timeoutMs ?? TIMEOUT_MS;
+  const maxAttempts = Math.max(1, options.attempts ?? 2);
   let last: KsnetApproveResult | null = null;
 
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       // eslint-disable-next-line no-await-in-loop
-      const result = await requestApprove(commConId, amount);
+      const result = await requestApprove(commConId, amount, timeoutMs);
       // 파싱까지 성공했으면 승인 거절이어도 그것이 확정된 답입니다. 재시도하지 않습니다.
       if (result.ok) return { result, attempts: attempt };
       last = result;
     } catch (error) {
       const message = error instanceof Error ? error.message : '승인 확인 중 오류';
-      last = failure('', message);
+      /*
+       * ★ AbortSignal.timeout 이 끊으면 TimeoutError 로 옵니다.
+       *   "답이 안 왔다" 와 "답이 이상하다" 를 호출부가 구분할 수 있어야 합니다.
+       */
+      const timedOut = error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError');
+      last = { ...failure('', message), timedOut };
     }
 
     // 곧바로 다시 두드리면 같은 이유로 또 실패합니다. 잠깐 쉽니다.
-    if (attempt === 1) {
+    if (attempt < maxAttempts) {
       // eslint-disable-next-line no-await-in-loop
       await new Promise((resolve) => setTimeout(resolve, 1500));
     }
   }
 
-  return { result: last ?? failure('', '승인 확인에 실패했습니다.'), attempts: 2 };
+  return { result: last ?? failure('', '승인 확인에 실패했습니다.'), attempts: maxAttempts };
 }
 
 /* ------------------------------------------------------------------
