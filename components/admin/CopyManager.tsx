@@ -70,7 +70,16 @@ function CopyEditor({
   };
 
   const reset = () => {
-    if (!window.confirm('지금 내용을 버리고 기본값으로 되돌릴까요?')) return;
+    if (
+      !window.confirm(
+        `"${meta.title}" 항목만 기본값으로 되돌립니다.
+
+지금 내용은 사라집니다. 계속할까요?
+(같은 묶음의 다른 항목은 그대로 있습니다)`
+      )
+    ) {
+      return;
+    }
     setMessage(null);
     startTransition(async () => {
       const result = await resetCopyAction(copyKey);
@@ -79,7 +88,7 @@ function CopyEditor({
         return;
       }
       setBlocks(result.data);
-      setMessage({ tone: 'ok', text: '기본값으로 되돌렸습니다.' });
+      setMessage({ tone: 'ok', text: `"${meta.title}" 을(를) 기본값으로 되돌렸습니다.` });
       router.refresh();
     });
   };
@@ -187,7 +196,7 @@ function CopyEditor({
           {pending ? '저장 중…' : '저장'}
         </button>
         <button type="button" onClick={reset} disabled={pending} className="admin-btn">
-          기본값으로 되돌리기
+          이 항목만 기본값으로
         </button>
         <a href={meta.path} target="_blank" rel="noreferrer" className="admin-btn">
           페이지 보기 ↗
