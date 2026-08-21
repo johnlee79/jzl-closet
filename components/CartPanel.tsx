@@ -321,19 +321,41 @@ export default function CartPanel({
             </div>
           </dl>
 
-          {/* ★ 예상 적립 — 적립률 × 상품금액을 화면에서 계산합니다. */}
+          {/*
+            ★ 예상 적립 — 적립률 × 상품금액을 화면에서 계산합니다.
+            ★ 지급 시점은 줄을 바꿔 아래에 둡니다.
+              한 줄에 이어 붙이면 좁은 요약 상자에서 괄호 한가운데가 끊겨
+              "…적립 예정 (배송완" / "료 시점에 지급)" 처럼 읽힙니다.
+              어차피 두 줄이 될 자리라면 뜻이 끊기는 곳에서 끊습니다.
+            ★ 금액은 줄바꿈으로 쪼개지지 않게 붙여 둡니다.
+          */}
           {expectedEarn > 0 ? (
-            <p className="mt-4 text-[14px] leading-relaxed text-wine">
-              이번 주문으로 {formatPrice(expectedEarn)}P 적립 예정
-              <span className="ml-1 text-muted">(배송완료 시점에 지급)</span>
+            <p className="mt-4 text-[15px] leading-relaxed text-wine">
+              이번 주문으로{' '}
+              <strong className="whitespace-nowrap font-semibold">
+                {formatPrice(expectedEarn)}P
+              </strong>{' '}
+              적립 예정
+              <span className="mt-0.5 block text-[13px] text-muted">
+                (배송완료 시점에 지급)
+              </span>
             </p>
           ) : null}
 
           {/* ★ 주문할 것이 하나도 없을 때는 안내하지 않습니다.
-              "0원인데 5만원을 더 담으라" 는 말이 되어 위 배송비 줄과 어긋납니다. */}
+              "0원인데 5만원을 더 담으라" 는 말이 되어 위 배송비 줄과 어긋납니다.
+            ★ 본문 색(ink)으로 올립니다. muted 는 캡션·라벨 자리의 색인데
+              이 줄은 손님이 읽고 행동하기를 바라는 문장입니다. */}
           {freeShippingLeft > 0 && live.orderableCount > 0 ? (
-            <p className="mt-4 text-[14px] leading-relaxed text-muted">
-              {formatPrice(freeShippingLeft)}원 더 담으시면 배송비가 무료입니다.
+            <p className="mt-4 text-[15px] leading-relaxed text-ink">
+              <strong className="whitespace-nowrap font-semibold">
+                {formatPrice(freeShippingLeft)}원
+              </strong>{' '}
+              더 담으시면 배송비가{' '}
+              {/* ★ "무료" 와 "입니다" 사이에서 줄이 끊기면 "입니다." 만 남습니다. 붙여 둡니다. */}
+              <span className="whitespace-nowrap">
+                <strong className="font-semibold text-wine">무료</strong>입니다.
+              </span>
             </p>
           ) : null}
 

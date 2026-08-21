@@ -149,7 +149,7 @@ export default function ShippingForm({ initial }: { initial: ShippingSettings })
               type="text"
               value={form.productLine}
               onChange={(event) => set('productLine', event.target.value)}
-              placeholder="무료배송   또는   3,000원 · 50,000원 이상 무료"
+              placeholder="무료배송   또는   배송비 3,000원 (50,000원 이상 무료)"
               maxLength={40}
               className="admin-input"
             />

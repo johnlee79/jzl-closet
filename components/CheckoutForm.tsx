@@ -1053,17 +1053,36 @@ export default function CheckoutForm({
                 </div>
               ) : null}
 
-              {/* ★ 이번 주문으로 쌓일 예상 적립. 화면에서 계산합니다. */}
+              {/*
+                ★ 이번 주문으로 쌓일 예상 적립. 화면에서 계산합니다.
+                ★ 장바구니 요약과 글자 하나까지 같게 둡니다.
+                  예전에는 여기만 "…P 가 적립될 예정입니다." 였습니다.
+                  같은 값을 두 화면이 다르게 말할 이유가 없고, 문구를 손볼 때
+                  한쪽만 고치게 됩니다.
+              */}
               {expectedEarn > 0 ? (
-                <p className="mt-4 border-t border-stone pt-4 text-[14px] leading-relaxed text-wine">
-                  이번 주문으로 {formatPrice(expectedEarn)}P 가 적립될 예정입니다.
-                  <span className="ml-1 text-muted">(배송완료 시점에 지급)</span>
+                <p className="mt-4 border-t border-stone pt-4 text-[15px] leading-relaxed text-wine">
+                  이번 주문으로{' '}
+                  <strong className="whitespace-nowrap font-semibold">
+                    {formatPrice(expectedEarn)}P
+                  </strong>{' '}
+                  적립 예정
+                  <span className="mt-0.5 block text-[13px] text-muted">
+                    (배송완료 시점에 지급)
+                  </span>
                 </p>
               ) : null}
 
               {freeShippingLeft > 0 ? (
-                <p className="mt-4 text-[14px] leading-relaxed text-muted">
-                  {formatPrice(freeShippingLeft)}원 더 담으시면 배송비가 무료입니다.
+                <p className="mt-4 text-[15px] leading-relaxed text-ink">
+                  <strong className="whitespace-nowrap font-semibold">
+                    {formatPrice(freeShippingLeft)}원
+                  </strong>{' '}
+                  더 담으시면 배송비가{' '}
+                  {/* ★ "무료" 와 "입니다" 사이에서 줄이 끊기면 "입니다." 만 남습니다. 붙여 둡니다. */}
+                  <span className="whitespace-nowrap">
+                    <strong className="font-semibold text-wine">무료</strong>입니다.
+                  </span>
                 </p>
               ) : null}
 

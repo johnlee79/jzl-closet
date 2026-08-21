@@ -90,7 +90,7 @@ export type ShippingSettings = {
    *   그렇다고 leadTime 을 줄이면 배송 안내 페이지와 판매정보 탭까지 같이 짧아집니다.
    *   한 문구를 여러 화면이 나눠 쓰던 것을 여기서 끊습니다.
    *
-   *   예) "무료배송" · "3,000원 · 50,000원 이상 무료"
+   *   예) "무료배송" · "배송비 3,000원 (50,000원 이상 무료)"
    *   비워 두면 배송비 설정으로 알아서 한 줄을 만듭니다.
    */
   productLine: string;
@@ -129,9 +129,17 @@ export function productShippingLine(
 
   if (freeShipping) return '무료배송';
 
-  const fee = `${formatNumber(settings.baseFee)}원`;
+  /*
+   * ★ 숫자 앞에 "배송비" 를 붙입니다.
+   *   예전에는 "3,000원 · 50,000원 이상 무료" 였는데, 앞의 3,000원이 무엇인지
+   *   문장 안에 드러나지 않았습니다. 가운뎃점으로 이어 붙인 두 토막이라
+   *   앞뒤가 따로 놀기도 했습니다. 괄호로 묶어 뒤가 앞의 단서임을 보이게 합니다.
+   * ★ 금액은 관리자 설정(배송비·무료배송 기준)에서 그대로 읽습니다.
+   *   무료배송 기준을 0으로 꺼 두면 괄호가 통째로 빠집니다.
+   */
+  const fee = `배송비 ${formatNumber(settings.baseFee)}원`;
   if (settings.freeThreshold > 0) {
-    return cutToOneLine(`${fee} · ${formatNumber(settings.freeThreshold)}원 이상 무료`);
+    return cutToOneLine(`${fee} (${formatNumber(settings.freeThreshold)}원 이상 무료)`);
   }
   return fee;
 }
