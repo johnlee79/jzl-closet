@@ -9,6 +9,7 @@ import {
   isSalesStatus,
   isStockReleasing,
   statusLabel,
+  mypageTabStatuses,
   NEEDS_CHECK_STATUSES,
   NEEDS_CHECK_TAB,
   UNSHIPPED_TAB,
@@ -589,8 +590,16 @@ export async function getOrdersOfUser(
   const supabase = getSupabaseAdmin();
   if (!supabase) return [];
 
+  /*
+   * ★ 손님 화면의 탭은 상태 하나가 아니라 여러 상태를 묶습니다.
+   *   예) '결제 확인 중' = 결제대기 + 승인확인실패 + 검토필요
+   *   어떤 상태를 묶는지는 lib/order-status.ts 의 MYPAGE_ORDER_TABS 한 곳에 있습니다.
+   * ★ 모르는 값이 들어오면 빈 배열이 나와 전체를 보여 줍니다.
+   *   (없어진 옛 주소는 화면 쪽에서 전체로 돌려보냅니다)
+   */
   let query = supabase.from(ORDERS).select('*').eq('user_id', userId);
-  if (status && status !== 'all') query = query.eq('status', status);
+  const statuses = status ? mypageTabStatuses(status) : [];
+  if (statuses.length > 0) query = query.in('status', statuses);
   query = query.order('created_at', { ascending: false });
 
   const { data, error } = await query;

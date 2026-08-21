@@ -358,6 +358,62 @@ export function orderProgress(status: string): OrderProgress {
   }
 }
 
+/* ==================================================================
+ * 마이페이지 주문 내역의 상태 탭
+ * ==================================================================
+ *
+ * ★★ 관리자 상태 13개를 그대로 탭으로 늘어놓지 않습니다.
+ *   손님 주문은 몇 건 되지 않아 대부분의 탭이 0건입니다. 빈 탭을 눌러 보게
+ *   만드는 것은 시간 낭비이고, 손님이 알 필요 없는 내부 사정까지 드러납니다.
+ *
+ * ★★ 승인확인실패·검토필요를 이름 그대로 보여 주지 않습니다.
+ *   우리가 KSNET 거래내역과 대조해야 풀리는 상태라 손님이 할 수 있는 일이 없고,
+ *   이름을 보면 불안해져 문의가 옵니다.
+ *   위 customerPaymentText 가 이미 같은 원칙으로 "결제를 확인하고 있습니다" 만
+ *   보여 주고 있었는데, 탭만 그 원칙 밖에 있었습니다.
+ *
+ * ★ '결제 확인 중' 이라고 부릅니다. '입금/결제 대기' 로 묶으면 무통장 손님은
+ *   입금하라는 뜻으로, 카드 손님은 왜 대기냐는 뜻으로 읽습니다.
+ *   성격이 다른 둘을 한 이름에 묶으면 양쪽 다 틀립니다.
+ *
+ * ★ 결제완료와 상품준비중은 손님에게 같은 상태입니다.
+ *   우리에게는 "재고 확인 전/후" 라는 큰 차이지만 손님이 보기엔 둘 다
+ *   "돈은 냈고 아직 안 왔다" 입니다.
+ */
+export type MypageOrderTab = {
+  key: string;
+  label: string;
+  /** 이 탭이 거르는 상태들. 비어 있으면 전체입니다. */
+  statuses: OrderStatus[];
+};
+
+export const MYPAGE_ORDER_TABS: MypageOrderTab[] = [
+  { key: 'all', label: '전체', statuses: [] },
+  {
+    key: 'checking',
+    label: '결제 확인 중',
+    statuses: ['pending_payment', 'payment_unconfirmed', 'payment_review'],
+  },
+  { key: 'preparing', label: '준비중', statuses: ['paid', 'preparing'] },
+  { key: 'shipping', label: '배송중', statuses: ['shipping'] },
+  { key: 'delivered', label: '배송완료', statuses: ['delivered', 'confirmed'] },
+  {
+    key: 'closed',
+    label: '취소·교환·반품',
+    statuses: ['cancel_requested', 'cancelled', 'exchange', 'returned', 'failed'],
+  },
+];
+
+/** 주소에 들어온 값이 지금 쓰는 탭인지 */
+export function isMypageOrderTab(key: string): boolean {
+  return MYPAGE_ORDER_TABS.some((tab) => tab.key === key);
+}
+
+/** 탭이 거르는 상태들. 전체이거나 모르는 값이면 빈 배열입니다. */
+export function mypageTabStatuses(key: string): OrderStatus[] {
+  return MYPAGE_ORDER_TABS.find((tab) => tab.key === key)?.statuses ?? [];
+}
+
 /**
  * 구매 적립이 아직 지급되지 않은 상태인지.
  *

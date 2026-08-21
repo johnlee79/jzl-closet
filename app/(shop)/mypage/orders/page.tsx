@@ -1,5 +1,7 @@
+import { redirect } from 'next/navigation';
 import MemberOrderList from '@/components/MemberOrderList';
 import { getActiveMember } from '@/lib/auth';
+import { isMypageOrderTab } from '@/lib/order-status';
 import { getOrdersOfUser } from '@/lib/orders';
 import { getReviewedKeys } from '@/lib/reviews';
 import { getCachedPayment } from '@/lib/settings';
@@ -15,6 +17,17 @@ export default async function MypageOrdersPage({
   if (!member) return null;
 
   const status = searchParams.status ?? 'all';
+
+  /*
+   * ★ 탭을 여섯 개로 줄이면서 없어진 주소가 생겼습니다.
+   *   (?status=payment_review 처럼 손님이 즐겨찾기해 두었을 수 있는 것들)
+   *   그대로 두면 아무것도 걸리지 않아 빈 목록만 보입니다. 전체로 돌려보냅니다.
+   * ★ 주소까지 깨끗해집니다. 화면만 전체로 바꾸면 주소창에는 없어진 탭 이름이
+   *   남아 있어, 그 주소를 다시 공유하게 됩니다.
+   */
+  if (status !== 'all' && !isMypageOrderTab(status)) {
+    redirect('/mypage/orders');
+  }
   const [orders, payment] = await Promise.all([
     getOrdersOfUser(member.user.id, status),
     getCachedPayment(),

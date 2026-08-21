@@ -2,7 +2,7 @@ import Link from 'next/link';
 import WelcomeNotice from '@/components/WelcomeNotice';
 import { getActiveMember } from '@/lib/auth';
 import { countInquiriesOfUser } from '@/lib/inquiries';
-import { statusLabel } from '@/lib/order-status';
+import { MYPAGE_ORDER_TABS, statusLabel } from '@/lib/order-status';
 import { countOrdersOfUser, depositDeadline, getOrdersOfUser } from '@/lib/orders';
 import { formatDate } from '@/lib/format';
 import { formatPrice } from '@/lib/product-utils';
@@ -10,12 +10,16 @@ import { getCachedEvent, getCachedPayment } from '@/lib/settings';
 
 export const metadata = { title: '요약' };
 
-/** 마이페이지에서 눈에 띄게 보여 줄 상태들 */
-const HIGHLIGHT = [
-  { status: 'pending_payment', href: '/mypage/orders?status=pending_payment' },
-  { status: 'shipping', href: '/mypage/orders?status=shipping' },
-  { status: 'delivered', href: '/mypage/orders?status=delivered' },
-] as const;
+/**
+ * 마이페이지에서 눈에 띄게 보여 줄 세 칸.
+ *
+ * ★★ 주문 내역의 탭 키를 그대로 씁니다.
+ *   예전에는 상태값 하나씩(pending_payment·shipping·delivered)을 세고 그 주소로
+ *   보냈습니다. 탭을 여섯 개로 묶으면서 그 주소들이 없어졌고, 무엇보다
+ *   여기서 "1건" 이라고 세어 놓고 눌러 들어가면 "3건" 이 나오게 됩니다.
+ *   숫자·이름·가는 곳이 전부 한 정의에서 나오게 맞춥니다.
+ */
+const HIGHLIGHT = ['checking', 'shipping', 'delivered'] as const;
 
 export default async function MypageHomePage() {
   const member = await getActiveMember();
@@ -65,7 +69,7 @@ export default async function MypageHomePage() {
             href={
               soonExpiring.length === 1
                 ? `/mypage/orders/${soonExpiring[0].id}`
-                : '/mypage/orders?status=pending_payment'
+                : '/mypage/orders?status=checking'
             }
             className="btn-secondary min-h-[40px] px-4 py-0 text-[14px]"
           >
@@ -82,19 +86,28 @@ export default async function MypageHomePage() {
         </h2>
 
         <ul className="mt-6 grid grid-cols-3 gap-3">
-          {HIGHLIGHT.map((item) => (
-            <li key={item.status}>
-              <Link
-                href={item.href}
-                className="block border border-stone p-5 transition-colors hover:border-ink"
-              >
-                <span className="text-[14px] text-muted">{statusLabel(item.status)}</span>
-                <span className="mt-2 block text-[28px] font-semibold tabular-nums text-ink">
-                  {counts[item.status] ?? 0}
-                </span>
-              </Link>
-            </li>
-          ))}
+          {HIGHLIGHT.map((key) => {
+            const tab = MYPAGE_ORDER_TABS.find((entry) => entry.key === key);
+            if (!tab) return null;
+            /* 묶인 상태들의 건수를 더합니다. 조회를 늘리지 않습니다. */
+            const count = tab.statuses.reduce(
+              (sum, status) => sum + (counts[status] ?? 0),
+              0
+            );
+            return (
+              <li key={tab.key}>
+                <Link
+                  href={`/mypage/orders?status=${tab.key}`}
+                  className="block border border-stone p-5 transition-colors hover:border-ink"
+                >
+                  <span className="text-[14px] text-muted">{tab.label}</span>
+                  <span className="mt-2 block text-[28px] font-semibold tabular-nums text-ink">
+                    {count}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
 
         <p className="mt-4 text-[15px] text-muted">

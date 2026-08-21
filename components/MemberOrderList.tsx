@@ -8,7 +8,7 @@ import OrderProgress from '@/components/OrderProgress';
 import { claimOrderAction } from '@/app/(shop)/mypage/actions';
 import { courierName, trackingUrl } from '@/lib/couriers';
 import { formatDate } from '@/lib/format';
-import { ORDER_STATUSES, ORDER_STATUS_META, statusLabel } from '@/lib/order-status';
+import { MYPAGE_ORDER_TABS, statusLabel } from '@/lib/order-status';
 import { formatPrice } from '@/lib/product-utils';
 import type { Order } from '@/lib/types';
 
@@ -80,34 +80,27 @@ export default function MemberOrderList({
 
   return (
     <div>
-      {/* ── 상태 필터 ─────────────────────────────────── */}
+      {/*
+        ── 상태 필터 ───────────────────────────────────
+        ★ 관리자 상태 13개를 그대로 늘어놓지 않습니다. 손님이 실제로 쓰는 여섯 개입니다.
+          무엇을 어떻게 묶는지는 lib/order-status.ts 의 MYPAGE_ORDER_TABS 한 곳에 있습니다.
+        ★ 건수는 붙이지 않습니다. 숫자를 세려면 조회가 늘어나는데,
+          주문이 몇 건뿐인 손님에게 얻는 것이 적습니다.
+      */}
       <nav aria-label="주문 상태" className="overflow-x-auto border-b border-stone pb-4">
-        <ul className="flex min-w-max gap-x-4 gap-y-2">
-          <li>
-            <Link
-              href="/mypage/orders"
-              aria-current={status === 'all' ? 'page' : undefined}
-              className={`text-[16px] tracking-[0.1em] transition-colors ${
-                status === 'all'
-                  ? 'text-ink underline decoration-wine underline-offset-[6px]'
-                  : 'text-muted hover:text-ink'
-              }`}
-            >
-              전체
-            </Link>
-          </li>
-          {ORDER_STATUSES.map((item) => (
-            <li key={item}>
+        <ul className="flex min-w-max gap-x-5 gap-y-2">
+          {MYPAGE_ORDER_TABS.map((tab) => (
+            <li key={tab.key}>
               <Link
-                href={`/mypage/orders?status=${item}`}
-                aria-current={status === item ? 'page' : undefined}
+                href={tab.key === 'all' ? '/mypage/orders' : `/mypage/orders?status=${tab.key}`}
+                aria-current={status === tab.key ? 'page' : undefined}
                 className={`whitespace-nowrap text-[16px] tracking-[0.1em] transition-colors ${
-                  status === item
+                  status === tab.key
                     ? 'text-ink underline decoration-wine underline-offset-[6px]'
                     : 'text-muted hover:text-ink'
                 }`}
               >
-                {ORDER_STATUS_META[item].label}
+                {tab.label}
               </Link>
             </li>
           ))}
