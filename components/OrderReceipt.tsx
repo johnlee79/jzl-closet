@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import OrderEarnNote from '@/components/OrderEarnNote';
+import OrderProgress from '@/components/OrderProgress';
 import { courierName, trackingUrl } from '@/lib/couriers';
 import { orderPaymentText } from '@/lib/order-status';
 import { formatPrice } from '@/lib/product-utils';
@@ -52,6 +54,21 @@ export default function OrderReceipt({
             {payment.title}
           </p>
           <p className="mt-2 text-[17px] leading-[1.8] text-ink">{payment.body}</p>
+
+          {/*
+            진행 단계 — 결제완료 ── 상품준비중 ── 배송중 ── 배송완료
+            ★ 손님이 가장 먼저 찾는 정보라 상태 문구 바로 아래에 둡니다.
+            ★ 취소·교환·반품은 이 흐름 밖이라 네 칸 대신 한 줄로 나옵니다.
+          */}
+          <div className="mt-7 border-t border-stone pt-6">
+            <OrderProgress status={order.status} />
+          </div>
+
+          {/*
+            적립 예정 — 회원 주문이고 아직 지급 전일 때만 나옵니다.
+            ★ 비회원 주문에는 적립이 없어 아무것도 그리지 않습니다.
+          */}
+          <OrderEarnNote order={order} className="mt-5" />
 
           {/*
             카드 승인 정보 (4-A)

@@ -25,8 +25,10 @@ type Leaf = {
   exact?: boolean;
   /** 같은 화면을 탭으로 나눠 쓰는 경우 (설정) — ?tab= 값까지 맞아야 활성 */
   tab?: string;
+  /** 같은 화면을 상태로 나눠 쓰는 경우 (주문) — ?status= 값까지 맞아야 활성 */
+  status?: string;
   /** 어떤 숫자를 뱃지로 붙일지 */
-  badge?: 'orders' | 'inquiries';
+  badge?: 'orders' | 'needsCheck' | 'unshipped' | 'inquiries';
 };
 
 type Group = {
@@ -103,8 +105,27 @@ const MENU: Group[] = [
         <circle cx="12.5" cy="14" r="0.8" />
       </Icon>
     ),
+    /*
+     * ★ '확인 필요' 와 '미출고' 는 주문 목록의 탭이지만 메뉴로도 꺼내 둡니다.
+     *   숫자만 뱃지로 보여 주고 누를 곳이 없으면, 사장님이 목록에 들어가 탭을
+     *   다시 찾아야 합니다. 매일 보는 두 목록이라 한 번에 들어가게 합니다.
+     * ★ 주소의 status 값은 lib/order-status.ts 의 NEEDS_CHECK_TAB · UNSHIPPED_TAB
+     *   과 같아야 합니다. 다르면 뱃지 숫자와 목록 건수가 어긋납니다.
+     */
     items: [
       { href: '/admin/orders', label: '주문 목록', exact: true, badge: 'orders' },
+      {
+        href: '/admin/orders?status=needs_check',
+        label: '확인 필요',
+        status: 'needs_check',
+        badge: 'needsCheck',
+      },
+      {
+        href: '/admin/orders?status=unshipped',
+        label: '미출고',
+        status: 'unshipped',
+        badge: 'unshipped',
+      },
       { href: '/admin/orders/bulk-tracking', label: '송장 일괄등록' },
       { href: '/admin/orders/customers', label: '주문자 목록' },
     ],
@@ -166,11 +187,17 @@ function basePath(href: string): string {
 export default function AdminShell({
   children,
   pendingCount = 0,
+  needsCheckCount = 0,
+  unshippedCount = 0,
   pendingInquiryCount = 0,
 }: {
   children: React.ReactNode;
-  /** 입금대기 건수 — 주문 관리 옆에 뱃지로 붙습니다. */
+  /** 결제대기 건수 — 주문 목록 옆에 뱃지로 붙습니다. */
   pendingCount?: number;
+  /** 승인확인실패 + 검토필요 — 돈이 오갔는지 모르는 주문입니다. */
+  needsCheckCount?: number;
+  /** 결제완료 + 상품준비중 — 아직 안 보낸 주문입니다. */
+  unshippedCount?: number;
   /** 미답변 문의 건수 — 문의 관리 옆에 뱃지로 붙습니다. */
   pendingInquiryCount?: number;
 }) {
@@ -183,8 +210,20 @@ export default function AdminShell({
   const [expanded, setExpanded] = useState<string[]>([]);
   const [restored, setRestored] = useState(false);
 
-  const badgeOf = (kind?: Leaf['badge']): number =>
-    kind === 'orders' ? pendingCount : kind === 'inquiries' ? pendingInquiryCount : 0;
+  const badgeOf = (kind?: Leaf['badge']): number => {
+    switch (kind) {
+      case 'orders':
+        return pendingCount;
+      case 'needsCheck':
+        return needsCheckCount;
+      case 'unshipped':
+        return unshippedCount;
+      case 'inquiries':
+        return pendingInquiryCount;
+      default:
+        return 0;
+    }
+  };
 
   /** 이 그룹 안에 지금 보고 있는 화면이 있는지 */
   const groupActive = (group: Group): boolean => {
@@ -246,11 +285,28 @@ export default function AdminShell({
     router.refresh();
   };
 
-  const Badge = ({ count, active }: { count: number; active: boolean }) =>
+  /*
+   * ★ '확인 필요' 만 빨강입니다. 돈이 오갔는지 모르는 주문이라 다른 숫자와
+   *   같은 무게로 보이면 안 됩니다. 나머지는 지금까지처럼 앰버입니다.
+   * ★ 켜진 줄은 배경이 파랑이라 뱃지를 흰 바탕으로 뒤집습니다.
+   */
+  const Badge = ({
+    count,
+    active,
+    tone = 'warn',
+  }: {
+    count: number;
+    active: boolean;
+    tone?: 'warn' | 'danger';
+  }) =>
     count > 0 ? (
       <span
         className={`admin-badge ${
-          active ? 'bg-white text-blue-700' : 'bg-amber-100 text-amber-800'
+          active
+            ? 'bg-white text-blue-700'
+            : tone === 'danger'
+              ? 'bg-red-100 text-red-700'
+              : 'bg-amber-100 text-amber-800'
         }`}
       >
         {count}
@@ -300,7 +356,22 @@ export default function AdminShell({
             >
               {group.icon}
               <span className="flex-1">{group.label}</span>
-              {!isOpen ? <Badge count={groupBadge} active={false} /> : null}
+              {/* ★ 접혀 있을 때는 그룹 안 숫자를 모두 더해 보여 줍니다.
+                  하나라도 빨강이면 그룹 뱃지도 빨강입니다. 접어 두었다고
+                  급한 건이 눈에 안 띄면 접는 기능이 위험해집니다. */}
+              {!isOpen ? (
+                <Badge
+                  count={groupBadge}
+                  active={false}
+                  tone={
+                    (group.items ?? []).some(
+                      (item) => item.badge === 'needsCheck' && badgeOf(item.badge) > 0
+                    )
+                      ? 'danger'
+                      : 'warn'
+                  }
+                />
+              ) : null}
               <svg
                 width="10"
                 height="10"
@@ -320,17 +391,27 @@ export default function AdminShell({
                 {(group.items ?? []).map((item) => {
                   const base = basePath(item.href);
                   const currentTab = searchParams.get('tab') ?? '';
+                  const currentStatus = searchParams.get('status') ?? '';
 
-                  // ★ 설정처럼 한 화면을 탭으로 나눠 쓰는 항목은 ?tab= 까지 맞아야 합니다.
-                  //   그렇지 않으면 '포인트' 와 '설정' 이 동시에 켜집니다.
-                  const leafActive = item.tab
-                    ? pathname === base && currentTab === item.tab
-                    : item.exact
-                      ? pathname === base &&
-                        !(group.items ?? []).some(
-                          (other) => other.tab && other.tab === currentTab
-                        )
-                      : pathname === base || pathname.startsWith(`${base}/`);
+                  /*
+                   * ★ 설정처럼 한 화면을 탭으로 나눠 쓰는 항목은 ?tab= 까지 맞아야 합니다.
+                   *   그렇지 않으면 '포인트' 와 '설정' 이 동시에 켜집니다.
+                   * ★ 주문의 '확인 필요'·'미출고' 도 같은 화면이라 ?status= 까지 봅니다.
+                   *   그리고 그 둘이 켜져 있으면 '주문 목록' 은 꺼야 합니다.
+                   *   안 그러면 두 줄이 동시에 파랗게 켜집니다.
+                   */
+                  const leafActive = item.status
+                    ? pathname === base && currentStatus === item.status
+                    : item.tab
+                      ? pathname === base && currentTab === item.tab
+                      : item.exact
+                        ? pathname === base &&
+                          !(group.items ?? []).some(
+                            (other) =>
+                              (other.tab && other.tab === currentTab) ||
+                              (other.status && other.status === currentStatus)
+                          )
+                        : pathname === base || pathname.startsWith(`${base}/`);
                   const count = badgeOf(item.badge);
 
                   return (
@@ -345,7 +426,11 @@ export default function AdminShell({
                         }`}
                       >
                         {item.label}
-                        <Badge count={count} active={leafActive} />
+                        <Badge
+                          count={count}
+                          active={leafActive}
+                          tone={item.badge === 'needsCheck' ? 'danger' : 'warn'}
+                        />
                       </Link>
                     </li>
                   );

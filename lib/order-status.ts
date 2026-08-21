@@ -295,6 +295,85 @@ export function isOrderStatus(value: string): value is OrderStatus {
   return (ORDER_STATUSES as readonly string[]).includes(value);
 }
 
+/* ==================================================================
+ * 손님에게 보여 주는 진행 단계
+ * ==================================================================
+ *
+ * ★★ 관리자 상태 13개를 그대로 보여 주지 않습니다.
+ *   손님이 알고 싶은 것은 "내 주문이 지금 어디쯤 왔나" 하나입니다.
+ *   승인확인실패·검토필요 같은 내부 사정은 단계가 아니라 우리 쪽 사정입니다.
+ *
+ * ★ 네 단계뿐입니다. 늘리지 마세요.
+ *   단계가 늘면 각 칸이 좁아져 글자가 겹치고, 손님이 세어 보게 됩니다.
+ */
+export const PROGRESS_STEPS = [
+  { status: 'paid', label: '결제완료' },
+  { status: 'preparing', label: '상품준비중' },
+  { status: 'shipping', label: '배송중' },
+  { status: 'delivered', label: '배송완료' },
+] as const;
+
+export type OrderProgress =
+  | {
+      kind: 'flow';
+      /**
+       * 지금 도달한 단계의 번호.
+       * ★ -1 은 아직 첫 단계(결제완료)에도 이르지 못한 상태입니다.
+       *   입금을 기다리는 무통장 주문이 여기입니다. 네 칸을 전부 흐리게 그립니다.
+       */
+      currentIndex: number;
+    }
+  | {
+      /** 배송 흐름 밖 — 취소·교환·반품·결제실패 */
+      kind: 'aside';
+      label: string;
+    };
+
+/**
+ * 주문 상태를 손님 화면의 진행 단계로 옮깁니다.
+ *
+ * ★ 취소·교환·반품·결제실패는 흐름 안에 넣지 않습니다.
+ *   억지로 끼워 넣으면 "배송중인데 취소됨" 같은 화면이 나옵니다.
+ * ★ 구매확정은 배송완료와 같은 칸입니다. 손님에게는 배송이 끝난 것이 마지막입니다.
+ *   구매확정 자체는 상태 카드가 따로 알려 줍니다.
+ */
+export function orderProgress(status: string): OrderProgress {
+  switch (status) {
+    /* 아직 결제 확인 전 — 네 칸 모두 흐립니다. */
+    case 'pending_payment':
+    case 'payment_unconfirmed':
+    case 'payment_review':
+      return { kind: 'flow', currentIndex: -1 };
+    case 'paid':
+      return { kind: 'flow', currentIndex: 0 };
+    case 'preparing':
+      return { kind: 'flow', currentIndex: 1 };
+    case 'shipping':
+      return { kind: 'flow', currentIndex: 2 };
+    case 'delivered':
+    case 'confirmed':
+      return { kind: 'flow', currentIndex: 3 };
+    default:
+      return { kind: 'aside', label: statusLabel(status) };
+  }
+}
+
+/**
+ * 구매 적립이 아직 지급되지 않은 상태인지.
+ *
+ * ★ 지급은 배송완료·구매확정 때 일어납니다. (lib/points.ts earnPurchasePoints)
+ *   그 전까지만 "적립 예정" 이라고 말할 수 있습니다.
+ * ★ 취소·반품·결제실패는 적립이 없습니다.
+ */
+export function isEarnPending(status: string): boolean {
+  return (
+    status === 'pending_payment' ||
+    status === 'paid' ||
+    status === 'preparing' ||
+    status === 'shipping'
+  );
+}
+
 /** 관리자 목록의 상태 탭 순서 */
 /**
  * 사람이 직접 확인해야 하는 두 상태를 한 번에 거르는 값. (4-B)
@@ -311,12 +390,26 @@ export const NEEDS_CHECK_TAB = 'needs_check';
 /** '확인 필요' 탭이 실제로 거르는 상태들 */
 export const NEEDS_CHECK_STATUSES: OrderStatus[] = ['payment_unconfirmed', 'payment_review'];
 
-export const STATUS_TABS: { key: OrderStatus | 'all' | typeof NEEDS_CHECK_TAB; label: string }[] = [
+/**
+ * 아직 안 보낸 주문을 한 번에 거르는 값.
+ *
+ * ★ 확인 필요와 같은 이유로 둡니다. 결제완료와 상품준비중을 따로 눌러 봐야 하면
+ *   한쪽을 잊습니다. 사장님이 매일 보는 "오늘 보낼 것" 목록입니다.
+ * ★ 상태값이 아니라 목록이라 주소에 이 문자열이 그대로 들어갑니다.
+ *   getOrders 가 'unshipped' 를 알아보고 UNSHIPPED_STATUSES 를 함께 겁니다.
+ */
+export const UNSHIPPED_TAB = 'unshipped';
+
+export const STATUS_TABS: {
+  key: OrderStatus | 'all' | typeof NEEDS_CHECK_TAB | typeof UNSHIPPED_TAB;
+  label: string;
+}[] = [
   { key: 'all', label: '전체' },
   /*
    * ★ 전체 바로 다음에 둡니다. 매일 가장 먼저 봐야 하는 목록입니다.
    */
   { key: NEEDS_CHECK_TAB, label: '확인 필요' },
+  { key: UNSHIPPED_TAB, label: '미출고' },
   ...ORDER_STATUSES.map((status) => ({
     key: status,
     label: ORDER_STATUS_META[status].label,

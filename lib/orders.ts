@@ -11,6 +11,7 @@ import {
   statusLabel,
   NEEDS_CHECK_STATUSES,
   NEEDS_CHECK_TAB,
+  UNSHIPPED_TAB,
   type OrderStatus,
 } from '@/lib/order-status';
 import {
@@ -308,6 +309,28 @@ async function loadItems(orderIds: string[]): Promise<Map<string, OrderItem[]>> 
 }
 
 /**
+ * 상태 조건을 조회에 겁니다. 건수와 목록이 같은 규칙을 쓰도록 한 곳에 둡니다.
+ *
+ * ★★ 두 가지는 상태 하나가 아니라 여러 상태를 함께 겁니다.
+ *   확인 필요 — 승인확인실패·검토필요. 돈이 오갔는지 우리가 모르는 주문입니다.
+ *   미출고    — 결제완료·상품준비중. 오늘 보내야 하는 주문입니다.
+ *   둘 다 따로 눌러 봐야 하면 한쪽을 잊습니다.
+ *
+ * ★ 예전에는 이 분기가 건수 쪽과 목록 쪽에 따로 적혀 있었습니다.
+ *   한쪽만 고치면 "건수는 5인데 목록은 2건" 이 됩니다. 한 함수로 모았습니다.
+ */
+function applyStatusFilter<T>(query: T, status: string | undefined): T {
+  const q = query as unknown as {
+    in: (column: string, values: string[]) => T;
+    eq: (column: string, value: string) => T;
+  };
+  if (status === NEEDS_CHECK_TAB) return q.in('status', NEEDS_CHECK_STATUSES);
+  if (status === UNSHIPPED_TAB) return q.in('status', UNSHIPPED_STATUSES);
+  if (status && status !== 'all') return q.eq('status', status);
+  return query;
+}
+
+/**
  * 조건에 맞는 주문 건수만 셉니다.
  *
  * ★ 평소에는 쓰지 않습니다. 목록 조회가 건수까지 함께 돌려주기 때문입니다.
@@ -323,13 +346,8 @@ async function countOrders(filter: OrderFilter): Promise<number> {
     ? `order_no.ilike.%${term}%,orderer_name.ilike.%${term}%,orderer_phone.ilike.%${term}%,depositor_name.ilike.%${term}%,receiver_name.ilike.%${term}%`
     : '';
 
-  const needsCheck = filter.status === NEEDS_CHECK_TAB;
   let query = supabase.from(ORDERS).select('id', { count: 'exact', head: true });
-  if (needsCheck) {
-    query = query.in('status', NEEDS_CHECK_STATUSES);
-  } else if (filter.status && filter.status !== 'all') {
-    query = query.eq('status', filter.status);
-  }
+  query = applyStatusFilter(query, filter.status);
   if (filter.from) query = query.gte('created_at', kstStart(filter.from));
   if (filter.to) query = query.lte('created_at', kstEnd(filter.to));
   if (filter.paymentMethod) query = query.eq('payment_method', filter.paymentMethod);
@@ -358,12 +376,6 @@ export async function getOrders(
 
   try {
     /*
-     * ★ 확인 필요 탭은 상태 하나가 아니라 둘을 함께 겁니다. (4-B)
-     *   승인확인실패·검토필요 — 돈이 오갔는지 우리가 모르는 주문들입니다.
-     */
-    const needsCheck = filter.status === NEEDS_CHECK_TAB;
-
-    /*
      * ============================================================
      * ★★ 건수와 목록을 한 번의 조회로 받습니다
      * ============================================================
@@ -381,11 +393,7 @@ export async function getOrders(
      * 반드시 같은 시점의 것이라 어긋날 수 없습니다. 조회 수도 절반이 됩니다.
      */
     let listQuery = supabase.from(ORDERS).select('*', { count: 'exact' });
-    if (needsCheck) {
-      listQuery = listQuery.in('status', NEEDS_CHECK_STATUSES);
-    } else if (filter.status && filter.status !== 'all') {
-      listQuery = listQuery.eq('status', filter.status);
-    }
+    listQuery = applyStatusFilter(listQuery, filter.status);
     if (filter.from) listQuery = listQuery.gte('created_at', kstStart(filter.from));
     if (filter.to) listQuery = listQuery.lte('created_at', kstEnd(filter.to));
     if (filter.paymentMethod) listQuery = listQuery.eq('payment_method', filter.paymentMethod);
@@ -2078,6 +2086,31 @@ export async function countPendingPayment(): Promise<number> {
     .eq('status', 'pending_payment');
   if (error) return 0;
   return count ?? 0;
+}
+
+/** 여러 상태를 한 번에 세는 공통부 */
+async function countByStatuses(statuses: string[]): Promise<number> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return 0;
+  const { count, error } = await supabase
+    .from(ORDERS)
+    .select('id', { count: 'exact', head: true })
+    .in('status', statuses);
+  if (error) return 0;
+  return count ?? 0;
+}
+
+/**
+ * 사람이 확인해야 하는 주문 수 — 승인확인실패 + 검토필요.
+ * ★ 돈이 오갔는지 우리가 모르는 주문입니다. 사이드바 뱃지로 매일 눈에 띄어야 합니다.
+ */
+export async function countNeedsCheck(): Promise<number> {
+  return countByStatuses(NEEDS_CHECK_STATUSES);
+}
+
+/** 아직 안 보낸 주문 수 — 결제완료 + 상품준비중 */
+export async function countUnshipped(): Promise<number> {
+  return countByStatuses(UNSHIPPED_STATUSES);
 }
 
 /** 기간 내 매출 합계 — 취소·반품·결제실패는 빼고 셉니다. */

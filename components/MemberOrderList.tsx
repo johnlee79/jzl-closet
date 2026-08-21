@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
+import OrderEarnNote from '@/components/OrderEarnNote';
+import OrderProgress from '@/components/OrderProgress';
 import { claimOrderAction } from '@/app/(shop)/mypage/actions';
 import { courierName, trackingUrl } from '@/lib/couriers';
 import { formatDate } from '@/lib/format';
@@ -184,7 +186,16 @@ export default function MemberOrderList({
                   ) : null}
                 </ul>
 
-                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                {/*
+                  진행 단계 — 목록에서는 작은 형태로 넣습니다.
+                  ★ 아래 상태 이름 바로 위에 둡니다. 위아래로 떨어뜨려 놓으면
+                    같은 것을 말하는 두 표시가 따로 노는 것처럼 보입니다.
+                */}
+                <OrderProgress status={order.status} compact className="mt-5 max-w-[420px]" />
+
+                <OrderEarnNote order={order} className="mt-4" />
+
+                <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
                   <span className="text-[16px] font-medium text-ink">
                     {statusLabel(order.status)}
                     {/* ★ 입금대기 주문에는 기한을 함께 보여 줍니다. */}
