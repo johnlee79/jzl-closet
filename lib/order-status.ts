@@ -109,7 +109,7 @@ export const ORDER_STATUS_META: Record<OrderStatus, StatusMeta> = {
   failed: {
     label: '결제실패',
     tone: 'stop',
-    hint: '결제가 완료되지 않았습니다. 다시 주문해 주세요.',
+    hint: '카드 승인 내역이 확인되지 않아 주문이 마무리되지 않았습니다. 장바구니는 그대로 있으니 다시 주문하실 수 있습니다.',
   },
   /*
    * ★ 아래 두 상태는 절대 자동으로 풀리지 않습니다. 사람이 확인해야 합니다.
@@ -231,10 +231,18 @@ export function customerPaymentText(
         title: statusLabel(status),
         body: statusHint(status),
       };
+    /*
+     * ★ "결제 실패" 라고 단정해 적지 않습니다.
+     *   카드 승인이 났는데 우리만 결과를 못 받은 경우가 드물게 있습니다.
+     *   그때 "결제되지 않았다" 고 못 박으면 손님이 다시 결제해 이중결제가 납니다.
+     *   확인된 사실(승인 내역이 확인되지 않음)만 적고, 다음 행동을 안내합니다.
+     * ★ 장바구니는 비우지 않습니다. 그대로 다시 시도할 수 있습니다.
+     */
     case 'failed':
       return {
         title: '결제가 완료되지 않았습니다',
-        body: '결제된 금액은 없습니다. 다시 주문해 주세요.',
+        body:
+          '카드 승인 내역이 확인되지 않았습니다. 장바구니는 그대로 있으니 다시 주문하실 수 있습니다. 결제하신 기억이 있는데 이 화면이 나온다면 문의해 주세요.',
       };
     default:
       return { title: statusLabel(status), body: statusHint(status) };
@@ -292,8 +300,21 @@ export function canRequestCancel(status: string): boolean {
 }
 
 /** 취소·반품처럼 재고를 되돌려야 하는 상태인지 */
+/**
+ * 이 상태가 되면 잡아 둔 재고를 손님에게서 풀어 주어야 하는지.
+ *
+ * ★★ 4-B 에서 failed(결제실패)가 들어왔습니다.
+ *   주문을 저장하는 순간 재고를 깎으므로, 결제가 끝내 안 된 주문은
+ *   재고를 돌려놓지 않으면 팔 수 있는 물건이 영영 잠깁니다.
+ *   (전체 점검 1번 — 카드 결제창을 닫고 나간 주문이 재고를 물고 있던 문제)
+ *
+ * ★ 되돌림이 두 번 일어나지 않게 막는 것은 이 함수가 아닙니다.
+ *   lib/orders.ts 의 releaseOrderStock 이 orders.stock_released_at 으로
+ *   DB 수준에서 한 번만 통과시킵니다. 결제실패 → 취소완료 처럼
+ *   되돌림 상태끼리 옮겨 다녀도 재고는 한 번만 돌아갑니다.
+ */
 export function isStockReleasing(status: string): boolean {
-  return status === 'cancelled' || status === 'returned';
+  return status === 'cancelled' || status === 'returned' || status === 'failed';
 }
 
 /**

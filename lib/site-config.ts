@@ -416,8 +416,26 @@ export type PaymentSettings = {
   /**
    * 입금 기한이 지난 주문을 자동으로 취소할지.
    * ★ 기한은 depositHours 를 그대로 씁니다. (주문 완료 화면 안내와 같은 값)
+   * ★ 무통장입금 주문에만 적용됩니다. 카드 주문은 아래 cardPendingMinutes 가 맡습니다.
    */
   autoCancelEnabled: boolean;
+  /**
+   * 결제대기로 남은 카드·간편결제 주문을 정리하기까지 기다리는 시간(분).
+   *
+   * ★★ 무통장입금(depositHours)과 다른 값이어야 합니다.
+   *   무통장입금은 손님이 은행에 다녀와야 하니 하루를 줍니다.
+   *   카드는 결제창을 닫으면 그걸로 끝이라 그렇게 오래 잡아 둘 이유가 없습니다.
+   *   그동안 재고가 묶여 팔 수 있는 물건이 품절로 보입니다.
+   *
+   * ★ 그렇다고 너무 짧으면 안 됩니다. 카드번호를 찾아 입력하고,
+   *   은행 앱으로 넘어가 인증하고 돌아오는 데 시간이 걸립니다.
+   *   결제 중인 손님의 주문을 우리가 먼저 정리해 버리면 안 됩니다.
+   *   기본 40분은 그 왕복을 넉넉히 잡은 값입니다.
+   *
+   * ★ 시간이 지났다고 바로 지우지 않습니다. KSNET 에 승인 여부를 먼저 묻습니다.
+   *   (lib/card-sweep.ts)
+   */
+  cardPendingMinutes: number;
   /** 새 주문이 들어오면 텔레그램으로 알릴지 */
   telegramEnabled: boolean;
   /** 새 1:1 문의가 들어오면 텔레그램으로 알릴지 */
@@ -471,6 +489,7 @@ export const DEFAULT_PAYMENT: PaymentSettings = {
   accountHolder: '',
   depositHours: 24,
   autoCancelEnabled: true,
+  cardPendingMinutes: 40,
   remoteAreaRules: DEFAULT_REMOTE_AREA_RULES,
   telegramEnabled: true,
   inquiryTelegramEnabled: true,

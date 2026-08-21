@@ -306,6 +306,44 @@ export default function PaymentForm({
           </label>
         </div>
 
+        {/* ── 결제대기 카드 주문 정리 (4-B) ───────────────
+          ★ 무통장입금 자동취소 바로 아래에 둡니다.
+            둘 다 "결제대기로 남은 주문을 언제 정리할까" 를 정하는 값이라,
+            떨어뜨려 두면 운영자가 하나만 보고 다른 쪽을 잊습니다.
+        */}
+        <div className="mt-5 border-t border-slate-200 pt-5">
+          <label className="admin-label" htmlFor="card-pending-minutes">
+            카드 결제대기 정리 시간 (분)
+          </label>
+          <input
+            id="card-pending-minutes"
+            type="number"
+            min={10}
+            max={1440}
+            value={form.cardPendingMinutes}
+            onChange={(event) =>
+              set('cardPendingMinutes', Math.max(10, Number(event.target.value) || 10))
+            }
+            className="admin-input tabular-nums"
+          />
+          <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+            이 시간이 지난 <strong>결제대기 카드·간편결제 주문</strong>은 KSNET 에 승인 여부를
+            확인한 뒤 정리합니다. 승인이 났으면 결제완료로 바꾸고, 안 났으면 결제실패로 바꾸며
+            재고와 사용 포인트를 되돌립니다.
+          </p>
+          <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+            무통장입금({form.depositHours}시간)과 다른 값입니다. 카드는 결제창을 닫으면 그걸로
+            끝이라 오래 잡아 둘 이유가 없고, 그동안 재고가 묶여 팔 수 있는 물건이 품절로
+            보입니다. <strong>10분 미만으로는 설정할 수 없습니다</strong> — 카드번호를 넣고
+            은행 앱으로 인증하고 돌아오는 시간을 남겨 두어야 합니다.
+          </p>
+          <p className="mt-1 text-[14px] leading-relaxed text-amber-800">
+            ★ 승인 여부를 확인하지 못한 주문은 <strong>그대로 둡니다.</strong> 임의로 정리하지
+            않고 텔레그램으로 알려 드립니다. 돈이 빠져나갔을 수 있는 주문이라 사람이 확인해야
+            합니다.
+          </p>
+        </div>
+
         <p className="mt-4 rounded-md bg-amber-50 px-3 py-2 text-[15px] leading-relaxed text-amber-900">
           계좌 정보는 주문 완료 화면과 주문 조회 화면에서만 보입니다. 상품 페이지나 푸터에는
           노출되지 않습니다.

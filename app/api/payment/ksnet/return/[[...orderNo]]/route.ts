@@ -1,6 +1,11 @@
 import { type NextRequest } from 'next/server';
 import { approveKsnetPayment } from '@/lib/payments/ksnet/approve';
-import { applyKsnetApproval, getOrderByNo, markPaymentUnconfirmed } from '@/lib/orders';
+import {
+  applyKsnetApproval,
+  failPendingCardOrder,
+  getOrderByNo,
+  markPaymentUnconfirmed,
+} from '@/lib/orders';
 import { createOrderToken } from '@/lib/order-token';
 import { writePaymentLog } from '@/lib/payment-logs';
 import { decodeEuckr } from '@/lib/payments/ksnet/encode';
@@ -142,8 +147,44 @@ async function handle(request: NextRequest, context: RouteContext): Promise<Resp
    * ★ 이 판단이 "주문번호를 못 찾음" 보다 먼저 와야 합니다.
    *   취소는 돈이 오가지 않은 것이 확실합니다. 주문번호를 모르더라도
    *   "결제 확인 중" 이라고 겁줄 이유가 없습니다.
-   *   주문은 결제대기 그대로 두어 다시 시도할 수 있게 합니다. */
+   *
+   * ★★ 4-B — 여기서 재고를 바로 되돌립니다.
+   *   예전에는 주문을 결제대기 그대로 두었습니다. 그런데 그 주문을
+   *   정리하는 코드가 어디에도 없어서, 손님이 취소를 누른 그 순간부터
+   *   재고가 영원히 묶였습니다. 팔 수 있는 물건이 품절로 보였습니다.
+   *
+   *   이 경로는 KSNET 이 "손님이 취소했다"(reCnclType=1)고 알려 준 것이라
+   *   결제가 안 된 것이 확실합니다. 기다릴 이유가 없습니다.
+   *   (실제 로그로 확인: 취소로 돌아온 원문에는 결제 Key 가 빈 값입니다)
+   *
+   * ★ 장바구니는 비우지 않습니다. 손님이 그대로 다시 시도할 수 있어야 합니다.
+   *   장바구니를 비우는 곳은 주문 완료 화면뿐입니다. (CartCleanupOnComplete)
+   */
   if (cancelled) {
+    if (orderNo) {
+      try {
+        const order = await getOrderByNo(orderNo);
+        /*
+         * ★ 결제대기일 때만 건드립니다.
+         *   이미 결제완료된 주문에 취소 신호가 뒤늦게 들어와도 아무 일도 없어야 합니다.
+         *   무통장입금은 이 경로로 오지 않지만, 와도 건드리지 않게 막아 둡니다.
+         */
+        if (order && order.status === 'pending_payment' && order.paymentMethod !== 'bank_transfer') {
+          await failPendingCardOrder(
+            order,
+            '손님이 결제창에서 취소했습니다. 재고를 바로 되돌렸습니다. (reCnclType=1)'
+          );
+        }
+      } catch (error) {
+        /*
+         * ★ 정리에 실패해도 손님 화면은 그대로 진행합니다.
+         *   손님은 이미 취소를 눌렀고, 돈은 오가지 않았습니다.
+         *   재고는 10분마다 도는 정리(card-sweep)가 다시 잡습니다.
+         */
+        console.warn('[ksnet/return] 결제창 취소 정리 실패:', orderNo, error);
+      }
+    }
+
     const query = orderNo ? `no=${encodeURIComponent(orderNo)}&reason=cancelled` : 'reason=cancelled';
     return htmlRedirect(`${SITE_URL}/checkout/failed?${query}`);
   }

@@ -120,3 +120,63 @@ export async function getPaymentLogs(orderNo: string, limit = 20): Promise<Payme
     createdAt: row.created_at,
   }));
 }
+
+/**
+ * ============================================================
+ * 주문의 결제 Key(reCommConId) 찾기
+ * ============================================================
+ *
+ * ★★ 왜 필요한가
+ *   KSNET 에 "이 주문 승인됐나요?" 를 물으려면 결제 Key 가 있어야 합니다.
+ *   recv_post.jsp 는 주문번호가 아니라 sndCommConId 로만 조회됩니다.
+ *
+ *   그런데 이 Key 는 주문에 저장되지 않습니다. 결제창이 돌려주는 값이라
+ *   손님이 결제창을 닫고 나가면 우리 손에 들어오지 않습니다.
+ *   결제창이 우리 서버로 한 번이라도 돌아왔다면 그 원문이 payment_logs 에
+ *   남아 있으므로, 거기서 꺼냅니다.
+ *
+ * ★ 못 찾는다는 것은 "KSNET 과 이 주문에 대해 아무 말도 주고받지 못했다" 는 뜻입니다.
+ *   판단은 호출부(lib/card-sweep.ts)가 합니다. 여기서는 찾기만 합니다.
+ *
+ * ★ 취소(reCnclType=1)로 돌아온 원문에는 Key 가 빈 값으로 옵니다.
+ *   실제 데이터로 확인했습니다. 빈 값은 없는 것으로 봅니다.
+ */
+
+/** 결제창·노티가 결제 Key 를 담아 보내는 이름들 (return 라우트와 같은 목록) */
+const COMM_ID_KEYS = ['reCommConId', 'sndCommConId', 'commConId', 'CommConId'];
+
+export async function findPaymentKey(orderNo: string): Promise<string> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase || !orderNo) return '';
+
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('parsed, raw')
+    .eq('order_no', orderNo)
+    .in('kind', ['return', 'notify'])
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (error || !data) return '';
+
+  for (const row of data as { parsed: unknown; raw: string | null }[]) {
+    // ① 파싱해 둔 값에서 먼저 찾습니다.
+    if (row.parsed && typeof row.parsed === 'object') {
+      const parsed = row.parsed as Record<string, unknown>;
+      for (const key of COMM_ID_KEYS) {
+        const value = parsed[key];
+        if (typeof value === 'string' && value.trim()) return value.trim();
+      }
+    }
+
+    // ② 파싱이 없거나 이름이 달랐으면 원문에서 직접 훑습니다.
+    const raw = row.raw ?? '';
+    for (const key of COMM_ID_KEYS) {
+      const found = new RegExp(`${key}=([^&\s]+)`).exec(raw);
+      const value = found ? decodeURIComponent(found[1]).trim() : '';
+      if (value) return value;
+    }
+  }
+
+  return '';
+}

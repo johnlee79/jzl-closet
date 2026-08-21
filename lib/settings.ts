@@ -551,6 +551,18 @@ export function normalizePayment(value: unknown): PaymentSettings {
     // 0시간이면 기한 안내를 못 하므로 1시간 밑으로는 내려가지 않게 합니다.
     depositHours: Math.max(1, count(raw.depositHours, DEFAULT_PAYMENT.depositHours)),
     autoCancelEnabled: raw.autoCancelEnabled !== false,
+    /*
+     * ★★ 10분 밑으로는 내려가지 않게 막습니다.
+     *   결제창에서 카드번호를 넣고 은행 앱으로 인증하고 돌아오는 데
+     *   10분은 흔히 걸립니다. 그보다 짧게 두면 결제 중인 손님의 주문을
+     *   우리가 먼저 결제실패로 바꿔 버립니다.
+     * ★ 위는 하루(1440분)로 막습니다. 그보다 길게 둘 이유가 없고,
+     *   실수로 큰 숫자를 넣으면 이 기능이 사실상 꺼집니다.
+     */
+    cardPendingMinutes: Math.min(
+      1440,
+      Math.max(10, count(raw.cardPendingMinutes, DEFAULT_PAYMENT.cardPendingMinutes))
+    ),
     remoteAreaRules: rules,
     telegramEnabled: raw.telegramEnabled !== false,
     inquiryTelegramEnabled: raw.inquiryTelegramEnabled !== false,

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { sweepAutoCancelQuietly } from '@/lib/auto-cancel';
+import { sweepCardOrdersQuietly } from '@/lib/card-sweep';
 import { countPendingInquiries } from '@/lib/inquiries';
 import { countReviewsToday } from '@/lib/reviews';
 import { statusBadgeClass, statusLabel, ORDER_STATUSES } from '@/lib/order-status';
@@ -138,7 +139,11 @@ export default async function AdminDashboardPage() {
   };
 
   // 관리자 첫 화면에서도 기한 지난 입금대기 건을 정리합니다.
-  if (configured) await sweepAutoCancelQuietly();
+  if (configured) {
+    // 무통장입금 기한 지난 건과, 결제대기로 남은 카드 주문을 함께 봅니다. (4-B)
+    await sweepAutoCancelQuietly();
+    await sweepCardOrdersQuietly();
+  }
 
   const [stats, pendingInquiryCount, memberCounts, reviewCounts] = configured
     ? await Promise.all([

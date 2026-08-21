@@ -8,6 +8,7 @@ import {
   isPaidStatus,
   isSalesStatus,
   isStockReleasing,
+  statusLabel,
   type OrderStatus,
 } from '@/lib/order-status';
 import {
@@ -60,6 +61,17 @@ const UNIQUE_VIOLATION = '23505';
 
 function isMissingTable(code: string | undefined): boolean {
   return Boolean(code && MISSING_TABLE_CODES.has(code));
+}
+
+/**
+ * 아직 없는 칸을 건드렸을 때 오는 코드들.
+ * ★ 42703 은 Postgres, PGRST204 는 PostgREST 가 스키마 캐시에서 못 찾았을 때입니다.
+ *   schema-4b.sql 을 아직 안 돌린 환경에서도 주문이 막히지 않게 하려고 봅니다.
+ */
+const MISSING_COLUMN_CODES = new Set(['42703', 'PGRST204']);
+
+function isMissingColumn(error: { code?: string } | null | undefined): boolean {
+  return Boolean(error?.code && MISSING_COLUMN_CODES.has(error.code));
 }
 
 function missingTableError(): Error {
@@ -750,13 +762,84 @@ export async function resolveUsedPoints(
   return Math.min(want, limit);
 }
 
-/** 옵션 조합의 재고를 delta 만큼 더합니다. (주문 시 -수량, 취소 시 +수량) */
+/**
+ * 재고가 움직인 기록.
+ *
+ * ★ 왜 남기는가
+ *   재고 숫자가 실제와 안 맞을 때 지금까지는 단서가 하나도 없었습니다.
+ *   상품의 options 안에 숫자만 덮어써 왔기 때문입니다.
+ *   이 기록이 "언제 · 어느 주문 때문에 · 몇 개" 를 말해 주는 유일한 자료입니다.
+ *
+ * ★ 기록 실패가 재고 반영을 되돌리지는 않습니다. 재고 쪽이 본체입니다.
+ *   표가 아직 없어도(schema-4b.sql 미실행) 조용히 넘어갑니다.
+ */
+type StockMoveContext = {
+  orderId: string | null;
+  orderNo: string | null;
+  reason: string;
+};
+
+type StockMoveRow = {
+  productId: string | null;
+  productSlug: string | null;
+  optionKey: string;
+  quantity: number;
+  stockBefore: number;
+  stockAfter: number;
+};
+
+async function writeStockMoves(
+  rows: StockMoveRow[],
+  direction: 'release' | 'deduct',
+  context: StockMoveContext
+): Promise<void> {
+  if (rows.length === 0) return;
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return;
+
+  try {
+    const { error } = await supabase.from('stock_moves').insert(
+      rows.map((row) => ({
+        order_id: context.orderId,
+        order_no: context.orderNo,
+        product_id: row.productId,
+        product_slug: row.productSlug,
+        option_key: row.optionKey || null,
+        direction,
+        quantity: row.quantity,
+        stock_before: row.stockBefore,
+        stock_after: row.stockAfter,
+        reason: context.reason || null,
+      }))
+    );
+    if (error && !isMissingTable(error.code)) {
+      console.warn('[orders] 재고 기록 실패:', error.message);
+    }
+  } catch (error) {
+    console.warn('[orders] 재고 기록 실패:', error);
+  }
+}
+
+/**
+ * 옵션 조합의 재고를 delta 만큼 더합니다. (주문 시 -수량, 취소 시 +수량)
+ *
+ * ★ context 를 주면 움직인 내역을 stock_moves 에 남깁니다.
+ *   안 주면 남기지 않습니다.
+ */
 async function adjustStock(
-  entries: { productId: string | null; optionKey: string; quantity: number }[],
-  delta: -1 | 1
+  entries: {
+    productId: string | null;
+    productSlug?: string | null;
+    optionKey: string;
+    quantity: number;
+  }[],
+  delta: -1 | 1,
+  context?: StockMoveContext
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return;
+
+  const moved: StockMoveRow[] = [];
 
   for (const entry of entries) {
     if (!entry.productId || !entry.optionKey) continue;
@@ -764,36 +847,133 @@ async function adjustStock(
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id, options')
+        .select('id, slug, options')
         .eq('id', entry.productId)
         .maybeSingle();
       if (error || !data) continue;
 
-      const options = normalizeOptions((data as { options: unknown }).options);
+      const row = data as { slug?: string; options: unknown };
+      const options = normalizeOptions(row.options);
       let touched = false;
+      let before = 0;
+      let after = 0;
 
       const combinations = options.combinations.map((combination) => {
         if (combination.key !== entry.optionKey) return combination;
         // ★ 재고를 관리하지 않는 조합(stock === null)은 건드리지 않습니다.
         if (combination.stock === null) return combination;
         touched = true;
-        return {
-          ...combination,
-          stock: Math.max(0, combination.stock + delta * entry.quantity),
-        };
+        before = combination.stock;
+        after = Math.max(0, combination.stock + delta * entry.quantity);
+        return { ...combination, stock: after };
       });
 
       if (!touched) continue;
 
-      await supabase
+      const written = await supabase
         .from('products')
         .update({ options: { groups: options.groups, combinations } })
-        .eq('id', entry.productId);
+        .eq('id', entry.productId)
+        .select('id');
+
+      /*
+       * ★ 예전에는 이 결과를 보지 않았습니다.
+       *   조용히 실패하면 재고가 실제와 어긋난 채로 아무도 모르게 지나갑니다.
+       *   되돌림 쪽은 특히 중요합니다 — 못 되돌렸는데 되돌린 것으로 기록되면
+       *   그 기록이 오히려 추적을 방해합니다.
+       */
+      if (written.error || !written.data || written.data.length === 0) {
+        console.warn(
+          '[orders] 재고 반영이 저장되지 않았습니다:',
+          entry.productId,
+          entry.optionKey,
+          written.error?.message ?? '대상 없음'
+        );
+        continue;
+      }
+
+      moved.push({
+        productId: entry.productId,
+        productSlug: entry.productSlug ?? row.slug ?? null,
+        optionKey: entry.optionKey,
+        quantity: entry.quantity,
+        stockBefore: before,
+        stockAfter: after,
+      });
     } catch (error) {
       // 재고 반영 실패가 주문 처리를 막지 않도록 로그만 남깁니다.
       console.warn('[orders] 재고 반영 실패:', entry.productId, entry.optionKey, error);
     }
   }
+
+  if (context) {
+    await writeStockMoves(moved, delta === 1 ? 'release' : 'deduct', context);
+  }
+}
+
+/**
+ * ============================================================
+ * 주문의 재고를 되돌립니다 — 한 주문당 딱 한 번
+ * ============================================================
+ *
+ * ★★ 왜 이 함수가 따로 있는가
+ *   같은 주문의 재고를 두 번 되돌리면 없는 물건이 있는 것으로 잡힙니다.
+ *   그 상태로 주문을 받으면 손님에게 사과하고 취소해야 합니다.
+ *
+ *   상태만으로는 막을 수 없습니다. 4-B 부터 결제실패도 재고를 되돌리므로
+ *     결제대기 → 결제실패(되돌림) → 취소완료(또 되돌림)
+ *   이라는 길이 실제로 생깁니다.
+ *
+ * ★★ 그래서 DB 가 막습니다.
+ *   stock_released_at 이 비어 있을 때만 값을 채우는 조건부 UPDATE 로
+ *   자리를 먼저 잡습니다. 같은 순간에 두 요청이 들어와도 DB 가 하나만
+ *   통과시킵니다. 자리를 잡은 요청만 재고를 건드립니다.
+ *
+ * ★ 칸이 아직 없으면(schema-4b.sql 미실행) 예전처럼 상태 검사에만 기댑니다.
+ *   되돌림이 아예 안 되는 것보다는 낫습니다.
+ *
+ * @returns 이번 호출이 실제로 되돌렸는지
+ */
+export async function releaseOrderStock(order: Order, reason: string): Promise<boolean> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return false;
+
+  const claim = await supabase
+    .from(ORDERS)
+    .update({ stock_released_at: new Date().toISOString() })
+    .eq('id', order.id)
+    .is('stock_released_at', null)
+    .select('id');
+
+  if (claim.error) {
+    if (isMissingColumn(claim.error)) {
+      // 칸이 없는 환경 — 예전 방식대로 그대로 되돌립니다.
+      console.warn(
+        '[orders] stock_released_at 칸이 없습니다. supabase/schema-4b.sql 을 실행해 주세요.'
+      );
+    } else {
+      console.warn('[orders] 재고 되돌림 자리를 잡지 못했습니다:', claim.error.message);
+      return false;
+    }
+  } else if (!claim.data || claim.data.length === 0) {
+    // 이미 누가 되돌렸습니다. 두 번째는 아무 일도 하지 않습니다.
+    return false;
+  }
+
+  await adjustStock(
+    order.items
+      .filter((item) => item.itemStatus === 'normal')
+      .map((item) => ({
+        productId: item.productId,
+        productSlug: item.productSlug,
+        optionKey: item.optionKey,
+        quantity: item.quantity,
+      })),
+    1,
+    { orderId: order.id, orderNo: order.orderNo, reason }
+  );
+
+  return true;
 }
 
 /** 주문번호를 받아 옵니다. DB 함수가 원자적으로 순번을 올려 줍니다. */
@@ -925,14 +1105,19 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
     }
   }
 
-  // 재고 차감 — 재고를 관리하는 조합만 줄어듭니다.
+  /*
+   * 재고 차감 — 재고를 관리하는 조합만 줄어듭니다.
+   * ★ 차감도 기록에 남깁니다. 되돌림만 남기면 "왜 줄었는지" 를 못 찾습니다.
+   */
   await adjustStock(
     lines.map((line) => ({
       productId: line.productId,
+      productSlug: line.productSlug,
       optionKey: line.optionKey,
       quantity: line.quantity,
     })),
-    -1
+    -1,
+    { orderId: row.id, orderNo: row.order_no, reason: '주문 접수' }
   );
 
   const items = ((itemData ?? []) as OrderItemRow[]).map(rowToItem);
@@ -987,18 +1172,18 @@ export async function updateOrderStatus(
 
   await addHistory(id, before.status, status, memo);
 
-  // 취소·반품으로 바뀌면 아직 살아 있는 품목의 재고를 되돌립니다.
+  /*
+   * 취소·반품·결제실패로 바뀌면 아직 살아 있는 품목의 재고를 되돌립니다.
+   *
+   * ★ 예전에는 여기서 바로 adjustStock 을 불렀습니다.
+   *   "되돌림 상태가 아니었다가 되었을 때만" 이라는 조건 하나로 막았는데,
+   *   4-B 에서 결제실패가 되돌림 상태에 들어오면서
+   *     결제대기 → 결제실패(되돌림) → 취소완료(또 되돌림)
+   *   이라는 길이 생겼습니다. 그 조건은 이 길을 막지 못합니다.
+   *   releaseOrderStock 이 DB 에서 한 번만 통과시킵니다.
+   */
   if (isStockReleasing(status) && !isStockReleasing(before.status)) {
-    await adjustStock(
-      before.items
-        .filter((item) => item.itemStatus === 'normal')
-        .map((item) => ({
-          productId: item.productId,
-          optionKey: item.optionKey,
-          quantity: item.quantity,
-        })),
-      1
-    );
+    await releaseOrderStock(before, memo || `${statusLabel(status)} 처리`);
 
     // ★ 쓴 포인트는 돌려주고, 이 주문으로 적립된 포인트(구매·리뷰)는 회수합니다.
     if (before.userId) {
@@ -1702,7 +1887,7 @@ export function toOrderStatus(value: string): OrderStatus | null {
  *   물건은 가는데 주문은 없어지는 배송 사고가 납니다.
  *   아래에 해당하면 건드리지 않고 관리자가 직접 처리하게 둡니다.
  */
-function isAutoCancelExempt(order: Order): boolean {
+export function isAutoCancelExempt(order: Order): boolean {
   // 1) 관리자가 직접 제외 표시를 한 주문
   if (order.autoCancelExcluded) return true;
   // 2) 송장번호가 들어간 주문 — 이미 발송된 것으로 봅니다
@@ -1787,6 +1972,107 @@ export async function autoCancelUnpaidOrders(
   }
 
   return result;
+}
+
+/**
+ * ============================================================
+ * 결제대기로 오래 남은 카드·간편결제 주문 찾기 (4-B)
+ * ============================================================
+ *
+ * ★★ 무통장입금은 여기에 들어오지 않습니다.
+ *   그쪽은 autoCancelUnpaidOrders 가 지금까지 하던 대로 처리합니다.
+ *   두 흐름을 섞으면 한쪽을 고칠 때 다른 쪽이 조용히 바뀝니다.
+ *
+ * ★ 여기서는 찾기만 합니다. 어떻게 할지는 lib/card-sweep.ts 가 정합니다.
+ *   찾은 주문을 바로 정리하면 안 됩니다. KSNET 에 승인 여부를 먼저 물어야 합니다.
+ */
+export async function findStalePendingCardOrders(
+  minutes: number,
+  limit = 30
+): Promise<Order[]> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return [];
+  if (!Number.isFinite(minutes) || minutes < 1) return [];
+
+  const cutoff = new Date(Date.now() - minutes * 60 * 1000).toISOString();
+
+  /*
+   * ★ 후보 id 만 가볍게 뽑습니다. select(*) 로 전체를 끌어오지 않습니다.
+   * ★ neq(bank_transfer) 로 무통장입금을 확실히 제외합니다.
+   *   isPgMethod 로 코드에서 거르면, 나중에 결제수단이 늘 때 이 조건이
+   *   조용히 어긋납니다. DB 조건에 직접 박아 둡니다.
+   */
+  const { data, error } = await supabase
+    .from(ORDERS)
+    .select('id')
+    .eq('status', 'pending_payment')
+    .neq('payment_method', 'bank_transfer')
+    .lt('created_at', cutoff)
+    .order('created_at', { ascending: true })
+    .limit(limit);
+
+  if (error || !data || data.length === 0) return [];
+
+  const orders: Order[] = [];
+  for (const row of data as { id: string }[]) {
+    // eslint-disable-next-line no-await-in-loop
+    const order = await getOrderById(row.id);
+    // 그 사이 상태가 바뀌었으면 건드리지 않습니다.
+    if (order && order.status === 'pending_payment') orders.push(order);
+  }
+  return orders;
+}
+
+/**
+ * 카드 주문을 결제실패로 정리합니다. (4-B)
+ *
+ * ★ 조건부 UPDATE 입니다. 결제대기일 때만 바뀝니다.
+ *   그 사이 승인이 들어와 결제완료가 되었다면 아무 일도 하지 않습니다.
+ *   이 한 줄이 "결제한 손님의 주문이 사라지는" 사고를 막습니다.
+ *
+ * ★ 재고·포인트 되돌림은 updateOrderStatus 안에서 일어납니다.
+ *   (isStockReleasing 에 failed 가 들어 있고, releaseOrderStock 이 한 번만 통과시킵니다)
+ *
+ * @returns 이번 호출이 실제로 바꿨는지
+ */
+export async function failPendingCardOrder(
+  order: Order,
+  memo: string
+): Promise<boolean> {
+  const supabase = requireSupabaseAdmin();
+
+  const claimed = await supabase
+    .from(ORDERS)
+    .update({ status: 'failed' })
+    .eq('id', order.id)
+    .eq('status', 'pending_payment')
+    .select('id');
+
+  if (claimed.error) {
+    throw new Error(`결제실패로 바꾸지 못했습니다: ${claimed.error.message}`);
+  }
+  // 0건이면 그 사이 다른 요청이 먼저 처리했습니다. 건드리지 않습니다.
+  if (!claimed.data || claimed.data.length === 0) return false;
+
+  await addHistory(order.id, order.status, 'failed', memo);
+
+  // 재고를 돌려놓습니다. 두 번 되돌지 않도록 DB 가 막습니다.
+  await releaseOrderStock(order, memo);
+
+  /*
+   * ★ 쓴 포인트도 돌려줍니다.
+   *   updateOrderStatus 를 거치지 않고 상태를 직접 바꿨으므로 여기서 부릅니다.
+   *   (상태를 조건부로 잡아야 해서 updateOrderStatus 를 쓸 수 없었습니다)
+   */
+  if (order.userId) {
+    try {
+      await revokeOrderPoints(order.userId, order.id, order.discount);
+    } catch (error) {
+      console.warn('[orders] 결제실패 포인트 되돌림 실패:', order.id, error);
+    }
+  }
+
+  return true;
 }
 
 /** 관리자 주문 상세의 '자동취소 제외' 토글 */
