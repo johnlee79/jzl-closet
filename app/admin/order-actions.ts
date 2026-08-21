@@ -19,6 +19,7 @@ import {
   updateShippingAddress,
   confirmUncertainPayment,
 } from '@/lib/orders';
+import { runCardSweep } from '@/lib/card-sweep';
 import { getPaymentSettings } from '@/lib/settings';
 import { notifyCancelAccepted, notifyStockShortage } from '@/lib/telegram';
 import {
@@ -442,5 +443,62 @@ export async function confirmPaymentAction(
     };
   } catch (error) {
     return fail(error, '결제 상태를 확정하지 못했습니다.');
+  }
+}
+
+/* ── 결제대기 카드 주문 지금 정리하기 (4-B) ───────────────
+ *
+ * ★★ 왜 버튼으로 두는가
+ *   이 정리는 주문 하나마다 KSNET 에 20초 타임아웃으로 두 번 물어봅니다.
+ *   한 번에 최대 30건까지 보므로 최악의 경우 20분이 넘습니다.
+ *   예전에는 관리자 주문 목록을 그리기 전에 이것을 기다렸습니다.
+ *   결제대기가 몇 건만 쌓여도 목록이 안 열리고, 주문이 몰리는 순간에
+ *   관리자 화면이 통째로 마비되는 구조였습니다.
+ *
+ *   평소에는 10분마다 도는 크론(/api/cron/card-sweep)이 합니다.
+ *   급할 때만 사람이 눌러서 돌립니다.
+ *
+ * ★ 쿨다운을 건너뜁니다(force). 눌렀는데 "최근에 돌아서 넘어갑니다" 로
+ *   아무 일도 안 일어나면 운영자는 고장으로 봅니다.
+ * ★ 정리가 하는 일 자체는 하나도 바꾸지 않았습니다. 도는 시점만 옮겼습니다.
+ * ------------------------------------------------------------------ */
+
+export type CardSweepSummary = {
+  /** 살펴본 결제대기 카드 주문 수 */
+  checked: number;
+  /** 승인이 확인되어 결제완료로 되살린 주문번호 */
+  recovered: string[];
+  /** 승인 없음이 확인되어 결제실패로 바꾼 주문번호 (재고 되돌림) */
+  failed: string[];
+  /** 금액·주문번호가 어긋나 검토필요로 둔 주문번호 */
+  review: string[];
+  /** 조회를 못 해 승인확인실패로 둔 주문번호 (재고 유지) */
+  unconfirmed: string[];
+  /** 결제 Key 가 없어 승인확인실패로 두고 재고만 되돌린 주문번호 */
+  noKey: string[];
+  /** 자동취소 제외·송장 있음 등으로 건너뛴 수 */
+  skipped: number;
+};
+
+export async function runCardSweepNowAction(): Promise<ActionResult<CardSweepSummary>> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  try {
+    const result = await runCardSweep(true);
+    refresh();
+    return {
+      ok: true,
+      data: {
+        checked: result.checked,
+        recovered: result.recovered.map((order) => order.orderNo),
+        failed: result.failed.map((order) => order.orderNo),
+        review: result.review.map((order) => order.orderNo),
+        unconfirmed: result.unconfirmed.map((order) => order.orderNo),
+        noKey: result.noKey.map((order) => order.orderNo),
+        skipped: result.skipped,
+      },
+    };
+  } catch (error) {
+    return fail(error, '정리하지 못했습니다.');
   }
 }

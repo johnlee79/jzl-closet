@@ -3,13 +3,20 @@ import { Suspense } from 'react';
 import BulkTrackingPanel from '@/components/admin/BulkTrackingPanel';
 import OrderFilters from '@/components/admin/OrderFilters';
 import OrderTable from '@/components/admin/OrderTable';
+import CardSweepButton from '@/components/admin/CardSweepButton';
 import { sweepAutoCancelQuietly } from '@/lib/auto-cancel';
-import { sweepCardOrdersQuietly } from '@/lib/card-sweep';
 import { countOrdersByStatus, getOrders } from '@/lib/orders';
 import { isSupabaseConfigured } from '@/lib/supabase/server';
 
 /** 주문 목록은 항상 최신 값을 봐야 합니다. */
 export const dynamic = 'force-dynamic';
+
+/**
+ * ★ 목록 자체는 DB 만 읽어 1초 안에 끝납니다. 이 값은 [지금 정리하기] 를 위한 것입니다.
+ *   그 버튼은 서버 액션이고, 서버 액션은 이 페이지의 라우트 설정을 따릅니다.
+ *   KSNET 조회를 기다려야 하므로 기본값(15초)으로는 모자랍니다.
+ */
+export const maxDuration = 60;
 
 export const metadata = { title: '주문 관리' };
 
@@ -34,12 +41,24 @@ export default async function AdminOrdersPage({
 }) {
   const configured = isSupabaseConfigured();
 
-  // ★ 크론을 아직 걸지 않았어도 관리자가 들어오면 기한 지난 입금대기 건이 정리됩니다.
-  //   최근에 한 번 돌았으면 그냥 넘어갑니다. (lib/auto-cancel.ts)
+  /*
+   * ★ 무통장입금 기한이 지난 건만 여기서 정리합니다.
+   *   DB 안에서 끝나는 일이라 화면을 붙잡지 않습니다.
+   *   그쪽 크론은 하루 한 번이라, 관리자가 들어올 때 정리해 주는 것이 의미가 있습니다.
+   *   최근에 한 번 돌았으면 그냥 넘어갑니다. (lib/auto-cancel.ts)
+   *
+   * ★★ 카드 정리는 여기서 뺐습니다. 화면을 그리기 전에 KSNET 에 물어보고 있었습니다.
+   *   결제대기 카드 주문 하나마다 20초 타임아웃으로 두 번 조회합니다.
+   *   한 번에 최대 30건까지 보므로 최악의 경우 30 × (20 + 1.5 + 20)초 ≈ 21분입니다.
+   *   그동안 주문 목록이 아예 안 열리고, Vercel 함수 시간 제한에 먼저 걸립니다.
+   *   주문이 몰려 결제대기가 쌓이는 순간에 관리자 화면이 마비되는 구조였습니다.
+   *
+   *   카드 정리는 10분마다 도는 크론(/api/cron/card-sweep)이 이미 맡고 있습니다.
+   *   급할 때는 목록 위의 [지금 정리하기] 버튼으로 직접 돌릴 수 있습니다.
+   *   정리가 하는 일 자체는 하나도 바뀌지 않았습니다. 도는 시점만 옮겼습니다.
+   */
   if (configured) {
-    // 무통장입금 기한 지난 건과, 결제대기로 남은 카드 주문을 함께 봅니다. (4-B)
     await sweepAutoCancelQuietly();
-    await sweepCardOrdersQuietly();
   }
 
   const page = Math.max(1, Number(searchParams.page ?? '1') || 1);
@@ -106,6 +125,13 @@ export default async function AdminOrdersPage({
           <OrderFilters counts={counts} total={allCount} />
         </Suspense>
       </div>
+
+      {/*
+        ★ 결제대기 카드 정리 — 예전에는 이 화면을 그리기 전에 자동으로 돌았습니다.
+          KSNET 조회를 기다리느라 목록이 안 열리는 일이 있어 버튼으로 뺐습니다.
+          평소에는 10분마다 도는 크론이 합니다.
+      */}
+      {configured ? <CardSweepButton /> : null}
 
       <div className="mt-5">
         {/* 공급처가 회신한 송장을 한 번에 넣는 자리 */}

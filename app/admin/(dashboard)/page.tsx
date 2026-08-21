@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { sweepAutoCancelQuietly } from '@/lib/auto-cancel';
-import { sweepCardOrdersQuietly } from '@/lib/card-sweep';
 import { countPendingInquiries } from '@/lib/inquiries';
 import { countReviewsToday } from '@/lib/reviews';
 import { statusBadgeClass, statusLabel, ORDER_STATUSES } from '@/lib/order-status';
@@ -138,11 +137,18 @@ export default async function AdminDashboardPage() {
     recentOrders: [],
   };
 
-  // 관리자 첫 화면에서도 기한 지난 입금대기 건을 정리합니다.
+  /*
+   * 관리자 첫 화면에서도 기한 지난 입금대기 건을 정리합니다.
+   * ★ DB 안에서 끝나는 일이라 화면을 붙잡지 않습니다.
+   *
+   * ★★ 카드 정리는 여기서도 뺐습니다. 주문 목록과 같은 이유입니다 —
+   *   화면을 그리기 전에 KSNET 에 최대 20초씩 물어보고 있었습니다.
+   *   관리자 첫 화면이 열리지 않으면 아무 일도 못 합니다.
+   *   카드 정리는 10분마다 도는 크론이 맡고, 급할 때는 주문 목록의
+   *   [지금 정리하기] 로 직접 돌립니다.
+   */
   if (configured) {
-    // 무통장입금 기한 지난 건과, 결제대기로 남은 카드 주문을 함께 봅니다. (4-B)
     await sweepAutoCancelQuietly();
-    await sweepCardOrdersQuietly();
   }
 
   const [stats, pendingInquiryCount, memberCounts, reviewCounts] = configured
