@@ -307,6 +307,42 @@ async function loadItems(orderIds: string[]): Promise<Map<string, OrderItem[]>> 
   return map;
 }
 
+/**
+ * 조건에 맞는 주문 건수만 셉니다.
+ *
+ * ★ 평소에는 쓰지 않습니다. 목록 조회가 건수까지 함께 돌려주기 때문입니다.
+ *   있는 것보다 뒤쪽 페이지를 요청해 행이 0건인 경우에만 씁니다.
+ *   그때는 어긋날 행이 없어 따로 세도 안전합니다.
+ */
+async function countOrders(filter: OrderFilter): Promise<number> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return 0;
+
+  const term = (filter.search ?? '').replace(/[%,().]/g, '').trim();
+  const searchExpression = term
+    ? `order_no.ilike.%${term}%,orderer_name.ilike.%${term}%,orderer_phone.ilike.%${term}%,depositor_name.ilike.%${term}%,receiver_name.ilike.%${term}%`
+    : '';
+
+  const needsCheck = filter.status === NEEDS_CHECK_TAB;
+  let query = supabase.from(ORDERS).select('id', { count: 'exact', head: true });
+  if (needsCheck) {
+    query = query.in('status', NEEDS_CHECK_STATUSES);
+  } else if (filter.status && filter.status !== 'all') {
+    query = query.eq('status', filter.status);
+  }
+  if (filter.from) query = query.gte('created_at', kstStart(filter.from));
+  if (filter.to) query = query.lte('created_at', kstEnd(filter.to));
+  if (filter.paymentMethod) query = query.eq('payment_method', filter.paymentMethod);
+  if (filter.cashReceipt) {
+    query = query.neq('cash_receipt_type', 'none');
+    if (filter.cashReceipt === 'todo') query = query.not('cash_receipt_issued', 'is', true);
+  }
+  if (searchExpression) query = query.or(searchExpression);
+
+  const { count, error } = await query;
+  return error ? 0 : (count ?? 0);
+}
+
 /** 관리자 주문 목록. 전체 건수까지 함께 돌려줍니다. */
 export async function getOrders(
   filter: OrderFilter = {}
@@ -321,29 +357,30 @@ export async function getOrders(
     : '';
 
   try {
-    // 같은 조건을 두 번 겁니다. (건수용 · 목록용)
     /*
      * ★ 확인 필요 탭은 상태 하나가 아니라 둘을 함께 겁니다. (4-B)
      *   승인확인실패·검토필요 — 돈이 오갔는지 우리가 모르는 주문들입니다.
      */
     const needsCheck = filter.status === NEEDS_CHECK_TAB;
 
-    let countQuery = supabase.from(ORDERS).select('id', { count: 'exact', head: true });
-    if (needsCheck) {
-      countQuery = countQuery.in('status', NEEDS_CHECK_STATUSES);
-    } else if (filter.status && filter.status !== 'all') {
-      countQuery = countQuery.eq('status', filter.status);
-    }
-    if (filter.from) countQuery = countQuery.gte('created_at', kstStart(filter.from));
-    if (filter.to) countQuery = countQuery.lte('created_at', kstEnd(filter.to));
-    if (filter.paymentMethod) countQuery = countQuery.eq('payment_method', filter.paymentMethod);
-    if (filter.cashReceipt) {
-      countQuery = countQuery.neq('cash_receipt_type', 'none');
-      if (filter.cashReceipt === 'todo') countQuery = countQuery.not('cash_receipt_issued', 'is', true);
-    }
-    if (searchExpression) countQuery = countQuery.or(searchExpression);
-
-    let listQuery = supabase.from(ORDERS).select('*');
+    /*
+     * ============================================================
+     * ★★ 건수와 목록을 한 번의 조회로 받습니다
+     * ============================================================
+     *
+     * 예전에는 같은 조건으로 두 번 물었습니다. 건수용 한 번, 목록용 한 번.
+     * 두 요청은 동시에 나가고 서버에서 각자 처리되므로 **서로 다른 시점**을 봅니다.
+     * 그 사이에 주문이 하나 들어오면
+     *   건수 = 13  ·  목록 = 12행
+     * 처럼 화면이 스스로 어긋납니다. 실제로 결제 직후 들어온 주문이
+     * "건수는 13인데 목록에는 12건" 으로 보이는 일이 있었습니다.
+     * 새로고침해도 그 순간 또 주문이 들어오면 같은 일이 반복됩니다.
+     *
+     * PostgREST 는 Prefer: count=exact 와 Range 를 함께 받으면 한 응답에
+     * 행과 전체 건수를 같이 돌려줍니다. 한 번만 물으면 두 값이
+     * 반드시 같은 시점의 것이라 어긋날 수 없습니다. 조회 수도 절반이 됩니다.
+     */
+    let listQuery = supabase.from(ORDERS).select('*', { count: 'exact' });
     if (needsCheck) {
       listQuery = listQuery.in('status', NEEDS_CHECK_STATUSES);
     } else if (filter.status && filter.status !== 'all') {
@@ -371,9 +408,18 @@ export async function getOrders(
       listQuery = listQuery.range(from, from + filter.limit - 1);
     }
 
-    const [countResult, listResult] = await Promise.all([countQuery, listQuery]);
+    const listResult = await listQuery;
 
     if (listResult.error) {
+      /*
+       * ★ 있는 것보다 뒤쪽 페이지를 달라고 하면 PostgREST 가 416 을 돌려줍니다.
+       *   (예: 13건뿐인데 2페이지) 이때는 "행이 없다" 가 맞는 답이고,
+       *   건수는 여전히 알려 줘야 합니다. 그래야 화면이 페이지 수를 그릴 수 있습니다.
+       *   행이 0건이라 어긋날 값도 없으므로 여기서만 건수를 따로 셉니다.
+       */
+      if (listResult.error.code === 'PGRST103') {
+        return { orders: [], total: listResult.count ?? (await countOrders(filter)) };
+      }
       if (!isMissingTable(listResult.error.code)) {
         console.error('[orders] 목록 조회 실패:', listResult.error.message);
       }
@@ -383,7 +429,11 @@ export async function getOrders(
     const rows = (listResult.data ?? []) as OrderRow[];
     const itemMap = await loadItems(rows.map((row) => row.id));
     const orders = rows.map((row) => rowToOrder(row, itemMap.get(row.id) ?? []));
-    return { orders, total: countResult.count ?? orders.length };
+    /*
+     * ★ count 와 rows 가 같은 응답에서 나왔으므로 서로 어긋날 수 없습니다.
+     *   count 를 못 읽는 환경이면 지금 받은 행 수를 씁니다.
+     */
+    return { orders, total: listResult.count ?? orders.length };
   } catch (error) {
     console.error('[orders] 목록 조회 실패:', error);
     return { orders: [], total: 0 };

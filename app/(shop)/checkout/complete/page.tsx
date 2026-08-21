@@ -139,11 +139,15 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
         </p>
 
         {/*
-          ★ 확인 중일 때만 잠깐 기다렸다 다시 읽습니다.
+          ★★ 카드 결과를 기다리는 동안에만 다시 읽습니다.
             승인 확인은 보통 1~2초면 끝납니다. 그 사이에 화면이 그려졌을 뿐인데
             손님이 결제가 안 된 줄 알고 다시 결제하는 것을 막습니다.
+
+          ★ checking(승인확인실패·검토필요)에서는 새로고침하지 않습니다.
+            그 상태는 사람이 KSNET 거래내역과 대조해야 풀립니다.
+            기다린다고 바뀌지 않는데 화면만 깜빡이면 손님이 더 불안해집니다.
         */}
-        {view === 'checking' ? <PaymentStatusRefresh /> : null}
+        {view === 'card_pending' ? <PaymentStatusRefresh /> : null}
       </header>
 
       <div className="mt-12 grid grid-cols-1 gap-12 lg:grid-cols-[1fr_320px] lg:gap-16">
