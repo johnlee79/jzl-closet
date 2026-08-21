@@ -17,6 +17,7 @@ import {
   setTracking,
   updateOrderStatus,
   updateShippingAddress,
+  confirmUncertainPayment,
 } from '@/lib/orders';
 import { notifyCancelAccepted } from '@/lib/telegram';
 import {
@@ -378,5 +379,31 @@ export async function cancelItemAction(
     return { ok: true, data: undefined };
   } catch (error) {
     return fail(error, '부분 취소에 실패했습니다.');
+  }
+}
+
+/* ── 승인확인실패·검토필요 주문의 결론 확정 (4-B) ─────────
+ *
+ * ★★ 자동으로는 결론을 내지 않는 두 상태입니다.
+ *   승인확인실패 — 승인 여부를 우리가 모릅니다
+ *   검토필요     — 승인은 났는데 금액·주문번호가 우리 기록과 다릅니다
+ *   운영자가 KSNET 거래내역(ksta.ksnet.co.kr)에서 확인한 뒤 눌러 확정합니다.
+ *
+ * ★ 이 액션은 우리 기록만 바꿉니다. 실제 승인·취소는 일어나지 않습니다.
+ *   KSNET 은 가맹점에 취소 권한을 주지 않습니다.
+ * ------------------------------------------------------------------ */
+
+export async function confirmPaymentAction(
+  id: string,
+  decision: 'paid' | 'failed'
+): Promise<ActionResult> {
+  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  try {
+    await confirmUncertainPayment(id, decision);
+    refresh(id);
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '결제 상태를 확정하지 못했습니다.');
   }
 }

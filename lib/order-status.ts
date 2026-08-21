@@ -263,8 +263,27 @@ export function isOrderStatus(value: string): value is OrderStatus {
 }
 
 /** 관리자 목록의 상태 탭 순서 */
-export const STATUS_TABS: { key: OrderStatus | 'all'; label: string }[] = [
+/**
+ * 사람이 직접 확인해야 하는 두 상태를 한 번에 거르는 값. (4-B)
+ *
+ * ★★ 왜 따로 두는가
+ *   승인확인실패와 검토필요는 "돈이 오갔는지 우리가 모르는" 주문입니다.
+ *   둘을 따로 눌러 봐야 하면 한쪽을 잊습니다. 매일 확인해야 하는 목록이라
+ *   한 번에 보이게 합니다.
+ * ★ 상태값이 아니라 목록이므로 주소에는 이 문자열이 그대로 들어갑니다.
+ *   getOrders 가 'needs_check' 를 알아보고 두 상태를 함께 겁니다.
+ */
+export const NEEDS_CHECK_TAB = 'needs_check';
+
+/** '확인 필요' 탭이 실제로 거르는 상태들 */
+export const NEEDS_CHECK_STATUSES: OrderStatus[] = ['payment_unconfirmed', 'payment_review'];
+
+export const STATUS_TABS: { key: OrderStatus | 'all' | typeof NEEDS_CHECK_TAB; label: string }[] = [
   { key: 'all', label: '전체' },
+  /*
+   * ★ 전체 바로 다음에 둡니다. 매일 가장 먼저 봐야 하는 목록입니다.
+   */
+  { key: NEEDS_CHECK_TAB, label: '확인 필요' },
   ...ORDER_STATUSES.map((status) => ({
     key: status,
     label: ORDER_STATUS_META[status].label,

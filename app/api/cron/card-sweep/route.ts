@@ -52,8 +52,12 @@ export async function GET(request: NextRequest) {
         recovered: result.recovered.map((order) => order.orderNo),
         /** 미승인으로 확인되어 결제실패로 바꾼 주문 (재고를 되돌렸습니다) */
         failed: result.failed.map((order) => order.orderNo),
-        /** 조회에 실패해 그대로 둔 주문 — 사람이 확인해야 합니다 */
-        needsReview: result.needsReview.map((order) => order.orderNo),
+        /** 금액·주문번호가 어긋나 검토필요로 둔 주문 (재고 유지) */
+        review: result.review.map((order) => order.orderNo),
+        /** 조회를 못 해 승인확인실패로 둔 주문 (재고 유지) */
+        unconfirmed: result.unconfirmed.map((order) => order.orderNo),
+        /** 결제 Key 가 없어 승인확인실패로 두고 재고만 되돌린 주문 */
+        noKey: result.noKey.map((order) => order.orderNo),
         skipped: result.skipped,
       },
       { headers: { 'Cache-Control': 'no-store' } }

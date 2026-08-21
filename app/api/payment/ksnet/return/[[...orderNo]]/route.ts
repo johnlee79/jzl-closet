@@ -5,6 +5,7 @@ import {
   failPendingCardOrder,
   getOrderByNo,
   markPaymentUnconfirmed,
+  saveKsnetPaymentKey,
 } from '@/lib/orders';
 import { createOrderToken } from '@/lib/order-token';
 import { writePaymentLog } from '@/lib/payment-logs';
@@ -228,6 +229,19 @@ async function handle(request: NextRequest, context: RouteContext): Promise<Resp
     );
   }
 
+  /*
+   * ── ★★ 결제 Key 를 먼저 주문에 적어 둡니다 (4-B) ──────
+   *
+   * 승인 재조회(recv_post.jsp)는 이 값으로만 됩니다. 주문번호로는 못 물어봅니다.
+   * 4-A 는 이 값을 승인 확인에만 쓰고 버렸습니다. 그래서 아래 승인 확인이
+   * 통신 오류로 실패하면 그 주문은 영영 확인할 방법이 없었습니다.
+   *
+   * ★ 승인 확인보다 먼저입니다. 확인이 실패해도 열쇠는 남아야
+   *   10분 뒤 정리 작업이 다시 물어볼 수 있습니다.
+   * ★ 실패해도 결제 처리를 막지 않습니다. (안에서 조용히 넘어갑니다)
+   */
+  await saveKsnetPaymentKey(orderNo, commConId);
+
   /* ── ★ 금액은 반드시 DB 에서 읽습니다 ──────────────────
    * 결제창이 보낸 금액을 쓰면, 그 값을 바꿔 보내는 것만으로
    * 1,000원짜리 승인을 100만원 주문의 완료로 만들 수 있습니다. */
@@ -281,7 +295,7 @@ async function handle(request: NextRequest, context: RouteContext): Promise<Resp
      *   '승인확인실패' 로 두고 사람이 KSNET 거래내역과 대조하게 합니다.
      */
     const marked = await markPaymentUnconfirmed(orderNo, reason);
-    await safeNotify(() => notifyPaymentUnconfirmed(marked, orderNo, reason));
+    await safeNotify(() => notifyPaymentUnconfirmed(marked.order, orderNo, reason));
 
     // 손님에게는 "확인 중" 으로 안내합니다. 실패라고 말하지 않습니다.
     return htmlRedirect(

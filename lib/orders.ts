@@ -9,6 +9,8 @@ import {
   isSalesStatus,
   isStockReleasing,
   statusLabel,
+  NEEDS_CHECK_STATUSES,
+  NEEDS_CHECK_TAB,
   type OrderStatus,
 } from '@/lib/order-status';
 import {
@@ -130,6 +132,9 @@ type OrderRow = {
   admin_memo: string | null;
   /** 3-C 에서 추가한 컬럼. 아직 없을 수 있어 선택 항목으로 둡니다. */
   auto_cancel_excluded?: boolean | null;
+  pg_comm_con_id?: string | null;
+  stock_released_at?: string | null;
+  sweep_notified_at?: string | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -236,6 +241,13 @@ function rowToOrder(
     trackingNo: row.tracking_no ?? '',
     adminMemo: row.admin_memo ?? '',
     autoCancelExcluded: row.auto_cancel_excluded === true,
+    /*
+     * ★ 승인 재조회의 유일한 열쇠입니다. 거래번호(pgTid)와 다릅니다.
+     *   4-B 에서 추가한 칸이라 아직 없을 수 있습니다.
+     */
+    pgCommConId: row.pg_comm_con_id ?? '',
+    stockReleasedAt: row.stock_released_at ?? null,
+    sweepNotifiedAt: row.sweep_notified_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     items,
@@ -310,8 +322,16 @@ export async function getOrders(
 
   try {
     // 같은 조건을 두 번 겁니다. (건수용 · 목록용)
+    /*
+     * ★ 확인 필요 탭은 상태 하나가 아니라 둘을 함께 겁니다. (4-B)
+     *   승인확인실패·검토필요 — 돈이 오갔는지 우리가 모르는 주문들입니다.
+     */
+    const needsCheck = filter.status === NEEDS_CHECK_TAB;
+
     let countQuery = supabase.from(ORDERS).select('id', { count: 'exact', head: true });
-    if (filter.status && filter.status !== 'all') {
+    if (needsCheck) {
+      countQuery = countQuery.in('status', NEEDS_CHECK_STATUSES);
+    } else if (filter.status && filter.status !== 'all') {
       countQuery = countQuery.eq('status', filter.status);
     }
     if (filter.from) countQuery = countQuery.gte('created_at', kstStart(filter.from));
@@ -324,7 +344,9 @@ export async function getOrders(
     if (searchExpression) countQuery = countQuery.or(searchExpression);
 
     let listQuery = supabase.from(ORDERS).select('*');
-    if (filter.status && filter.status !== 'all') {
+    if (needsCheck) {
+      listQuery = listQuery.in('status', NEEDS_CHECK_STATUSES);
+    } else if (filter.status && filter.status !== 'all') {
       listQuery = listQuery.eq('status', filter.status);
     }
     if (filter.from) listQuery = listQuery.gte('created_at', kstStart(filter.from));
@@ -790,8 +812,10 @@ type StockMoveRow = {
 
 async function writeStockMoves(
   rows: StockMoveRow[],
-  direction: 'release' | 'deduct',
-  context: StockMoveContext
+  direction: 'release' | 'deduct' | 'skip',
+  context: StockMoveContext,
+  /** direction 이 skip 일 때 왜 건너뛰었는지 */
+  excludedReason?: string
 ): Promise<void> {
   if (rows.length === 0) return;
   const supabase = getSupabaseAdmin();
@@ -810,6 +834,7 @@ async function writeStockMoves(
         stock_before: row.stockBefore,
         stock_after: row.stockAfter,
         reason: context.reason || null,
+        excluded_reason: excludedReason || null,
       }))
     );
     if (error && !isMissingTable(error.code)) {
@@ -840,6 +865,7 @@ async function adjustStock(
   if (!supabase) return;
 
   const moved: StockMoveRow[] = [];
+  const skippedRows: StockMoveRow[] = [];
 
   for (const entry of entries) {
     if (!entry.productId || !entry.optionKey) continue;
@@ -868,7 +894,22 @@ async function adjustStock(
         return { ...combination, stock: after };
       });
 
-      if (!touched) continue;
+      if (!touched) {
+        /*
+         * ★ 재고를 관리하지 않는 조합(stock = null)입니다.
+         *   차감한 적이 없으므로 되돌리면 없던 재고가 생깁니다.
+         *   건너뛰되 이유를 남깁니다.
+         */
+        skippedRows.push({
+          productId: entry.productId,
+          productSlug: entry.productSlug ?? row.slug ?? null,
+          optionKey: entry.optionKey,
+          quantity: entry.quantity,
+          stockBefore: 0,
+          stockAfter: 0,
+        });
+        continue;
+      }
 
       const written = await supabase
         .from('products')
@@ -908,6 +949,14 @@ async function adjustStock(
 
   if (context) {
     await writeStockMoves(moved, delta === 1 ? 'release' : 'deduct', context);
+    if (skippedRows.length > 0) {
+      await writeStockMoves(
+        skippedRows,
+        'skip',
+        context,
+        '재고를 관리하지 않는 조합(stock 없음)이라 건너뜀 — 차감한 적이 없습니다'
+      );
+    }
   }
 }
 
@@ -960,6 +1009,35 @@ export async function releaseOrderStock(order: Order, reason: string): Promise<b
     return false;
   }
 
+  const context = { orderId: order.id, orderNo: order.orderNo, reason };
+
+  /*
+   * ★★ 되돌리면 안 되는 품목을 먼저 걸러 냅니다.
+   *   ① item_status = cancelled — 부분취소(cancelOrderItem)가 이미 되돌렸습니다.
+   *     여기서 또 되돌리면 없던 재고가 생깁니다.
+   *   ② 재고를 관리하지 않는 조합(stock = null) — 차감한 적이 없습니다.
+   *     이 판단은 adjustStock 안에서 실제 값을 보고 합니다.
+   *
+   * ★ 건너뛴 것을 조용히 넘기지 않습니다.
+   *   나중에 재고가 안 맞을 때 "왜 안 돌아왔는지" 를 알 수 있어야 합니다.
+   */
+  const skipped = order.items.filter((item) => item.itemStatus !== 'normal');
+  if (skipped.length > 0) {
+    await writeStockMoves(
+      skipped.map((item) => ({
+        productId: item.productId,
+        productSlug: item.productSlug,
+        optionKey: item.optionKey,
+        quantity: item.quantity,
+        stockBefore: 0,
+        stockAfter: 0,
+      })),
+      'skip',
+      context,
+      `품목 상태가 ${skipped[0].itemStatus} 라 건너뜀 (부분취소가 이미 되돌렸을 수 있음)`
+    );
+  }
+
   await adjustStock(
     order.items
       .filter((item) => item.itemStatus === 'normal')
@@ -970,7 +1048,7 @@ export async function releaseOrderStock(order: Order, reason: string): Promise<b
         quantity: item.quantity,
       })),
     1,
-    { orderId: order.id, orderNo: order.orderNo, reason }
+    context
   );
 
   return true;
@@ -1375,7 +1453,11 @@ export async function cancelOrderItem(orderId: string, itemId: string): Promise<
     '금액을 다시 계산하지 못했습니다'
   );
 
-  // 취소한 품목의 재고를 되돌립니다.
+  /*
+   * 취소한 품목의 재고를 되돌립니다.
+   * ★ 기록을 남깁니다. 이 되돌림이 있었기 때문에 나중에 주문 전체를 정리할 때
+   *   같은 품목을 또 되돌리지 않습니다. (releaseOrderStock 이 cancelled 를 제외)
+   */
   await adjustStock(
     [
       {
@@ -1611,15 +1693,21 @@ export async function applyKsnetApproval(
  *   그 상태에서 손님에게 "실패했으니 다시 결제하세요" 라고 하면 이중결제가 납니다.
  * ★ 이미 결제 처리가 끝난 주문이면 건드리지 않습니다.
  */
+/**
+ * ★ 4-B — 돌려주는 값이 바뀌었습니다.
+ *   "정말로 이번에 상태를 바꿨는지" 를 호출부가 알아야 합니다.
+ *   자동정리는 실제로 바뀐 건만 세고 알려야 하는데, 예전처럼 주문만 돌려주면
+ *   이미 승인확인실패였던 주문까지 매번 새로 처리한 것으로 세게 됩니다.
+ */
 export async function markPaymentUnconfirmed(
   orderNo: string,
   reason: string
-): Promise<Order | null> {
+): Promise<{ moved: boolean; order: Order | null }> {
   const supabase = requireSupabaseAdmin();
 
   const order = await getOrderByNo(orderNo);
-  if (!order) return null;
-  if (isPaidStatus(order.status)) return order;
+  if (!order) return { moved: false, order: null };
+  if (isPaidStatus(order.status)) return { moved: false, order };
 
   const { data, error } = await supabase
     .from(ORDERS)
@@ -1630,12 +1718,15 @@ export async function markPaymentUnconfirmed(
 
   if (error) {
     console.error('[orders] 승인확인실패 처리 실패:', error.message);
-    return order;
+    return { moved: false, order };
   }
-  if (!data || data.length === 0) return await getOrderById(order.id);
+  // 0건이면 그 사이 다른 요청이 먼저 처리했습니다.
+  if (!data || data.length === 0) {
+    return { moved: false, order: await getOrderById(order.id) };
+  }
 
   await addHistory(order.id, order.status, 'payment_unconfirmed', `승인 확인 실패 — ${reason}`);
-  return await getOrderById(order.id);
+  return { moved: true, order: await getOrderById(order.id) };
 }
 
 /* ------------------------------------------------------------------
@@ -2024,6 +2115,58 @@ export async function findStalePendingCardOrders(
 }
 
 /**
+ * ============================================================
+ * 자정 점검용 — 오늘 것과 어제 이전 것을 갈라 돌려줍니다 (4-B)
+ * ============================================================
+ *
+ * ★★ 왜 나누는가
+ *   승인 재조회는 당일에 한해 가능합니다.
+ *     오늘 들어온 건   → 아직 물어볼 수 있습니다
+ *     어제 이전 건     → 이미 물어볼 수 없습니다
+ *   처리 방법이 완전히 다르므로 조회 단계에서 갈라 둡니다.
+ *
+ * ★ "오늘" 은 한국 시간 기준입니다. 서버는 UTC 로 돕니다.
+ *   UTC 기준으로 자르면 한국 시간 오전 9시에 날짜가 바뀌어,
+ *   그날 새벽 주문이 "어제 것" 으로 잘못 분류됩니다.
+ */
+export async function findTodayPendingCardOrders(
+  limit = 100
+): Promise<{ today: Order[]; older: Order[] }> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return { today: [], older: [] };
+
+  const KST_OFFSET = 9 * 60 * 60 * 1000;
+  const nowKst = new Date(Date.now() + KST_OFFSET);
+  const midnightKst = Date.UTC(
+    nowKst.getUTCFullYear(),
+    nowKst.getUTCMonth(),
+    nowKst.getUTCDate()
+  ) - KST_OFFSET;
+  const boundary = new Date(midnightKst).toISOString();
+
+  const { data, error } = await supabase
+    .from(ORDERS)
+    .select('id, created_at')
+    .eq('status', 'pending_payment')
+    .neq('payment_method', 'bank_transfer')
+    .order('created_at', { ascending: true })
+    .limit(limit);
+
+  if (error || !data) return { today: [], older: [] };
+
+  const today: Order[] = [];
+  const older: Order[] = [];
+  for (const row of data as { id: string; created_at: string }[]) {
+    // eslint-disable-next-line no-await-in-loop
+    const order = await getOrderById(row.id);
+    if (!order || order.status !== 'pending_payment') continue;
+    if (row.created_at >= boundary) today.push(order);
+    else older.push(order);
+  }
+  return { today, older };
+}
+
+/**
  * 카드 주문을 결제실패로 정리합니다. (4-B)
  *
  * ★ 조건부 UPDATE 입니다. 결제대기일 때만 바뀝니다.
@@ -2073,6 +2216,75 @@ export async function failPendingCardOrder(
   }
 
   return true;
+}
+
+/**
+ * ============================================================
+ * 결제 Key 를 주문에 적어 둡니다 (4-B)
+ * ============================================================
+ *
+ * ★★ 왜 필요한가
+ *   승인 재조회(recv_post.jsp · sndActionType=1)는 결제 Key 로만 됩니다.
+ *   주문번호로는 물어볼 수 없습니다.
+ *   4-A 는 이 값을 결제창 복귀 시점에 받아 승인 확인에만 쓰고 버렸습니다.
+ *   그래서 손님이 결제창을 닫고 나간 주문은 나중에 확인할 방법이 없었습니다.
+ *
+ * ★ 승인 확인보다 먼저 부릅니다.
+ *   승인 확인이 통신 오류로 실패하더라도 열쇠는 남아야 합니다.
+ *   그래야 10분 뒤 정리 작업이 다시 물어볼 수 있습니다.
+ *
+ * ★ 실패해도 결제 처리를 막지 않습니다. 칸이 아직 없는 환경도 있습니다.
+ */
+export async function saveKsnetPaymentKey(
+  orderNo: string,
+  commConId: string
+): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase || !orderNo || !commConId) return;
+
+  const { error } = await supabase
+    .from(ORDERS)
+    .update({ pg_comm_con_id: commConId, pg_provider: 'ksnet' })
+    .eq('order_no', orderNo);
+
+  if (error) {
+    if (isMissingColumn(error)) {
+      console.warn(
+        '[orders] pg_comm_con_id 칸이 없습니다. supabase/schema-4b.sql 을 실행해 주세요.'
+      );
+      return;
+    }
+    console.warn('[orders] 결제 Key 를 저장하지 못했습니다:', orderNo, error.message);
+  }
+}
+
+/**
+ * 자동정리 알림을 이번에 보내도 되는지 묻고, 되면 자리를 잡습니다.
+ *
+ * ★★ 카드 정리는 10분마다 돕니다. 표시가 없으면 같은 주문으로 하루 144번
+ *   알림이 갑니다. 알림이 잦으면 정작 중요한 것을 놓칩니다.
+ * ★ 비어 있을 때만 채우는 조건부 UPDATE 라, 동시에 두 번 돌아도 하나만 통과합니다.
+ * ★ 칸이 없으면(SQL 미실행) 그냥 보냅니다. 못 보내는 것보다 낫습니다.
+ *
+ * @returns 이번에 알려도 되는지
+ */
+export async function claimSweepNotice(orderId: string): Promise<boolean> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return false;
+
+  const claim = await supabase
+    .from(ORDERS)
+    .update({ sweep_notified_at: new Date().toISOString() })
+    .eq('id', orderId)
+    .is('sweep_notified_at', null)
+    .select('id');
+
+  if (claim.error) {
+    if (isMissingColumn(claim.error)) return true;
+    console.warn('[orders] 알림 표시를 남기지 못했습니다:', claim.error.message);
+    return true;
+  }
+  return Boolean(claim.data && claim.data.length > 0);
 }
 
 /** 관리자 주문 상세의 '자동취소 제외' 토글 */
@@ -2198,4 +2410,110 @@ export async function getOrdererSummaries(
   return Array.from(map.values())
     .sort((a, b) => b.totalAmount - a.totalAmount)
     .slice(0, limit);
+}
+
+/**
+ * ============================================================
+ * 사람이 확인한 결론을 확정합니다 (4-B)
+ * ============================================================
+ *
+ * ★★ 자동으로는 결론을 내지 않는 두 상태를 마무리하는 자리입니다.
+ *     payment_unconfirmed  승인 여부를 우리가 모릅니다
+ *     payment_review       승인은 났는데 금액·주문번호가 우리 기록과 다릅니다
+ *   운영자가 KSNET 거래내역에서 확인한 뒤에만 부릅니다.
+ *
+ * ★ 이 함수는 우리 기록만 바꿉니다. 실제 승인·취소는 일어나지 않습니다.
+ *   KSNET 은 가맹점에 취소 권한을 주지 않습니다.
+ *
+ * ★★ 결제완료로 확정할 때 재고를 다시 깎지 않습니다.
+ *   주문을 만들 때 이미 깎았습니다. 다만 그 사이 자동정리가 재고를 되돌렸다면
+ *   지금 다시 잡아야 합니다. 그 판단은 stock_released_at 으로 합니다.
+ *
+ * ★★ 결제실패로 확정할 때는 아직 안 돌아온 재고만 되돌립니다.
+ *   releaseOrderStock 이 DB 에서 한 번만 통과시키므로 두 번 돌아가지 않습니다.
+ */
+export async function confirmUncertainPayment(
+  id: string,
+  decision: 'paid' | 'failed'
+): Promise<Order> {
+  const supabase = requireSupabaseAdmin();
+  const before = await getOrderById(id);
+  if (!before) throw new Error('주문을 찾을 수 없습니다.');
+
+  if (before.status !== 'payment_unconfirmed' && before.status !== 'payment_review') {
+    throw new Error(
+      `확인이 필요한 주문이 아닙니다. (지금 상태: ${statusLabel(before.status)})`
+    );
+  }
+
+  if (decision === 'paid') {
+    /*
+     * ★ 자동정리가 재고를 되돌려 두었다면 다시 잡아야 합니다.
+     *   되돌린 뒤 그 물건이 팔렸을 수도 있으므로, 재고가 모자라도 막지 않고
+     *   깎기만 합니다. (0 밑으로는 내려가지 않습니다)
+     *   운영자는 이미 승인을 확인하고 누른 것이라 주문을 되돌릴 수 없습니다.
+     *   재고가 모자라면 그건 사람이 공급처와 풀어야 할 문제입니다.
+     */
+    if (before.stockReleasedAt) {
+      await adjustStock(
+        before.items
+          .filter((item) => item.itemStatus === 'normal')
+          .map((item) => ({
+            productId: item.productId,
+            productSlug: item.productSlug,
+            optionKey: item.optionKey,
+            quantity: item.quantity,
+          })),
+        -1,
+        {
+          orderId: before.id,
+          orderNo: before.orderNo,
+          reason: '승인 확인 후 결제완료로 확정 — 되돌렸던 재고를 다시 잡음',
+        }
+      );
+      await supabase.from(ORDERS).update({ stock_released_at: null }).eq('id', id);
+    }
+
+    assertWritten(
+      await supabase
+        .from(ORDERS)
+        .update({ status: 'paid', paid_at: before.paidAt ?? new Date().toISOString() })
+        .eq('id', id)
+        .select('id'),
+      '결제완료로 바꾸지 못했습니다'
+    );
+    await addHistory(
+      id,
+      before.status,
+      'paid',
+      '운영자가 KSNET 거래내역에서 승인을 확인하고 결제완료로 확정했습니다.'
+    );
+    return (await getOrderById(id)) as Order;
+  }
+
+  /* ── 결제실패로 확정 ── */
+  assertWritten(
+    await supabase.from(ORDERS).update({ status: 'failed' }).eq('id', id).select('id'),
+    '결제실패로 바꾸지 못했습니다'
+  );
+  await addHistory(
+    id,
+    before.status,
+    'failed',
+    '운영자가 KSNET 거래내역에서 승인이 없음을 확인하고 결제실패로 확정했습니다.'
+  );
+
+  // 아직 안 돌아온 재고만 되돌립니다. (DB 가 두 번 되돌리지 않게 막습니다)
+  await releaseOrderStock(before, '운영자가 결제실패로 확정');
+
+  // 쓴 포인트도 돌려줍니다.
+  if (before.userId) {
+    try {
+      await revokeOrderPoints(before.userId, before.id, before.discount);
+    } catch (error) {
+      console.warn('[orders] 확정 후 포인트 되돌림 실패:', id, error);
+    }
+  }
+
+  return (await getOrderById(id)) as Order;
 }

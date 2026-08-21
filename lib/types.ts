@@ -297,6 +297,16 @@ export type Order = {
   adminMemo: string;
   /** 켜 두면 입금 기한이 지나도 자동취소하지 않습니다. (공급처에 발송 요청이 나간 건) */
   autoCancelExcluded: boolean;
+  /**
+   * KSNET 결제 Key(reCommConId).
+   * ★ 승인 재조회의 유일한 열쇠입니다. 거래번호(pgTid)와 다릅니다.
+   *   결제창이 우리 서버로 돌아오는 순간 저장합니다. 없으면 재조회를 못 합니다.
+   */
+  pgCommConId: string;
+  /** 이 주문 때문에 재고를 되돌린 시각. 채워져 있으면 다시 되돌리지 않습니다. */
+  stockReleasedAt: string | null;
+  /** 카드 자동정리 알림을 보낸 시각. 같은 주문으로 두 번 알리지 않기 위한 표시입니다. */
+  sweepNotifiedAt: string | null;
 
   createdAt: string | null;
   updatedAt: string | null;

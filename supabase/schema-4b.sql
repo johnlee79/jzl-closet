@@ -94,3 +94,64 @@ create index if not exists orders_pending_sweep_idx
 -- select column_name from information_schema.columns
 --  where table_name = 'orders' and column_name = 'stock_released_at';
 -- select count(*) from public.stock_moves;
+
+
+-- ══════════════════════════════════════════════════════════
+-- 4-B 수정본에서 더한 칸들
+-- ══════════════════════════════════════════════════════════
+
+-- ── 4. 결제 Key (reCommConId) ──────────────────────────────
+--
+-- ★★ 이것이 없으면 승인 재조회 자체가 불가능합니다.
+--   KSNET 의 recv_post.jsp(sndActionType=1)는 sndCommConId 로만 조회됩니다.
+--   주문번호로는 물어볼 수 없습니다.
+--
+--   4-A 는 이 값을 결제창 복귀 시점에 받아 승인 확인에만 쓰고 버렸습니다.
+--   그래서 손님이 결제창을 닫고 나간 주문은 나중에 확인할 방법이 없었습니다.
+--   이제 받는 즉시 주문 행에 적어 둡니다. 이 칸이 생긴 뒤의 주문부터
+--   "승인이 났는데 우리만 모르는" 상태를 되살릴 수 있습니다.
+--
+-- ★★ pg_tid 에 같이 넣어 돌려쓰면 안 됩니다.
+--   pg_tid 는 KSNET 거래번호(trno) 자리입니다. 취소를 대행사에 요청할 때
+--   넘겨야 하는 값이라, 결제 Key 와 섞이면 엉뚱한 거래를 취소하게 됩니다.
+alter table public.orders
+  add column if not exists pg_comm_con_id text;
+
+comment on column public.orders.pg_comm_con_id is
+  'KSNET 결제 Key(reCommConId). 승인 재조회(recv_post.jsp)의 유일한 열쇠입니다. 거래번호(pg_tid)와 다릅니다.';
+
+
+-- ── 5. 자동정리 알림을 이미 보냈는지 ───────────────────────
+--
+-- 왜 필요한가
+--   카드 정리는 10분마다 돕니다. 승인확인실패로 바뀐 주문은 그 상태로 남으므로
+--   표시가 없으면 같은 주문으로 하루 144번 알림이 갑니다.
+--   알림이 잦으면 정작 중요한 것을 놓칩니다.
+--
+-- ★ 이 칸이 비어 있을 때만 채우는 조건부 UPDATE 로 한 번만 보냅니다.
+alter table public.orders
+  add column if not exists sweep_notified_at timestamptz;
+
+comment on column public.orders.sweep_notified_at is
+  '카드 자동정리 알림을 보낸 시각. 채워져 있으면 같은 주문으로 다시 알리지 않습니다.';
+
+
+-- ── 6. 재고 기록에 "제외됨" 을 남길 자리 ───────────────────
+--
+-- 왜 필요한가
+--   되돌리지 않고 건너뛴 품목이 있습니다.
+--     · stock 이 null 인 조합 — 차감한 적이 없어 되돌리면 없던 재고가 생깁니다
+--     · item_status = 'cancelled' — 부분취소가 이미 되돌렸습니다
+--   조용히 건너뛰면 나중에 재고가 안 맞을 때 "왜 안 돌아왔는지" 를 알 수 없습니다.
+--   건너뛴 사실과 이유를 남깁니다. direction 에 'skip' 이 들어갑니다.
+alter table public.stock_moves
+  add column if not exists excluded_reason text;
+
+comment on column public.stock_moves.excluded_reason is
+  'direction = skip 일 때 왜 되돌리지 않았는지. 재고가 안 맞을 때 이 줄이 단서가 됩니다.';
+
+
+-- ── 확인용 ─────────────────────────────────────────────────
+-- select column_name from information_schema.columns
+--  where table_name = 'orders'
+--    and column_name in ('stock_released_at', 'pg_comm_con_id', 'sweep_notified_at');

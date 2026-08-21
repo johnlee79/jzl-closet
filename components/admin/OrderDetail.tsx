@@ -7,6 +7,7 @@ import {
   acceptCancelAction,
   cancelItemAction,
   completeCancelAction,
+  confirmPaymentAction,
   setAutoCancelExcludedAction,
   setCashReceiptIssuedAction,
   setMemoAction,
@@ -15,6 +16,7 @@ import {
   updateStatusAction,
 } from '@/app/admin/order-actions';
 import CopyValue from '@/components/admin/CopyValue';
+import type { PaymentLog } from '@/lib/payment-logs';
 import { COURIERS, courierName, trackingUrl } from '@/lib/couriers';
 import {
   ORDER_STATUSES,
@@ -43,7 +45,14 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-export default function OrderDetail({ order }: { order: Order }) {
+export default function OrderDetail({
+  order,
+  paymentLogs = [],
+}: {
+  order: Order;
+  /** 승인 조회 이력 (4-B) — KSNET 거래내역과 대조할 때 씁니다 */
+  paymentLogs?: PaymentLog[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<Message>(null);
@@ -75,6 +84,12 @@ export default function OrderDetail({ order }: { order: Order }) {
   const isBank = order.paymentMethod === 'bank_transfer';
   /** 취소 요청을 접수했지만 아직 환불하지 않은 상태 (4-A) */
   const cancelPending = order.status === 'cancel_requested';
+  /**
+   * 사람이 확인해야 하는 주문인지. (4-B)
+   * ★ 승인확인실패 = "모름", 검토필요 = "승인은 났는데 값이 안 맞음".
+   *   둘 다 자동으로 결론 내지 않고 사람에게 넘긴 상태입니다.
+   */
+  const needsCheck = order.status === 'payment_unconfirmed' || order.status === 'payment_review';
   const liveItems = order.items.filter((item) => item.itemStatus === 'normal');
   const tracking = trackingUrl(order.courier, order.trackingNo);
 
@@ -337,6 +352,113 @@ export default function OrderDetail({ order }: { order: Order }) {
                   ) : null}
                   <CopyValue label="KSNET 거래번호 (trno)" value={order.pgTid ?? ''} large={cancelPending} />
                   <CopyValue label="승인번호" value={order.pgAuthNo} large={cancelPending} />
+                </div>
+              ) : null}
+
+              {/*
+                ★★ 사람이 확인해야 하는 주문 (4-B)
+                  승인확인실패·검토필요는 "돈이 오갔는지 우리가 모르는" 상태입니다.
+                  KSNET 거래내역(ksta.ksnet.co.kr)과 직접 대조해야 하고,
+                  그러려면 결제 Key·거래번호·조회 이력이 한자리에 있어야 합니다.
+              */}
+              {needsCheck ? (
+                <div className="mt-4 rounded-md bg-amber-50 p-3">
+                  <p className="text-[15px] font-medium leading-relaxed text-amber-900">
+                    사람이 확인해야 하는 주문입니다.
+                  </p>
+                  <p className="mt-1 text-[14px] leading-relaxed text-amber-900">
+                    {order.status === 'payment_review'
+                      ? '승인은 났는데 금액이나 주문번호가 우리 기록과 다릅니다. 자동으로 완료 처리하지 않았습니다.'
+                      : '승인 여부를 확인하지 못했습니다. 결제되지 않았다고 단정할 수 없습니다.'}
+                  </p>
+
+                  <div className="mt-3 flex flex-col gap-3">
+                    <CopyValue label="결제 Key (reCommConId)" value={order.pgCommConId} />
+                    <CopyValue label="KSNET 거래번호 (trno)" value={order.pgTid ?? ''} />
+                    <CopyValue label="주문번호" value={order.orderNo} />
+                  </div>
+
+                  {/* ── 조회 이력 ── */}
+                  <div className="mt-4">
+                    <span className="admin-label">승인 조회 이력</span>
+                    {paymentLogs.length === 0 ? (
+                      <p className="text-[15px] text-slate-600">기록이 없습니다.</p>
+                    ) : (
+                      <ul className="flex flex-col gap-1">
+                        {paymentLogs.map((log) => (
+                          <li
+                            key={log.id}
+                            className="flex flex-wrap gap-x-3 text-[14px] leading-relaxed text-slate-700"
+                          >
+                            <span className="tabular-nums text-slate-500">
+                              {formatDateTime(log.createdAt)}
+                            </span>
+                            <span className="font-medium">{log.kind}</span>
+                            {log.authyn ? <span>승인 {log.authyn}</span> : null}
+                            {log.trno ? <span>trno {log.trno}</span> : null}
+                            {log.note ? <span className="text-slate-500">{log.note}</span> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  {/* ── 확정 ── */}
+                  <div className="mt-4 border-t border-amber-200 pt-3">
+                    <p className="text-[14px] leading-relaxed text-amber-900">
+                      ★ KSNET 거래내역에서 확인한 뒤 눌러 주세요. 이 버튼은 우리 기록만
+                      바꿉니다. 실제 승인·취소는 일어나지 않습니다.
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => {
+                          if (
+                            !window.confirm(
+                              '승인이 확인되었습니까?\n\n결제완료로 바꿉니다. 재고는 그대로 잡아 둡니다.'
+                            )
+                          ) {
+                            return;
+                          }
+                          run(
+                            () => confirmPaymentAction(order.id, 'paid'),
+                            '결제완료로 확정했습니다.'
+                          );
+                        }}
+                        className="admin-btn-primary"
+                      >
+                        결제완료로 확정
+                      </button>
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => {
+                          if (
+                            !window.confirm(
+                              '결제되지 않은 것이 확인되었습니까?\n\n결제실패로 바꿉니다. 재고가 아직 안 돌아왔으면 지금 되돌립니다.'
+                            )
+                          ) {
+                            return;
+                          }
+                          run(
+                            () => confirmPaymentAction(order.id, 'failed'),
+                            '결제실패로 확정했습니다.'
+                          );
+                        }}
+                        className="admin-btn"
+                      >
+                        결제실패로 확정
+                      </button>
+                    </div>
+                    {order.stockReleasedAt ? (
+                      <p className="mt-2 text-[14px] text-slate-600">
+                        재고는 이미 되돌렸습니다 ({formatDateTime(order.stockReleasedAt)})
+                      </p>
+                    ) : (
+                      <p className="mt-2 text-[14px] text-slate-600">재고는 아직 잡아 둔 상태입니다.</p>
+                    )}
+                  </div>
                 </div>
               ) : null}
 
