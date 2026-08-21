@@ -71,6 +71,9 @@ type BrandRow = {
   image_url: string | null;
   /** 3-E 에서 추가한 컬럼. 아직 없을 수 있어 선택 항목으로 둡니다. */
   logo_url?: string | null;
+  /** 로고 균일화에서 추가한 칸. 아직 없을 수 있어 선택 항목으로 둡니다. */
+  logo_original_url?: string | null;
+  logo_scale?: number | string | null;
   display_order: number | null;
   is_visible: boolean | null;
   is_featured: boolean | null;
@@ -83,6 +86,14 @@ const CATEGORY_COLUMNS =
 const CATEGORY_COLUMNS_LEGACY =
   'id, slug, label, name_ko, parent_slug, display_order, is_visible, description';
 const BRAND_COLUMNS =
+  'id, slug, label, name, name_ko, tagline, story, origin, since, image_url, logo_url, logo_original_url, logo_scale, display_order, is_visible, is_featured';
+
+/**
+ * schema-brand-logo.sql 을 아직 돌리지 않은 경우에 쓰는 목록.
+ * ★ 없는 칸을 고르면 조회가 통째로 실패합니다. 로고 균일화 칸만 뺀 목록을 따로 둡니다.
+ *   (logo_url 을 3-E 때 같은 방식으로 견디고 있습니다)
+ */
+const BRAND_COLUMNS_NO_NORMALIZE =
   'id, slug, label, name, name_ko, tagline, story, origin, since, image_url, logo_url, display_order, is_visible, is_featured';
 
 /** schema-3e.sql 을 아직 돌리지 않은 경우에 쓰는 목록 (logo_url 제외) */
@@ -139,6 +150,9 @@ function rowToBrand(row: BrandRow): Brand {
     since: row.since ?? '',
     imageUrl: row.image_url ?? '',
     logoUrl: row.logo_url ?? '',
+    logoOriginalUrl: row.logo_original_url ?? '',
+    // numeric 은 PostgREST 가 문자열로 돌려줄 수 있습니다. 숫자로 맞춰 둡니다.
+    logoScale: Number(row.logo_scale ?? 1) || 1,
     order: row.display_order ?? 0,
     isVisible: row.is_visible !== false,
     isFeatured: Boolean(row.is_featured),
@@ -196,6 +210,19 @@ async function readCategories(): Promise<Category[] | null> {
   }
 }
 
+/**
+ * 브랜드별 로고 미세 조정 배율을 허용 범위 안으로 잘라 냅니다.
+ *
+ * ★ 범위를 넓히지 마세요. 0.7~1.5 를 벗어날 정도로 조정해야 한다면
+ *   그 로고 파일 자체가 균일화에 맞지 않는 것입니다. 파일을 바꾸는 편이 낫습니다.
+ * ★ 숫자가 아닌 값이 들어오면 1 로 봅니다. 저장이 실패하는 것보다 낫습니다.
+ */
+function clampLogoScale(value: number | undefined): number {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 1;
+  return Math.min(1.5, Math.max(0.7, n));
+}
+
 /** 아직 없는 컬럼을 골랐을 때 오는 코드 */
 const MISSING_COLUMN = '42703';
 
@@ -222,6 +249,22 @@ async function readBrands(): Promise<Brand[] | null> {
      *   그때는 로고 없이 한 번 더 읽어 사이트를 정상으로 굴립니다.
      *   (SQL 을 돌리고 나면 자동으로 첫 번째 조회가 성공합니다)
      */
+    /*
+     * ★ 칸이 없으면 한 단계씩 줄여 다시 읽습니다.
+     *   ① 로고 균일화 칸(logo_original_url · logo_scale) 없이
+     *   ② 그래도 없으면 logo_url 까지 빼고 (schema-3e.sql 미실행)
+     *   한 번에 다 빼지 않는 이유는, 3-E 는 돌렸고 균일화 SQL 만 안 돌린
+     *   상태에서 로고가 통째로 사라지면 안 되기 때문입니다.
+     */
+    if (error?.code === MISSING_COLUMN) {
+      const retry = (await supabase
+        .from(BRAND_TABLE)
+        .select(BRAND_COLUMNS_NO_NORMALIZE)
+        .order('display_order', { ascending: true })) as BrandRead;
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (error?.code === MISSING_COLUMN) {
       const retry = (await supabase
         .from(BRAND_TABLE)
@@ -454,6 +497,10 @@ export type BrandInput = {
   imageUrl: string;
   /** 로고. 비워 두면 브랜드명을 글자로 보여 줍니다. */
   logoUrl: string;
+  /** 균일화 전 원본 로고 주소 */
+  logoOriginalUrl?: string;
+  /** 브랜드별 미세 조정 배율 (0.7~1.5) */
+  logoScale?: number;
   isVisible: boolean;
   isFeatured: boolean;
   displayOrder?: number;
@@ -472,6 +519,8 @@ export async function createBrand(input: BrandInput): Promise<void> {
     since: input.since || null,
     image_url: input.imageUrl || null,
     logo_url: input.logoUrl || null,
+    logo_original_url: input.logoOriginalUrl || null,
+    logo_scale: clampLogoScale(input.logoScale),
     is_visible: input.isVisible,
     is_featured: input.isFeatured,
     display_order: input.displayOrder ?? (await nextOrder(BRAND_TABLE, null)),
@@ -498,6 +547,10 @@ export async function updateBrand(
   if (patch.since !== undefined) row.since = patch.since || null;
   if (patch.imageUrl !== undefined) row.image_url = patch.imageUrl || null;
   if (patch.logoUrl !== undefined) row.logo_url = patch.logoUrl || null;
+  if (patch.logoOriginalUrl !== undefined) {
+    row.logo_original_url = patch.logoOriginalUrl || null;
+  }
+  if (patch.logoScale !== undefined) row.logo_scale = clampLogoScale(patch.logoScale);
   if (patch.isVisible !== undefined) row.is_visible = patch.isVisible;
   if (patch.isFeatured !== undefined) row.is_featured = patch.isFeatured;
   if (patch.displayOrder !== undefined) row.display_order = patch.displayOrder;

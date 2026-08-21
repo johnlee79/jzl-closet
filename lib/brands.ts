@@ -29,6 +29,18 @@ export type Brand = {
    *   로고는 각 브랜드사의 등록상표라 쓸 수 있는 것만 골라 올리시면 됩니다.
    */
   logoUrl: string;
+  /**
+   * 균일화 전 원본 로고 주소.
+   * ★ 기준값을 바꿔 다시 구울 때 언제나 여기서 시작합니다.
+   *   이미 축소된 logoUrl 을 다시 키우면 화질이 깨집니다.
+   */
+  logoOriginalUrl: string;
+  /**
+   * 브랜드별 로고 미세 조정 배율 (0.7~1.5, 기본 1).
+   * ★ 잉크 밀도 보정을 자동으로 넣어도 눈으로만 보이는 차이가 남습니다.
+   *   그때 처리 로직을 통째로 바꾸지 말고 그 브랜드만 이 값을 올리세요.
+   */
+  logoScale: number;
   order: number;
   isVisible: boolean;
   isFeatured: boolean;

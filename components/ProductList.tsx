@@ -141,7 +141,12 @@ export default function ProductList({
                   aria-pressed={brand === 'all'}
                   className={filterChipClass(brand === 'all')}
                 >
-                  <span className={CHIP_TEXT}>ALL</span>
+                  {/*
+                    ★ 로고 칩과 높이를 맞춥니다.
+                      브랜드 줄은 로고(36px 상자)와 글자가 섞이는 유일한 줄입니다.
+                      여기만 글자 높이 그대로 두면 ALL 칩만 14px 낮아져 줄이 어긋납니다.
+                  */}
+                  <span className={`inline-flex h-[36px] items-center ${CHIP_TEXT}`}>ALL</span>
                 </button>
               </li>
               {brandChips.map((item) => (

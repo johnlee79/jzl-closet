@@ -186,11 +186,11 @@ export default async function BrandsPage() {
 
                   <div>
                     <h2 className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-ink">
-                      <BrandMark
-                        brand={brand}
-                        size="lg"
-                        className={featured ? '!text-[28px] md:!text-[36px]' : ''}
-                      />
+                      {/*
+                        ★ 크기 예외를 주지 않습니다. 로고 크기는 이미지에 구워져 있고
+                          (800×360 캔버스에 면적 기준 배치), 여기서 또 키우면 어긋납니다.
+                      */}
+                      <BrandMark brand={brand} size="lg" />
                       {brand.nameKo ? (
                         <span className="font-serif text-[16px] text-muted md:text-[17px]">
                           · {brand.nameKo}

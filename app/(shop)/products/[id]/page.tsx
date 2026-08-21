@@ -340,7 +340,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
             /* 카드와 같은 자리·같은 역할이라 같은 방식으로 보여 줍니다. */
             <Link
               href={`/brand/${product.brandSlug}`}
-              className="inline-flex min-h-[25px] items-center text-[14px] tracking-[0.16em] text-muted underline-offset-4 hover:underline"
+              className="inline-flex min-h-[45px] items-center text-[14px] tracking-[0.16em] text-muted underline-offset-4 hover:underline"
             >
               {brand ? <BrandMark brand={brand} size="card" /> : brandLabel}
             </Link>

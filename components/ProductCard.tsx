@@ -100,12 +100,12 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
           {brandLabel ? (
             /*
               ★ min-h-[25px] 인 이유
-                글자일 때 이 줄의 높이가 25px 입니다. 로고(20px)로 바뀌어도 같은
+                로고 상자가 45px 이라 글자일 때도 같은 높이를 지켜야 합니다. 그래야
                 높이를 지켜야 상품명이 위아래로 밀리지 않고, 목록에서 카드마다
                 줄이 어긋나지 않습니다. h- 가 아니라 min-h- 인 것은, 좁은 화면에서
                 긴 브랜드명이 두 줄로 접힐 때 잘리지 않게 하기 위해서입니다.
             */
-            <p className="flex min-h-[25px] items-center text-[14px] tracking-[0.16em] text-muted">
+            <p className="flex min-h-[45px] items-center text-[14px] tracking-[0.16em] text-muted">
               <BrandMark brand={brand ?? { label: brandLabel, name: brandName, logoUrl: '' }} size="card" />
             </p>
           ) : null}

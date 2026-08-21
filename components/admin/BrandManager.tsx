@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import BrandLogoField from '@/components/admin/BrandLogoField';
 import ImageUploader from '@/components/admin/ImageUploader';
 import {
   deleteBrandAction,
@@ -25,6 +26,8 @@ type Draft = {
   since: string;
   imageUrl: string;
   logoUrl: string;
+  logoOriginalUrl: string;
+  logoScale: number;
   isVisible: boolean;
   isFeatured: boolean;
 };
@@ -41,6 +44,8 @@ function toDraft(brand: Brand): Draft {
     since: brand.since,
     imageUrl: brand.imageUrl,
     logoUrl: brand.logoUrl,
+    logoOriginalUrl: brand.logoOriginalUrl,
+    logoScale: brand.logoScale,
     isVisible: brand.isVisible,
     isFeatured: brand.isFeatured,
   };
@@ -58,6 +63,8 @@ function emptyDraft(): Draft {
     since: '',
     imageUrl: '',
     logoUrl: '',
+    logoOriginalUrl: '',
+    logoScale: 1,
     isVisible: true,
     isFeatured: false,
   };
@@ -274,21 +281,33 @@ function BrandForm({
               투명한 배경은 그대로 유지됩니다.
             </li>
             <li>
-              비율은 건드리지 않습니다. <strong>높이만 글자 높이에 맞추고 가로는 비율대로</strong>
-              늘어나므로 정사각형이든 가로로 긴 형태든 찌그러지지 않습니다.
+              <strong>크기는 올리는 즉시 자동으로 맞춰집니다.</strong> 다른 브랜드 로고와
+              같은 무게로 보이도록 넓이(가로×세로)를 기준으로 계산해 800×360 투명
+              캔버스 한가운데에 얹어 저장합니다. 비율은 건드리지 않으므로 찌그러지지
+              않습니다.
+            </li>
+            <li>
+              가로로 아주 긴 로고는 그만큼 <strong>낮게</strong>, 정사각형에 가까운 로고는
+              <strong>크게</strong> 들어갑니다. 눈에 보이는 크기를 맞추기 위한 것이라
+              정상입니다.
             </li>
             <li>
               글자가 아주 작게 들어간 로고는 상품 카드에서 알아보기 어렵습니다.
               <strong>심볼이나 워드마크만</strong> 있는 것이 좋습니다.
             </li>
           </ul>
-          <ImageUploader
-            images={draft.logoUrl ? [draft.logoUrl] : []}
-            onChange={(next) => set('logoUrl', next[0] ?? '')}
-            slug={`brands/${draft.slug || 'new'}/logo`}
-            multiple={false}
-            label="로고 이미지를 끌어다 놓거나 클릭해서 선택하세요"
-            frame="full"
+          <BrandLogoField
+            slug={draft.slug || 'new'}
+            value={{
+              logoUrl: draft.logoUrl,
+              logoOriginalUrl: draft.logoOriginalUrl,
+              logoScale: draft.logoScale,
+            }}
+            onChange={(next) => {
+              set('logoUrl', next.logoUrl);
+              set('logoOriginalUrl', next.logoOriginalUrl);
+              set('logoScale', next.logoScale);
+            }}
           />
         </div>
 
@@ -405,6 +424,8 @@ export default function BrandManager({
             since: draft.since.trim(),
             imageUrl: draft.imageUrl.trim(),
             logoUrl: draft.logoUrl.trim(),
+            logoOriginalUrl: draft.logoOriginalUrl.trim(),
+            logoScale: draft.logoScale,
             isVisible: draft.isVisible,
             isFeatured: draft.isFeatured,
           },
