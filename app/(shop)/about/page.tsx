@@ -132,7 +132,7 @@ export default async function AboutPage() {
       ) : null}
 
       {/* ① 제목 · 부제 */}
-      <header className="max-w-[760px]">
+      <header id="about-hero" className="max-w-[760px] scroll-mt-24">
         <p className="label-xs">ABOUT</p>
         <h1 className="mt-3 font-display text-[36px] font-light leading-none tracking-[0.24em] text-ink md:text-[48px]">
           {hero.heading || store.name}
@@ -166,8 +166,9 @@ export default async function AboutPage() {
       {/* ③ 고르는 기준 */}
       {principles.length > 0 ? (
         <section
+          id="about-choose"
           aria-labelledby="principle-heading"
-          className="section border-t border-stone"
+          className="section scroll-mt-24 border-t border-stone"
         >
           <p className="label-xs">HOW WE CHOOSE</p>
           <h2
@@ -182,7 +183,7 @@ export default async function AboutPage() {
               dangerouslySetInnerHTML={{ __html: choose.html }}
             />
           ) : null}
-          <ol className="mt-10 grid grid-cols-1 gap-10 md:grid-cols-2 md:gap-x-16">
+          <ol id="about-principles" className="mt-10 grid scroll-mt-24 grid-cols-1 gap-10 md:grid-cols-2 md:gap-x-16">
             {principles.map((item, index) => (
               <li key={index} className="border-t border-stone pt-6">
                 <p className="font-display text-[32px] font-light tracking-[0.1em] text-ink">
@@ -207,8 +208,9 @@ export default async function AboutPage() {
       */}
       {aboutBrands.length > 0 ? (
         <section
+          id="about-brands"
           aria-labelledby="about-brands-heading"
-          className="section border-t border-stone"
+          className="section scroll-mt-24 border-t border-stone"
         >
           <p className="label-xs">BRANDS</p>
           <h2
@@ -236,7 +238,11 @@ export default async function AboutPage() {
       ) : null}
 
       {/* ⑤ 문의 — 전화 걸기 버튼 없이 카카오톡 실시간 문의로 받습니다. (3-G) */}
-      <section aria-labelledby="contact-heading" className="section border-t border-stone">
+      <section
+        id="about-contact"
+        aria-labelledby="contact-heading"
+        className="section scroll-mt-24 border-t border-stone"
+      >
         <p className="label-xs">CONTACT</p>
         <h2
           id="contact-heading"

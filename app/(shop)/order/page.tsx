@@ -59,7 +59,7 @@ export default async function OrderPage() {
         ★ '주문 조회' 링크는 문구 본문 안의 <a> 로 들어 있습니다.
           편집기가 링크를 허용하므로 운영자가 주소까지 고칠 수 있습니다.
       */}
-      <header className="max-w-[680px]">
+      <header id="order-hero" className="max-w-[680px] scroll-mt-24">
         <p className="label-xs">CART &amp; ORDER</p>
         {head?.heading ? (
           <h1 className="mt-3 font-serif text-[28px] leading-snug text-ink md:text-[36px]">
@@ -74,7 +74,7 @@ export default async function OrderPage() {
         ) : null}
       </header>
 
-      <section aria-label="장바구니" className="mt-12">
+      <section id="cart-box" aria-label="장바구니" className="mt-12 scroll-mt-24">
         <CartPanel
           emptyNote={resolveCopy(copy.cartEmpty, store)[0]}
           payNote={resolveCopy(copy.cartPayment, store)[0]}
@@ -82,7 +82,11 @@ export default async function OrderPage() {
         />
       </section>
 
-      <section aria-labelledby="step-heading" className="section border-t border-stone">
+      <section
+        id="order-steps"
+        aria-labelledby="step-heading"
+        className="section scroll-mt-24 border-t border-stone"
+      >
         <p className="label-xs">HOW TO ORDER</p>
         <h2
           id="step-heading"
@@ -105,7 +109,7 @@ export default async function OrderPage() {
           ))}
         </ol>
 
-        <div className="mt-12 border border-stone p-6 md:p-8">
+        <div id="order-notes" className="mt-12 scroll-mt-24 border border-stone p-6 md:p-8">
           <CopyBlocks
             blocks={notes}
             headingLevel={3}

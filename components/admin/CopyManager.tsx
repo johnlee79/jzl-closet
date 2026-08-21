@@ -17,6 +17,21 @@ import {
 
 type Message = { tone: 'ok' | 'error'; text: string } | null;
 
+/**
+ * 이 항목이 지금 화면에 아무것도 못 그리는 상태인지.
+ *
+ * ★ "쓰이지 않는 항목" 과 "내용이 비어 있는 항목" 은 다릅니다.
+ *   문구 열여덟 개는 모두 화면에 연결되어 있습니다. 다만 내용을 비워 두면
+ *   그 자리에 아무것도 안 나옵니다. (메인 CATEGORY 머리말이 그렇습니다)
+ *   운영자가 "이 항목은 안 쓰이나?" 하고 헤매지 않도록 그 상태를 표시합니다.
+ */
+function isBlank(section: CopySection): boolean {
+  return section.every(
+    (block) =>
+      !block.heading.trim() && !block.body.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()
+  );
+}
+
 /* ------------------------------------------------------------------
  * 항목 하나 — 문단 여러 개를 다룹니다.
  * ------------------------------------------------------------------ */
@@ -95,7 +110,23 @@ function CopyEditor({
 
   return (
     <div className="border-t border-slate-200 bg-slate-50 p-4">
-      <p className="text-[15px] leading-relaxed text-slate-600">{meta.hint}</p>
+      {/*
+        ★ 자리 설명을 주의사항보다 위에, 굵게 둡니다.
+          운영자가 편집기를 열고 가장 먼저 확인하는 것은 "여기가 어디냐" 입니다.
+      */}
+      <p className="text-[15px] font-medium leading-relaxed text-slate-800">
+        <span className="text-slate-500">나오는 자리 · </span>
+        {meta.where}
+      </p>
+
+      {meta.limits ? (
+        <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-[14px] leading-relaxed text-amber-900">
+          <strong>적어도 화면에 안 나오는 칸이 있습니다.</strong> {meta.limits} 값은 그대로
+          저장되니 지우실 필요는 없습니다.
+        </p>
+      ) : null}
+
+      <p className="mt-2 text-[15px] leading-relaxed text-slate-600">{meta.hint}</p>
 
       <ul className="mt-4 flex flex-col gap-4">
         {blocks.map((block, index) => (
@@ -198,8 +229,9 @@ function CopyEditor({
         <button type="button" onClick={reset} disabled={pending} className="admin-btn">
           이 항목만 기본값으로
         </button>
+        {/* ★ 주소에 #앵커가 붙어 있어 그 문구 자리로 바로 갑니다. 도착하면 잠깐 밝혀집니다. */}
         <a href={meta.path} target="_blank" rel="noreferrer" className="admin-btn">
-          페이지 보기 ↗
+          이 문구 자리 보기 ↗
         </a>
       </div>
     </div>
@@ -320,11 +352,22 @@ export default function CopyManager({
                           <span className="text-[16px] font-medium text-slate-900">
                             {meta.title}
                           </span>
-                          <span className="ml-2 text-[14px] text-slate-500">
-                            {meta.path}
-                          </span>
+                          {isBlank(copy[key]) ? (
+                            <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-[13px] text-slate-700">
+                              내용이 비어 있어 화면에 안 나옴
+                            </span>
+                          ) : null}
+                          {meta.limits ? (
+                            <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[13px] text-amber-900">
+                              일부 칸은 화면에 안 나옴
+                            </span>
+                          ) : null}
+                          {/* ★ 주소만 적어 두면 /order 가 여섯 줄 반복됩니다. 자리 설명을 함께 둡니다. */}
                           <span className="block text-[14px] text-slate-500">
-                            {copy[key].length}개 {meta.blockLabel}
+                            {meta.where}
+                          </span>
+                          <span className="block text-[13px] text-slate-400">
+                            {copy[key].length}개 {meta.blockLabel} · {meta.path}
                           </span>
                         </span>
                         <span aria-hidden="true" className="text-[15px] text-slate-500">

@@ -287,7 +287,8 @@ export default function CartPanel({
           */}
           {payNote?.html ? (
             <div
-              className="detail-body mt-3 text-[14px] leading-relaxed text-muted"
+              id="payment-notice"
+              className="detail-body mt-3 scroll-mt-24 text-[14px] leading-relaxed text-muted"
               dangerouslySetInnerHTML={{ __html: payNote.html }}
             />
           ) : null}
@@ -300,7 +301,8 @@ export default function CartPanel({
             <KakaoChatButton className="mt-3 w-full" />
             {copyNote?.html ? (
               <div
-                className="detail-body mt-3 text-[14px] leading-relaxed text-muted"
+                id="cart-copy-note"
+                className="detail-body mt-3 scroll-mt-24 text-[14px] leading-relaxed text-muted"
                 dangerouslySetInnerHTML={{ __html: copyNote.html }}
               />
             ) : null}

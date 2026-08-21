@@ -103,7 +103,11 @@ export default async function HomePage() {
           둘 다 꺼져 있으면 섹션 태그째 그리지 않습니다. 빈 여백이 남지 않습니다.
       */}
       {banners.length > 0 || sections.hero ? (
-        <section aria-labelledby="hero-title" className="pb-16 pt-8 md:pb-24 md:pt-10">
+        <section
+          id="home-hero"
+          aria-labelledby="hero-title"
+          className="scroll-mt-24 pb-16 pt-8 md:pb-24 md:pt-10"
+        >
         <div className="shell">
           {banners.length > 0 ? (
             <MainBanner banners={banners} interval={design.interval} />
@@ -183,7 +187,11 @@ export default async function HomePage() {
       ) : null}
 
       {sections.selection ? (
-      <section aria-labelledby="story-title" className="section border-t border-stone">
+      <section
+        id="home-story"
+        aria-labelledby="story-title"
+        className="section scroll-mt-24 border-t border-stone"
+      >
         <div className="shell grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,380px)_1fr] lg:gap-24">
           <div>
             <p className="label-xs">OUR STORY</p>
@@ -212,7 +220,7 @@ export default async function HomePage() {
       ) : null}
 
       {sections.category ? (
-      <section aria-label="카테고리" className="section border-t border-stone">
+      <section id="home-category" aria-label="카테고리" className="section scroll-mt-24 border-t border-stone">
         <div className="shell">
           {/*
             ★ 제목과 설명은 관리자 문구에서 옵니다. 기본값은 비어 있어 아무것도 안 나옵니다. (3-J)

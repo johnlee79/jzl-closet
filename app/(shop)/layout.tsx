@@ -1,3 +1,4 @@
+import AnchorFlash from '@/components/AnchorFlash';
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
 import PointPopup from '@/components/PointPopup';
@@ -126,6 +127,12 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
             sns={sns}
             escrow={escrow}
           />
+          {/*
+            #앵커로 들어온 자리를 잠깐 밝힙니다.
+            ★ 관리자 문구 화면의 [페이지 보기] 가 자리를 찍어 보내는데,
+              도착한 곳을 표시해 주지 않으면 어느 문단인지 알 수 없습니다.
+          */}
+          <AnchorFlash />
           {/* 맨 위로 — 고객 화면 전체에 실립니다. 두 화면 높이만큼 내려가야 나타납니다. */}
           <ScrollToTop />
           {/* 팝업 — 노출 화면(메인만/전체) 판단은 컴포넌트가 주소를 보고 합니다. */}
