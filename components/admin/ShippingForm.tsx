@@ -107,6 +107,55 @@ export default function ShippingForm({ initial }: { initial: ShippingSettings })
       <section className="admin-card p-4 md:p-5">
         <h2 className="text-[18px] font-semibold text-slate-900">반품·소요일</h2>
 
+        {/*
+          ★ 이 두 금액은 이용약관 제11조에도 그대로 들어갑니다.
+            여기서 고치면 약관 문구가 함께 바뀝니다. 약관을 따로 고치지 마세요.
+          ★ 손님이 부담하는 경우(단순 변심)에만 쓰입니다.
+            하자·오배송은 회사가 부담하므로 이 금액이 나가지 않습니다.
+        */}
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div>
+            <label className="admin-label" htmlFor="ship-return-fee">
+              반품 배송비 (원)
+            </label>
+            <input
+              id="ship-return-fee"
+              type="number"
+              min={0}
+              step={500}
+              value={form.returnFee}
+              onChange={(event) => set('returnFee', number(event.target.value))}
+              className="admin-input tabular-nums"
+            />
+            <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+              단순 변심으로 반품하실 때 손님이 부담하는 왕복 배송비입니다.
+            </p>
+          </div>
+          <div>
+            <label className="admin-label" htmlFor="ship-exchange-fee">
+              교환 배송비 (원)
+            </label>
+            <input
+              id="ship-exchange-fee"
+              type="number"
+              min={0}
+              step={500}
+              value={form.exchangeFee}
+              onChange={(event) => set('exchangeFee', number(event.target.value))}
+              className="admin-input tabular-nums"
+            />
+            <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+              단순 변심으로 교환하실 때 손님이 부담하는 왕복 배송비입니다.
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-[15px] leading-relaxed text-slate-700">
+          <strong>이 두 금액은 이용약관 제11조에도 그대로 나갑니다.</strong> 여기서
+          고치면 약관도 함께 바뀝니다. 하자·오배송은 회사 부담이라 이 금액이 나가지
+          않습니다.
+        </p>
+
         <div className="mt-4 flex flex-col gap-3">
           <div>
             <label className="admin-label" htmlFor="ship-return">

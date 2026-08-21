@@ -21,7 +21,7 @@ import {
   SNS_KEY,
   STORE_KEY,
   getBranding,
-  getCopySettings,
+  readStoredCopy,
   getDesignSettings,
   normalizeAnalytics,
   normalizeDesign,
@@ -449,8 +449,17 @@ export async function saveCopyAction(
   }
 
   try {
-    const current = await getCopySettings();
-    await writeSetting(COPY_KEY, { ...current, [key]: cleaned });
+    /*
+     * ★★ 저장된 것만 읽어서, 지금 고친 항목 하나만 얹습니다.
+     *   예전에는 getCopySettings() 를 읽어 통째로 다시 썼습니다.
+     *   그 값에는 저장되지 않은 항목까지 코드 기본값이 채워져 있어서,
+     *   항목 하나를 저장하면 나머지 열일곱 개도 그 시점 값으로 DB 에 박혔습니다.
+     *   그 뒤로는 코드 기본값을 고쳐도 화면이 바뀌지 않습니다.
+     *   카드결제를 붙이고도 약관이 "즉시 결제를 제공하지 않습니다" 로
+     *   남아 있던 것이 이것 때문입니다.
+     */
+    const stored = await readStoredCopy();
+    await writeSetting(COPY_KEY, { ...stored, [key]: cleaned });
 
     revalidateTag(SETTINGS_TAG);
     revalidatePath(COPY_META[key].path);
@@ -524,14 +533,22 @@ export async function saveAboutImageAction(imageUrl: string): Promise<ActionResu
   }
 }
 
-/** 잘못 지웠을 때 원래 문구로 돌아갑니다. (lib/default-copy.ts 값) */
+/**
+ * 잘못 지웠을 때 원래 문구로 돌아갑니다. (lib/default-copy.ts 값)
+ *
+ * ★★ 기본값을 "저장" 하지 않고 저장해 둔 값을 "지웁니다".
+ *   기본값을 적어 넣으면 그 순간의 문구가 DB 에 박혀, 나중에 코드 기본값을
+ *   고쳐도 이 항목만 옛 문구로 남습니다. 되돌리기의 뜻은
+ *   "코드 기본값을 따라간다" 이지 "지금 기본값을 베껴 둔다" 가 아닙니다.
+ */
 export async function resetCopyAction(key: CopyKey): Promise<ActionResult<CopySection>> {
   if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     const fallback = defaultCopyFor(key);
-    const current = await getCopySettings();
-    await writeSetting(COPY_KEY, { ...current, [key]: fallback });
+    const stored = await readStoredCopy();
+    delete stored[key];
+    await writeSetting(COPY_KEY, stored);
 
     revalidateTag(SETTINGS_TAG);
     revalidatePath(COPY_META[key].path);

@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import CopyBlocks from '@/components/CopyBlocks';
-import { resolveCopy } from '@/lib/copy';
+import { resolveCopy, shippingTokens } from '@/lib/copy';
 import {
   getCachedCopy,
+  getCachedShipping,
   getCachedStore,
   getOgImage,
 } from '@/lib/settings';
@@ -26,8 +27,16 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function TermsPage() {
-  const [copy, store] = await Promise.all([getCachedCopy(), getCachedStore()]);
-  const blocks = resolveCopy(copy.terms, store);
+  /*
+   * ★ 반품·교환 배송비는 약관에 숫자로 박지 않고 배송·반품 설정에서 읽습니다.
+   *   금액을 바꾸면 약관 제11조 문구가 함께 바뀝니다.
+   */
+  const [copy, store, shipping] = await Promise.all([
+    getCachedCopy(),
+    getCachedStore(),
+    getCachedShipping(),
+  ]);
+  const blocks = resolveCopy(copy.terms, store, shippingTokens(shipping));
 
   return (
     <div className="shell py-14 md:py-20">

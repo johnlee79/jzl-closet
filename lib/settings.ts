@@ -365,6 +365,9 @@ export function normalizeShipping(value: unknown): ShippingSettings {
     baseFee: count(raw.baseFee, DEFAULT_SHIPPING.baseFee),
     freeThreshold: count(raw.freeThreshold, DEFAULT_SHIPPING.freeThreshold),
     islandFee: count(raw.islandFee, DEFAULT_SHIPPING.islandFee),
+    /* 나중에 추가한 항목이라 예전에 저장한 값에는 없습니다. 없으면 기본값을 씁니다. */
+    returnFee: count(raw.returnFee, DEFAULT_SHIPPING.returnFee),
+    exchangeFee: count(raw.exchangeFee, DEFAULT_SHIPPING.exchangeFee),
     returnAddress: optionalText(raw.returnAddress, DEFAULT_SHIPPING.returnAddress),
     leadTime: optionalText(raw.leadTime, DEFAULT_SHIPPING.leadTime),
     // 비워 둘 수 있는 항목입니다. 비면 배송비 설정으로 문구를 만듭니다.
@@ -502,6 +505,37 @@ export function normalizeCopy(value: unknown): CopySettings {
 
 export async function getCopySettings(): Promise<CopySettings> {
   return normalizeCopy(await readSetting(COPY_KEY));
+}
+
+/**
+ * 관리자가 저장해 둔 문구를 손대지 않은 채로 읽습니다.
+ *
+ * ★★ 위 getCopySettings 와 반드시 구분해야 합니다.
+ *   그쪽은 저장되지 않은 항목에 코드 기본값을 채워 넣은 "화면에 나갈 값" 입니다.
+ *   그 값을 그대로 다시 저장하면, 손대지도 않은 항목까지 그 시점의 기본값으로
+ *   DB 에 박혀 버립니다. 그 뒤로는 코드 기본값을 고쳐도 화면이 바뀌지 않습니다.
+ *   (실제로 그렇게 되어 있었습니다. 카드결제를 붙이고도 약관이 "즉시 결제를
+ *   제공하지 않습니다" 로 남아 있던 이유입니다)
+ *
+ * ★ 저장·되돌리기는 반드시 이 함수를 씁니다.
+ */
+export async function readStoredCopy(): Promise<Record<string, unknown>> {
+  const raw = await readSetting(COPY_KEY);
+  return raw && typeof raw === 'object' && !Array.isArray(raw)
+    ? { ...(raw as Record<string, unknown>) }
+    : {};
+}
+
+/**
+ * 관리자에서 저장한 적이 있는 문구 항목들.
+ * ★ 여기 없는 항목은 코드 기본값을 그대로 따라갑니다.
+ *   관리자 화면에서 어느 쪽인지 보여 주는 데 씁니다.
+ */
+export async function getStoredCopyKeys(): Promise<CopyKey[]> {
+  const raw = await readStoredCopy();
+  return COPY_KEYS.filter(
+    (key) => Array.isArray(raw[key]) && (raw[key] as unknown[]).length > 0
+  );
 }
 
 export const getCachedCopy = unstable_cache(getCopySettings, ['copy'], {

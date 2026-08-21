@@ -253,15 +253,25 @@ function CopyEditor({
  */
 export default function CopyManager({
   copy,
+  storedKeys = [],
   aboutImage,
   heroButtons,
 }: {
   copy: CopySettings;
+  /**
+   * 관리자에서 저장한 적이 있어 DB 값이 화면에 나가는 항목들.
+   *
+   * ★★ 여기 있는 항목은 코드 기본값을 고쳐도 화면이 바뀌지 않습니다.
+   *   [기본값으로 되돌리기] 를 눌러야 다시 코드를 따라갑니다.
+   *   어느 쪽인지 보이지 않으면 "고쳤는데 왜 안 바뀌지" 를 한참 헤매게 됩니다.
+   */
+  storedKeys?: CopyKey[];
   /** 편집숍 소개 그룹에 끼워 넣을 대표 이미지 업로드 화면 */
   aboutImage?: React.ReactNode;
   /** 메인 화면 그룹에 끼워 넣을 히어로 버튼 설정 화면 (3-J) */
   heroButtons?: React.ReactNode;
 }) {
+  const stored = new Set(storedKeys);
   /** 열려 있는 항목. 문구가 아닌 칸도 이름을 붙여 함께 다룹니다. */
   const [open, setOpen] = useState<CopyKey | 'about-image' | 'hero-buttons' | null>(null);
 
@@ -360,6 +370,16 @@ export default function CopyManager({
                           {meta.limits ? (
                             <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[13px] text-amber-900">
                               일부 칸은 화면에 안 나옴
+                            </span>
+                          ) : null}
+                          {/*
+                            ★ 저장해 둔 값이 있는 항목만 표시합니다.
+                              표시가 없으면 코드 기본값을 그대로 따라가고 있다는 뜻이라,
+                              개발자가 기본 문구를 고치면 화면도 함께 바뀝니다.
+                          */}
+                          {stored.has(key) ? (
+                            <span className="ml-2 rounded bg-blue-100 px-1.5 py-0.5 text-[13px] text-blue-800">
+                              저장한 문구 사용 중
                             </span>
                           ) : null}
                           {/* ★ 주소만 적어 두면 /order 가 여섯 줄 반복됩니다. 자리 설명을 함께 둡니다. */}

@@ -9,6 +9,7 @@ import {
   getAboutPageSettings,
   getCopySettings,
   getDesignSettings,
+  getStoredCopyKeys,
   getHeroButtons,
 } from '@/lib/settings';
 
@@ -35,9 +36,10 @@ export default async function AdminDesignPage({
   searchParams: { tab?: string };
 }) {
   const tab: TabKey = isTab(searchParams.tab) ? searchParams.tab : 'banner';
-  const [design, copy, aboutPage, heroButtons] = await Promise.all([
+  const [design, copy, storedCopyKeys, aboutPage, heroButtons] = await Promise.all([
     getDesignSettings(),
     getCopySettings(),
+    getStoredCopyKeys(),
     getAboutPageSettings(),
     getHeroButtons(),
   ]);
@@ -100,6 +102,7 @@ export default async function AdminDesignPage({
             </p>
             <CopyManager
               copy={copy}
+              storedKeys={storedCopyKeys}
               aboutImage={<AboutImageForm imageUrl={aboutPage.imageUrl} />}
               heroButtons={<HeroButtonsForm initial={heroButtons} />}
             />

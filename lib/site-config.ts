@@ -77,6 +77,16 @@ export type ShippingSettings = {
   freeThreshold: number;
   /** 제주·도서산간 추가배송비 */
   islandFee: number;
+  /**
+   * 단순 변심 반품 시 손님이 부담하는 왕복 배송비.
+   *
+   * ★ 이용약관 제11조와 배송·교환·반품 안내에 {{returnFee}} 로 들어갑니다.
+   *   금액을 바꾸면 약관 문구도 함께 바뀝니다. 따로 고칠 필요가 없습니다.
+   * ★ 하자·오배송은 회사 부담이라 이 값이 쓰이지 않습니다.
+   */
+  returnFee: number;
+  /** 단순 변심 교환 시 손님이 부담하는 왕복 배송비. {{exchangeFee}} */
+  exchangeFee: number;
   /** 반품 주소 — 사업장 주소와 다를 수 있습니다. */
   returnAddress: string;
   /** 평균 배송 소요일 안내 문구 */
@@ -100,6 +110,8 @@ export const DEFAULT_SHIPPING: ShippingSettings = {
   baseFee: 3000,
   freeThreshold: 50000,
   islandFee: 3000,
+  returnFee: 3000,
+  exchangeFee: 6000,
   returnAddress: '인천광역시 부평구 부일로 38, 1102호 (부개동)',
   leadTime: '주문 확인 후 1~3영업일 내 출고되며, 출고 후 1~3일 내 도착합니다.',
   productLine: '',
@@ -1080,8 +1092,22 @@ export type CopySettings = Record<CopyKey, CopySection>;
  * 문구 안의 치환자를 스토어 정보 값으로 바꿉니다.
  * 사업자 정보를 한 번만 고치면 약관·안내 페이지에 그대로 반영됩니다.
  */
-export function applyStoreTokens(text: string, store: StoreSettings): string {
+export function applyStoreTokens(
+  text: string,
+  store: StoreSettings,
+  /**
+   * 스토어 정보 밖에서 오는 치환자.
+   *
+   * ★ 지금은 배송·반품 설정의 {{returnFee}} · {{exchangeFee}} 뿐입니다.
+   *   이용약관과 배송·교환·반품 안내에서만 넘겨 줍니다. 그 밖의 화면에서는
+   *   치환되지 않고 글자 그대로 남습니다. 아무 데나 쓰지 마세요.
+   * ★ 스토어 정보와 이름이 겹치면 스토어 쪽이 이깁니다.
+   *   사업자 정보가 다른 값으로 덮이는 일이 없어야 합니다.
+   */
+  extra: Record<string, string> = {}
+): string {
   const table: Record<string, string> = {
+    ...extra,
     name: store.name,
     nameKo: store.nameKo,
     slogan: store.slogan,
