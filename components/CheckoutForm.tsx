@@ -1142,9 +1142,15 @@ export default function CheckoutForm({
                 </p>
               )}
 
+              {/*
+                ★ 결제수단과 상관없이 "안내되는 계좌로 입금해 주시면" 이 나오고
+                  있었습니다. 카드로 결제하는 손님에게는 없는 절차입니다.
+                  무통장입금일 때만 입금 안내를 하고, 그 밖에는 문의처만 남깁니다.
+              */}
               <p className="mt-4 text-[14px] leading-relaxed text-muted">
-                주문 후 안내되는 계좌로 입금해 주시면 확인 후 발송해 드립니다. 문의는
-                고객센터 {storePhone}.
+                {isBank
+                  ? `주문 후 안내되는 계좌로 입금해 주시면 확인 후 발송해 드립니다. 문의는 고객센터 ${storePhone}.`
+                  : `결제가 끝나면 바로 주문이 확정됩니다. 문의는 고객센터 ${storePhone}.`}
               </p>
             </div>
           </aside>

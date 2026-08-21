@@ -79,8 +79,14 @@ export default async function CheckoutPage() {
         <h1 className="mt-3 font-serif text-[28px] leading-snug text-ink md:text-[36px]">
           주문서 작성
         </h1>
+        {/*
+          ★ 예전에는 "주문이 접수되면 입금 계좌를 안내드립니다" 뿐이었습니다.
+            카드로 결제할 손님도 이 문장을 먼저 보게 됩니다.
+          ★ 이 문구에는 아직 관리자 항목이 없습니다. 코드에 박혀 있습니다.
+        */}
         <p className="mt-4 text-[17px] leading-[1.9] text-ink md:text-[18px]">
-          받는 분과 배송지를 확인해 주세요. 주문이 접수되면 입금 계좌를 안내드립니다.
+          받는 분과 배송지를 확인하고 결제수단을 골라 주세요. 무통장입금을 고르시면
+          주문 완료 화면에서 입금 계좌를 안내드립니다.
         </p>
       </header>
 
