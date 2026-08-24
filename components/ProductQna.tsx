@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import ProductInquiryForm from '@/components/ProductInquiryForm';
 import { formatDate } from '@/lib/format';
 import { inquiryCategoryLabel, inquiryStatusLabel } from '@/lib/inquiry-status';
+import { useMember } from '@/lib/member';
 import type { PublicInquiry } from '@/lib/inquiries';
 
 /** 한 화면에 보여 줄 문의 수 */
@@ -55,26 +56,13 @@ export default function ProductQna({
   const [done, setDone] = useState('');
 
   /**
-   * 로그인 여부는 브라우저에서 따로 물어봅니다.
+   * 로그인 여부는 브라우저에서 물어봅니다.
    * ★ 서버에서 쿠키를 읽으면 상품 상세가 정적 생성에서 빠집니다. (SEO 최우선)
-   *   문의 작성 폼을 펼칠 때만 확인하면 되므로 늦게 와도 문제없습니다.
+   * ★ 문의 폼은 [문의하기] 를 눌러야 펼쳐집니다. 그때는 이미 답이 와 있습니다.
+   *   아직 모르는 동안에는 비회원으로 봅니다. 비밀글로 잠기는 쪽이 안전합니다.
    */
-  const [isMember, setIsMember] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-    fetch('/api/auth/me')
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data: { loggedIn?: boolean } | null) => {
-        if (alive && data?.loggedIn) setIsMember(true);
-      })
-      .catch(() => {
-        /* 로그인 확인 실패는 비회원으로 봅니다. */
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const member = useMember();
+  const isMember = member?.loggedIn === true;
 
   const totalPages = Math.max(1, Math.ceil(inquiries.length / PAGE_SIZE));
   const start = (page - 1) * PAGE_SIZE;

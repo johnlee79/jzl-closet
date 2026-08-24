@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useMember } from '@/lib/member';
 import { NOTICE_POPUP_EVENT, readNoticePopupCount } from '@/lib/popup-order';
 
 /**
@@ -10,21 +11,12 @@ import { NOTICE_POPUP_EVENT, readNoticePopupCount } from '@/lib/popup-order';
  * ★ 포인트를 주는 것이 아니라 "얼마 있는지" 를 알려 주기만 합니다.
  * ★ 로그인한 회원에게만, 잔액이 0보다 클 때만 뜹니다.
  * ★ 마지막으로 본 시각을 브라우저에 저장해 설정한 간격(기본 1시간) 안에는 다시 띄우지 않습니다.
- * ★ DB 조회를 추가하지 않습니다. 헤더가 이미 부르는 /api/auth/me 응답을 그대로 씁니다.
+ * ★ DB 조회를 추가하지 않습니다. 화면 전체가 함께 쓰는 로그인 상태(lib/member.ts)를
+ *   그대로 읽습니다. 보유 포인트도 그 답에 함께 실려 옵니다.
  * ★ 공지·이벤트 팝업이 떠 있으면 이번에는 뜨지 않습니다. (공지 팝업 우선)
  */
 
 const STORAGE_KEY = 'jzl-point-popup-at';
-
-type Me = {
-  loggedIn?: boolean;
-  pointBalance?: number;
-  pointExpiringSoon?: number;
-  pointMinUse?: number;
-  pointUseUnit?: number;
-  pointPopupEnabled?: boolean;
-  pointPopupIntervalHours?: number;
-};
 
 function shownRecently(hours: number): boolean {
   try {
@@ -52,25 +44,16 @@ function won(value: number): string {
 }
 
 export default function PointPopup() {
-  const [me, setMe] = useState<Me | null>(null);
+  /*
+   * ★ 로그인 상태는 헤더·상품 화면과 같은 답을 씁니다. (lib/member.ts)
+   *   예전에는 이 팝업이 /api/auth/me 를 따로 불렀습니다. 한 화면에서
+   *   같은 질문이 다섯 번 나가던 것 중 하나였습니다.
+   * ★ null 이면 아직 모릅니다. 모르는 동안에는 뜨지 않습니다.
+   */
+  const me = useMember();
   /** 공지 팝업이 몇 개 떠 있는지. null 이면 아직 모릅니다. */
   const [noticeCount, setNoticeCount] = useState<number | null>(readNoticePopupCount());
   const [closed, setClosed] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-    fetch('/api/auth/me')
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data: Me | null) => {
-        if (alive && data) setMe(data);
-      })
-      .catch(() => {
-        /* 실패하면 팝업을 띄우지 않습니다. */
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
 
   useEffect(() => {
     const handle = (event: Event) => {
@@ -95,11 +78,11 @@ export default function PointPopup() {
   const ready =
     !closed &&
     me !== null &&
-    me.loggedIn === true &&
-    me.pointPopupEnabled !== false &&
+    me.loggedIn &&
+    me.pointPopupEnabled &&
     balance > 0 &&
     noticeCount === 0 &&
-    !shownRecently(me.pointPopupIntervalHours ?? 1);
+    !shownRecently(me.pointPopupIntervalHours);
 
   // 실제로 보여 준 순간에만 시각을 기록합니다.
   useEffect(() => {
@@ -108,9 +91,7 @@ export default function PointPopup() {
 
   if (!ready || !me) return null;
 
-  const expiring = me.pointExpiringSoon ?? 0;
-  const minUse = me.pointMinUse ?? 0;
-  const useUnit = me.pointUseUnit ?? 1;
+  const { pointExpiringSoon: expiring, pointMinUse: minUse, pointUseUnit: useUnit } = me;
 
   return (
     <div className="pointer-events-none fixed inset-0 z-40 flex items-end justify-center p-4 md:items-center">

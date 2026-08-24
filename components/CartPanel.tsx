@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import CartChangeNotice from '@/components/CartChangeNotice';
 import CopyOrderButton from '@/components/CopyOrderButton';
 import KakaoChatButton from '@/components/KakaoChatButton';
@@ -11,6 +10,7 @@ import SafeImage from '@/components/SafeImage';
 import { useSite } from '@/components/SiteProvider';
 import { useCart } from '@/lib/cart';
 import { useCartLive } from '@/lib/cart-live';
+import { useMember } from '@/lib/member';
 import type { ResolvedBlock } from '@/lib/copy';
 import { formatPrice } from '@/lib/product-utils';
 import { EARN_PAYOUT_NOTE, expectedPurchasePoints } from '@/lib/site-config';
@@ -35,23 +35,20 @@ export default function CartPanel({
 }) {
   /**
    * 로그인 여부. 배지를 보여 줄지만 정합니다.
+   *
    * ★ 서버에서 쿠키를 읽으면 정적 생성이 깨지므로 브라우저에서 물어봅니다.
+   * ★★ null 이면 아직 모릅니다. 모르는 동안에는 배지를 그리지 않습니다.
+   *   예전에는 "일단 비회원" 으로 그렸다가 답이 오면 지웠습니다. 그래서
+   *   로그인한 분이 "가입하고 3,000P 받기" 를 봤다가 사라지는 걸 겪었습니다.
    */
-  const [isMember, setIsMember] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    fetch('/api/auth/me')
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data: { loggedIn?: boolean } | null) => {
-        if (alive && data?.loggedIn) setIsMember(true);
-      })
-      .catch(() => {
-        /* 확인하지 못하면 비회원으로 봅니다. */
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const member = useMember();
+  /** 비회원이라는 것을 확인했을 때만 켭니다. 모르는 동안에는 꺼져 있습니다. */
+  const showSignupBadge = member !== null && !member.loggedIn;
+  /*
+   * ★ 위에 배지가 있으면 간격을 좁힙니다.
+   *   아직 모르는 동안에는 배지가 없으므로 회원과 같은 간격을 씁니다.
+   */
+  const orderButtonTop = showSignupBadge ? 'mt-4' : 'mt-8';
 
   const { items, count, ready, removeItem, updateQuantity, setSelected, clear } = useCart();
   // 브랜드명·고객센터 번호·배송비는 관리자 설정 값을 씁니다.
@@ -367,12 +364,17 @@ export default function CartPanel({
             </span>
           </div>
 
-          {/* ★ 전환이 가장 잘 일어나는 자리입니다. 비회원에게만 보여 줍니다. */}
-          {isMember ? null : (
+          {/*
+            ★ 전환이 가장 잘 일어나는 자리입니다. 비회원에게만 보여 줍니다.
+            ★★ 로그인 여부를 알기 전에는 그리지 않습니다. 회원에게 잠깐이라도
+              보이면 안 됩니다. 비회원에게는 답이 온 뒤 나타나면서 아래가
+              조금 밀리는데, 틀린 것을 보여 주는 것보다 낫습니다.
+          */}
+          {showSignupBadge ? (
             <div className="mt-8 flex justify-center">
               <SignupPointBadge href="/signup?next=/checkout" />
             </div>
-          )}
+          ) : null}
 
           {/*
             ★★ 값을 확인하기 전에는 주문서로 보내지 않습니다.
@@ -385,7 +387,7 @@ export default function CartPanel({
           {live.canOrder ? (
             <Link
               href="/checkout"
-              className={`btn-primary w-full ${isMember ? 'mt-8' : 'mt-4'}`}
+              className={`btn-primary w-full ${orderButtonTop}`}
             >
               주문하기
             </Link>
@@ -394,7 +396,7 @@ export default function CartPanel({
               <button
                 type="button"
                 disabled
-                className={`btn-primary w-full ${isMember ? 'mt-8' : 'mt-4'}`}
+                className={`btn-primary w-full ${orderButtonTop}`}
               >
                 주문하기
               </button>

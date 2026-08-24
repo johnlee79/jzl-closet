@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { useTransition } from 'react';
 import { logoutAction } from '@/app/(shop)/auth-actions';
+import { clearMember, useMember } from '@/lib/member';
 
 /**
  * 헤더의 로그인·마이페이지 영역.
@@ -48,34 +49,28 @@ const FILLED_BUTTON =
 
 export default function AccountMenu({ variant = 'desktop' }: { variant?: Variant }) {
   const router = useRouter();
-  const pathname = usePathname();
   const [pending, startTransition] = useTransition();
-  const [name, setName] = useState('');
-  const [ready, setReady] = useState(false);
 
-  // 화면을 옮길 때마다 다시 확인합니다. (로그인·로그아웃 직후 바로 반영되도록)
-  useEffect(() => {
-    let alive = true;
-    void (async () => {
-      try {
-        const response = await fetch('/api/auth/me', { cache: 'no-store' });
-        const data = (await response.json()) as { name?: string };
-        if (alive) setName(data.name ?? '');
-      } catch {
-        if (alive) setName('');
-      } finally {
-        if (alive) setReady(true);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [pathname]);
+  /*
+   * ★ 로그인 상태는 lib/member.ts 에서 받아 씁니다.
+   *   화면을 옮길 때 다시 물어보는 일은 MemberSync 가 합니다.
+   *   예전에는 이 컴포넌트가 직접 물었고, 안내 띠·상품 화면도 각자 물어서
+   *   한 화면에 같은 요청이 다섯 번 나갔습니다.
+   * ★ null 이면 아직 모릅니다. 그동안에는 자리만 잡아 둡니다. (아래 각 variant)
+   */
+  const member = useMember();
+  const ready = member !== null;
+  const name = member?.name ?? '';
 
   const logout = () => {
     startTransition(async () => {
       await logoutAction();
-      setName('');
+      /*
+       * ★ 서버에 다시 물어볼 때까지 기다리지 않고 바로 비회원으로 바꿉니다.
+       *   그 사이에 이름과 마이페이지 버튼이 남아 있으면
+       *   로그아웃을 눌렀는데 아무 일도 안 일어난 것처럼 보입니다.
+       */
+      clearMember();
       router.replace('/');
       router.refresh();
     });

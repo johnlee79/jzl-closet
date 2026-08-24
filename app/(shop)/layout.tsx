@@ -1,6 +1,7 @@
 import AnchorFlash from '@/components/AnchorFlash';
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
+import MemberSync from '@/components/MemberSync';
 import PointPopup from '@/components/PointPopup';
 import PopupLayer from '@/components/PopupLayer';
 import ReferralCapture from '@/components/ReferralCapture';
@@ -118,6 +119,13 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
             storeHours={store.hours}
             logoUrl={branding.logo?.url ?? ''}
           />
+          {/*
+            로그인 상태를 언제 다시 물어볼지 여기서 한 번만 정합니다.
+            ★ 화면마다 따로 묻지 않습니다. 예전에는 헤더·안내 띠·상품 담기 버튼·
+              상품 문의·포인트 팝업이 각자 물어서 한 화면에 요청이 다섯 번 나갔고,
+              서로 다른 순간에 답을 받아 화면이 여러 번 움찔거렸습니다.
+          */}
+          <MemberSync />
           {/* 연락처 미입력 같은 안내 줄. 로그인 상태는 브라우저에서 확인합니다. */}
           <SiteNotices />
           <main id="main">{children}</main>

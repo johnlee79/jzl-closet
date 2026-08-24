@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import OptionSelector from '@/components/OptionSelector';
 import KakaoChatButton from '@/components/KakaoChatButton';
 import SignupPointBadge from '@/components/SignupPointBadge';
+import { useMember } from '@/lib/member';
 import { useSite } from '@/components/SiteProvider';
 import { brandLabel as findBrandLabel, brandName as findBrandName } from '@/lib/brands';
 import { categoryNameKo } from '@/lib/categories';
@@ -53,25 +54,17 @@ export default function AddToCartButton({ product }: { product: Product }) {
   const [added, setAdded] = useState(false);
 
   /**
-   * 로그인 여부에 따라 버튼 문구만 바꿉니다.
+   * 로그인 여부에 따라 버튼 문구가 달라집니다.
+   *
    * ★ 서버에서 쿠키를 읽으면 상품 상세가 정적 생성에서 빠집니다. (SEO 최우선)
-   *   문구가 조금 늦게 바뀌는 것은 문제가 되지 않습니다.
+   *   그래서 브라우저에서 물어봅니다. (lib/member.ts 가 한 번만 묻습니다)
+   *
+   * ★★ null 이면 아직 모릅니다. 모르는 동안에는 "비회원 구매" 라고 쓰지 않습니다.
+   *   예전에는 "일단 비회원" 으로 그렸다가 답이 오면 "바로 구매" 로 고쳤습니다.
+   *   로그인한 분이 이 화면을 열 때마다 자기가 비회원이라는 말을 잠깐씩 봤습니다.
    */
-  const [isMember, setIsMember] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    fetch('/api/auth/me')
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data: { loggedIn?: boolean } | null) => {
-        if (alive && data?.loggedIn) setIsMember(true);
-      })
-      .catch(() => {
-        /* 확인하지 못하면 비회원으로 봅니다. */
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const member = useMember();
+  const isMember = member?.loggedIn === true;
 
   const hasOptions = product.optionGroups.length > 0;
 
@@ -368,27 +361,39 @@ export default function AddToCartButton({ product }: { product: Product }) {
         >
           장바구니 담기
         </button>
-        {/* ★ 비회원도 그대로 주문할 수 있게 길을 하나 더 둡니다. 가입을 강요하지 않습니다. */}
-        <button
-          type="button"
-          onClick={handleBuyNow}
-          disabled={!canAdd}
-          className="btn-secondary w-full"
-        >
-          {isMember ? '바로 구매' : '비회원 구매'}
-        </button>
+        {/*
+          ★ 비회원도 그대로 주문할 수 있게 길을 하나 더 둡니다. 가입을 강요하지 않습니다.
+          ★★ 로그인 여부를 알기 전에는 같은 높이의 빈 자리만 둡니다.
+            글자가 "비회원 구매" → "바로 구매" 로 바뀌는 걸 보여 주지 않습니다.
+            자리를 미리 잡아 두므로 답이 와도 아래가 밀리지 않습니다.
+        */}
+        {member === null ? (
+          <div aria-hidden="true" className="min-h-[52px] w-full" />
+        ) : (
+          <button
+            type="button"
+            onClick={handleBuyNow}
+            disabled={!canAdd}
+            className="btn-secondary w-full"
+          >
+            {isMember ? '바로 구매' : '비회원 구매'}
+          </button>
+        )}
         {/* ★ 전화번호 버튼을 카카오톡 문의로 바꿨습니다.
             전화번호는 판매정보 탭의 판매자 정보와 푸터에 그대로 있습니다.
             설정에 채팅방 주소가 없으면 이 버튼은 나오지 않습니다. */}
         <KakaoChatButton className="w-full" />
       </div>
 
-      {/* 가입 유도 — 설정에서 가입 축하 포인트를 껐거나 0이면 나오지 않습니다. */}
-      {isMember ? null : (
+      {/*
+        가입 유도 — 설정에서 가입 축하 포인트를 껐거나 0이면 나오지 않습니다.
+        ★ 비회원이라는 것을 확인했을 때만 그립니다. 모르는 동안에는 그리지 않습니다.
+      */}
+      {member !== null && !isMember ? (
         <div className="mt-4 flex justify-center">
           <SignupPointBadge />
         </div>
-      )}
+      ) : null}
 
       {added ? (
         <p className="mt-4 text-[16px] leading-relaxed text-ink">
