@@ -1062,11 +1062,41 @@ async function writeStockMoves(
 }
 
 /**
- * 옵션 조합의 재고를 delta 만큼 더합니다. (주문 시 -수량, 취소 시 +수량)
+ * ============================================================
+ * 재고를 delta 만큼 더합니다 — DB 함수가 한 번에 처리합니다
+ * ============================================================
  *
- * ★ context 를 주면 움직인 내역을 stock_moves 에 남깁니다.
- *   안 주면 남기지 않습니다.
+ * ★★ 예전에는 앱이 직접 했습니다.
+ *     ① 상품을 통째로 읽고 ② 코드에서 빼고 ③ 통째로 다시 씀
+ *   두 주문이 동시에 ①을 하면 둘 다 같은 값을 읽습니다.
+ *   각자 계산하고 각자 씁니다. 나중에 쓴 쪽이 이겨 재고가 사라집니다.
+ *   재고 5개에 3개씩 두 명이 주문하면 둘 다 성공하고 재고는 2개로 남았습니다.
+ *
+ *   이제 supabase/schema-4c.sql 의 apply_stock_changes() 가
+ *   행을 잠그고 읽기·계산·쓰기를 한 트랜잭션에서 끝냅니다.
+ *   포인트(apply_point_change)와 같은 방식입니다.
+ *
+ * ★★ 주문 한 건을 통째로 넘깁니다. 상품마다 따로 부르지 마세요.
+ *   따로 부르면 세 번째에서 실패해도 앞의 둘은 이미 커밋됩니다.
+ *   한 번에 넘겨야 하나라도 모자랄 때 전부 되돌아갑니다.
+ *
+ * @param allowShort 재고가 모자랄 때
+ *   false(기본) — 예외를 던집니다. 주문이 통째로 실패해야 하는 자리입니다.
+ *   true        — 0 에서 멈추고 부족분을 돌려줍니다.
+ *                 [결제완료로 확정] 전용입니다. 이미 승인된 돈이라
+ *                 주문을 되돌릴 수 없어 막지 않습니다.
+ *
+ * ★ context 를 주면 움직인 내역을 stock_moves 에 남깁니다. 안 주면 남기지 않습니다.
  */
+type StockChangeRow = {
+  product_id: string;
+  option_key: string;
+  quantity: number;
+  status: 'ok' | 'short' | 'unmanaged' | 'missing';
+  stock_before: number | null;
+  stock_after: number | null;
+};
+
 async function adjustStock(
   entries: {
     productId: string | null;
@@ -1075,106 +1105,91 @@ async function adjustStock(
     quantity: number;
   }[],
   delta: -1 | 1,
-  context?: StockMoveContext
+  context?: StockMoveContext,
+  allowShort = false
 ): Promise<StockShortage[]> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return [];
+
+  /* 상품이나 옵션이 비어 있는 줄은 애초에 재고를 건드릴 수 없습니다. */
+  const lines = entries.filter((entry) => entry.productId && entry.optionKey);
+  if (lines.length === 0) return [];
+
+  /** 결과를 돌려받은 뒤 slug 를 붙이기 위한 표 */
+  const slugOf = new Map<string, string | null>();
+  for (const entry of lines) {
+    slugOf.set(`${entry.productId}|${entry.optionKey}`, entry.productSlug ?? null);
+  }
+
+  const { data, error } = await supabase.rpc('apply_stock_changes', {
+    p_lines: lines.map((entry) => ({
+      product_id: entry.productId,
+      option_key: entry.optionKey,
+      quantity: entry.quantity,
+    })),
+    p_delta: delta,
+    p_allow_short: allowShort,
+  });
+
+  if (error) {
+    /*
+     * ★★ 차감인데 막아야 하는 자리(allowShort = false)에서는 던집니다.
+     *   재고가 모자란데 조용히 넘어가면 팔 수 없는 물건을 판 것이 됩니다.
+     *   부르는 쪽(createOrder)이 주문을 지우고 손님에게 알립니다.
+     *
+     * ★ 되돌림(+1)과 [결제완료로 확정]은 던지지 않습니다.
+     *   되돌리다 실패했다고 취소 처리 자체를 막으면 손님이 더 곤란해집니다.
+     *   기록만 남기고 사람이 나중에 맞춥니다. 예전 동작 그대로입니다.
+     */
+    if (delta === -1 && !allowShort) throw error;
+    console.warn('[orders] 재고 반영 실패:', error.message);
+    return [];
+  }
+
+  const rows = (Array.isArray(data) ? data : []) as StockChangeRow[];
 
   const moved: StockMoveRow[] = [];
   const skippedRows: StockMoveRow[] = [];
   const shortages: StockShortage[] = [];
 
-  for (const entry of entries) {
-    if (!entry.productId || !entry.optionKey) continue;
+  for (const row of rows) {
+    const productSlug = slugOf.get(`${row.product_id}|${row.option_key}`) ?? null;
 
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, slug, options')
-        .eq('id', entry.productId)
-        .maybeSingle();
-      if (error || !data) continue;
-
-      const row = data as { slug?: string; options: unknown };
-      const options = normalizeOptions(row.options);
-      let touched = false;
-      let before = 0;
-      let after = 0;
-
-      const combinations = options.combinations.map((combination) => {
-        if (combination.key !== entry.optionKey) return combination;
-        // ★ 재고를 관리하지 않는 조합(stock === null)은 건드리지 않습니다.
-        if (combination.stock === null) return combination;
-        touched = true;
-        before = combination.stock;
-        after = Math.max(0, combination.stock + delta * entry.quantity);
-        /*
-         * ★ 깎으려는데 있는 것보다 많으면 0 에서 멈춥니다.
-         *   막지는 않되 얼마나 모자랐는지 남깁니다. 호출부가 사람에게 알립니다.
-         */
-        if (delta === -1 && combination.stock < entry.quantity) {
-          shortages.push({
-            productId: entry.productId ?? null,
-            productSlug: entry.productSlug ?? null,
-            optionKey: entry.optionKey,
-            wanted: entry.quantity,
-            available: combination.stock,
-          });
-        }
-        return { ...combination, stock: after };
-      });
-
-      if (!touched) {
-        /*
-         * ★ 재고를 관리하지 않는 조합(stock = null)입니다.
-         *   차감한 적이 없으므로 되돌리면 없던 재고가 생깁니다.
-         *   건너뛰되 이유를 남깁니다.
-         */
-        skippedRows.push({
-          productId: entry.productId,
-          productSlug: entry.productSlug ?? row.slug ?? null,
-          optionKey: entry.optionKey,
-          quantity: entry.quantity,
-          stockBefore: 0,
-          stockAfter: 0,
-        });
-        continue;
-      }
-
-      const written = await supabase
-        .from('products')
-        .update({ options: { groups: options.groups, combinations } })
-        .eq('id', entry.productId)
-        .select('id');
-
+    if (row.status === 'unmanaged' || row.status === 'missing') {
       /*
-       * ★ 예전에는 이 결과를 보지 않았습니다.
-       *   조용히 실패하면 재고가 실제와 어긋난 채로 아무도 모르게 지나갑니다.
-       *   되돌림 쪽은 특히 중요합니다 — 못 되돌렸는데 되돌린 것으로 기록되면
-       *   그 기록이 오히려 추적을 방해합니다.
+       * ★ 건너뛴 것을 조용히 넘기지 않습니다.
+       *   재고를 관리하지 않는 조합은 차감한 적이 없어 되돌리면 없던 재고가 생깁니다.
+       *   나중에 "왜 안 돌아왔는지" 를 알 수 있어야 합니다.
        */
-      if (written.error || !written.data || written.data.length === 0) {
-        console.warn(
-          '[orders] 재고 반영이 저장되지 않았습니다:',
-          entry.productId,
-          entry.optionKey,
-          written.error?.message ?? '대상 없음'
-        );
-        continue;
-      }
-
-      moved.push({
-        productId: entry.productId,
-        productSlug: entry.productSlug ?? row.slug ?? null,
-        optionKey: entry.optionKey,
-        quantity: entry.quantity,
-        stockBefore: before,
-        stockAfter: after,
+      skippedRows.push({
+        productId: row.product_id,
+        productSlug,
+        optionKey: row.option_key,
+        quantity: row.quantity,
+        stockBefore: 0,
+        stockAfter: 0,
       });
-    } catch (error) {
-      // 재고 반영 실패가 주문 처리를 막지 않도록 로그만 남깁니다.
-      console.warn('[orders] 재고 반영 실패:', entry.productId, entry.optionKey, error);
+      continue;
     }
+
+    if (row.status === 'short') {
+      shortages.push({
+        productId: row.product_id,
+        productSlug,
+        optionKey: row.option_key,
+        wanted: row.quantity,
+        available: row.stock_before ?? 0,
+      });
+    }
+
+    moved.push({
+      productId: row.product_id,
+      productSlug,
+      optionKey: row.option_key,
+      quantity: row.quantity,
+      stockBefore: row.stock_before ?? 0,
+      stockAfter: row.stock_after ?? 0,
+    });
   }
 
   if (context) {
@@ -1191,6 +1206,33 @@ async function adjustStock(
 
   return shortages;
 }
+
+/**
+ * DB 함수가 던진 재고 부족 예외에서 손님에게 보여 줄 줄들을 꺼냅니다.
+ *
+ * ★ 함수가 이런 모양으로 던집니다.
+ *     재고가 모자랍니다|캐시미어 코트 (블랙/S) — 재고가 2개 남았습니다|…
+ *   앞머리를 떼고 막대(|)로 나누면 그대로 화면에 쓸 수 있습니다.
+ * ★ 모양이 다르면 통째로 한 줄로 씁니다. 메시지를 잃는 것보다 낫습니다.
+ */
+function stockShortageProblems(error: unknown): string[] | null {
+  const message =
+    typeof error === 'object' && error !== null && 'message' in error
+      ? String((error as { message: unknown }).message)
+      : '';
+  if (!message.includes('재고가 모자랍니다')) return null;
+
+  const at = message.indexOf('재고가 모자랍니다|');
+  if (at < 0) return [message.trim()];
+
+  const parts = message
+    .slice(at + '재고가 모자랍니다|'.length)
+    .split('|')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return parts.length > 0 ? parts : [message.trim()];
+}
+
 
 /**
  * ============================================================
@@ -1396,6 +1438,56 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
     throw new Error(`주문 상품을 저장하지 못했습니다: ${itemError.message}`);
   }
 
+  /*
+   * ============================================================
+   * 재고 차감 — 여기서 실패하면 주문이 성립하지 않습니다
+   * ============================================================
+   *
+   * ★★ 왜 이 자리인가 (예전에는 맨 아래에 있었습니다)
+   *   ① 포인트 차감보다 앞이어야 합니다.
+   *     뒤에 두면 재고가 모자랄 때 이미 깎인 포인트까지 되돌려야 합니다.
+   *     앞에 두면 되돌릴 것이 없습니다.
+   *   ② 이력(addHistory)보다 앞이어야 합니다.
+   *     주문을 지울 때 이력이 남아 있으면 지저분해집니다.
+   *     지금 자리에서는 주문과 품목만 있고, 품목은 연쇄 삭제됩니다.
+   *
+   * ★★ 예전에는 모자라도 0 에서 멈추고 그냥 진행했습니다.
+   *   팔 수 없는 물건을 판 주문이 그대로 들어왔습니다.
+   *   이제 DB 함수가 예외를 던지고, 우리는 주문을 지우고 손님에게 알립니다.
+   *
+   * ★ 위 priceLines 의 재고 검사는 그대로 둡니다.
+   *   그쪽은 손님에게 미리 알려 주는 친절이고, 진짜 방어선은 여기입니다.
+   *   검사와 차감 사이에 다른 주문이 끼어들 수 있어 검사만으로는 못 막습니다.
+   */
+  try {
+    await adjustStock(
+      lines.map((line) => ({
+        productId: line.productId,
+        productSlug: line.productSlug,
+        optionKey: line.optionKey,
+        quantity: line.quantity,
+      })),
+      -1,
+      { orderId: row.id, orderNo: row.order_no, reason: '주문 접수' }
+    );
+  } catch (error) {
+    // 재고를 잡지 못했으므로 주문은 없던 일이 됩니다. (품목은 연쇄 삭제됩니다)
+    await supabase.from(ORDERS).delete().eq('id', row.id);
+
+    const problems = stockShortageProblems(error);
+    if (problems) {
+      throw new CheckoutError('주문할 수 없는 상품이 있습니다.', problems);
+    }
+    /*
+     * 재고 부족이 아닌 실패입니다. (함수가 없거나 DB 가 답을 못 주는 경우)
+     * ★ 이때도 주문을 만들면 안 됩니다. 재고를 잡지 못한 주문이기 때문입니다.
+     */
+    console.error('[orders] 재고를 잡지 못해 주문을 취소했습니다:', row.order_no, error);
+    throw new Error(
+      '재고를 확인하지 못해 주문을 접수하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+    );
+  }
+
   await addHistory(row.id, null, 'pending_payment', '주문이 접수되었습니다.');
 
   /* 포인트 차감.
@@ -1443,20 +1535,8 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
     }
   }
 
-  /*
-   * 재고 차감 — 재고를 관리하는 조합만 줄어듭니다.
-   * ★ 차감도 기록에 남깁니다. 되돌림만 남기면 "왜 줄었는지" 를 못 찾습니다.
-   */
-  await adjustStock(
-    lines.map((line) => ({
-      productId: line.productId,
-      productSlug: line.productSlug,
-      optionKey: line.optionKey,
-      quantity: line.quantity,
-    })),
-    -1,
-    { orderId: row.id, orderNo: row.order_no, reason: '주문 접수' }
-  );
+  /* ★ 재고 차감은 위(품목 저장 직후)에서 이미 끝났습니다.
+       모자라면 그 자리에서 주문을 지우고 멈춥니다. */
 
   const items = ((itemData ?? []) as OrderItemRow[]).map(rowToItem);
   return rowToOrder(row, items, await loadHistory(row.id));
@@ -2799,7 +2879,14 @@ export async function confirmUncertainPayment(
           orderId: before.id,
           orderNo: before.orderNo,
           reason: '승인 확인 후 결제완료로 확정 — 되돌렸던 재고를 다시 잡음',
-        }
+        },
+        /*
+         * ★★ 이 자리만 재고가 모자라도 막지 않습니다.
+         *   주문 접수는 모자라면 통째로 실패하지만, 여기는 이미 카드 승인이
+         *   난 뒤입니다. 손님 돈이 빠져나간 상태라 주문을 되돌릴 수 없습니다.
+         *   0 에서 멈추고 부족분을 돌려받아 사람에게 알립니다.
+         */
+        true
       );
       await supabase.from(ORDERS).update({ stock_released_at: null }).eq('id', id);
     }
