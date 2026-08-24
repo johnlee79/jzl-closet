@@ -1,8 +1,7 @@
 'use server';
 
-import { cookies } from 'next/headers';
 import { revalidatePath, revalidateTag } from 'next/cache';
-import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import { isAdmin } from '@/lib/admin-guard';
 import {
   NOTICE_TAG,
   createNotice,
@@ -36,10 +35,6 @@ export type ActionResult<T = undefined> =
   | { ok: true; data: T }
   | { ok: false; error: string };
 
-async function assertAdmin(): Promise<boolean> {
-  return verifySessionToken(cookies().get(ADMIN_COOKIE)?.value);
-}
-
 function fail(error: unknown, fallback: string): { ok: false; error: string } {
   const message = error instanceof Error ? error.message : fallback;
   console.error('[admin/content]', message);
@@ -55,7 +50,7 @@ export async function toggleReviewAction(
   visible: boolean,
   productSlug: string
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     await setReviewVisible(id, visible);
@@ -72,7 +67,7 @@ export async function replyReviewAction(
   reply: string,
   productSlug: string
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     await replyToReview(id, reply);
@@ -88,7 +83,7 @@ export async function deleteReviewAction(
   id: string,
   productSlug: string
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     await deleteReview(id);
@@ -121,7 +116,7 @@ export async function createAdminReviewAction(input: {
    */
   writtenAt?: string;
 }): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   const rating = Math.trunc(input.rating);
   if (rating < 1 || rating > 5) return { ok: false, error: '별점을 선택해 주세요.' };
@@ -196,7 +191,7 @@ export async function saveNoticeAction(
   input: NoticeInput,
   id?: string
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   if (!input.title.trim()) return { ok: false, error: '제목을 입력해 주세요.' };
   if (!input.content.trim()) return { ok: false, error: '내용을 입력해 주세요.' };
 
@@ -211,7 +206,7 @@ export async function saveNoticeAction(
 }
 
 export async function deleteNoticeAction(id: string): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     await deleteNotice(id);
@@ -237,7 +232,7 @@ export async function savePopupAction(
   input: PopupInput,
   id?: string
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   if (!input.title.trim()) return { ok: false, error: '제목을 입력해 주세요.' };
   if (!input.imageUrl.trim() && !input.content.trim()) {
     return { ok: false, error: '이미지나 내용 중 하나는 넣어 주세요.' };
@@ -257,7 +252,7 @@ export async function savePopupAction(
 }
 
 export async function deletePopupAction(id: string): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     await deletePopup(id);
@@ -277,7 +272,7 @@ export async function adjustPointsAction(
   amount: number,
   memo: string
 ): Promise<ActionResult<{ balance: number }>> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   const value = Math.trunc(Number(amount) || 0);
   if (value === 0) return { ok: false, error: '지급하거나 차감할 금액을 입력해 주세요.' };

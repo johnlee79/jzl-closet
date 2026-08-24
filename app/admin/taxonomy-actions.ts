@@ -1,8 +1,7 @@
 'use server';
 
-import { cookies } from 'next/headers';
 import { revalidatePath, revalidateTag } from 'next/cache';
-import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import { isAdmin } from '@/lib/admin-guard';
 import {
   TAXONOMY_TAG,
   countChildCategories,
@@ -32,10 +31,6 @@ import { findCategory } from '@/lib/categories';
 export type ActionResult<T = undefined> =
   | { ok: true; data: T }
   | { ok: false; error: string };
-
-async function assertAdmin(): Promise<boolean> {
-  return verifySessionToken(cookies().get(ADMIN_COOKIE)?.value);
-}
 
 function fail(error: unknown, fallback: string): { ok: false; error: string } {
   const message = error instanceof Error ? error.message : fallback;
@@ -71,7 +66,7 @@ export async function saveCategoryAction(
   input: CategoryInput,
   isNew: boolean
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   if (!input.label.trim()) return { ok: false, error: '라벨을 입력해 주세요.' };
   if (!input.nameKo.trim()) return { ok: false, error: '한글명을 입력해 주세요.' };
@@ -121,7 +116,7 @@ export async function toggleCategoryAction(
   slug: string,
   isVisible: boolean
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     await updateCategory(slug, { isVisible });
@@ -135,7 +130,7 @@ export async function toggleCategoryAction(
 
 /** 드래그로 바꾼 순서를 저장합니다. slug 를 화면에 보이는 순서대로 넘기세요. */
 export async function reorderCategoriesAction(slugs: string[]): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     await reorder('categories', slugs);
@@ -155,7 +150,7 @@ export async function deleteCategoryAction(
   slug: string,
   isSub: boolean
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     const used = isSub
@@ -192,7 +187,7 @@ export async function reorderSubCategoriesAction(
   parentSlug: string,
   slugs: string[]
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     // 넘어온 slug 들이 정말 이 대분류의 자식인지 확인합니다.
@@ -219,7 +214,7 @@ export async function saveBrandAction(
   input: BrandInput,
   isNew: boolean
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   if (!input.label.trim()) return { ok: false, error: '라벨을 입력해 주세요.' };
   if (!input.name.trim()) return { ok: false, error: '정식 표기(name)를 입력해 주세요.' };
@@ -248,7 +243,7 @@ export async function toggleBrandAction(
   slug: string,
   patch: { isVisible?: boolean; isFeatured?: boolean }
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     await updateBrand(slug, patch);
@@ -261,7 +256,7 @@ export async function toggleBrandAction(
 }
 
 export async function reorderBrandsAction(slugs: string[]): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     await reorder('brands', slugs);
@@ -274,7 +269,7 @@ export async function reorderBrandsAction(slugs: string[]): Promise<ActionResult
 }
 
 export async function deleteBrandAction(slug: string): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     const used = await countProductsOfBrand(slug);

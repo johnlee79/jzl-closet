@@ -1,9 +1,8 @@
 import { DeleteObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
-import { cookies } from 'next/headers';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { NextResponse } from 'next/server';
 import sharp from 'sharp';
-import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import { isAdmin } from '@/lib/admin-guard';
 import { requireR2, toPublicUrl } from '@/lib/r2';
 import {
   BRANDING_KEY,
@@ -41,10 +40,6 @@ function unauthorized() {
   return NextResponse.json({ error: '관리자 로그인이 필요합니다.' }, { status: 401 });
 }
 
-async function requireAdmin(): Promise<boolean> {
-  return verifySessionToken(cookies().get(ADMIN_COOKIE)?.value);
-}
-
 /** 파일 타입을 먼저 보고, 없으면 확장자로 판단합니다. */
 function resolveExtension(file: File): string | null {
   const byType = ALLOWED[file.type.toLowerCase()];
@@ -78,7 +73,7 @@ async function removeObjects(keys: string[]): Promise<void> {
 }
 
 export async function POST(request: Request) {
-  if (!(await requireAdmin())) return unauthorized();
+  if (!(await isAdmin())) return unauthorized();
 
   let r2;
   try {
@@ -252,7 +247,7 @@ export async function POST(request: Request) {
 
 /** 기본 파비콘으로 되돌립니다. */
 export async function DELETE() {
-  if (!(await requireAdmin())) return unauthorized();
+  if (!(await isAdmin())) return unauthorized();
 
   const previous = await getBranding();
   // 파비콘만 기본값으로 되돌립니다. 로고는 따로 관리하므로 남겨 둡니다.

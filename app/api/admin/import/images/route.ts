@@ -1,8 +1,7 @@
 import { PutObjectCommand } from '@aws-sdk/client-s3';
-import { cookies } from 'next/headers';
 import { NextResponse, type NextRequest } from 'next/server';
 import sharp from 'sharp';
-import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import { isAdmin } from '@/lib/admin-guard';
 import { requireR2, toPublicUrl } from '@/lib/r2';
 import { slugify } from '@/lib/product-utils';
 import type { UploadedImage } from '@/lib/types';
@@ -36,10 +35,6 @@ const FETCH_TIMEOUT = 20000;
 
 const MAX_WIDTH = 1600;
 const WEBP_QUALITY = 82;
-
-async function requireAdmin(): Promise<boolean> {
-  return verifySessionToken(cookies().get(ADMIN_COOKIE)?.value);
-}
 
 function keyFor(folder: string, extension: string): string {
   const safe = slugify(folder) || 'imported';
@@ -158,7 +153,7 @@ async function copyOne(source: string, folder: string): Promise<CopyResult> {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await requireAdmin())) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: '관리자 로그인이 필요합니다.' }, { status: 401 });
   }
 

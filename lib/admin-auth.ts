@@ -9,6 +9,41 @@
 export const ADMIN_COOKIE = 'jzl_admin_session';
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7일
 
+/* ==================================================================
+ * 관리자 이메일 목록 (2단계)
+ * ==================================================================
+ *
+ * ★★ 왜 DB 가 아니라 환경변수인가
+ *   profiles 에 is_admin 같은 칸을 두면, DB 에 쓸 수 있는 사람이
+ *   자기 자신을 관리자로 만들 수 있습니다. 환경변수는 DB 와 별개라
+ *   DB 가 뚫려도 관리자가 늘어나지 않습니다.
+ *   대신 사람을 늘릴 때마다 값을 고치고 다시 배포해야 합니다.
+ *   혼자 쓰는 동안에는 이쪽이 낫습니다.
+ *
+ * ★ 쉼표로 나눕니다. 줄바꿈과 공백은 알아서 걸러냅니다.
+ *   예) ADMIN_EMAILS=me@example.com, another@example.com
+ *
+ * ★ 대소문자를 가리지 않습니다. 이메일은 원래 그렇습니다.
+ */
+export function adminEmails(): string[] {
+  return (process.env.ADMIN_EMAILS ?? '')
+    .split(/[,\n]/)
+    .map((value) => value.trim().toLowerCase())
+    .filter((value) => value.length > 0);
+}
+
+/** 이 이메일이 관리자 목록에 있는지 */
+export function isAdminEmail(email: string | null | undefined): boolean {
+  const target = (email ?? '').trim().toLowerCase();
+  if (!target) return false;
+  return adminEmails().includes(target);
+}
+
+/** 이메일 로그인을 쓸 수 있는 상태인지 — 목록이 비어 있으면 아직 못 씁니다. */
+export function isAdminEmailConfigured(): boolean {
+  return adminEmails().length > 0;
+}
+
 function getSecret(): string | null {
   const password = process.env.ADMIN_PASSWORD;
   return password && password.length > 0 ? password : null;

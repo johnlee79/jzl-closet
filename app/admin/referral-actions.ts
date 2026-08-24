@@ -1,8 +1,7 @@
 'use server';
 
-import { cookies } from 'next/headers';
 import { revalidatePath, revalidateTag } from 'next/cache';
-import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import { isAdmin } from '@/lib/admin-guard';
 import { changePoints } from '@/lib/points';
 import {
   createGift,
@@ -43,10 +42,6 @@ export type ActionResult<T = undefined> =
   | { ok: true; data: T }
   | { ok: false; error: string };
 
-async function assertAdmin(): Promise<boolean> {
-  return verifySessionToken(cookies().get(ADMIN_COOKIE)?.value);
-}
-
 function fail(error: unknown, fallback: string): { ok: false; error: string } {
   const message = error instanceof Error ? error.message : fallback;
   console.error('[admin/referral]', message);
@@ -71,7 +66,7 @@ export async function saveGiftAction(
   input: GiftInput,
   id?: string
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   if (!input.name.trim()) return { ok: false, error: '사은품 이름을 입력해 주세요.' };
 
   try {
@@ -85,7 +80,7 @@ export async function saveGiftAction(
 }
 
 export async function deleteGiftAction(id: string): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   try {
     await deleteGift(id);
     refresh();
@@ -101,7 +96,7 @@ export async function saveGoalAction(
   input: GoalInput,
   id?: string
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   if (!input.name.trim()) return { ok: false, error: '목표 이름을 입력해 주세요.' };
   if (input.targetCount < 1) return { ok: false, error: '목표 인원은 1명 이상이어야 합니다.' };
   if (input.rewardType === 'point' && input.rewardPoints <= 0) {
@@ -125,7 +120,7 @@ export async function saveGoalAction(
 }
 
 export async function deleteGoalAction(id: string): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   try {
     await deleteGoal(id);
     refresh();
@@ -146,7 +141,7 @@ export async function judgeLinkAction(
   id: string,
   approve: boolean
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     const referrerId = await judgeLink(id, approve);
@@ -170,7 +165,7 @@ export async function payAchievementAction(
   points: number,
   memo: string
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   if (points <= 0) return { ok: false, error: '지급할 포인트가 없습니다.' };
 
   try {
@@ -189,7 +184,7 @@ export async function rejectAchievementAction(
   id: string,
   reason: string
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   try {
     await setAchievementStatus(id, 'rejected', reason);
     refresh();
@@ -205,7 +200,7 @@ export async function saveShippingAction(
   id: string,
   input: ShippingInput
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   try {
     await updateShipping(id, input);
     refresh();
@@ -222,7 +217,7 @@ export async function shipGiftAction(
   giftName: string,
   receiver: string
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   if (!courier.trim()) return { ok: false, error: '택배사를 골라 주세요.' };
   if (!trackingNo.trim()) return { ok: false, error: '송장번호를 입력해 주세요.' };
 
@@ -244,7 +239,7 @@ export async function shipGiftAction(
 export async function saveReferralSettingsAction(
   input: ReferralSettings
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   if (input.monthlyPointCap < 0) {
     return { ok: false, error: '월 지급 한도는 0 이상이어야 합니다.' };
   }

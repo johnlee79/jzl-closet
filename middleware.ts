@@ -1,6 +1,11 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import {
+  ADMIN_COOKIE,
+  isAdminEmail,
+  isAdminEmailConfigured,
+  verifySessionToken,
+} from '@/lib/admin-auth';
 
 /**
  * 두 가지 일을 합니다.
@@ -31,6 +36,51 @@ function isGuestOnly(pathname: string): boolean {
   return pathname === '/login' || pathname === '/signup';
 }
 
+/**
+ * Supabase 로 로그인한 사람이 관리자 이메일인지. (2단계)
+ *
+ * ★ 여기서는 쿠키를 갱신하지 않습니다. 읽기만 합니다.
+ *   관리자 화면은 손님 화면 갱신 흐름(아래 2번)을 타지 않으므로,
+ *   토큰 갱신은 손님 쪽에서 하던 대로 그쪽에 맡깁니다.
+ *   여기서 갱신까지 하려 들면 응답 쿠키를 만들어 돌려줘야 하는데,
+ *   통과할 때는 NextResponse.next() 를 그대로 쓰는 편이 단순합니다.
+ *
+ * ★ getUser() 를 씁니다. 쿠키에 든 토큰을 그대로 믿는 getSession() 이 아닙니다.
+ *   관리자 문에서 쿠키만 믿으면 안 됩니다.
+ *
+ * ★ 목록이 비어 있으면 Supabase 에 물어보지도 않습니다.
+ *   아직 이메일 로그인을 쓰지 않는 동안 쓸데없는 왕복을 만들지 않습니다.
+ */
+async function isAdminBySupabaseSession(request: NextRequest): Promise<boolean> {
+  if (!isAdminEmailConfigured()) return false;
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) return false;
+
+  try {
+    const supabase = createServerClient(url, anonKey, {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value;
+        },
+        set() {
+          /* 읽기만 합니다. */
+        },
+        remove() {
+          /* 읽기만 합니다. */
+        },
+      },
+    });
+
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) return false;
+    return isAdminEmail(data.user.email);
+  } catch {
+    return false;
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
@@ -41,8 +91,20 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    const token = request.cookies.get(ADMIN_COOKIE)?.value;
-    if (await verifySessionToken(token)) {
+    /*
+     * ★★ 두 가지 길을 모두 인정합니다. (전환 중)
+     *   1) 옛 길 — 비밀번호 하나로 받은 서명 쿠키
+     *   2) 새 길 — Supabase 로그인 + 이메일이 ADMIN_EMAILS 목록에 있음
+     *   옛 길은 4단계에서 지웁니다.
+     *
+     * ★ 옛 쿠키를 먼저 봅니다. 계산만 하면 되어 즉시 끝납니다.
+     *   Supabase 확인은 Supabase 서버까지 왕복이 있습니다.
+     *   옛 길로 들어와 있는 동안에는 그 왕복이 아예 일어나지 않습니다.
+     */
+    if (await verifySessionToken(request.cookies.get(ADMIN_COOKIE)?.value)) {
+      return NextResponse.next();
+    }
+    if (await isAdminBySupabaseSession(request)) {
       return NextResponse.next();
     }
 

@@ -1,8 +1,7 @@
 'use server';
 
-import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import { isAdmin } from '@/lib/admin-guard';
 import { adminUpdateProfile, getProfile, type MemberStatus } from '@/lib/profiles';
 import { SITE_URL } from '@/lib/store';
 import { createAuthClient } from '@/lib/supabase/auth-server';
@@ -17,10 +16,6 @@ import { createAuthClient } from '@/lib/supabase/auth-server';
 export type ActionResult<T = undefined> =
   | { ok: true; data: T }
   | { ok: false; error: string };
-
-async function assertAdmin(): Promise<boolean> {
-  return verifySessionToken(cookies().get(ADMIN_COOKIE)?.value);
-}
 
 function fail(error: unknown, fallback: string): { ok: false; error: string } {
   const message = error instanceof Error ? error.message : fallback;
@@ -43,7 +38,7 @@ export async function updateMemberAction(
     adminMemo: string;
   }
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   if (!patch.name.trim()) return { ok: false, error: '이름은 비울 수 없습니다.' };
   if (!STATUSES.includes(patch.status as MemberStatus)) {
     return { ok: false, error: '알 수 없는 상태입니다.' };
@@ -67,7 +62,7 @@ export async function updateMemberAction(
  * ★ 관리자가 새 비밀번호를 정하지 않습니다. 회원이 메일 링크로 직접 정합니다.
  */
 export async function sendResetMailAction(userId: string): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   const profile = await getProfile(userId);
   if (!profile?.email) {

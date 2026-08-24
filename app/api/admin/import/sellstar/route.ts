@@ -1,6 +1,5 @@
-import { cookies } from 'next/headers';
 import { NextResponse, type NextRequest } from 'next/server';
-import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import { isAdmin } from '@/lib/admin-guard';
 import { getProductBySellstarId } from '@/lib/products';
 import {
   SellstarError,
@@ -24,9 +23,9 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
 export async function GET(request: NextRequest) {
-  // ★ verifySessionToken 은 async 입니다. await 를 빠뜨리면 Promise 가 늘 참이라
+  // ★ isAdmin 은 async 입니다. await 를 빠뜨리면 Promise 가 늘 참이라
   //   인증이 통째로 무력화됩니다. (실제로 그 상태였습니다)
-  if (!(await verifySessionToken(cookies().get(ADMIN_COOKIE)?.value))) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: '관리자 로그인이 필요합니다.' }, { status: 401 });
   }
 

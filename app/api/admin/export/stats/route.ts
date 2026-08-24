@@ -1,6 +1,5 @@
-import { cookies } from 'next/headers';
 import { NextResponse, type NextRequest } from 'next/server';
-import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import { isAdmin } from '@/lib/admin-guard';
 import { statusLabel } from '@/lib/order-status';
 import { kstDaysAgo, kstToday } from '@/lib/orders';
 import { getProductStats, getSalesStats } from '@/lib/stats';
@@ -25,7 +24,7 @@ function row(...values: unknown[]): string {
 }
 
 export async function GET(request: NextRequest) {
-  if (!(await verifySessionToken(cookies().get(ADMIN_COOKIE)?.value))) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
   }
 

@@ -1,8 +1,7 @@
 'use server';
 
-import { cookies } from 'next/headers';
 import { revalidatePath, revalidateTag } from 'next/cache';
-import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import { isAdmin } from '@/lib/admin-guard';
 import { defaultCopyFor } from '@/lib/default-copy';
 import {
   ANALYTICS_KEY,
@@ -68,10 +67,6 @@ export type ActionResult<T = undefined> =
   | { ok: true; data: T }
   | { ok: false; error: string };
 
-async function assertAdmin(): Promise<boolean> {
-  return verifySessionToken(cookies().get(ADMIN_COOKIE)?.value);
-}
-
 function fail(error: unknown, fallback: string): { ok: false; error: string } {
   const message = error instanceof Error ? error.message : fallback;
   console.error('[admin/settings]', message);
@@ -87,7 +82,7 @@ function revalidateEverything(): void {
 /* ── 4-1. 스토어 정보 ─────────────────────────────────────── */
 
 export async function saveStoreAction(input: StoreSettings): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   if (!input.name.trim()) return { ok: false, error: '브랜드명을 입력해 주세요.' };
   if (!input.phone.trim()) return { ok: false, error: '고객센터 번호를 입력해 주세요.' };
@@ -110,7 +105,7 @@ export async function saveStoreAction(input: StoreSettings): Promise<ActionResul
 /* ── 4-2. 브랜딩 · 로고 ───────────────────────────────────── */
 
 export async function saveLogoAction(url: string): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     const branding = await getBranding();
@@ -130,7 +125,7 @@ export async function saveLogoAction(url: string): Promise<ActionResult> {
 /* ── 4-3. 배송·반품 ───────────────────────────────────────── */
 
 export async function saveShippingAction(input: ShippingSettings): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   /*
    * ★★ 금액 칸을 하나라도 빠뜨리지 마세요.
@@ -170,7 +165,7 @@ export async function saveShippingAction(input: ShippingSettings): Promise<Actio
 /* ── 2-A. 결제·주문 (입금 계좌 · 도서산간 · 알림 · 구매안전) ── */
 
 export async function savePaymentAction(input: PaymentSettings): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   const bankFilled = [input.bankName, input.accountNo, input.accountHolder].filter((value) =>
     value.trim()
@@ -238,7 +233,7 @@ export async function saveRewardAction(
   points: PointSettings,
   review: ReviewSettings
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   if (points.minUse < 0) return { ok: false, error: '최소 사용 금액은 0 이상이어야 합니다.' };
   if (points.purchase.amount < 0 || points.purchase.amount > 100) {
@@ -274,7 +269,7 @@ export async function saveRewardAction(
 /* ── 3-B. 판매정보 ────────────────────────────────────────── */
 
 export async function saveSalesAction(input: SalesSettings): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     await writeSetting(SALES_KEY, normalizeSales(input));
@@ -292,7 +287,7 @@ export async function saveSalesAction(input: SalesSettings): Promise<ActionResul
 /* ── 3-B. 문구 · 이벤트 ───────────────────────────────────── */
 
 export async function saveEventAction(input: EventSettings): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   const ribbon = input.ribbon;
   if (ribbon.enabled && !ribbon.text.trim()) {
@@ -317,7 +312,7 @@ export async function saveEventAction(input: EventSettings): Promise<ActionResul
 /* ── 3-G. SNS ─────────────────────────────────────────────── */
 
 export async function saveSnsAction(input: SnsSettings): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   /*
    * ★ 주소는 http(s) 만 받습니다.
@@ -357,7 +352,7 @@ export async function saveSnsAction(input: SnsSettings): Promise<ActionResult> {
 export async function saveAnalyticsAction(
   input: AnalyticsSettings
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   const id = input.ga4Id.trim();
   if (id && !GA4_ID_PATTERN.test(id)) {
@@ -380,7 +375,7 @@ export async function saveAnalyticsAction(
 /* ── 5-1. 메인 배너 ───────────────────────────────────────── */
 
 export async function saveDesignAction(input: DesignSettings): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     const value = normalizeDesign(input);
@@ -403,7 +398,7 @@ export async function saveDesignAction(input: DesignSettings): Promise<ActionRes
 export async function saveMainSectionsAction(
   sections: MainSections
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     const current = await getDesignSettings();
@@ -430,7 +425,7 @@ export async function saveMainSectionsAction(
  *   (og:image 를 내보내는 페이지가 메인·목록·약관 등 여러 곳에 흩어져 있습니다)
  */
 export async function saveOgImageAction(imageUrl: string): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     const current = await getDesignSettings();
@@ -454,7 +449,7 @@ export async function saveCopyAction(
   key: CopyKey,
   section: CopySection
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   const cleaned = section
     .map((block) => ({ heading: block.heading.trim(), body: block.body }))
@@ -503,7 +498,7 @@ export async function saveCopyAction(
 export async function saveHeroButtonsAction(
   input: HeroButtonsSettings
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   if (!input.primaryLabel.trim()) {
     return { ok: false, error: '첫 번째 버튼 문구를 입력해 주세요.' };
@@ -539,7 +534,7 @@ export async function saveHeroButtonsAction(
  * ★ 빈 문자열도 정상입니다. 비우면 /about 이 이미지 영역을 통째로 건너뜁니다.
  */
 export async function saveAboutImageAction(imageUrl: string): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     await writeSetting(ABOUT_PAGE_KEY, { imageUrl: imageUrl.trim() });
@@ -561,7 +556,7 @@ export async function saveAboutImageAction(imageUrl: string): Promise<ActionResu
  *   "코드 기본값을 따라간다" 이지 "지금 기본값을 베껴 둔다" 가 아닙니다.
  */
 export async function resetCopyAction(key: CopyKey): Promise<ActionResult<CopySection>> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     const fallback = defaultCopyFor(key);

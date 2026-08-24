@@ -1,8 +1,7 @@
 import { DeleteObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import sharp from 'sharp';
-import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import { isAdmin } from '@/lib/admin-guard';
 import { requireR2, toObjectKey, toPublicUrl } from '@/lib/r2';
 import { slugify } from '@/lib/product-utils';
 import type { UploadedImage } from '@/lib/types';
@@ -24,11 +23,6 @@ const ALLOWED_TYPES = new Set([
   'image/gif',
 ]);
 
-async function requireAdmin(): Promise<boolean> {
-  const token = cookies().get(ADMIN_COOKIE)?.value;
-  return verifySessionToken(token);
-}
-
 function unauthorized() {
   return NextResponse.json({ error: '관리자 로그인이 필요합니다.' }, { status: 401 });
 }
@@ -45,7 +39,7 @@ function makeKeys(productSlug: string): { key: string; thumbKey: string } {
 }
 
 export async function POST(request: Request) {
-  if (!(await requireAdmin())) return unauthorized();
+  if (!(await isAdmin())) return unauthorized();
 
   let r2;
   try {
@@ -159,7 +153,7 @@ export async function POST(request: Request) {
  * URL 을 주면 썸네일(thumb/) 까지 함께 지웁니다.
  */
 export async function DELETE(request: Request) {
-  if (!(await requireAdmin())) return unauthorized();
+  if (!(await isAdmin())) return unauthorized();
 
   let r2;
   try {

@@ -1,8 +1,7 @@
 'use server';
 
-import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import { isAdmin } from '@/lib/admin-guard';
 import {
   createProduct,
   createTemplate,
@@ -20,14 +19,6 @@ import type { Product, ProductInput } from '@/lib/types';
 export type ActionResult<T = undefined> =
   | { ok: true; data: T }
   | { ok: false; error: string };
-
-/**
- * 미들웨어가 /admin/* 를 이미 막고 있지만,
- * 서버 액션은 직접 호출될 수도 있으므로 여기서 한 번 더 확인합니다.
- */
-async function assertAdmin(): Promise<boolean> {
-  return verifySessionToken(cookies().get(ADMIN_COOKIE)?.value);
-}
 
 function fail(error: unknown, fallback: string): { ok: false; error: string } {
   const message = error instanceof Error ? error.message : fallback;
@@ -69,7 +60,7 @@ export async function patchProductAction(
     Pick<Product, 'price' | 'isSoldOut' | 'isVisible' | 'displayOrder' | 'isNew' | 'isSale'>
   >
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     const updated = await patchProduct(id, patch);
@@ -82,7 +73,7 @@ export async function patchProductAction(
 }
 
 export async function deleteProductAction(id: string): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     const before = await getProductById(id);
@@ -99,7 +90,7 @@ export async function deleteProductAction(id: string): Promise<ActionResult> {
 export async function duplicateProductAction(
   id: string
 ): Promise<ActionResult<{ id: string }>> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     const copy = await duplicateProduct(id);
@@ -128,7 +119,7 @@ export async function saveProductAction(
   input: ProductInput,
   id?: string
 ): Promise<ActionResult<{ id: string; slug: string }>> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   const problem = validate(input);
   if (problem) return { ok: false, error: problem };
@@ -159,7 +150,7 @@ export async function createTemplateAction(
   title: string,
   body: string
 ): Promise<ActionResult<{ id: string; title: string; body: string }>> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   if (!title.trim()) return { ok: false, error: '템플릿 제목을 입력해 주세요.' };
   if (!body.trim()) return { ok: false, error: '템플릿 내용을 입력해 주세요.' };
 
@@ -175,7 +166,7 @@ export async function createTemplateAction(
 }
 
 export async function deleteTemplateAction(id: string): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     await deleteTemplate(id);

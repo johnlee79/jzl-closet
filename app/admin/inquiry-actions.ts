@@ -1,8 +1,7 @@
 'use server';
 
-import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import { isAdmin } from '@/lib/admin-guard';
 import { answerInquiry, getInquiryById, updateInquiryStatus } from '@/lib/inquiries';
 import { isInquiryStatus, type InquiryStatus } from '@/lib/inquiry-status';
 import { getProductSlugById } from '@/lib/products';
@@ -12,10 +11,6 @@ import { getProductSlugById } from '@/lib/products';
 export type ActionResult<T = undefined> =
   | { ok: true; data: T }
   | { ok: false; error: string };
-
-async function assertAdmin(): Promise<boolean> {
-  return verifySessionToken(cookies().get(ADMIN_COOKIE)?.value);
-}
 
 function fail(error: unknown, fallback: string): { ok: false; error: string } {
   const message = error instanceof Error ? error.message : fallback;
@@ -52,7 +47,7 @@ export async function answerInquiryAction(
   /** 'closed' 일 때만 그 상태를 유지합니다. 비워 두면 '답변완료'가 됩니다. */
   status = ''
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   if (!answer.trim()) return { ok: false, error: '답변 내용을 입력해 주세요.' };
 
   const nextStatus: InquiryStatus | undefined = isInquiryStatus(status)
@@ -77,7 +72,7 @@ export async function updateInquiryStatusAction(
   id: string,
   status: string
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   if (!isInquiryStatus(status)) return { ok: false, error: '알 수 없는 상태입니다.' };
 
   try {

@@ -1,6 +1,5 @@
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import { isAdmin } from '@/lib/admin-guard';
 import { brandLabel } from '@/lib/brands';
 import { categoryNameKo, findSubCategory } from '@/lib/categories';
 import { getProducts } from '@/lib/products';
@@ -60,7 +59,7 @@ function formatDate(value: string | null): string {
 }
 
 export async function GET() {
-  if (!(await verifySessionToken(cookies().get(ADMIN_COOKIE)?.value))) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
   }
 

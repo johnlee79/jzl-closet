@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import ThemeToggle from '@/components/admin/ThemeToggle';
+import { adminSignOutAction } from '@/app/admin/login-actions';
 import ScrollToTop from '@/components/ScrollToTop';
 
 /**
@@ -277,10 +278,24 @@ export default function AdminShell({
       prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key]
     );
 
+  /*
+   * ★★ 두 가지 길로 들어올 수 있으므로 나갈 때도 둘 다 정리합니다.
+   *   옛 쿠키만 지우면 Supabase 세션이 살아 있어 그대로 다시 들어가지고,
+   *   반대도 마찬가지입니다.
+   *   "로그아웃했는데 그대로 들어가진다" 는 가장 놀라운 종류의 버그입니다.
+   *
+   * ★ 한쪽이 실패해도 다른 쪽은 정리합니다.
+   *   나가는 길이 반쯤 막히면 손님용 화면에 관리자 계정이 남습니다.
+   */
   const handleLogout = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
-    await fetch('/api/admin/login', { method: 'DELETE' });
+
+    await Promise.allSettled([
+      fetch('/api/admin/login', { method: 'DELETE' }),
+      adminSignOutAction(),
+    ]);
+
     router.replace('/admin/login');
     router.refresh();
   };

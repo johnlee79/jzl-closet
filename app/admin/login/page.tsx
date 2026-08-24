@@ -2,22 +2,62 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
+import { adminEmailLoginAction } from '@/app/admin/login-actions';
 
 /**
  * 관리자 로그인.
  * 관리자 레이아웃과 같은 톤(시스템 폰트·흰 카드·파란 버튼)으로 맞춥니다.
  * 화면 가운데 카드 하나만 두고, 꾸밈은 넣지 않습니다.
+ *
+ * ★★ 두 가지 길이 함께 열려 있습니다. (전환 중)
+ *   위  — 이메일 + 비밀번호 (새 길)
+ *   아래 — 비밀번호 하나 (옛 길)
+ *
+ *   어느 쪽으로도 들어갈 수 있습니다. 새 길을 준비하는 동안,
+ *   또는 새 길에 문제가 생겼을 때 잠기지 않게 하기 위해서입니다.
+ *   옛 길은 4단계에서 닫습니다. 그때 아래 칸을 지웁니다.
  */
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get('next') ?? '/admin';
 
+  const [email, setEmail] = useState('');
+  const [emailPassword, setEmailPassword] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  /** 어느 쪽으로 들어왔든 같은 곳으로 보냅니다. */
+  const goIn = () => {
+    // 미들웨어가 쿠키를 다시 읽도록 새로고침합니다.
+    router.replace(next.startsWith('/admin') ? next : '/admin');
+    router.refresh();
+  };
+
+  /* ── 새 길 — 이메일 + 비밀번호 ────────────────────── */
+  const handleEmailLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (pending) return;
+
+    setPending(true);
+    setError('');
+    try {
+      const result = await adminEmailLoginAction(email, emailPassword);
+      if (!result.ok) {
+        setError(result.error);
+        setPending(false);
+        return;
+      }
+      goIn();
+    } catch {
+      setError('서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+      setPending(false);
+    }
+  };
+
+  /* ── 옛 길 — 비밀번호 하나 ────────────────────────── */
+  const handlePasswordLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (pending) return;
 
@@ -37,10 +77,7 @@ function LoginForm() {
         setPending(false);
         return;
       }
-
-      // 미들웨어가 쿠키를 다시 읽도록 새로고침합니다.
-      router.replace(next.startsWith('/admin') ? next : '/admin');
-      router.refresh();
+      goIn();
     } catch {
       setError('서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.');
       setPending(false);
@@ -58,35 +95,79 @@ function LoginForm() {
           <p className="mt-1.5 text-[15px] text-slate-500">관리자 로그인</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-7">
-          <label htmlFor="admin-password" className="admin-label">
+        {/* ── 이메일 로그인 ─────────────────────────── */}
+        <form onSubmit={handleEmailLogin} className="mt-7">
+          <label htmlFor="admin-email" className="admin-label">
+            이메일
+          </label>
+          <input
+            id="admin-email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            autoComplete="username"
+            autoFocus
+            className="admin-input"
+            placeholder="admin@example.com"
+          />
+
+          <label htmlFor="admin-email-password" className="admin-label mt-3 block">
             비밀번호
+          </label>
+          <input
+            id="admin-email-password"
+            type="password"
+            value={emailPassword}
+            onChange={(event) => setEmailPassword(event.target.value)}
+            autoComplete="current-password"
+            className="admin-input"
+            placeholder="비밀번호"
+          />
+
+          <button
+            type="submit"
+            disabled={pending || !email.trim() || !emailPassword}
+            className="admin-btn-primary mt-4 w-full"
+          >
+            {pending ? '확인 중…' : '로그인'}
+          </button>
+        </form>
+
+        {/*
+          ── 옛 길 ──────────────────────────────────
+          ★ 4단계에서 이 아래를 통째로 지웁니다.
+            그때까지는 남겨 둡니다. 새 길에 문제가 생겨도 들어올 수 있어야 합니다.
+        */}
+        <form onSubmit={handlePasswordLogin} className="mt-6 border-t border-slate-200 pt-5">
+          <label htmlFor="admin-password" className="admin-label">
+            또는 관리자 비밀번호
           </label>
           <input
             id="admin-password"
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            autoComplete="current-password"
-            autoFocus
-            required
+            autoComplete="off"
             className="admin-input"
-            placeholder="비밀번호를 입력하세요"
+            placeholder="예전 방식"
           />
-
-          {error ? (
-            <p
-              role="alert"
-              className="mt-3 rounded-md bg-red-50 px-3 py-2 text-[15px] leading-relaxed text-red-700"
-            >
-              {error}
-            </p>
-          ) : null}
-
-          <button type="submit" disabled={pending} className="admin-btn-primary mt-5 w-full">
-            {pending ? '확인 중…' : '로그인'}
+          <button
+            type="submit"
+            disabled={pending || !password}
+            className="admin-btn mt-3 w-full"
+          >
+            {pending ? '확인 중…' : '비밀번호로 로그인'}
           </button>
         </form>
+
+        {error ? (
+          <p
+            role="alert"
+            className="mt-4 rounded-md bg-red-50 px-3 py-2 text-[15px] leading-relaxed text-red-700"
+          >
+            {error}
+          </p>
+        ) : null}
 
         <p className="mt-5 border-t border-slate-200 pt-4 text-center text-[14px] leading-relaxed text-slate-500">
           한 번 로그인하면 7일 동안 유지됩니다.

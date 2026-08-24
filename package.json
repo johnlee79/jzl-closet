@@ -8,7 +8,8 @@
     "start": "next start",
     "check:schema": "node scripts/check-schema.mjs",
     "check:origin": "node scripts/check-origin.mjs",
-    "check:token": "node --conditions=react-server --no-warnings scripts/check-order-token.mjs"
+    "check:token": "node --conditions=react-server --no-warnings scripts/check-order-token.mjs",
+    "check:guard": "node scripts/check-admin-guard.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1109.0",

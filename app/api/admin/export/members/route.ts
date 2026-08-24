@@ -1,6 +1,5 @@
-import { cookies } from 'next/headers';
 import { NextResponse, type NextRequest } from 'next/server';
-import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import { isAdmin } from '@/lib/admin-guard';
 import { getMembers } from '@/lib/profiles';
 
 /**
@@ -65,7 +64,7 @@ function kstEnd(day: string): string {
 }
 
 export async function GET(request: NextRequest) {
-  if (!(await verifySessionToken(cookies().get(ADMIN_COOKIE)?.value))) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
   }
 

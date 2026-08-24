@@ -1,7 +1,6 @@
 import { PutObjectCommand } from '@aws-sdk/client-s3';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import { isAdmin } from '@/lib/admin-guard';
 import { normalizeBrandLogo, LOGO_SCALE_MAX, LOGO_SCALE_MIN } from '@/lib/brand-logo';
 import { requireR2, toPublicUrl } from '@/lib/r2';
 import { slugify } from '@/lib/product-utils';
@@ -34,10 +33,6 @@ export const dynamic = 'force-dynamic';
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED = new Set(['image/png', 'image/webp', 'image/jpeg', 'image/jpg', 'image/gif']);
 
-async function requireAdmin(): Promise<boolean> {
-  return verifySessionToken(cookies().get(ADMIN_COOKIE)?.value);
-}
-
 function extOf(nameOrUrl: string): string {
   const m = /\.([a-zA-Z0-9]+)(?:\?|$)/.exec(nameOrUrl);
   const ext = m ? m[1].toLowerCase() : '';
@@ -53,7 +48,7 @@ const CONTENT_TYPE: Record<string, string> = {
 };
 
 export async function POST(request: Request) {
-  if (!(await requireAdmin())) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: '관리자 로그인이 필요합니다.' }, { status: 401 });
   }
 

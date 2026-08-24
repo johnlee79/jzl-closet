@@ -1,8 +1,7 @@
 'use server';
 
-import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import { isAdmin } from '@/lib/admin-guard';
 import { canEditAddress, isOrderStatus } from '@/lib/order-status';
 import {
   bulkUpdateStatus,
@@ -37,10 +36,6 @@ export type ActionResult<T = undefined> =
   | { ok: true; data: T }
   | { ok: false; error: string };
 
-async function assertAdmin(): Promise<boolean> {
-  return verifySessionToken(cookies().get(ADMIN_COOKIE)?.value);
-}
-
 function fail(error: unknown, fallback: string): { ok: false; error: string } {
   const message = error instanceof Error ? error.message : fallback;
   console.error('[admin/orders]', message);
@@ -61,7 +56,7 @@ export async function updateStatusAction(
   status: string,
   memo = ''
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   if (!isOrderStatus(status)) return { ok: false, error: '알 수 없는 상태입니다.' };
 
   try {
@@ -79,7 +74,7 @@ export async function bulkStatusAction(
   status: string,
   memo = ''
 ): Promise<ActionResult<{ done: number; failed: number; skipped: string[] }>> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   if (!isOrderStatus(status)) return { ok: false, error: '알 수 없는 상태입니다.' };
   if (ids.length === 0) return { ok: false, error: '선택한 주문이 없습니다.' };
 
@@ -99,7 +94,7 @@ export async function setTrackingAction(
   courier: string,
   trackingNo: string
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   if (trackingNo.trim() && !courier) {
     return { ok: false, error: '택배사를 선택해 주세요.' };
   }
@@ -123,7 +118,7 @@ export async function setTrackingAction(
 export async function previewBulkTrackingAction(
   text: string
 ): Promise<ActionResult<TrackingMatchRow[]>> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   if (!text.trim()) return { ok: false, error: '붙여넣을 내용이 없습니다.' };
 
   const parsed = parseTrackingText(text);
@@ -191,7 +186,7 @@ export async function previewBulkTrackingAction(
 export async function applyBulkTrackingAction(
   rows: { orderId: string; courierCode: string; trackingNo: string }[]
 ): Promise<ActionResult<{ done: number; failed: number; errors: string[] }>> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   if (rows.length === 0) return { ok: false, error: '등록할 건이 없습니다.' };
 
   let done = 0;
@@ -232,7 +227,7 @@ export async function updateAddressAction(
     deliveryMemo: string;
   }
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   if (!patch.receiverName.trim() || !patch.receiverPhone.trim() || !patch.address1.trim()) {
     return { ok: false, error: '받는 분·연락처·주소는 비울 수 없습니다.' };
@@ -255,7 +250,7 @@ export async function updateAddressAction(
 }
 
 export async function setMemoAction(id: string, memo: string): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     await setAdminMemo(id, memo);
@@ -278,7 +273,7 @@ export async function setAutoCancelExcludedAction(
   id: string,
   excluded: boolean
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     await setAutoCancelExcluded(id, excluded);
@@ -305,7 +300,7 @@ export async function acceptCancelAction(
   id: string,
   memo: string
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     const order = await requestOrderCancel(id, memo);
@@ -332,7 +327,7 @@ export async function completeCancelAction(
   id: string,
   memo: string
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     await completeOrderCancel(id, memo);
@@ -352,7 +347,7 @@ export async function setCashReceiptIssuedAction(
   id: string,
   issued: boolean
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     await setCashReceiptIssued(id, issued);
@@ -373,7 +368,7 @@ export async function cancelItemAction(
   orderId: string,
   itemId: string
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     await cancelOrderItem(orderId, itemId);
@@ -407,7 +402,7 @@ export async function confirmPaymentAction(
   id: string,
   decision: 'paid' | 'failed'
 ): Promise<ActionResult<{ shortages: ShortageLine[] }>> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     const { order, shortages } = await confirmUncertainPayment(id, decision);
@@ -481,7 +476,7 @@ export type CardSweepSummary = {
 };
 
 export async function runCardSweepNowAction(): Promise<ActionResult<CardSweepSummary>> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     const result = await runCardSweep(true);

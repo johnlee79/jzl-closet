@@ -1,8 +1,7 @@
 'use server';
 
-import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { ADMIN_COOKIE, verifySessionToken } from '@/lib/admin-auth';
+import { isAdmin } from '@/lib/admin-guard';
 import { createProduct, getProductBySlug } from '@/lib/products';
 import { splitOriginAndManufacturer } from '@/lib/origin';
 import { slugify } from '@/lib/product-utils';
@@ -27,10 +26,6 @@ export type ActionResult<T = undefined> =
   | { ok: true; data: T }
   | { ok: false; error: string };
 
-async function assertAdmin(): Promise<boolean> {
-  return verifySessionToken(cookies().get(ADMIN_COOKIE)?.value);
-}
-
 function fail(error: unknown, fallback: string): { ok: false; error: string } {
   const message = error instanceof Error ? error.message : fallback;
   console.error('[admin/import]', message);
@@ -42,7 +37,7 @@ function fail(error: unknown, fallback: string): { ok: false; error: string } {
 export async function fetchSellstarAction(
   id: number
 ): Promise<ActionResult<SellstarProduct>> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     return { ok: true, data: await fetchSellstarProduct(id) };
@@ -93,7 +88,7 @@ async function uniqueSlug(base: string): Promise<string> {
 export async function importProductAction(
   payload: ImportPayload
 ): Promise<ActionResult<{ id: string; slug: string }>> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   if (!payload.name.trim()) return { ok: false, error: '상품명을 입력해 주세요.' };
   if (payload.price <= 0) return { ok: false, error: 'JZL 판매가를 입력해 주세요.' };
@@ -160,7 +155,7 @@ export async function importProductAction(
 export async function saveImportSettingsAction(
   input: ImportSettings
 ): Promise<ActionResult> {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     await writeSetting(IMPORT_KEY, normalizeImport(input));
@@ -176,7 +171,7 @@ export async function saveImportSettingsAction(
 export async function loadImportSettingsAction(): Promise<
   ActionResult<ImportSettings>
 > {
-  if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   try {
     return { ok: true, data: await getImportSettings() };
   } catch (error) {
