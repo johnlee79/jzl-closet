@@ -78,13 +78,34 @@ function alreadySignedUpMessage(provider?: AuthProvider): string {
   return '이미 가입된 이메일입니다. 로그인해 주세요.';
 }
 
+/**
+ * 탈퇴한 계정의 이메일로 다시 들어오려 할 때 하는 안내.
+ *
+ * ★★ 이 이메일로는 정말로 아무것도 할 수 없습니다.
+ *   로그인 — 탈퇴 상태라 막힙니다
+ *   재가입 — 인증 계정이 남아 있어 "이미 가입된 이메일" 로 막힙니다
+ *   완전한 막다른 길입니다.
+ *
+ * ★★ 예전에는 두 곳 모두 되지 않는 것을 권했습니다.
+ *   로그인 화면 — "새로 가입해 주시거나" (같은 이메일로는 가입이 안 됩니다)
+ *   가입 화면   — "로그인해 주세요"     (탈퇴 계정은 로그인이 안 됩니다)
+ *   손님은 두 화면을 오가며 같은 자리를 맴돌게 됩니다.
+ *
+ * ★ 실제로 되는 길은 둘뿐이라 그 둘만 적습니다.
+ *   ① 다른 이메일로 새로 가입
+ *   ② 고객센터에 문의 — 관리자가 회원 상태를 되돌리면 예전 계정을 다시 씁니다
+ *      (관리자 > 회원 관리 > 회원 상세에서 상태를 '정상' 으로 바꾸면 됩니다)
+ */
+const WITHDRAWN_ACCOUNT_MESSAGE =
+  '탈퇴하신 계정의 이메일입니다. 같은 이메일로는 다시 가입하실 수 없습니다. 다른 이메일로 새로 가입하시거나, 이 이메일을 계속 쓰고 싶으시면 고객센터로 문의해 주세요.';
+
 /* ------------------------------------------------------------------
  * 이메일 중복 확인
  * ------------------------------------------------------------------ */
 
 export async function checkEmailAction(
   email: string
-): Promise<ActionResult<{ available: boolean }>> {
+): Promise<ActionResult<{ available: boolean; withdrawn: boolean }>> {
   const problem = checkEmail(email);
   if (problem) return { ok: false, error: problem };
 
@@ -99,8 +120,21 @@ export async function checkEmailAction(
       중복확인은 "쓸 수 있는 이메일" 이라고 알려 주는 자리입니다.
       여기서 쓸 수 있다고 해 놓고 가입 버튼에서 막으면 손님이 두 번 헛걸음합니다.
   */
-  const taken = (await authAccountByEmail(email)) !== null || (await emailTaken(email));
-  return { ok: true, data: { available: !taken } };
+  const account = await authAccountByEmail(email);
+  const taken = account !== null || (await emailTaken(email));
+
+  /*
+   * ★ 탈퇴한 계정이면 따로 알려 줍니다.
+   *   "이미 가입된 이메일입니다 · 로그인하기" 로 보내면 로그인도 막혀 있어
+   *   손님이 두 화면을 오가며 맴돕니다. 가입 버튼을 눌렀을 때와 같은 안내를 합니다.
+   */
+  let withdrawn = false;
+  if (account) {
+    const previous = await getProfile(account.id);
+    withdrawn = previous?.status === 'withdrawn';
+  }
+
+  return { ok: true, data: { available: !taken, withdrawn } };
 }
 
 /* ------------------------------------------------------------------
@@ -205,6 +239,16 @@ export async function signupAction(
   */
   const existing = await authAccountByEmail(email);
   if (existing || (await emailTaken(email))) {
+    /*
+     * ★ 탈퇴한 계정의 이메일이면 "로그인해 주세요" 가 막다른 길입니다.
+     *   그 계정은 로그인도 막혀 있습니다. 되는 길만 알려 줍니다.
+     */
+    if (existing) {
+      const previous = await getProfile(existing.id);
+      if (previous?.status === 'withdrawn') {
+        return { ok: false, error: WITHDRAWN_ACCOUNT_MESSAGE };
+      }
+    }
     return { ok: false, error: alreadySignedUpMessage(existing?.provider) };
   }
 
@@ -420,10 +464,11 @@ export async function loginAction(
   const profile = await getProfile(data.user.id);
   if (profile?.status === 'withdrawn') {
     await supabase.auth.signOut();
-    return {
-      ok: false,
-      error: '탈퇴한 계정입니다. 새로 가입해 주시거나 고객센터로 문의해 주세요.',
-    };
+    /*
+     * ★ 예전에는 "새로 가입해 주시거나" 라고 했습니다.
+     *   같은 이메일로는 가입이 안 됩니다. 되지 않는 것을 권하고 있었습니다.
+     */
+    return { ok: false, error: WITHDRAWN_ACCOUNT_MESSAGE };
   }
   if (profile?.status === 'inactive') {
     await supabase.auth.signOut();

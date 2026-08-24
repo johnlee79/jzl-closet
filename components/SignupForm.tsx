@@ -58,7 +58,7 @@ export default function SignupForm() {
     referralCode: '',
   });
   const [error, setError] = useState('');
-  const [emailState, setEmailState] = useState<'idle' | 'ok' | 'taken'>('idle');
+  const [emailState, setEmailState] = useState<'idle' | 'ok' | 'taken' | 'withdrawn'>('idle');
 
   /*
    * 추천 링크로 들어왔으면 칸을 미리 채워 둡니다.
@@ -116,7 +116,10 @@ export default function SignupForm() {
         setEmailState('idle');
         return;
       }
-      setEmailState(result.data.available ? 'ok' : 'taken');
+      /* 탈퇴한 계정이면 로그인으로 보내면 안 됩니다. 그쪽도 막혀 있습니다. */
+      setEmailState(
+        result.data.available ? 'ok' : result.data.withdrawn ? 'withdrawn' : 'taken'
+      );
     });
   };
 
@@ -208,6 +211,20 @@ export default function SignupForm() {
                 <Link href="/login" className="link-wine">
                   로그인하기
                 </Link>
+              </p>
+            ) : null}
+            {/*
+              ★ 탈퇴한 계정은 로그인으로 보내면 안 됩니다. 그쪽도 막혀 있습니다.
+                같은 이메일로는 가입도 안 되므로, 실제로 되는 길만 적습니다.
+            */}
+            {emailState === 'withdrawn' ? (
+              <p className="mt-2 text-[14px] leading-relaxed text-wine">
+                탈퇴하신 계정의 이메일입니다. 같은 이메일로는 다시 가입하실 수 없습니다.
+                다른 이메일로 가입하시거나{' '}
+                <Link href="/inquiry/new" className="link-wine">
+                  고객센터로 문의
+                </Link>
+                해 주세요.
               </p>
             ) : null}
           </div>
