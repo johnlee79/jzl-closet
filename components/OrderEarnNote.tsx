@@ -3,7 +3,7 @@
 import { useSite } from '@/components/SiteProvider';
 import { isEarnPending } from '@/lib/order-status';
 import { formatPrice } from '@/lib/product-utils';
-import { expectedPurchasePoints } from '@/lib/site-config';
+import { EARN_PAYOUT_NOTE, expectedPurchasePoints } from '@/lib/site-config';
 import type { Order } from '@/lib/types';
 
 /**
@@ -52,7 +52,7 @@ export default function OrderEarnNote({
       <strong className="whitespace-nowrap font-semibold">
         {formatPrice(amount)}P
       </strong>
-      <span className="mt-0.5 block text-[13px] text-muted">(배송완료 후 지급)</span>
+      <span className="mt-0.5 block text-[13px] text-muted">{EARN_PAYOUT_NOTE}</span>
     </p>
   );
 }

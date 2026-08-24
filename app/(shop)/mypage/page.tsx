@@ -85,7 +85,18 @@ export default async function MypageHomePage() {
           주문 요약
         </h2>
 
-        <ul className="mt-6 grid grid-cols-3 gap-3">
+        {/*
+          ★★ 좁은 화면에서는 세로로 쌓고 이름과 숫자를 좌우로 놓습니다.
+            예전에는 화면 크기와 상관없이 늘 세 칸이었습니다.
+            320px 기기에서 한 칸이 85px 인데 안쪽 여백이 40px 이라
+            글자가 쓸 수 있는 폭이 45px 뿐이었습니다.
+            "결제 확인 중" 이 석 줄로 접혔습니다. (실제로 재 본 값입니다)
+          ★ 여백을 줄이는 것으로는 못 풉니다. 여백을 0 으로 해도 85px 인데
+            "결제 확인 중" 은 14px 글자로 84px 입니다. 칸 자체가 좁습니다.
+          ★ sm(640px) 부터는 예전 모양 그대로 세 칸입니다.
+            그 폭에서는 한 칸이 190px 이라 넉넉합니다.
+        */}
+        <ul className="mt-6 flex flex-col gap-2 sm:grid sm:grid-cols-3 sm:gap-3">
           {HIGHLIGHT.map((key) => {
             const tab = MYPAGE_ORDER_TABS.find((entry) => entry.key === key);
             if (!tab) return null;
@@ -98,10 +109,12 @@ export default async function MypageHomePage() {
               <li key={tab.key}>
                 <Link
                   href={`/mypage/orders?status=${tab.key}`}
-                  className="block border border-stone p-5 transition-colors hover:border-ink"
+                  className="flex items-center justify-between gap-3 border border-stone px-5 py-4 transition-colors hover:border-ink sm:flex-col sm:items-start sm:justify-start sm:p-5"
                 >
-                  <span className="text-[14px] text-muted">{tab.label}</span>
-                  <span className="mt-2 block text-[28px] font-semibold tabular-nums text-ink">
+                  <span className="whitespace-nowrap text-[15px] text-muted sm:text-[14px]">
+                    {tab.label}
+                  </span>
+                  <span className="text-[24px] font-semibold leading-none tabular-nums text-ink sm:mt-2 sm:text-[28px]">
                     {count}
                   </span>
                 </Link>

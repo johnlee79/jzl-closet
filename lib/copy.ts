@@ -41,6 +41,30 @@ export function shippingTokens(shipping: {
   };
 }
 
+/**
+ * 결제·주문 설정에서 오는 치환자.
+ *
+ * ★★ 입금 기한을 문구에 숫자로 적지 않기 위해서입니다.
+ *   예전에는 "주문일로부터 24시간 안에…" 라고 글자로 박혀 있었습니다.
+ *   설정을 48시간으로 바꾸면 장바구니는 24시간, 주문 완료 화면은 48시간이라고
+ *   말하고, 실제 자동취소는 48시간에 걸렸습니다. 세 곳이 서로 다른 말을 했습니다.
+ *
+ * ★★ autoCancelNotice 는 자동취소를 꺼 두면 통째로 사라집니다.
+ *   취소되지 않는데 "자동으로 취소됩니다" 라고 겁을 주면 안 됩니다.
+ *   숫자만 바꾸는 depositHours 로는 이 경우를 다룰 수 없어 문장째로 둡니다.
+ */
+export function paymentTokens(payment: {
+  depositHours: number;
+  autoCancelEnabled: boolean;
+}): Record<string, string> {
+  return {
+    depositHours: String(payment.depositHours),
+    autoCancelNotice: payment.autoCancelEnabled
+      ? `주문일로부터 ${payment.depositHours}시간 안에 입금이 확인되지 않으면 주문이 자동으로 취소됩니다.`
+      : '',
+  };
+}
+
 /** 메타데이터·JSON-LD 에 쓸 평문. 태그를 지우고 공백을 정리합니다. */
 export function copyToPlainText(section: CopySection, store: StoreSettings): string {
   return resolveCopy(section, store)

@@ -3,9 +3,10 @@ import Link from 'next/link';
 import CartPanel from '@/components/CartPanel';
 import CopyBlocks from '@/components/CopyBlocks';
 import KakaoChatButton from '@/components/KakaoChatButton';
-import { resolveCopy } from '@/lib/copy';
+import { paymentTokens, resolveCopy } from '@/lib/copy';
 import {
   getCachedCopy,
+  getCachedPayment,
   getCachedStore,
   getOgImage,
 } from '@/lib/settings';
@@ -44,10 +45,20 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function OrderPage() {
-  const [copy, store] = await Promise.all([getCachedCopy(), getCachedStore()]);
+  /*
+   * ★ 입금 기한과 자동취소 안내는 결제 설정에서 읽어 넣습니다.
+   *   문구에 숫자를 박아 두면 설정을 바꿔도 따라가지 않습니다.
+   */
+  const [copy, store, payment] = await Promise.all([
+    getCachedCopy(),
+    getCachedStore(),
+    getCachedPayment(),
+  ]);
+  const tokens = paymentTokens(payment);
+
   const head = resolveCopy(copy.orderHero, store)[0];
   const steps = resolveCopy(copy.orderSteps, store);
-  const notes = resolveCopy(copy.order, store);
+  const notes = resolveCopy(copy.order, store, tokens);
 
   return (
     <div className="shell py-14 md:py-20">
@@ -77,7 +88,7 @@ export default async function OrderPage() {
       <section id="cart-box" aria-label="장바구니" className="mt-12 scroll-mt-24">
         <CartPanel
           emptyNote={resolveCopy(copy.cartEmpty, store)[0]}
-          payNote={resolveCopy(copy.cartPayment, store)[0]}
+          payNote={resolveCopy(copy.cartPayment, store, tokens)[0]}
           copyNote={resolveCopy(copy.cartCopyNote, store)[0]}
         />
       </section>

@@ -13,7 +13,7 @@ import { useCart } from '@/lib/cart';
 import { useCartLive } from '@/lib/cart-live';
 import type { ResolvedBlock } from '@/lib/copy';
 import { formatPrice } from '@/lib/product-utils';
-import { expectedPurchasePoints } from '@/lib/site-config';
+import { EARN_PAYOUT_NOTE, expectedPurchasePoints } from '@/lib/site-config';
 
 /**
  * ★ 문구는 서버(/order 페이지)가 읽어 넘겨 줍니다. (3-L)
@@ -337,7 +337,7 @@ export default function CartPanel({
               </strong>{' '}
               적립 예정
               <span className="mt-0.5 block text-[13px] text-muted">
-                (배송완료 시점에 지급)
+                {EARN_PAYOUT_NOTE}
               </span>
             </p>
           ) : null}

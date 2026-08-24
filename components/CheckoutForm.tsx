@@ -22,6 +22,7 @@ import { formatPhone } from '@/lib/format';
 import { formatPrice } from '@/lib/product-utils';
 import {
   acceptsCashReceipt,
+  EARN_PAYOUT_NOTE,
   expectedPurchasePoints,
   maxUsablePoints,
   type PaymentMethod,
@@ -1068,7 +1069,7 @@ export default function CheckoutForm({
                   </strong>{' '}
                   적립 예정
                   <span className="mt-0.5 block text-[13px] text-muted">
-                    (배송완료 시점에 지급)
+                    {EARN_PAYOUT_NOTE}
                   </span>
                 </p>
               ) : null}

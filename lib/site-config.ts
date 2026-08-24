@@ -658,6 +658,18 @@ export const DEFAULT_POINTS: PointSettings = {
  * 구매 적립 예상 금액. 원 단위 아래는 버립니다.
  * ★ DB 조회 없이 화면에서 그대로 계산합니다.
  */
+/**
+ * 적립이 언제 나가는지 알려 주는 한 줄.
+ *
+ * ★★ 한 곳에서만 씁니다. 쓰는 화면은 다섯입니다 —
+ *   장바구니 · 주문서 · 주문 완료 · 주문 조회 · 마이페이지 주문 내역.
+ *   예전에는 앞의 둘이 "(배송완료 시점에 지급)", 뒤의 셋이 "(배송완료 후 지급)"
+ *   이었습니다. 같은 것을 두 가지로 말하고 있었습니다.
+ * ★ 실제 지급 시점과 맞아야 합니다. lib/points.ts 의 earnPurchasePoints 는
+ *   배송완료·구매확정에서 나갑니다. 그쪽을 바꾸면 이 문구도 바꾸세요.
+ */
+export const EARN_PAYOUT_NOTE = '(배송완료 후 지급)';
+
 export function expectedPurchasePoints(
   amount: number,
   settings: Pick<PointSettings, 'purchase'>
@@ -734,7 +746,17 @@ export type SalesSettings = {
 export const DEFAULT_SALES: SalesSettings = {
   shippingNote: '',
   deliveryPeriod: [
-    '결제(입금) 확인 후 2~5일 이내에 발송됩니다.',
+    /*
+     * ★★ "1~3영업일" 로 맞춰 두었습니다. 다른 데서 말하는 것과 같아야 합니다.
+     *   예전에는 여기만 "2~5일" 이었습니다. 손님이 상품 상세의 [판매정보] 탭에서
+     *   2~5일을 보고, 배송·교환·반품 안내에서 1~3영업일을 봤습니다.
+     *   늦어졌을 때 어느 쪽으로도 항의할 수 있는 상태였습니다.
+     * ★ 여기를 고치실 때는 아래 세 곳도 함께 봐 주세요. 같은 말을 합니다.
+     *     DEFAULT_SHIPPING.leadTime          (상품 상세 · 관리자 배송 설정)
+     *     lib/default-copy.ts 의 guide       (배송·교환·반품 안내 페이지)
+     *     lib/default-copy.ts 의 terms 제10조 (이용약관 — 법에서 정한 표현)
+     */
+    '결제(입금) 확인 후 1~3영업일 이내에 발송됩니다.',
     '주말·공휴일은 발송이 되지 않으며, 연휴나 기상 상황에 따라 하루이틀 늦어질 수 있습니다.',
   ].join('\n'),
   exchangePolicy: [
@@ -1139,6 +1161,15 @@ export const STORE_TOKENS: { token: string; label: string }[] = [
   { token: '{{regNumber}}', label: '사업자등록번호' },
   { token: '{{mailOrder}}', label: '통신판매업신고번호' },
   { token: '{{address}}', label: '주소' },
+  /*
+   * ★ 아래 넷은 스토어 정보가 아니라 다른 설정에서 옵니다.
+   *   쓸 수 있는 화면이 정해져 있어 라벨에 그것을 적어 둡니다.
+   *   다른 화면에 적으면 치환되지 않고 글자 그대로 남습니다.
+   */
+  { token: '{{autoCancelNotice}}', label: '입금 자동취소 안내 — 장바구니·주문 문구에서만' },
+  { token: '{{depositHours}}', label: '입금 기한(시간) — 장바구니·주문 문구에서만' },
+  { token: '{{returnFee}}', label: '반품 배송비 — 이용약관에서만' },
+  { token: '{{exchangeFee}}', label: '교환 배송비 — 이용약관에서만' },
 ];
 
 /**
