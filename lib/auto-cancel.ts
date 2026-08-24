@@ -1,8 +1,13 @@
 import 'server-only';
 
-import { autoCancelUnpaidOrders, type AutoCancelResult } from '@/lib/orders';
-import { getPaymentSettings } from '@/lib/settings';
-import { notifyAutoCancel } from '@/lib/telegram';
+import {
+  autoCancelUnpaidOrders,
+  autoCompleteDeliveredOrders,
+  type AutoCancelResult,
+  type AutoDeliveredResult,
+} from '@/lib/orders';
+import { getPaymentSettings, getShippingSettings } from '@/lib/settings';
+import { notifyAutoCancel, notifyAutoDelivered } from '@/lib/telegram';
 
 /**
  * 입금대기 자동취소 실행기.
@@ -61,4 +66,53 @@ export async function sweepAutoCancelQuietly(): Promise<void> {
   } catch (error) {
     console.warn('[auto-cancel] 정리 실패:', error);
   }
+}
+
+/**
+ * ============================================================
+ * 배송완료 자동 전환 — 같은 크론에 얹습니다
+ * ============================================================
+ *
+ * ★★ 크론을 새로 만들지 않습니다.
+ *   이미 하루 한 번 도는 /api/cron/auto-cancel 이 부릅니다.
+ *   배송완료 전환은 하루에 한 번이면 충분합니다. 몇 시간 늦게 넘어가도
+ *   손해가 없고, 크론을 늘리면 관리할 것만 늘어납니다.
+ *
+ * ★★ 미입금 자동취소와 완전히 따로 돕니다.
+ *   한쪽이 실패해도 다른 쪽은 그대로 돕니다. 설정 스위치도 따로입니다.
+ *   (자동취소는 결제 설정, 이쪽은 배송 설정)
+ *
+ * ★ 관리자 화면에서는 부르지 않습니다.
+ *   자동취소는 관리자가 들어올 때도 정리하지만, 이쪽은 그럴 이유가 없습니다.
+ *   주문 목록을 열었다는 이유로 포인트가 나가면 언제 나갔는지 알기 어렵습니다.
+ *   나가는 시점이 하루 한 번으로 정해져 있는 편이 추적하기 좋습니다.
+ */
+export type DeliveredSweepResult = AutoDeliveredResult & { enabled: boolean };
+
+export async function runAutoDelivered(): Promise<DeliveredSweepResult> {
+  const shipping = await getShippingSettings();
+
+  // 0 이면 꺼진 것입니다. 사람이 직접 배송완료로 바꿉니다.
+  if (shipping.autoDeliveredDays <= 0) {
+    return { delivered: [], unknownShippedAt: 0, enabled: false };
+  }
+
+  const result = await autoCompleteDeliveredOrders(shipping.autoDeliveredDays);
+
+  if (result.delivered.length > 0) {
+    try {
+      await notifyAutoDelivered(result.delivered, shipping.autoDeliveredDays);
+    } catch (error) {
+      // 알림 실패가 전환을 되돌리지는 않습니다. 이미 처리는 끝났습니다.
+      console.warn('[auto-delivered] 텔레그램 알림 실패:', error);
+    }
+  }
+
+  if (result.unknownShippedAt > 0) {
+    console.warn(
+      `[auto-delivered] 배송중이 된 시각을 몰라 건드리지 않은 주문 ${result.unknownShippedAt}건`
+    );
+  }
+
+  return { ...result, enabled: true };
 }

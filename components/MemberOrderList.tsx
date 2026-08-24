@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import OrderEarnNote from '@/components/OrderEarnNote';
 import OrderProgress from '@/components/OrderProgress';
+import ReceiptConfirm from '@/components/ReceiptConfirm';
 import { claimOrderAction } from '@/app/(shop)/mypage/actions';
 import { courierName, trackingUrl } from '@/lib/couriers';
 import { formatDate } from '@/lib/format';
@@ -187,6 +188,13 @@ export default function MemberOrderList({
                 <OrderProgress status={order.status} compact className="mt-5 max-w-[420px]" />
 
                 <OrderEarnNote order={order} className="mt-4" />
+
+                {/*
+                  받으셨나요? — 배송중일 때만 나옵니다.
+                  ★ 목록에도 두는 이유: 상세까지 들어가야 누를 수 있으면 대부분 안 누릅니다.
+                    포인트를 앞당겨 받을 수 있다는 사실 자체를 여기서 알려야 합니다.
+                */}
+                <ReceiptConfirm order={order} className="mt-4" />
 
                 <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
                   <span className="text-[16px] font-medium text-ink">

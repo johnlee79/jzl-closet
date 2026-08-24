@@ -138,6 +138,7 @@ type OrderRow = {
   pg_comm_con_id?: string | null;
   stock_released_at?: string | null;
   sweep_notified_at?: string | null;
+  points_earned?: number | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -251,6 +252,7 @@ function rowToOrder(
     pgCommConId: row.pg_comm_con_id ?? '',
     stockReleasedAt: row.stock_released_at ?? null,
     sweepNotifiedAt: row.sweep_notified_at ?? null,
+    pointsEarned: row.points_earned ?? 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     items,
@@ -698,6 +700,22 @@ type PricedLine = {
   lineTotal: number;
   thumbnailUrl: string;
 };
+
+/**
+ * 송장 없이 배송중으로 바꾸려 했을 때.
+ *
+ * ★ 따로 만든 이유 — 일괄 변경에서 이 건만 골라내 빼기 위해서입니다.
+ *   메시지 문자열을 비교하는 방식은 문구를 고치는 순간 조용히 깨집니다.
+ */
+export class TrackingRequiredError extends Error {
+  readonly orderNo: string;
+
+  constructor(orderNo: string) {
+    super('송장번호를 먼저 입력해 주세요. 송장을 넣으면 배송중으로 자동으로 바뀝니다.');
+    this.name = 'TrackingRequiredError';
+    this.orderNo = orderNo;
+  }
+}
 
 export class CheckoutError extends Error {
   /** 화면에 목록으로 보여 줄 문제 상품들 */
@@ -1573,6 +1591,51 @@ export async function addHistory(
 }
 
 /**
+ * 주문이 배송중으로 바뀐 시각. 여러 건을 한 번에 읽습니다.
+ *
+ * ★★ 왜 이력에서 읽는가 — 컬럼을 새로 만들지 않아도 됩니다.
+ *   상태를 바꿀 때마다 order_status_history 에 한 줄씩 남기고 있습니다.
+ *   실제 데이터를 확인해 보니 지금 배송중인 주문도, 이미 배송완료된 주문도
+ *   전부 '배송중' 기록을 갖고 있었습니다. 그래서 SQL 없이 갑니다.
+ *
+ * ★★ 기록이 없으면 그 주문은 아예 빼 버립니다. 주문일로 대신하지 않습니다.
+ *   주문일을 기준으로 삼으면 오래된 주문이 배포하자마자 한꺼번에
+ *   배송완료로 넘어가면서 포인트가 우르르 나갑니다.
+ *   모르는 건 건드리지 않는 쪽이 안전합니다. 사람이 직접 바꾸면 됩니다.
+ *
+ * ★ 여러 번 배송중이 된 주문은 마지막 기록을 씁니다.
+ *   배송완료였다가 되돌린 경우, 되돌린 시점부터 다시 세는 것이 맞습니다.
+ */
+export async function shippedAtMap(
+  orderIds: string[]
+): Promise<Map<string, string>> {
+  const found = new Map<string, string>();
+  if (orderIds.length === 0) return found;
+
+  const supabase = requireSupabaseAdmin();
+  const { data, error } = await supabase
+    .from(HISTORY)
+    .select('order_id, created_at')
+    .in('order_id', orderIds)
+    .eq('to_status', 'shipping')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    // 이력 테이블이 없으면 자동 전환을 하지 않습니다. 조용히 빈 값을 돌려줍니다.
+    if (!isMissingTable(error.code)) {
+      console.warn('[orders] 배송중 시각을 읽지 못했습니다:', error.message);
+    }
+    return found;
+  }
+
+  // 오름차순이라 뒤에 오는 것이 최신입니다. 그대로 덮어씁니다.
+  for (const row of (data ?? []) as { order_id: string; created_at: string }[]) {
+    if (row.created_at) found.set(row.order_id, row.created_at);
+  }
+  return found;
+}
+
+/**
  * 상태 변경. 이력에 남기고, 취소·반품이면 재고를 되돌립니다.
  * 결제완료로 바꾸면 paid_at 을 채웁니다.
  */
@@ -1586,6 +1649,27 @@ export async function updateOrderStatus(
   if (!before) throw new Error('주문을 찾을 수 없습니다.');
   if (before.status === status && !memo) {
     return before;
+  }
+
+  /*
+   * ★★ 송장 없이 배송중으로 바꾸지 못하게 막습니다.
+   *
+   *   배송중이라고 해 놓고 조회할 송장이 없으면 손님은 바로 문의합니다.
+   *   "배송중이라는데 어디까지 왔나요" 에 답할 수가 없습니다.
+   *   송장을 넣으면 setTracking 이 알아서 배송중으로 바꿔 주므로,
+   *   관리자가 이 순서를 건너뛸 이유가 없습니다.
+   *
+   * ★★ 왜 화면이 아니라 여기서 막는가
+   *   상태를 바꾸는 길이 여럿입니다 — 주문 상세의 드롭다운, 목록의 일괄 변경,
+   *   앞으로 생길 다른 경로. 화면마다 막으면 하나씩 새어 나갑니다.
+   *   들어오는 문이 이 함수 하나이므로 여기를 잠급니다.
+   *
+   * ★ 되돌아오는 경우는 막지 않습니다.
+   *   배송완료였다가 문제가 생겨 배송중으로 되돌리는 일은 있을 수 있고,
+   *   그때는 이미 송장이 있습니다. 송장이 있으면 이 검사를 그냥 지나갑니다.
+   */
+  if (status === 'shipping' && !before.trackingNo.trim()) {
+    throw new TrackingRequiredError(before.orderNo);
   }
 
   const patch: Record<string, unknown> = { status };
@@ -1661,19 +1745,35 @@ export async function bulkUpdateStatus(
   ids: string[],
   status: OrderStatus,
   memo = ''
-): Promise<{ done: number; failed: number }> {
+): Promise<{ done: number; failed: number; skipped: string[] }> {
   let done = 0;
   let failed = 0;
+  /*
+   * ★★ 송장이 없어 배송중으로 못 넘긴 주문번호.
+   *
+   *   전체를 막지 않습니다. 20건을 골라 넘기는데 그중 하나가 송장이 없다고
+   *   전부 되돌리면, 관리자는 어느 건이 문제인지 모른 채 처음부터 다시
+   *   골라야 합니다. 여러 건을 한 번에 처리하려고 쓰는 자리라 그게 제일 답답합니다.
+   *
+   * ★ 대신 어느 주문이 왜 빠졌는지 반드시 돌려줍니다.
+   *   조용히 빼면 넘어간 줄 알고 지나갑니다. 그게 더 나쁩니다.
+   */
+  const skipped: string[] = [];
+
   for (const id of ids) {
     try {
       await updateOrderStatus(id, status, memo);
       done += 1;
     } catch (error) {
+      if (error instanceof TrackingRequiredError) {
+        skipped.push(error.orderNo);
+        continue;
+      }
       console.warn('[orders] 일괄 상태 변경 실패:', id, error);
       failed += 1;
     }
   }
-  return { done, failed };
+  return { done, failed, skipped };
 }
 
 /**
@@ -2965,4 +3065,132 @@ export async function confirmUncertainPayment(
   }
 
   return { order: (await getOrderById(id)) as Order, shortages: [] };
+}
+
+/**
+ * ============================================================
+ * 배송중인 주문을 배송완료로 자동 전환
+ * ============================================================
+ *
+ * ★★ 왜 필요한가
+ *   배송이 끝나도 아무도 상태를 바꿔 주지 않으면 주문은 영원히 배송중입니다.
+ *   구매 적립 포인트는 배송완료 시점에 나가므로, 그동안 손님은 포인트를
+ *   못 받고 후기도 쓸 수 없습니다. 사람 손을 기다리게 두면 안 됩니다.
+ *
+ * ★★ 넘기는 조건이 셋 다 맞아야 합니다.
+ *   1) 지금 배송중이고
+ *   2) 송장번호가 실제로 있고
+ *   3) 배송중이 된 지 정해진 일수가 지났을 것
+ *
+ *   특히 3) 의 기준은 주문일이 아니라 **배송중으로 바뀐 시각**입니다.
+ *   주문일로 세면 오래된 주문이 한꺼번에 넘어가면서 포인트가 우르르 나갑니다.
+ *
+ * ★★ 배송중이 된 시각을 모르는 주문은 건드리지 않습니다.
+ *   이력이 없는 옛 주문이 그렇습니다. 모르는 건 사람이 직접 처리하게 둡니다.
+ *
+ * ★ 포인트는 updateOrderStatus 안에서 나갑니다. 여기서 따로 주지 않습니다.
+ *   그쪽이 주문 행의 points_earned 를 선점한 뒤에 지급하므로,
+ *   손님이 같은 순간에 [수령 확인] 을 눌러도 한 번만 나갑니다.
+ *
+ * ★ 한 번에 처리하는 수를 제한합니다. 크론에 시간 제한이 있습니다.
+ *   남은 건은 다음 실행에서 처리됩니다. 급한 일이 아닙니다.
+ */
+export type AutoDeliveredResult = {
+  /** 배송완료로 넘긴 주문 */
+  delivered: Order[];
+  /** 배송중이 된 시각을 몰라 건드리지 않은 건수 */
+  unknownShippedAt: number;
+};
+
+export async function autoCompleteDeliveredOrders(
+  days: number,
+  limit = 50
+): Promise<AutoDeliveredResult> {
+  const empty: AutoDeliveredResult = { delivered: [], unknownShippedAt: 0 };
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return empty;
+  // 0 이거나 이상한 값이면 자동으로 넘기지 않습니다.
+  if (!Number.isFinite(days) || days < 1) return empty;
+
+  /*
+   * ★ 송장이 있는 배송중 주문만 뽑습니다.
+   *   빈 문자열로 저장된 경우가 있을 수 있어 null 과 '' 를 모두 걸러냅니다.
+   */
+  const { data, error } = await supabase
+    .from(ORDERS)
+    .select('id')
+    .eq('status', 'shipping')
+    .not('tracking_no', 'is', null)
+    .neq('tracking_no', '')
+    .order('created_at', { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    console.warn('[orders] 배송완료 자동 전환 대상을 찾지 못했습니다:', error.message);
+    return empty;
+  }
+  if (!data || data.length === 0) return empty;
+
+  const ids = (data as { id: string }[]).map((row) => row.id);
+  const shippedAt = await shippedAtMap(ids);
+
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+  const result: AutoDeliveredResult = { delivered: [], unknownShippedAt: 0 };
+
+  for (const id of ids) {
+    const at = shippedAt.get(id);
+    if (!at) {
+      // 언제 배송중이 됐는지 모릅니다. 그냥 둡니다.
+      result.unknownShippedAt += 1;
+      continue;
+    }
+
+    const time = new Date(at).getTime();
+    if (!Number.isFinite(time) || time > cutoff) continue;
+
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const order = await getOrderById(id);
+      // 읽는 사이에 사람이 먼저 바꿨을 수 있습니다.
+      if (!order || order.status !== 'shipping') continue;
+
+      // eslint-disable-next-line no-await-in-loop
+      const done = await updateOrderStatus(
+        id,
+        'delivered',
+        `[자동] 배송중 ${days}일 경과로 배송완료 처리`
+      );
+      result.delivered.push(done);
+    } catch (error) {
+      // 한 건이 실패해도 나머지는 계속합니다.
+      console.warn('[orders] 배송완료 자동 전환 실패:', id, error);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * 손님이 직접 누른 [수령 확인].
+ *
+ * ★★ 배송중일 때만 됩니다.
+ *   준비중인 주문을 받았다고 할 수는 없고, 이미 배송완료면 할 일이 없습니다.
+ *   조용히 넘어가지 않고 왜 안 되는지 말해 줍니다.
+ *
+ * ★ 포인트는 updateOrderStatus 안에서 한 번만 나갑니다.
+ *   자동 전환과 이 버튼이 같은 순간에 겹쳐도 먼저 선점한 쪽만 지급합니다.
+ */
+export async function confirmReceipt(orderId: string): Promise<Order> {
+  const before = await getOrderById(orderId);
+  if (!before) throw new Error('주문을 찾을 수 없습니다.');
+
+  if (before.status === 'delivered' || before.status === 'confirmed') {
+    return before;
+  }
+  if (before.status !== 'shipping') {
+    throw new Error('아직 배송중인 주문이 아닙니다.');
+  }
+
+  return updateOrderStatus(orderId, 'delivered', '손님이 수령을 확인했습니다.');
 }

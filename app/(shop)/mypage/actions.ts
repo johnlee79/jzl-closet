@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getActiveMember } from '@/lib/auth';
-import { claimOrder, getOrderOfUser, requestCancel } from '@/lib/orders';
+import { claimOrder, confirmReceipt, getOrderOfUser, requestCancel } from '@/lib/orders';
 import { canRequestCancel } from '@/lib/order-status';
 import { isSocialProvider, updateProfile, withdrawProfile } from '@/lib/profiles';
 import { getPaymentSettings } from '@/lib/settings';
@@ -131,6 +131,44 @@ export async function memberCancelRequestAction(
     }
   }
 
+  revalidatePath(`/mypage/orders/${order.id}`);
+  revalidatePath('/admin/orders');
+  return { ok: true, data: undefined };
+}
+
+/* ── 수령 확인 ────────────────────────────────────────────── */
+
+/**
+ * 손님이 [수령 확인] 을 눌렀습니다.
+ *
+ * ★★ 이 순간 구매 적립 포인트가 나갑니다.
+ *   그래서 본인 주문인지 서버에서 다시 확인합니다.
+ *   화면이 보낸 주문 id 를 그대로 믿으면 남의 주문을 배송완료로 만들 수 있습니다.
+ *
+ * ★ 포인트가 두 번 나가지 않습니다.
+ *   지급은 updateOrderStatus 안에서 일어나고, 그쪽이 주문 행의 points_earned 를
+ *   먼저 선점한 뒤에 지급합니다. 자동 전환(크론)과 이 버튼이 같은 순간에
+ *   겹쳐도 먼저 선점한 쪽만 통과합니다. 구매 적립에 쓰던 방식 그대로입니다.
+ *
+ * ★ 이미 배송완료면 오류로 만들지 않고 그냥 성공으로 둡니다.
+ *   두 번 눌렀거나, 누르는 사이에 크론이 먼저 처리한 경우입니다.
+ *   손님 입장에서는 원하던 결과가 이미 이뤄져 있습니다.
+ */
+export async function confirmReceiptAction(orderId: string): Promise<ActionResult> {
+  const member = await getActiveMember();
+  if (!member) return needLogin();
+
+  const order = await getOrderOfUser(member.user.id, orderId);
+  if (!order) return { ok: false, error: '주문을 찾을 수 없습니다.' };
+
+  try {
+    await confirmReceipt(order.id);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '처리하지 못했습니다.';
+    return { ok: false, error: message };
+  }
+
+  revalidatePath('/mypage/orders');
   revalidatePath(`/mypage/orders/${order.id}`);
   revalidatePath('/admin/orders');
   return { ok: true, data: undefined };

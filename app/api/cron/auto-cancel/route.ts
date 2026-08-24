@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { runAutoCancel } from '@/lib/auto-cancel';
+import { runAutoCancel, runAutoDelivered } from '@/lib/auto-cancel';
 
 /**
  * 입금대기 자동취소 — 정기 실행 입구.
@@ -55,6 +55,34 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await runAutoCancel(true);
+
+    /*
+     * ★★ 배송완료 자동 전환을 같은 실행에 얹습니다. 크론을 새로 만들지 않습니다.
+     *   하루 한 번이면 충분한 일이고, 크론을 늘리면 관리할 것만 늘어납니다.
+     *
+     * ★ 자동취소와 따로 감쌉니다. 한쪽이 실패해도 다른 쪽 결과는 살립니다.
+     *   전환이 실패했다고 이미 끝난 취소 결과까지 500 으로 날려 버리면
+     *   무엇이 처리됐는지 알 수 없게 됩니다.
+     */
+    let delivered: { count: number; orderNos: string[]; unknown: number; enabled: boolean } = {
+      count: 0,
+      orderNos: [],
+      unknown: 0,
+      enabled: false,
+    };
+    try {
+      const done = await runAutoDelivered();
+      delivered = {
+        count: done.delivered.length,
+        orderNos: done.delivered.map((order) => order.orderNo),
+        /** 배송중이 된 시각을 몰라 건드리지 않은 건수 */
+        unknown: done.unknownShippedAt,
+        enabled: done.enabled,
+      };
+    } catch (error) {
+      console.error('[cron/auto-cancel] 배송완료 자동 전환 실패:', error);
+    }
+
     return NextResponse.json(
       {
         ok: true,
@@ -62,6 +90,7 @@ export async function GET(request: NextRequest) {
         // 송장이 있거나 자동취소 제외로 남겨 둔 건수
         skipped: result.skipped,
         orderNos: result.cancelled.map((order) => order.orderNo),
+        delivered,
       },
       { headers: { 'Cache-Control': 'no-store' } }
     );

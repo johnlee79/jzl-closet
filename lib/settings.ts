@@ -372,6 +372,16 @@ export function normalizeShipping(value: unknown): ShippingSettings {
     leadTime: optionalText(raw.leadTime, DEFAULT_SHIPPING.leadTime),
     // 비워 둘 수 있는 항목입니다. 비면 배송비 설정으로 문구를 만듭니다.
     productLine: optionalText(raw.productLine, DEFAULT_SHIPPING.productLine),
+    /*
+     * ★ 너무 짧으면 아직 못 받은 손님의 주문이 배송완료로 넘어갑니다.
+     *   실수로 1 을 넣는 일을 막기 위해 최소 3일로 둡니다. 0 은 "끔" 이라 그대로 둡니다.
+     * ★ 위쪽도 막습니다. 90일이 넘으면 자동 전환의 뜻이 없습니다.
+     */
+    autoDeliveredDays: (() => {
+      const days = count(raw.autoDeliveredDays, DEFAULT_SHIPPING.autoDeliveredDays);
+      if (days <= 0) return 0;
+      return Math.min(90, Math.max(3, days));
+    })(),
   };
 }
 

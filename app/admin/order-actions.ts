@@ -78,7 +78,7 @@ export async function bulkStatusAction(
   ids: string[],
   status: string,
   memo = ''
-): Promise<ActionResult<{ done: number; failed: number }>> {
+): Promise<ActionResult<{ done: number; failed: number; skipped: string[] }>> {
   if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
   if (!isOrderStatus(status)) return { ok: false, error: '알 수 없는 상태입니다.' };
   if (ids.length === 0) return { ok: false, error: '선택한 주문이 없습니다.' };

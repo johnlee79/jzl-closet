@@ -191,6 +191,39 @@ export default function ShippingForm({ initial }: { initial: ShippingSettings })
           않습니다.
         </p>
 
+        {/* ── 배송완료 자동 전환 ─────────────────────────── */}
+        <div className="mt-4">
+          <label className="admin-label" htmlFor="ship-auto-delivered">
+            배송완료 자동 전환 (일)
+          </label>
+          <input
+            id="ship-auto-delivered"
+            type="number"
+            min={0}
+            step={1}
+            value={form.autoDeliveredDays}
+            onChange={(event) => set('autoDeliveredDays', number(event.target.value))}
+            className="admin-input tabular-nums md:max-w-[200px]"
+          />
+          {/*
+            ★★ 이 시점에 구매 적립 포인트가 나갑니다.
+              날짜를 줄이면 아직 못 받은 손님의 주문까지 배송완료가 되고,
+              포인트가 먼저 나갑니다. 되돌리려면 포인트 회수까지 해야 합니다.
+            ★ 기준은 주문일이 아니라 배송중으로 바뀐 시각입니다.
+            ★ 송장이 없는 주문은 자동으로 넘기지 않습니다.
+          */}
+          <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+            배송중이 된 지 이 일수가 지나면 자동으로 배송완료가 됩니다.{' '}
+            <strong>이때 구매 적립 포인트가 지급됩니다.</strong> 송장이 있는 주문만
+            넘어가고, 기준은 주문일이 아니라 배송중으로 바뀐 시각입니다. 0이면 자동
+            전환을 하지 않고 사람이 직접 바꿔야 합니다. (3~90일)
+          </p>
+          <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+            손님은 주문 내역에서 [수령 확인] 을 눌러 더 일찍 받을 수 있습니다. 이 일수는
+            그 안내 문구에도 그대로 나갑니다.
+          </p>
+        </div>
+
         <div className="mt-4 flex flex-col gap-3">
           <div>
             <label className="admin-label" htmlFor="ship-return">

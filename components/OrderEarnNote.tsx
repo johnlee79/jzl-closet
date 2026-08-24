@@ -35,6 +35,26 @@ export default function OrderEarnNote({
 
   // 비회원 주문에는 적립이 없습니다.
   if (!order.userId) return null;
+
+  /*
+   * ★★ 이미 지급이 끝난 주문은 "예정" 이 아니라 "적립되었습니다" 라고 말합니다.
+   *   예전에는 지급된 뒤에 이 자리가 통째로 사라졌습니다. 손님 입장에서는
+   *   기다리던 포인트가 들어왔는지 어디서도 확인할 수 없었습니다.
+   *
+   * ★ 금액은 다시 계산하지 않고 주문에 적힌 실제 지급액을 그대로 씁니다.
+   *   그 사이 적립률이 바뀌었으면 다시 계산한 값은 실제와 달라집니다.
+   */
+  if (order.pointsEarned > 0) {
+    return (
+      <p className={`text-[15px] leading-relaxed text-wine ${className}`}>
+        <strong className="whitespace-nowrap font-semibold">
+          {formatPrice(order.pointsEarned)}P
+        </strong>
+        {' 가 적립되었습니다.'}
+      </p>
+    );
+  }
+
   if (!isEarnPending(order.status)) return null;
 
   const base = Math.max(

@@ -69,6 +69,12 @@ export default function OrderDetail({
   const [courier, setCourier] = useState(order.courier);
   const [trackingNo, setTrackingNo] = useState(order.trackingNo);
   const [memo, setMemo] = useState(order.adminMemo);
+  /*
+   * ★ 저장된 송장을 봅니다. 입력칸에 방금 친 값이 아닙니다.
+   *   치기만 하고 [송장 저장] 을 누르지 않은 상태에서 배송중을 고를 수 있게 하면
+   *   상태만 바뀌고 송장은 저장되지 않은 주문이 생깁니다.
+   */
+  const hasTracking = Boolean(order.trackingNo.trim());
   /** 자동취소 제외 — 공급처에 발송 요청이 나간 주문을 잠급니다. */
   const [autoCancelExcluded, setAutoCancelExcluded] = useState(order.autoCancelExcluded);
   /** 취소 처리 메모 — 대행사 접수번호 등을 남깁니다. (4-A) */
@@ -750,9 +756,23 @@ export default function OrderDetail({
                 onChange={(event) => setStatus(event.target.value)}
                 className="admin-input"
               >
+                {/*
+                  ★★ 송장이 없으면 배송중을 고를 수 없습니다.
+                    배송중이라고 해 놓고 조회할 송장이 없으면 손님이 바로 문의합니다.
+                    "배송중이라는데 어디까지 왔나요" 에 답할 수가 없습니다.
+                  ★ 아래 [송장 등록] 에 번호를 넣으면 상태가 알아서 배송중으로 바뀝니다.
+                    그래서 이 순서를 건너뛸 이유가 없습니다.
+                  ★ 실제로 막는 것은 서버입니다. (lib/orders.ts 의 updateOrderStatus)
+                    여기서는 왜 못 고르는지 미리 보여 주기만 합니다.
+                */}
                 {ORDER_STATUSES.map((value) => (
-                  <option key={value} value={value}>
+                  <option
+                    key={value}
+                    value={value}
+                    disabled={value === 'shipping' && !hasTracking}
+                  >
                     {ORDER_STATUS_META[value].label}
+                    {value === 'shipping' && !hasTracking ? ' (송장 입력 후 가능)' : ''}
                   </option>
                 ))}
               </select>

@@ -528,3 +528,37 @@ export async function notifyProfileFillFailed(
 
   await sendTelegramMessage(lines.join('\n'));
 }
+
+/**
+ * 📦 배송중 N일이 지나 자동으로 배송완료 처리한 주문.
+ *
+ * ★ 여러 건을 한 통으로 묶습니다. 건마다 보내면 알림이 도배됩니다.
+ * ★★ 이 시점에 구매 적립 포인트가 나갑니다. 그래서 반드시 알립니다.
+ *   돈이 나가는 일은 조용히 지나가면 안 됩니다.
+ *   실제로 받지 못한 손님이 있으면 배송중으로 되돌리고 포인트를 회수해야 합니다.
+ */
+export async function notifyAutoDelivered(orders: Order[], days: number): Promise<void> {
+  if (orders.length === 0) return;
+
+  const head = [
+    `📦 <b>배송완료 자동 처리</b> ${orders.length}건`,
+    '',
+    `배송중이 된 지 ${days}일이 지나 배송완료로 넘겼습니다.`,
+    '이 시점에 구매 적립 포인트가 지급됩니다.',
+    '',
+  ];
+
+  const rows = orders.map(
+    (order) =>
+      `· ${escapeHtml(order.orderNo)} ${escapeHtml(order.ordererName)} ` +
+      `${formatPrice(order.totalAmount)}원`
+  );
+
+  const tail = [
+    '',
+    '★ 아직 못 받으신 손님이 있으면 배송중으로 되돌려 주세요.',
+    `관리자: ${SITE_URL}/admin/orders?status=delivered`,
+  ];
+
+  await sendTelegramMessage([...head, ...rows, ...tail].join('\n'));
+}

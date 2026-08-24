@@ -6,6 +6,7 @@ import { useState, useTransition } from 'react';
 import CopyOrderButton from '@/components/CopyOrderButton';
 import KakaoChatButton from '@/components/KakaoChatButton';
 import OrderReceipt, { orderToText } from '@/components/OrderReceipt';
+import ReceiptConfirm from '@/components/ReceiptConfirm';
 import { memberCancelRequestAction } from '@/app/(shop)/mypage/actions';
 import { canRequestCancel } from '@/lib/order-status';
 import type { Order } from '@/lib/types';
@@ -80,6 +81,9 @@ export default function MemberOrderDetail({
             <div className="mt-4">
               <CopyOrderButton text={orderToText(order, storeName)} />
             </div>
+
+            {/* 받으셨나요? — 배송중일 때만 나옵니다. */}
+            <ReceiptConfirm order={order} className="mt-6" />
 
             {canRequestCancel(order.status) ? (
               <div className="mt-6 border-t border-stone pt-6">

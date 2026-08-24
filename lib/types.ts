@@ -307,6 +307,15 @@ export type Order = {
   stockReleasedAt: string | null;
   /** 카드 자동정리 알림을 보낸 시각. 같은 주문으로 두 번 알리지 않기 위한 표시입니다. */
   sweepNotifiedAt: string | null;
+  /**
+   * 이 주문으로 실제 지급된 구매 적립 포인트.
+   *
+   * ★ 지급 여부를 가리는 표시이기도 합니다. lib/points.ts 의 earnPurchasePoints 가
+   *   이 칸을 조건부로 선점한 뒤에 지급해서, 같은 주문에 두 번 나가지 않습니다.
+   * ★ 화면에서 "몇 P 가 적립되었습니다" 를 말할 때 이 값을 씁니다.
+   *   다시 계산하지 않습니다. 그 사이 적립률이 바뀌었으면 실제와 다른 숫자를 말하게 됩니다.
+   */
+  pointsEarned: number;
 
   createdAt: string | null;
   updatedAt: string | null;

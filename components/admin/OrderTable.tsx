@@ -98,11 +98,30 @@ export default function OrderTable({ orders }: { orders: Order[] }) {
         setMessage({ tone: 'error', text: result.error });
         return;
       }
+      /*
+       * ★★ 송장이 없어 빠진 주문은 반드시 주문번호를 대서 알립니다.
+       *   "18건을 바꿨습니다" 만 나오면 나머지 2건도 넘어간 줄 알고 지나갑니다.
+       *   어느 주문이 왜 빠졌는지 알아야 송장을 넣고 다시 처리할 수 있습니다.
+       *
+       * ★ 전체를 막지는 않습니다. 여러 건을 한 번에 넘기려고 쓰는 자리인데
+       *   하나 때문에 전부 되돌리면 처음부터 다시 골라야 합니다.
+       *
+       * ★ 빠진 건이 있으면 성공이 아니라 오류 색으로 보여 줍니다.
+       *   할 일이 남았다는 뜻이라 눈에 띄어야 합니다.
+       */
+      const { done, failed, skipped } = result.data;
+      const parts = [`${done}건을 바꿨습니다.`];
+      if (failed > 0) parts.push(`(실패 ${failed}건)`);
+      if (skipped.length > 0) {
+        parts.push(
+          `송장이 없어 ${skipped.length}건은 배송중으로 넘기지 않았습니다 — ` +
+            `${skipped.join(', ')}. 송장을 입력하면 자동으로 배송중이 됩니다.`
+        );
+      }
+
       setMessage({
-        tone: 'ok',
-        text: `${result.data.done}건을 바꿨습니다.${
-          result.data.failed > 0 ? ` (실패 ${result.data.failed}건)` : ''
-        }`,
+        tone: skipped.length > 0 || failed > 0 ? 'error' : 'ok',
+        text: parts.join(' '),
       });
       setSelected([]);
       router.refresh();
