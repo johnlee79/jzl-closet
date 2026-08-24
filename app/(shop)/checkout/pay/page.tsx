@@ -105,6 +105,11 @@ export default async function CheckoutPayPage({ searchParams }: PageProps) {
       frameHeight={KSPAY_FRAME_HEIGHT}
       isMobile={isMobile}
       orderNo={order.orderNo}
+      /*
+       * ★ 바깥 창이 스스로 주문 상태를 물어볼 때 함께 보냅니다.
+       *   방금 위에서 확인한 그 서명입니다. 새로 만들지 않습니다.
+       */
+      token={token}
     />
   );
 }

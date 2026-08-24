@@ -7,7 +7,7 @@ import {
   markPaymentUnconfirmed,
   saveKsnetPaymentKey,
 } from '@/lib/orders';
-import { createOrderToken } from '@/lib/order-token';
+import { ksnetResultUrl } from '@/lib/payments/ksnet/result-url';
 import { writePaymentLog } from '@/lib/payment-logs';
 import { decodeEuckr } from '@/lib/payments/ksnet/encode';
 import { clientIp } from '@/lib/rate-limit';
@@ -428,7 +428,7 @@ async function handle(request: NextRequest, context: RouteContext): Promise<Resp
     if (payment.telegramEnabled) {
       await safeNotify(() => notifyNewOrder(paidOrder, 0));
     }
-    return htmlRedirect(await completeUrl(orderNo));
+    return htmlRedirect(await resultUrl('paid', orderNo));
   }
 
   /*
@@ -481,38 +481,15 @@ function parseFormBody(body: string): Record<string, string> {
   return out;
 }
 
-/** 주문 완료 화면 주소 — 서명 토큰을 붙여야 열립니다. */
-async function completeUrl(orderNo: string): Promise<string> {
-  const token = await createOrderToken(orderNo);
-  const query = new URLSearchParams({ no: orderNo, k: token });
-  return `${SITE_URL}/checkout/complete?${query.toString()}`;
-}
-
 /**
  * 지금 주문 상태에 맞는 화면으로 보냅니다.
  *
- * ★ 손님에게 보이는 말이 상태와 어긋나면 안 됩니다.
- *   확인 중인 주문에 "완료" 라고 하면 발송을 기다리게 되고,
- *   승인이 났을 수 있는 주문에 "실패" 라고 하면 이중결제를 부릅니다.
+ * ★ 실제 판단은 lib/payments/ksnet/result-url.ts 에 있습니다.
+ *   바깥 창이 스스로 물어보는 창구(/api/payment/ksnet/status)와 같은 함수를 씁니다.
+ *   두 벌로 두면 한쪽만 고쳐 서로 다른 곳으로 보내게 됩니다.
  */
 async function resultUrl(status: string, orderNo: string): Promise<string> {
-  const encoded = encodeURIComponent(orderNo);
-
-  // 사람이 확인해야 하는 상태 — "확인 중" 으로만 안내합니다.
-  if (status === 'payment_review' || status === 'payment_unconfirmed') {
-    return `${SITE_URL}/checkout/pending?no=${encoded}`;
-  }
-
-  // 돈이 오가지 않은 것이 확실한 상태
-  if (status === 'failed') {
-    return `${SITE_URL}/checkout/failed?no=${encoded}&reason=declined`;
-  }
-  if (status === 'cancelled' || status === 'cancel_requested') {
-    return `${SITE_URL}/checkout/failed?no=${encoded}&reason=cancelled`;
-  }
-
-  // 결제완료 이후(준비중·배송중…)는 완료 화면으로 보냅니다.
-  return completeUrl(orderNo);
+  return ksnetResultUrl(status, orderNo);
 }
 
 /**
@@ -572,6 +549,22 @@ function htmlRedirect(url: string): Response {
       var url = "${safe}";
 
       /*
+       * ★★ 콘솔 기록을 남깁니다.
+       *   이 화면에 갇히는 일이 반복돼서, 어디서 끊기는지 눈으로 보려고 둡니다.
+       *   전부 [ksnet] 로 시작하므로 개발자도구에서 그 말로 걸러 보면 됩니다.
+       *   결제 금액·카드번호 같은 것은 찍지 않습니다. 주소와 결과만 남깁니다.
+       */
+      function log(step, extra) {
+        try {
+          console.log("[ksnet] 결제창: " + step, extra === undefined ? "" : extra);
+        } catch (e) {}
+      }
+
+      var framed = false;
+      try { framed = window.top !== window.self; } catch (e) { framed = true; }
+      log("응답 화면이 그려졌습니다", { 프레임안인가: framed, 갈곳: url });
+
+      /*
        * ★★ PC 결제는 우리 페이지(/checkout/pay) 위에 띄운 아이프레임 안에서 돕니다.
        *   결과 화면으로 넘어가야 하는 것은 이 프레임이 아니라 바깥 창입니다.
        *   바깥 창을 옮기는 길을 세 갈래로 두고 하나라도 되면 넘어가게 합니다.
@@ -579,25 +572,69 @@ function htmlRedirect(url: string): Response {
        *   이 화면에 갇혀 새로고침해야 했습니다.
        */
 
-      // ① 바깥 창에게 알립니다. 바깥 창이 스스로 옮겨 갑니다.
-      //    top 에 손을 못 대는 상황에서도 이 길은 열려 있습니다.
+      /*
+       * ① 바깥 창에게 알립니다. 바깥 창이 스스로 옮겨 갑니다.
+       *   top 에 손을 못 대는 상황에서도 이 길은 열려 있습니다.
+       *
+       * ★★ 바로 위(parent)와 맨 바깥(top) 둘 다에 보냅니다.
+       *   결제사 화면이 프레임을 한 겹 더 쓰는 경우가 있습니다.
+       *   그러면 parent 는 결제사 화면이라 우리 신호를 받을 사람이 없습니다.
+       *   맨 바깥이 우리 페이지이므로 그쪽에도 같이 보내야 닿습니다.
+       */
+      var sentTo = [];
       try {
         if (window.parent && window.parent !== window.self) {
           window.parent.postMessage({ type: "ksnet-payment-result", url: url }, "*");
+          sentTo.push("바로 위(parent)");
         }
-      } catch (e) {}
+      } catch (e) {
+        log("① parent 에 신호를 보내지 못했습니다", String(e));
+      }
+      try {
+        if (window.top && window.top !== window.self && window.top !== window.parent) {
+          window.top.postMessage({ type: "ksnet-payment-result", url: url }, "*");
+          sentTo.push("맨 바깥(top)");
+        }
+      } catch (e) {
+        log("① top 에 신호를 보내지 못했습니다", String(e));
+      }
+      if (sentTo.length > 0) log("① 신호를 보냈습니다 (postMessage)", sentTo.join(", "));
+      else log("① 건너뜀 — 바깥 창이 없습니다 (프레임이 아닙니다)");
 
       // ② 바깥 창을 직접 옮깁니다. 같은 출처면 이 길이 가장 빠릅니다.
       try {
         if (window.top && window.top !== window.self) {
+          log("② 바깥 창을 직접 옮깁니다");
           window.top.location.replace(url);
+          /*
+           * ★ 여기서 멈추지 않습니다.
+           *   replace 가 예외 없이 지나갔어도 실제로 안 옮겨지는 경우가 있습니다.
+           *   (샌드박스·정책으로 조용히 무시되는 환경)
+           *   3초 뒤에도 이 화면이 그대로면 아래 ③ 으로 갑니다.
+           */
+          setTimeout(function () {
+            log("② 이후에도 이 화면이 남아 있습니다 — ③ 으로 넘어갑니다");
+            try { window.location.replace(url); } catch (e) { window.location.href = url; }
+          }, 2500);
           return;
         }
-      } catch (e) {}
+        log("② 건너뜀 — 바깥 창이 없습니다");
+      } catch (e) {
+        log("② 바깥 창을 옮기지 못했습니다 (교차 출처일 수 있습니다)", String(e));
+      }
 
       // ③ 그래도 안 되면 최소한 이 화면이라도 결과로 바꿉니다.
       //    (모바일은 애초에 프레임이 없어 여기로 옵니다)
+      log("③ 이 화면을 결과로 바꿉니다");
       try { window.location.replace(url); } catch (e) { window.location.href = url; }
+
+      /*
+       * ★ 자바스크립트로 다 실패한 경우를 위해 head 의 meta refresh 가 3초 뒤에 움직입니다.
+       *   그때가 되면 이 기록이 마지막으로 남습니다.
+       */
+      setTimeout(function () {
+        log("3초가 지났는데 아직 여기입니다 — meta refresh 가 곧 움직입니다");
+      }, 3000);
     })();
   </script>
 </body>
