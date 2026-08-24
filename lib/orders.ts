@@ -1668,7 +1668,26 @@ export async function cancelOrderItem(orderId: string, itemId: string): Promise<
   // 전부 취소되면 배송비도 받지 않습니다.
   const shippingFee = remaining.length === 0 ? 0 : order.shippingFee;
   const extraShippingFee = remaining.length === 0 ? 0 : order.extraShippingFee;
-  const totalAmount = itemsTotal + shippingFee + extraShippingFee - order.discount;
+
+  /*
+   * ★★ 0원 밑으로 내려가지 않게 막습니다.
+   *   쓴 포인트가 남은 상품금액보다 크면 그냥 빼기만 해서는 음수가 됩니다.
+   *   예) 10,000원어치를 사면서 포인트 5,000원을 쓴 주문에서 그 상품을 취소하면
+   *       0 + 0 + 0 − 5,000 = −5,000원
+   *   이 음수가 주문 목록·매출 통계·CSV 내보내기에 그대로 들어갑니다.
+   *
+   * ★★ 할인(discount)은 줄이지 않습니다. 반드시 그대로 두어야 합니다.
+   *   포인트 반환이 이 값을 읽어서 돌려줍니다.
+   *     revokeOrderPoints(userId, id, before.discount)
+   *   여기서 할인을 깎으면 손님이 쓴 포인트를 그만큼 못 돌려받습니다.
+   *   그래서 "받을 돈" 만 0에서 멈추고, "쓴 포인트" 는 기록 그대로 둡니다.
+   *   그 결과 items_total − discount 와 total_amount 가 어긋날 수 있는데,
+   *   둘은 원래 다른 것을 뜻합니다. 어긋난 채로 두는 편이 맞습니다.
+   */
+  const totalAmount = Math.max(
+    0,
+    itemsTotal + shippingFee + extraShippingFee - order.discount
+  );
 
   assertWritten(
     await supabase

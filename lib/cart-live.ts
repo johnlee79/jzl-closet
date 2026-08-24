@@ -187,12 +187,30 @@ export function useCartLive(postcode = ''): CartLive {
   const lines: CartLineView[] = items.map((item) => {
     const line = byKey.get(item.key);
     if (!line) {
-      /* 아직 못 받았거나 서버가 답을 못 준 줄 — 담을 때 값으로 그립니다. */
+      /*
+       * 서버가 이 줄의 값을 알려 주지 않았습니다. 담을 때 값으로 그립니다.
+       *
+       * ★★ 그런데 그렇게 되는 경우가 둘입니다. 반드시 갈라야 합니다.
+       *
+       *   status !== 'ok' — 아직 답을 못 받았거나 받지 못했습니다.
+       *     이때는 주문 버튼이 이미 잠겨 있으므로 그냥 그리면 됩니다.
+       *
+       *   status === 'ok' — 답은 왔는데 이 줄이 빠졌습니다.
+       *     서버가 한 번에 확인하는 줄 수(50)를 넘긴 경우입니다.
+       *     이 줄을 "주문 가능" 으로 두면, 화면 합계에는 안 들어가면서
+       *     주문에는 들어갑니다. 손님이 본 적 없는 금액이 결제됩니다.
+       *     고쳐 둔 문제가 51번째 줄부터 그대로 되살아납니다.
+       *     그래서 확인하지 못한 줄은 이번 주문에서 뺍니다.
+       *     장바구니에서 지우지는 않습니다. 품절과 같은 방식입니다.
+       */
+      const unchecked = status === 'ok';
       return {
         productSlug: item.productId,
         optionKey: item.optionKey,
-        ok: true,
-        reason: '',
+        ok: !unchecked,
+        reason: unchecked
+          ? '한 번에 확인할 수 있는 상품 수를 넘겼습니다. 담긴 상품을 줄여 주세요.'
+          : '',
         productName: item.name,
         brandLabel: item.brand,
         thumbnailUrl: item.thumbnail,
@@ -202,7 +220,7 @@ export function useCartLive(postcode = ''): CartLive {
         freeShipping: false,
         key: item.key,
         quantity: item.quantity,
-        orderable: item.selected,
+        orderable: item.selected && !unchecked,
       };
     }
     return {
@@ -224,13 +242,20 @@ export function useCartLive(postcode = ''): CartLive {
 
   if (status === 'ok') {
     for (const view of lines) {
-      const line = byKey.get(view.key);
-      if (!line) continue;
-
-      if (!line.ok) {
-        blocked.push({ key: view.key, name: view.productName, reason: line.reason });
+      /*
+       * ★ 못 사는 줄은 화면에 그린 값(view)으로 판단합니다.
+       *   예전에는 서버 응답(byKey)에서 다시 찾았는데, 확인하지 못한 줄은
+       *   서버 응답 자체가 없어서 조용히 넘어갔습니다. 주문에서는 빠지는데
+       *   손님에게는 아무 말도 하지 않는 상태가 됩니다.
+       */
+      if (!view.ok) {
+        blocked.push({ key: view.key, name: view.productName, reason: view.reason });
         continue;
       }
+
+      /* 값 비교는 서버가 알려 준 값이 있어야 할 수 있습니다. */
+      const line = byKey.get(view.key);
+      if (!line) continue;
 
       /* ★ 체크를 풀어 둔 상품은 주문에 안 들어가므로 확인을 요구하지 않습니다. */
       const item = items.find((entry) => entry.key === view.key);
