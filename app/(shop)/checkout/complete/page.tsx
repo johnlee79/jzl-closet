@@ -70,7 +70,7 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
    *   가 한 화면에 같이 나왔습니다. 카드 손님에게는 최악의 안내입니다.
    *
    *   view 가 갈리는 기준
-   *     paid         결제가 끝남 — 승인번호까지 보여 줍니다
+   *     paid         결제가 끝남 — 결제수단과 금액을 보여 줍니다
    *     bank_pending 무통장입금, 입금 전 — 계좌와 기한을 안내합니다
    *     checking     카드인데 아직 확인 중 — 실패라고 말하지 않습니다
    */

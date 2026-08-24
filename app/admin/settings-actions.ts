@@ -132,8 +132,27 @@ export async function saveLogoAction(url: string): Promise<ActionResult> {
 export async function saveShippingAction(input: ShippingSettings): Promise<ActionResult> {
   if (!(await assertAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
-  if (input.baseFee < 0 || input.freeThreshold < 0 || input.islandFee < 0) {
-    return { ok: false, error: '금액은 0 이상으로 넣어 주세요.' };
+  /*
+   * ★★ 금액 칸을 하나라도 빠뜨리지 마세요.
+   *   반품·교환 배송비는 나중에 추가되면서 이 검사에 들어오지 못했습니다.
+   *   그래서 음수를 넣으면 여기를 그냥 통과하고, 저장할 때 normalizeShipping 이
+   *   조용히 기본값으로 바꿔 놓았습니다. "저장했습니다" 가 뜨는데 새로고침하면
+   *   내가 넣은 값도 아니고 이전 값도 아닌 숫자가 들어 있습니다.
+   *   무엇이 잘못됐는지 알려 주지 않으면 운영자는 저장이 고장 난 줄 압니다.
+   */
+  const amounts: [string, number][] = [
+    ['기본 배송비', input.baseFee],
+    ['무료배송 기준', input.freeThreshold],
+    ['제주·도서산간 추가', input.islandFee],
+    ['반품 배송비', input.returnFee],
+    ['교환 배송비', input.exchangeFee],
+  ];
+  const wrong = amounts.find(([, value]) => !Number.isFinite(value) || value < 0);
+  if (wrong) {
+    return {
+      ok: false,
+      error: `${wrong[0]}는 0 이상으로 넣어 주세요. 지금 값: ${wrong[1]}`,
+    };
   }
 
   try {

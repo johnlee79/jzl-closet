@@ -71,11 +71,19 @@ export default function OrderReceipt({
           <OrderEarnNote order={order} className="mt-5" />
 
           {/*
-            카드 승인 정보 (4-A)
-            ★ 손님이 가장 불안해하는 지점입니다. 승인번호가 눈에 보이면 안심합니다.
-              카드사에 문의할 때도 이 번호가 필요합니다.
-            ★ 무통장입금에는 나오지 않습니다. (승인번호가 없습니다)
+            카드 결제 정보 (4-A)
+
+            ★★ 승인번호는 손님 화면에 두지 않습니다. 다시 넣지 마세요.
+              손님이 쓸 일이 없는 값입니다. 카드사에 문의할 때도 카드사는
+              카드번호와 결제일시로 찾지, 가맹점 승인번호를 묻지 않습니다.
+              필요한 곳은 관리자 주문 상세 하나뿐이고 거기에는 그대로 있습니다.
+              (취소를 대행사에 접수할 때 거래번호와 함께 씁니다)
+
+            ★ 결제수단과 금액은 남깁니다. 어느 카드로 얼마가 나갔는지는
+              손님이 확인해야 하는 값입니다.
+            ★ 무통장입금에는 나오지 않습니다. (승인 정보가 없습니다)
           */}
+          {/* ★ 승인번호가 있다는 것은 카드 승인이 났다는 뜻입니다. 조건으로만 씁니다. */}
           {payment.view === 'paid' && order.pgAuthNo ? (
             <dl className="mt-6 flex flex-col gap-2.5 border-t border-stone pt-5 text-[17px]">
               <div className="flex justify-between gap-4">
@@ -83,12 +91,6 @@ export default function OrderReceipt({
                 {/* ★ 카드사명까지 보여 줍니다. 손님이 어느 카드로 결제했는지 바로 압니다. */}
                 <dd className="text-ink">
                   {paymentMethodDetail(order.paymentMethod, order.pgMessage)}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted">승인번호</dt>
-                <dd className="font-sans font-semibold tabular-nums text-ink">
-                  {order.pgAuthNo}
                 </dd>
               </div>
               <div className="flex justify-between gap-4">

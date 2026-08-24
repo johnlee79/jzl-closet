@@ -490,3 +490,41 @@ export async function notifyStockShortage(
 
   await sendTelegramMessage(lines.join('\n'));
 }
+
+/**
+ * ⚠️ 소셜 로그인 회원의 비어 있던 이름·이메일을 채우지 못했습니다.
+ *
+ * ★★ 왜 알리는가
+ *   구글·카카오로 처음 들어온 분은 profiles 에 이름이 비어 있을 수 있습니다.
+ *   그 빈칸을 채우는 일이 조용히 실패하면 아무도 모릅니다.
+ *   회원 목록에 이름이 빈 사람이 생기고, 주문서가 미리 채워지지 않고,
+ *   문의에 답할 때 부를 이름이 없습니다. 손님은 잘못이 없는데 불편만 겪습니다.
+ *
+ * ★ 로그인을 막지는 않습니다. 이미 본인 확인은 끝났습니다.
+ *   이름이 비어 있는 것 때문에 못 들어가게 하면 그게 더 큰 문제입니다.
+ *
+ * ★ 자주 나면 안 되는 알림입니다. 반복되면 profiles 쓰기 권한이나
+ *   컬럼이 잘못된 것이니 원인을 찾아야 합니다.
+ */
+export async function notifyProfileFillFailed(
+  userId: string,
+  email: string,
+  reason: string
+): Promise<void> {
+  const lines = [
+    '⚠️ <b>회원 정보를 채우지 못했습니다</b> — 소셜 로그인',
+    '',
+    `회원 ${escapeHtml(email || '(이메일 없음)')}`,
+    `내부 id ${escapeHtml(userId)}`,
+    '',
+    `이유: ${escapeHtml(reason)}`,
+    '',
+    '★ 로그인 자체는 정상입니다. 이름이나 이메일이 비어 있을 수 있습니다.',
+    '  관리자 > 회원에서 확인해 주세요.',
+    '  같은 알림이 반복되면 profiles 쓰기 권한을 확인해야 합니다.',
+    '',
+    `확인: ${SITE_URL}/admin/members`,
+  ];
+
+  await sendTelegramMessage(lines.join('\n'));
+}

@@ -3,6 +3,7 @@ import { assertWritten } from '@/lib/db-write';
 
 import { toProvider, type AuthProvider } from '@/lib/auth-provider';
 import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
+import { notifyProfileFillFailed } from '@/lib/telegram';
 
 /**
  * 회원 정보(profiles) 읽기·쓰기. 서버 전용이며 service_role 로만 접근합니다.
@@ -411,7 +412,34 @@ export async function ensureProfile(input: {
     // (비밀번호가 이미 있으므로 비밀번호 변경 화면이 계속 필요합니다)
 
     if (Object.keys(patch).length > 0) {
-      await supabase.from(TABLE).update(patch).eq('id', input.id);
+      /*
+       * ★★ 결과를 확인합니다. 예전에는 보내 놓고 그냥 넘어갔습니다.
+       *   실패해도 아무도 몰랐습니다. 이름이 빈 채로 남은 회원이 생기고,
+       *   주문서가 미리 채워지지 않고, 문의에 답할 때 부를 이름이 없습니다.
+       *
+       * ★ 실패해도 로그인은 막지 않습니다. 본인 확인은 이미 끝났습니다.
+       *   이름을 못 채웠다는 이유로 못 들어가게 하면 그게 더 큰 문제입니다.
+       *   대신 반드시 알려서 사람이 채워 넣을 수 있게 합니다.
+       *
+       * ★ select('id') 를 붙여야 몇 줄이 바뀌었는지 알 수 있습니다.
+       *   붙이지 않으면 한 줄도 못 바꿨을 때도 error 가 null 로 옵니다.
+       */
+      const { data, error } = await supabase
+        .from(TABLE)
+        .update(patch)
+        .eq('id', input.id)
+        .select('id');
+
+      const failed = error
+        ? error.message
+        : !data || data.length === 0
+          ? '해당 회원 행을 찾지 못했습니다.'
+          : '';
+
+      if (failed) {
+        console.error('[profiles] 소셜 로그인 회원 정보 보정 실패:', input.id, failed);
+        await notifyProfileFillFailed(input.id, email, failed);
+      }
     }
     return false;
   }

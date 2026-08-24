@@ -17,14 +17,49 @@ export default function ShippingForm({ initial }: { initial: ShippingSettings })
   const set = <K extends keyof ShippingSettings>(key: K, value: ShippingSettings[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
+  /*
+   * ★★ 예전에는 숫자가 아닌 글자를 전부 지웠습니다. (replace(/[^0-9]/g, ''))
+   *   그러면 -3000 이 3000 이 됩니다. 부호가 조용히 뒤집히는 겁니다.
+   *   운영자는 자기가 넣은 값이 그대로 들어간 줄 알고 저장합니다.
+   *
+   * ★ 지금은 마이너스를 그대로 둡니다. 잘못된 값이 눈에 보여야
+   *   아래 검사가 무엇이 잘못됐는지 말해 줄 수 있습니다.
+   */
   const number = (value: string): number => {
-    const parsed = Number(value.replace(/[^0-9]/g, ''));
-    return Number.isFinite(parsed) ? parsed : 0;
+    const cleaned = value.replace(/[^0-9-]/g, '');
+    if (!cleaned || cleaned === '-') return 0;
+    const parsed = Number(cleaned);
+    return Number.isFinite(parsed) ? Math.trunc(parsed) : 0;
+  };
+
+  /** 0 미만인 금액 칸. 저장하기 전에 여기서 먼저 잡습니다. */
+  const negativeField = (): string => {
+    const amounts: [string, number][] = [
+      ['기본 배송비', form.baseFee],
+      ['무료배송 기준', form.freeThreshold],
+      ['제주·도서산간 추가', form.islandFee],
+      ['반품 배송비', form.returnFee],
+      ['교환 배송비', form.exchangeFee],
+    ];
+    const wrong = amounts.find(([, value]) => value < 0);
+    return wrong ? `${wrong[0]}는 0 이상으로 넣어 주세요. 지금 값: ${wrong[1]}` : '';
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage(null);
+
+    /*
+     * ★ 서버에 보내기 전에 여기서 먼저 잡습니다. 서버도 같은 검사를 합니다.
+     *   화면에서 막으면 왕복 없이 바로 알 수 있고, 서버 검사는 화면을 거치지
+     *   않고 들어오는 값을 막습니다. 둘 다 있어야 합니다.
+     */
+    const wrong = negativeField();
+    if (wrong) {
+      setMessage({ tone: 'error', text: wrong });
+      return;
+    }
+
     startTransition(async () => {
       const result = await saveShippingAction(form);
       if (!result.ok) {

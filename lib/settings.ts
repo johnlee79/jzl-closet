@@ -734,17 +734,32 @@ export const getCachedPoints = unstable_cache(getPointSettings, ['points'], {
 
 /* ── 판매정보 (3-B) ───────────────────────────────────────── */
 
+/*
+ * ★★ 왜 optionalText 인가 — 일부러 비운 것과 입력하지 않은 것을 구분합니다.
+ *
+ *   예전에는 전부 text() 였습니다. text() 는 빈 문자열을 "입력 안 함" 으로 보고
+ *   기본값을 대신 넣습니다. 그래서 운영자가 항목을 지우고 저장하면
+ *   "저장했습니다" 가 뜬 뒤 새로고침하면 옛 값이 그대로 돌아왔습니다.
+ *   저장은 됐는데 읽을 때 되살아난 것이라 운영자는 저장이 안 된 줄 압니다.
+ *
+ *   optionalText() 는 값이 문자열이면 빈 문자열이라도 그대로 씁니다.
+ *   키 자체가 없을 때(= 한 번도 저장한 적 없음)만 기본값을 씁니다.
+ *   그래서 처음 열었을 때는 기본 문구가 채워져 있고, 지우면 지워진 채로 남습니다.
+ *
+ * ★ 비어도 화면은 깨지지 않습니다. 판매정보 탭은 내용이 없는 항목을
+ *   제목째 그리지 않습니다. (components/SalesInfo.tsx 의 Block)
+ */
 export function normalizeSales(value: unknown): SalesSettings {
   if (!value || typeof value !== 'object') return DEFAULT_SALES;
   const raw = value as Record<string, unknown>;
   return {
-    shippingNote: text(raw.shippingNote, ''),
-    deliveryPeriod: text(raw.deliveryPeriod, DEFAULT_SALES.deliveryPeriod),
-    exchangePolicy: text(raw.exchangePolicy, DEFAULT_SALES.exchangePolicy),
-    exchangeCost: text(raw.exchangeCost, DEFAULT_SALES.exchangeCost),
-    notAllowed: text(raw.notAllowed, DEFAULT_SALES.notAllowed),
-    returnAddress: text(raw.returnAddress, ''),
-    asInfo: text(raw.asInfo, DEFAULT_SALES.asInfo),
+    shippingNote: optionalText(raw.shippingNote, ''),
+    deliveryPeriod: optionalText(raw.deliveryPeriod, DEFAULT_SALES.deliveryPeriod),
+    exchangePolicy: optionalText(raw.exchangePolicy, DEFAULT_SALES.exchangePolicy),
+    exchangeCost: optionalText(raw.exchangeCost, DEFAULT_SALES.exchangeCost),
+    notAllowed: optionalText(raw.notAllowed, DEFAULT_SALES.notAllowed),
+    returnAddress: optionalText(raw.returnAddress, ''),
+    asInfo: optionalText(raw.asInfo, DEFAULT_SALES.asInfo),
   };
 }
 
@@ -773,13 +788,18 @@ function normalizeRibbon(value: unknown): RibbonSettings {
   };
 }
 
+/*
+ * ★ 판매정보와 같은 이유로 optionalText 를 씁니다.
+ *   지우고 저장하면 지워진 채로 남아야 합니다. (위 normalizeSales 의 설명 참고)
+ * ★ 비면 그 안내 자체가 나오지 않습니다. 빈 제목만 남지 않습니다.
+ */
 export function normalizeEvent(value: unknown): EventSettings {
   if (!value || typeof value !== 'object') return DEFAULT_EVENT;
   const raw = value as Record<string, unknown>;
   return {
-    signupComplete: text(raw.signupComplete, DEFAULT_EVENT.signupComplete),
-    mypageWelcome: text(raw.mypageWelcome, DEFAULT_EVENT.mypageWelcome),
-    earnNotice: text(raw.earnNotice, DEFAULT_EVENT.earnNotice),
+    signupComplete: optionalText(raw.signupComplete, DEFAULT_EVENT.signupComplete),
+    mypageWelcome: optionalText(raw.mypageWelcome, DEFAULT_EVENT.mypageWelcome),
+    earnNotice: optionalText(raw.earnNotice, DEFAULT_EVENT.earnNotice),
     ribbon: normalizeRibbon(raw.ribbon),
   };
 }
