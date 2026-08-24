@@ -21,6 +21,13 @@ function isMissingTable(code: string | undefined): boolean {
   return Boolean(code && MISSING_TABLE_CODES.has(code));
 }
 
+/** 컬럼이 아직 없을 때 PostgREST 가 돌려주는 코드들 */
+const MISSING_COLUMN_CODES = new Set(['42703', 'PGRST204']);
+
+function isMissingColumn(code: string | undefined): boolean {
+  return Boolean(code && MISSING_COLUMN_CODES.has(code));
+}
+
 export type PointReason =
   | 'signup'
   | 'review_text'
@@ -240,21 +247,71 @@ export async function earnPurchasePoints(
   const supabase = getSupabaseAdmin();
   if (!supabase) return 0;
 
-  // 이미 지급한 주문인지 확인합니다.
-  const { data, error } = await supabase
+  /*
+   * ★★ 자리를 먼저 잡고 그다음에 줍니다. 순서가 반대면 두 번 나갑니다.
+   *
+   *   예전 순서 — 확인하고 → 주고 → 표시
+   *     ① 확인과 표시 사이가 벌어져 있어, 두 요청이 동시에 오면
+   *        둘 다 "아직 안 줬다" 를 읽고 둘 다 지급했습니다.
+   *     ② 마지막 표시가 실패해도 아무도 몰랐습니다. 확인조차 하지 않았습니다.
+   *        표시가 없으니 관리자가 상태를 배송완료로 다시 바꿀 때 또 나갔습니다.
+   *
+   *   지금 순서 — 표시를 먼저 쓰고(아직 안 준 주문에만) → 잡았을 때만 지급
+   *     DB 가 한 번만 통과시키므로 동시에 와도 한 쪽만 잡습니다.
+   *
+   * ★ 이 프로젝트가 이미 쓰는 방식입니다.
+   *   재고 되돌리기(orders.stock_released_at)와 생일 포인트(birthday_point_year)가
+   *   같은 모양입니다. 새로 만든 규칙이 아닙니다.
+   */
+  const claim = await supabase
     .from('orders')
-    .select('points_earned')
+    .update({ points_earned: amount })
     .eq('id', orderId)
-    .maybeSingle();
+    // 아직 지급하지 않은 주문에만 씁니다. (칸이 비어 있거나 0)
+    .or('points_earned.is.null,points_earned.eq.0')
+    .select('id');
 
-  // points_earned 컬럼이 아직 없으면(schema-3b.sql 미실행) 지급하지 않습니다.
-  // 중복 지급을 막을 방법이 없는 상태에서 주는 것보다 안 주는 쪽이 안전합니다.
-  if (error || !data) return 0;
-  if (((data as { points_earned: number | null }).points_earned ?? 0) > 0) return 0;
+  if (claim.error) {
+    /*
+     * ★ 칸이 없는 경우(schema-3b.sql 미실행)와 그 밖의 실패를 나눠 남깁니다.
+     *   칸이 없으면 중복 지급을 막을 방법이 없으므로 주지 않는 것이 맞습니다.
+     *   그 밖의 실패는 적립이 통째로 멈춘다는 뜻이라 조용히 넘기면 안 됩니다.
+     */
+    if (isMissingColumn(claim.error.code)) {
+      console.warn(
+        '[points] orders.points_earned 칸이 없습니다. supabase/schema-3b.sql 을 실행해 주세요.'
+      );
+    } else {
+      console.error(
+        '[points] 구매 적립 자리를 잡지 못했습니다 — 적립이 나가지 않습니다:',
+        orderId,
+        claim.error.message
+      );
+    }
+    return 0;
+  }
+  // 잡지 못했다면 이미 지급된 주문입니다. 조용히 넘어갑니다.
+  if (!claim.data || claim.data.length === 0) return 0;
 
-  await tryEarnPoints(userId, amount, 'purchase', '구매 적립', orderId);
+  /*
+   * ★★ 여기서는 tryEarnPoints 를 쓰지 않습니다.
+   *   그 함수는 실패를 조용히 삼킵니다. 자리를 잡아 둔 상태에서 삼켜 버리면
+   *   "줬다고 표시돼 있는데 실제로는 안 준" 주문이 남고 아무도 모릅니다.
+   *   던지는 쪽을 직접 불러 실패를 잡습니다.
+   */
+  try {
+    await changePoints(userId, amount, 'purchase', '구매 적립', orderId);
+  } catch (error) {
+    /*
+     * 지급이 실패했으니 잡아 둔 자리를 풀어 줍니다. 다음에 다시 시도할 수 있습니다.
+     * ★ 이 되돌리기까지 실패하면 이 주문은 적립을 받지 못한 채로 남습니다.
+     *   두 번 주는 것보다 안 주는 쪽이 안전합니다. 관리자가 수동으로 줄 수 있습니다.
+     */
+    await supabase.from('orders').update({ points_earned: 0 }).eq('id', orderId);
+    console.warn('[points] 구매 적립 실패 — 잡아 둔 자리를 풀었습니다:', orderId, error);
+    return 0;
+  }
 
-  await supabase.from('orders').update({ points_earned: amount }).eq('id', orderId);
   return amount;
 }
 

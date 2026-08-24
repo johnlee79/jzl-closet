@@ -422,6 +422,39 @@ export async function notifyCardSweepDigest(
  *   운영자는 이미 KSNET 에서 승인을 확인하고 누른 것이라 주문을 되돌릴 수 없습니다.
  *   재고를 어떻게 맞출지는 공급처와 사람이 풀어야 할 문제입니다.
  */
+/**
+ * 포인트는 못 깎았는데 할인은 남아 있는 주문 — 사람이 직접 맞춰야 합니다.
+ *
+ * ★★ 아주 드물게 납니다. 손님이 다른 창에서 포인트를 다 써 버린 순간에
+ *   주문이 들어오면 차감이 실패합니다. 그때 할인을 없던 걸로 되돌리는데,
+ *   그 되돌리기까지 실패한 경우입니다.
+ * ★ 주문은 막지 않습니다. 이미 저장돼 있고 손님은 결제로 넘어갔습니다.
+ *   대신 즉시 알려 사람이 금액을 맞추게 합니다. 조용히 두면 그만큼 손해입니다.
+ */
+export async function notifyDiscountMismatch(
+  orderNo: string,
+  orderId: string,
+  discount: number,
+  shouldBe: number
+): Promise<void> {
+  const lines = [
+    '⚠️ <b>금액을 맞춰 주세요</b> — 포인트는 안 깎였는데 할인이 남아 있습니다',
+    '',
+    `주문번호 ${escapeHtml(orderNo)}`,
+    '',
+    `할인으로 잡힌 금액  ${formatPrice(discount)}원`,
+    `실제 받아야 할 금액  ${formatPrice(shouldBe)}원`,
+    '',
+    '★ 손님 포인트는 차감되지 않았습니다. 그런데 주문에는 할인이 들어가 있습니다.',
+    '  그대로 두면 그만큼 덜 받게 됩니다.',
+    '  주문 금액을 고치거나, 손님 포인트를 수동으로 차감해 주세요.',
+    '',
+    `확인: ${SITE_URL}/admin/orders/${orderId}`,
+  ];
+
+  await sendTelegramMessage(lines.join('\n'));
+}
+
 export async function notifyStockShortage(
   order: Order,
   shortages: {

@@ -32,6 +32,7 @@ import {
 import { isRemoteArea, maxUsablePoints } from '@/lib/site-config';
 import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
 import { getBrands } from '@/lib/taxonomy';
+import { notifyDiscountMismatch } from '@/lib/telegram';
 import { brandLabel } from '@/lib/brands';
 import type {
   CashReceiptType,
@@ -1405,12 +1406,40 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
       await changePoints(input.userId, -discount, 'order_use', '주문 사용', row.id);
     } catch (error) {
       console.warn('[orders] 포인트 차감 실패 — 할인 없이 진행합니다:', row.id, error);
-      await supabase
+
+      /*
+       * ★★ 되돌리기가 성공했는지 반드시 확인합니다.
+       *   예전에는 결과를 보지 않고 화면에 돌려줄 값만 0 으로 바꿨습니다.
+       *   되돌리기가 실패하면 DB 에는 할인이 남아 있는데 손님에게는 0 이라고
+       *   말하게 됩니다. 그리고 그 할인만큼 덜 받게 됩니다.
+       */
+      const rollback = await supabase
         .from(ORDERS)
         .update({ discount: 0, total_amount: totalAmount + discount })
-        .eq('id', row.id);
-      row.discount = 0;
-      row.total_amount = totalAmount + discount;
+        .eq('id', row.id)
+        .select('id');
+
+      if (!rollback.error && rollback.data && rollback.data.length > 0) {
+        row.discount = 0;
+        row.total_amount = totalAmount + discount;
+      } else {
+        /*
+         * ★ 손님을 막지 않습니다. 주문은 이미 저장되어 있고 결제로 넘어갑니다.
+         *   여기서 던지면 손님은 오류를 보고 다시 주문해 중복 주문이 됩니다.
+         *   대신 사람을 부릅니다. 금액이 어긋난 채 조용히 넘어가면 안 됩니다.
+         */
+        console.error('[orders] 할인 되돌리기 실패 — 금액이 어긋납니다:', row.order_no);
+        try {
+          await notifyDiscountMismatch(
+            row.order_no,
+            row.id,
+            discount,
+            totalAmount + discount
+          );
+        } catch (notifyError) {
+          console.warn('[orders] 금액 불일치 알림 실패:', notifyError);
+        }
+      }
     }
   }
 
@@ -1719,16 +1748,41 @@ export async function cancelOrderItem(orderId: string, itemId: string): Promise<
     1
   );
 
+  /*
+   * ★ 품목 하나를 취소한 사실만 남깁니다. 상태는 아직 그대로입니다.
+   *   예전에는 여기에 미리 'cancelled' 를 적어 두었는데, 실제 상태 변경은
+   *   그 아래에서 따로 했습니다. 이력이 사실보다 앞서 있었습니다.
+   */
   await addHistory(
     orderId,
     order.status,
-    remaining.length === 0 ? 'cancelled' : order.status,
+    order.status,
     `부분 취소: ${target.productName}${target.optionKey ? ` (${target.optionKey})` : ''} x${target.quantity}`
   );
 
-  // 남은 상품이 하나도 없으면 주문 전체를 취소로 바꿉니다.
+  /*
+   * 남은 상품이 하나도 없으면 주문 전체를 취소로 바꿉니다.
+   *
+   * ★★ 반드시 updateOrderStatus 를 거칩니다. 상태만 직접 바꾸면 안 됩니다.
+   *   예전에는 여기서 DB 를 직접 고쳤습니다.
+   *     await supabase.from(ORDERS).update({ status: 'cancelled' })...
+   *   그러면 updateOrderStatus 안에 있는 것들이 전부 건너뛰어집니다.
+   *     · 손님이 쓴 포인트 반환    ← 돈입니다. 실제로 새고 있었습니다
+   *     · 이 주문으로 준 적립 회수
+   *     · 추천 첫 구매 실적 되돌리기
+   *   [취소 완료] 버튼은 이미 이 함수를 거칩니다. 두 길이 달랐던 것입니다.
+   *
+   * ★ 재고가 두 번 돌아가지 않습니다.
+   *   updateOrderStatus 안의 releaseOrderStock 은 itemStatus 가 normal 이 아닌
+   *   품목을 건너뜁니다. 이 시점에는 모든 품목이 cancelled 이므로 하나도
+   *   되돌리지 않습니다. 재고는 품목을 취소할 때 이미 하나씩 돌아갔습니다.
+   */
   if (remaining.length === 0 && order.status !== 'cancelled') {
-    await supabase.from(ORDERS).update({ status: 'cancelled' }).eq('id', orderId);
+    return await updateOrderStatus(
+      orderId,
+      'cancelled',
+      '모든 품목이 취소되어 주문을 취소 처리했습니다.'
+    );
   }
 
   return (await getOrderById(orderId)) ?? order;
