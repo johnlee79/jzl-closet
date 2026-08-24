@@ -357,61 +357,6 @@ export async function notifyReferralReward(
 }
 
 /**
- * 🗂 카드 자동정리 일일 요약 (4-B).
- *
- * ★★ 왜 건별로 안 보내고 모아서 보내는가
- *   결제 Key 없이 정리되는 건은 가장 흔한 경우입니다. 결제창을 열었다가
- *   그냥 닫은 손님이 매일 여럿 나옵니다. 그때마다 알리면 하루에 수십 번
- *   울리고, 정작 중요한 알림("우리가 놓친 승인")을 놓칩니다.
- *
- * ★ 그래도 반드시 알려야 합니다. 재고를 되돌린 주문이라
- *   KSNET 쪽에 승인이 살아 있다면 우리가 모르는 매출이 됩니다.
- *   하루 한 번, 거래내역과 대조할 목록을 드립니다.
- */
-export async function notifyCardSweepDigest(
-  noKey: Order[],
-  expired: Order[]
-): Promise<void> {
-  if (noKey.length === 0 && expired.length === 0) return;
-
-  const list = (orders: Order[]) =>
-    orders
-      .slice(0, 20)
-      .map(
-        (order) =>
-          `· ${escapeHtml(order.orderNo)} ${escapeHtml(order.ordererName)} ${formatPrice(order.totalAmount)}원`
-      );
-
-  const lines = [
-    '🗂 <b>카드 결제대기 정리 요약</b>',
-    '',
-    ...(noKey.length > 0
-      ? [
-          `<b>결제 신호가 없어 정리한 주문 ${noKey.length}건</b> (재고는 되돌렸습니다)`,
-          ...list(noKey),
-          ...(noKey.length > 20 ? [`… 외 ${noKey.length - 20}건`] : []),
-          '',
-        ]
-      : []),
-    ...(expired.length > 0
-      ? [
-          `<b>자정이 지나 조회할 수 없게 된 주문 ${expired.length}건</b>`,
-          ...list(expired),
-          ...(expired.length > 20 ? [`… 외 ${expired.length - 20}건`] : []),
-          '',
-        ]
-      : []),
-    '★ 모두 <b>승인확인실패</b> 상태입니다. 결제되지 않았다고 단정할 수 없습니다.',
-    '  KSNET 거래내역(ksta.ksnet.co.kr)에서 이 주문번호들을 확인해 주세요.',
-    '  승인이 있었다면 관리자 주문 상세에서 결제완료로 확정해 주세요.',
-    '',
-    `확인: ${SITE_URL}/admin/orders?status=payment_unconfirmed`,
-  ];
-
-  await sendTelegramMessage(lines.join('\n'));
-}
-
-/**
  * ⚠️ 결제완료로 확정했는데 재고가 모자랐습니다 (4-B).
  *
  * ★★ 왜 알려야 하는가

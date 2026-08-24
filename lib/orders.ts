@@ -2632,58 +2632,6 @@ export async function findStalePendingCardOrders(
 }
 
 /**
- * ============================================================
- * 자정 점검용 — 오늘 것과 어제 이전 것을 갈라 돌려줍니다 (4-B)
- * ============================================================
- *
- * ★★ 왜 나누는가
- *   승인 재조회는 당일에 한해 가능합니다.
- *     오늘 들어온 건   → 아직 물어볼 수 있습니다
- *     어제 이전 건     → 이미 물어볼 수 없습니다
- *   처리 방법이 완전히 다르므로 조회 단계에서 갈라 둡니다.
- *
- * ★ "오늘" 은 한국 시간 기준입니다. 서버는 UTC 로 돕니다.
- *   UTC 기준으로 자르면 한국 시간 오전 9시에 날짜가 바뀌어,
- *   그날 새벽 주문이 "어제 것" 으로 잘못 분류됩니다.
- */
-export async function findTodayPendingCardOrders(
-  limit = 100
-): Promise<{ today: Order[]; older: Order[] }> {
-  const supabase = getSupabaseAdmin();
-  if (!supabase) return { today: [], older: [] };
-
-  const KST_OFFSET = 9 * 60 * 60 * 1000;
-  const nowKst = new Date(Date.now() + KST_OFFSET);
-  const midnightKst = Date.UTC(
-    nowKst.getUTCFullYear(),
-    nowKst.getUTCMonth(),
-    nowKst.getUTCDate()
-  ) - KST_OFFSET;
-  const boundary = new Date(midnightKst).toISOString();
-
-  const { data, error } = await supabase
-    .from(ORDERS)
-    .select('id, created_at')
-    .eq('status', 'pending_payment')
-    .neq('payment_method', 'bank_transfer')
-    .order('created_at', { ascending: true })
-    .limit(limit);
-
-  if (error || !data) return { today: [], older: [] };
-
-  const today: Order[] = [];
-  const older: Order[] = [];
-  for (const row of data as { id: string; created_at: string }[]) {
-    // eslint-disable-next-line no-await-in-loop
-    const order = await getOrderById(row.id);
-    if (!order || order.status !== 'pending_payment') continue;
-    if (row.created_at >= boundary) today.push(order);
-    else older.push(order);
-  }
-  return { today, older };
-}
-
-/**
  * 카드 주문을 결제실패로 정리합니다. (4-B)
  *
  * ★ 조건부 UPDATE 입니다. 결제대기일 때만 바뀝니다.

@@ -494,6 +494,27 @@ export type PaymentSettings = {
    *   우리가 놓친 승인을 찾아내는 일도 멈춥니다.
    */
   cardSweepEnabled: boolean;
+  /**
+   * KSNET 승인 재조회가 되는 기간 (시간).
+   *
+   * ★★ KSNET 답변 (2026-08-24)
+   *   "결제 키 값으로 재조회가 가능한 기간은 결제 이후 대략 2일 정도이며,
+   *    결제 시간에 따라 일부 조정될 수 있습니다."
+   *
+   *   "대략" 이고 "조정될 수 있다" 입니다. 48시간으로 딱 자르면,
+   *   자정 같은 경계가 끼어 실제로는 30시간 만에 막히는 경우를 놓칩니다.
+   *   기본 36시간은 그 경계를 넘기면서 하한선 안에 들어가는 값입니다.
+   *
+   * ★★ 이 값은 "물어보지 말라" 는 뜻이 아닙니다.
+   *   기간이 지나도 일단 물어봅니다. 조회는 공짜이고, 되면 답이 옵니다.
+   *   이 값이 정하는 것은 조회에 실패했을 때의 반응뿐입니다 —
+   *     기간 안에서 실패 → 뭔가 잘못된 것. 사람에게 알립니다.
+   *     기간이 지나 실패 → 예상된 일. 조용히 승인확인실패로 둡니다.
+   *   그래서 KSNET 답변이 부정확했더라도 손해가 없습니다.
+   *
+   * ★ 0 이면 기간 제한 없이 언제나 "기간 안" 으로 봅니다.
+   */
+  cardRequeryHours: number;
   /** 새 주문이 들어오면 텔레그램으로 알릴지 */
   telegramEnabled: boolean;
   /** 새 1:1 문의가 들어오면 텔레그램으로 알릴지 */
@@ -549,6 +570,7 @@ export const DEFAULT_PAYMENT: PaymentSettings = {
   autoCancelEnabled: true,
   cardPendingMinutes: 40,
   cardSweepEnabled: true,
+  cardRequeryHours: 36,
   remoteAreaRules: DEFAULT_REMOTE_AREA_RULES,
   telegramEnabled: true,
   inquiryTelegramEnabled: true,

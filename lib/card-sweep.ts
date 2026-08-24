@@ -5,7 +5,6 @@ import {
   claimSweepNotice,
   failPendingCardOrder,
   findStalePendingCardOrders,
-  findTodayPendingCardOrders,
   isAutoCancelExempt,
   markPaymentUnconfirmed,
   releaseOrderStock,
@@ -13,11 +12,7 @@ import {
 import { findPaymentKey, writePaymentLog } from '@/lib/payment-logs';
 import { approveKsnetPayment } from '@/lib/payments/ksnet/approve';
 import { getPaymentSettings } from '@/lib/settings';
-import {
-  notifyCardSweepDigest,
-  notifyPaymentPaid,
-  notifyPaymentUnconfirmed,
-} from '@/lib/telegram';
+import { notifyPaymentPaid, notifyPaymentUnconfirmed } from '@/lib/telegram';
 import type { Order } from '@/lib/types';
 
 /**
@@ -44,7 +39,7 @@ import type { Order } from '@/lib/types';
  *                                ├ 승인 O · 금액/주문번호 불일치 → 검토필요 · 재고 유지 · 알림
  *                                ├ 승인 X (승인 없음 확인)       → 결제실패 · 재고 되돌림 · 알림 없음
  *                                └ 조회 실패 (1회 재시도 후)     → 승인확인실패 · 재고 유지 · 알림 1회
- *   결제 Key 없음 ─────────────────────────────────────────────→ 승인확인실패 · 재고 되돌림 · 일일 요약
+ *   결제 Key 없음 ─────────────────────────────────────────────→ 승인확인실패 · 재고 되돌림 · 알림 없음
  *
  * ★ 결제 Key 가 없는 건을 결제실패로 적지 않는 이유
  *   "확인했고 결제 안 됨" 과 "모름" 은 다릅니다. 조회할 열쇠 자체가 없으니
@@ -116,87 +111,53 @@ export async function runCardSweep(force = false): Promise<CardSweepResult> {
 
   for (const order of stale) {
     // eslint-disable-next-line no-await-in-loop
-    await runOne(order, result, payment.telegramEnabled);
+    await runOne(order, result, payment.telegramEnabled, {
+      requeryHours: payment.cardRequeryHours,
+    });
   }
 
   return result;
 }
 
 /* ------------------------------------------------------------------
- * 자정 전 마감 점검 (23:50 KST)
+ * 자정 전 마감 점검 — 없앴습니다 (2026-08-24)
+ * ------------------------------------------------------------------
+ *
+ * ★★ 왜 있었나
+ *   4a.md 의 "승인 재조회는 당일에 한해 가능하다" 는 문장 하나 때문이었습니다.
+ *   그 말이 맞다면 23시 50분에 들어온 주문은 40분 뒤면 영영 확인할 수
+ *   없게 되므로, 하루가 끝나기 전에 한 번 훑을 이유가 있었습니다.
+ *
+ * ★★ 왜 없앴나
+ *   그 문장의 출처가 KSNET 문서가 아니라 우리가 쓴 작업 지시서였습니다.
+ *   KSNET 에 직접 물어 확인한 답은 이렇습니다. (2026-08-24)
+ *     "결제 키 값으로 재조회가 가능한 기간은 결제 이후 대략 2일 정도이며,
+ *      결제 시간에 따라 일부 조정될 수 있습니다."
+ *   자정 경계라는 것이 애초에 없었습니다. 그 위에 지은 cron 도,
+ *   어제 이전 주문을 조회도 안 해 보고 승인확인실패로 밀어내던 코드도
+ *   근거가 없었습니다. 물어보면 답이 왔을 주문을 사람 손으로 넘기고
+ *   있었던 셈입니다.
+ *
+ * ★ 이제 10분마다 도는 runCardSweep 하나가 전부 처리합니다.
+ *   기간이 지난 주문도 일단 물어봅니다. 조회는 공짜입니다.
+ *   기간(cardRequeryHours)이 정하는 것은 조회에 실패했을 때의 반응뿐입니다.
+ *   자세한 것은 lib/site-config.ts 의 cardRequeryHours 주석에 있습니다.
+ *
+ * ★ 일일 요약 알림도 함께 없앴습니다. 건별 알림이 이미 있어 중복이었습니다.
+ *   결제 Key 가 없는 건은 지금까지도 건별 알림이 없었고 지금도 없습니다.
+ *   그쪽은 손님이 결제창을 열었다 닫은, 가장 흔하고 무해한 경우입니다.
+ *   관리자 [확인 필요] 목록과 사이드바 뱃지에 그대로 보입니다.
  * ------------------------------------------------------------------ */
 
-export type CardDailyResult = CardSweepResult & {
-  /** 자정을 넘겨 조회가 불가능해진 주문 */
-  expired: Order[];
-};
-
-/**
- * ★★ 왜 자정 전에 한 번 더 도는가
- *   4-A 에서 확인한 대로 승인 재조회는 **당일에 한해** 가능합니다.
- *   23시 50분에 들어온 주문은 40분 뒤면 다음 날이라 영영 확인할 수 없게 됩니다.
- *   그래서 하루가 끝나기 전에 그날 주문을 한 번 훑습니다.
- *
- * ★ 40분이 안 지났어도 조회합니다. 조회는 조회일 뿐 상태를 바꾸지 않습니다.
- *   판정이 확실한 건만 처리하고, 아직 결제 중일 수 있는 건은 건드리지 않습니다.
- *
- * ★ 어제 이전에 들어온 결제대기 카드 주문은 이미 조회할 수 없습니다.
- *   승인확인실패로 보내고 일일 요약에 담습니다.
- */
-export async function runCardDailyCheck(): Promise<CardDailyResult> {
-  const payment = await getPaymentSettings();
-  const base = emptyResult();
-  const result: CardDailyResult = { ...base, expired: [] };
-
-  // ★ 자정 점검도 카드 쪽 일이라 카드 스위치를 봅니다.
-  if (!payment.cardSweepEnabled) return result;
-
-  const { today, older } = await findTodayPendingCardOrders();
-  result.checked = today.length + older.length;
-
-  /* ── 오늘 들어온 건 — 아직 조회할 수 있습니다 ── */
-  for (const order of today) {
-    // eslint-disable-next-line no-await-in-loop
-    await runOne(order, result, payment.telegramEnabled, { onlyCertain: true });
-  }
-
-  /* ── 어제 이전 건 — 이미 조회할 수 없습니다 ── */
-  for (const order of older) {
-    if (isAutoCancelExempt(order)) {
-      result.skipped += 1;
-      continue;
-    }
-    try {
-      // eslint-disable-next-line no-await-in-loop
-      const { moved } = await markPaymentUnconfirmed(
-        order.orderNo,
-        '[자동정리] 자정이 지나 KSNET 승인 재조회를 할 수 없습니다. 거래내역과 직접 대조해 주세요.'
-      );
-      if (moved) result.expired.push(order);
-    } catch (error) {
-      console.warn('[card-sweep] 조회 불가 처리 실패:', order.orderNo, error);
-      result.skipped += 1;
-    }
-  }
-
-  /* ── 일일 요약 한 번 ── */
-  const digest = [...result.noKey, ...result.expired];
-  if (payment.telegramEnabled && digest.length > 0) {
-    await safely(() => notifyCardSweepDigest(result.noKey, result.expired));
-  }
-
-  return result;
-}
-
 /* ------------------------------------------------------------------
- * 주문 하나 처리 — 두 cron 이 같은 규칙을 씁니다
+ * 주문 하나 처리
  * ------------------------------------------------------------------ */
 
 async function runOne(
   order: Order,
   result: CardSweepResult,
   telegramEnabled: boolean,
-  options: { onlyCertain?: boolean } = {}
+  options: { onlyCertain?: boolean; requeryHours?: number } = {}
 ): Promise<void> {
   /*
    * ★ 관리자가 잠가 둔 주문이나 송장이 나간 주문은 건드리지 않습니다.
@@ -223,10 +184,12 @@ async function handleOne(
   order: Order,
   result: CardSweepResult,
   telegramEnabled: boolean,
-  options: { onlyCertain?: boolean }
+  options: { onlyCertain?: boolean; requeryHours?: number }
 ): Promise<void> {
   const createdAt = order.createdAt ? new Date(order.createdAt).getTime() : Date.now();
   const minutes = Math.max(0, Math.round((Date.now() - createdAt) / 60_000));
+  /** KSNET 승인 재조회가 되는 기간 (시간). 0 이면 제한 없음. */
+  const requeryHours = options.requeryHours ?? 0;
 
   /* ── ① 결제 Key 찾기 ────────────────────────────────── */
   /*
@@ -263,8 +226,9 @@ async function handleOne(
      * ★★ 결제실패가 아니라 승인확인실패입니다.
      *   "확인했고 결제 안 됨" 이 아니라 "모름" 이기 때문입니다.
      *   재고만 돌려놓고 주문은 남겨 사람이 확인할 수 있게 둡니다.
-     * ★ 알림은 건별로 보내지 않습니다. 가장 흔한 경우라 매번 울리면
-     *   정작 중요한 알림을 놓칩니다. 하루 한 번 요약에만 담습니다.
+     * ★ 알림을 보내지 않습니다. 손님이 결제창을 열었다 닫은, 가장 흔하고
+     *   무해한 경우라 매번 울리면 정작 중요한 알림을 놓칩니다.
+     *   관리자 [확인 필요] 목록과 사이드바 뱃지에 그대로 보입니다.
      */
     const memo = `${minutes}분 동안 결제 신호가 없었습니다. 결제 Key 가 없어 승인 여부를 확인할 수 없습니다. 재고만 되돌렸습니다.`;
     const { moved } = await markPaymentUnconfirmed(order.orderNo, `[자동정리] ${memo}`);
@@ -298,14 +262,29 @@ async function handleOne(
 
   /* ── ③ 조회 자체가 실패 ─────────────────────────────── */
   if (!approve.ok) {
-    // 자정 점검에서는 판정이 안 서는 건을 건드리지 않습니다.
     if (options.onlyCertain) return;
-    await handOff(
-      order,
-      result,
-      telegramEnabled,
-      `승인 재조회에 실패했습니다(${attempts}회 시도): ${approve.error ?? '알 수 없는 이유'}`
-    );
+
+    /*
+     * ★★ 여기서 기간을 봅니다. 물어보기 전이 아니라 물어본 다음입니다.
+     *   기간이 지났다고 조회를 건너뛰지 않습니다. 조회는 공짜이고,
+     *   되면 답이 오고 안 되면 오류가 옵니다. KSNET 이 말한 "대략 2일" 이
+     *   틀렸더라도 이렇게 하면 손해가 없습니다.
+     *
+     *   기간이 정하는 것은 실패했을 때의 반응뿐입니다.
+     *     기간 안에서 실패 → 뭔가 잘못된 것입니다. 사람에게 알립니다.
+     *     기간이 지나 실패 → 예상된 일입니다. 조용히 승인확인실패로 둡니다.
+     *
+     * ★ 예상된 실패에 매번 알림을 보내면, 정작 봐야 하는 알림이 묻힙니다.
+     *   조용히 두어도 관리자 [확인 필요] 목록과 뱃지에 그대로 보입니다.
+     */
+    const withinWindow =
+      requeryHours <= 0 || minutes <= requeryHours * 60;
+
+    const reason = withinWindow
+      ? `승인 재조회에 실패했습니다(${attempts}회 시도): ${approve.error ?? '알 수 없는 이유'}`
+      : `주문한 지 ${Math.floor(minutes / 60)}시간이 지나 KSNET 승인 재조회가 되지 않습니다(${attempts}회 시도). 거래내역과 직접 대조해 주세요.`;
+
+    await handOff(order, result, telegramEnabled && withinWindow, reason);
     return;
   }
 
@@ -419,7 +398,6 @@ async function safely(run: () => Promise<void>): Promise<void> {
  *
  * 지금은 어디서 도는가
  *   · 10분마다 /api/cron/card-sweep   (평소)
- *   · 23:50 KST /api/cron/card-daily  (자정 전 마감 점검)
  *   · 관리자 주문 목록의 [지금 정리하기] 버튼 (급할 때 사람이)
  *
  * ★ 화면이 열릴 때마다 정리하고 싶어지면, 그 화면이 KSNET 응답을 기다리게 된다는

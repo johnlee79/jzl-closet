@@ -9,10 +9,6 @@
     {
       "path": "/api/cron/card-sweep",
       "schedule": "*/10 * * * *"
-    },
-    {
-      "path": "/api/cron/card-daily",
-      "schedule": "50 14 * * *"
     }
   ]
 }

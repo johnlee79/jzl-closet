@@ -366,6 +366,42 @@ export default function PaymentForm({
           </p>
         </div>
 
+        {/* ── 승인 재조회 기간 ─────────────────────────── */}
+        <div className="mt-4">
+          <label className="admin-label" htmlFor="card-requery-hours">
+            KSNET 승인 재조회 기간 (시간)
+          </label>
+          <input
+            id="card-requery-hours"
+            type="number"
+            min={0}
+            max={24 * 14}
+            step={1}
+            value={form.cardRequeryHours}
+            onChange={(event) =>
+              set('cardRequeryHours', Math.max(0, Number(event.target.value) || 0))
+            }
+            className="admin-input tabular-nums md:max-w-[200px]"
+          />
+          {/*
+            ★★ 이 값은 "물어보지 말라" 는 뜻이 아닙니다.
+              기간이 지나도 일단 물어봅니다. 조회는 공짜입니다.
+              이 값이 정하는 것은 조회에 실패했을 때의 반응뿐입니다.
+              그래서 KSNET 답변이 부정확했더라도 손해가 없습니다.
+          */}
+          <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+            KSNET 에 확인한 답은 <strong>“결제 키로 재조회 가능한 기간은 결제 이후 대략 2일,
+            결제 시간에 따라 일부 조정”</strong> 입니다. “대략” 이고 “조정될 수 있다” 라
+            48시간으로 딱 자르지 않고 여유를 두어 <strong>36시간</strong>을 기본으로 둡니다.
+          </p>
+          <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
+            ★ 이 기간이 지나도 <strong>조회는 그대로 해 봅니다.</strong> 물어보는 데 드는 것이
+            없고, 되면 답이 옵니다. 이 값이 정하는 것은 <strong>조회에 실패했을 때의 반응</strong>
+            뿐입니다 — 기간 안에서 실패하면 뭔가 잘못된 것이라 텔레그램으로 알리고, 기간이 지나
+            실패하면 예상된 일이라 조용히 [확인 필요] 로 둡니다. 0이면 언제나 “기간 안” 으로 봅니다.
+          </p>
+        </div>
+
         <p className="mt-4 rounded-md bg-amber-50 px-3 py-2 text-[15px] leading-relaxed text-amber-900">
           계좌 정보는 주문 완료 화면과 주문 조회 화면에서만 보입니다. 상품 페이지나 푸터에는
           노출되지 않습니다.

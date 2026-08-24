@@ -613,6 +613,16 @@ export function normalizePayment(value: unknown): PaymentSettings {
      *   (무통장 autoCancelEnabled 와 같은 방식)
      */
     cardSweepEnabled: raw.cardSweepEnabled !== false,
+    /*
+     * ★ 0 은 "제한 없음" 이라 그대로 둡니다.
+     * ★ 너무 짧으면 멀쩡한 조회 실패까지 조용히 넘어갑니다. 최소 1시간.
+     * ★ KSNET 이 대략 2일이라고 했으므로 그보다 한참 큰 값은 뜻이 없습니다. 최대 14일.
+     */
+    cardRequeryHours: (() => {
+      const hours = count(raw.cardRequeryHours, DEFAULT_PAYMENT.cardRequeryHours);
+      if (hours <= 0) return 0;
+      return Math.min(24 * 14, Math.max(1, hours));
+    })(),
     remoteAreaRules: rules,
     telegramEnabled: raw.telegramEnabled !== false,
     inquiryTelegramEnabled: raw.inquiryTelegramEnabled !== false,
