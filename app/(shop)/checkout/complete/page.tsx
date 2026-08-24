@@ -139,15 +139,24 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps) 
         </p>
 
         {/*
-          ★★ 카드 결과를 기다리는 동안에만 다시 읽습니다.
-            승인 확인은 보통 1~2초면 끝납니다. 그 사이에 화면이 그려졌을 뿐인데
-            손님이 결제가 안 된 줄 알고 다시 결제하는 것을 막습니다.
+          ★★ 카드 결과를 기다리는 동안에만 스스로 물어봅니다.
 
-          ★ checking(승인확인실패·검토필요)에서는 새로고침하지 않습니다.
+            손님이 결제창에서 승인을 마치고 넘어온 시점에, 우리 서버는 아직
+            KSNET 승인 확인을 끝내지 못했을 수 있습니다. 그러면 이 화면이
+            "결제 결과를 불러오는 중입니다" 로 그려지고 진행 단계도 흐린 채로
+            굳습니다. 손으로 새로고침해야 완료 화면이 나옵니다.
+            승인은 이미 났는데 손님은 안 된 줄 알고 다시 결제합니다.
+
+          ★ 서명(k)을 함께 넘깁니다. 상태 창구가 그 값으로 본인 주문인지 봅니다.
+            주문번호는 규칙적이라 그것만으로는 열리지 않습니다.
+
+          ★ checking(승인확인실패·검토필요)에서는 묻지 않습니다.
             그 상태는 사람이 KSNET 거래내역과 대조해야 풀립니다.
             기다린다고 바뀌지 않는데 화면만 깜빡이면 손님이 더 불안해집니다.
         */}
-        {view === 'card_pending' ? <PaymentStatusRefresh /> : null}
+        {view === 'card_pending' ? (
+          <PaymentStatusRefresh orderNo={order.orderNo} token={token} />
+        ) : null}
       </header>
 
       <div className="mt-12 grid grid-cols-1 gap-12 lg:grid-cols-[1fr_320px] lg:gap-16">
