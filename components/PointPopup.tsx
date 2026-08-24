@@ -21,6 +21,7 @@ type Me = {
   pointBalance?: number;
   pointExpiringSoon?: number;
   pointMinUse?: number;
+  pointUseUnit?: number;
   pointPopupEnabled?: boolean;
   pointPopupIntervalHours?: number;
 };
@@ -109,6 +110,7 @@ export default function PointPopup() {
 
   const expiring = me.pointExpiringSoon ?? 0;
   const minUse = me.pointMinUse ?? 0;
+  const useUnit = me.pointUseUnit ?? 1;
 
   return (
     <div className="pointer-events-none fixed inset-0 z-40 flex items-end justify-center p-4 md:items-center">
@@ -129,6 +131,13 @@ export default function PointPopup() {
           {minUse > 0 ? (
             <p className="mt-2 text-[14px] leading-relaxed text-muted">
               {won(minUse)}P 이상부터 사용하실 수 있습니다.
+            </p>
+          ) : null}
+
+          {/* ★ 주문서·마이페이지와 같은 말을 합니다. 세 곳이 어긋나면 안 됩니다. */}
+          {useUnit > 1 ? (
+            <p className="mt-2 text-[14px] leading-relaxed text-muted">
+              {won(useUnit)}원 단위로 사용하실 수 있습니다.
             </p>
           ) : null}
         </div>

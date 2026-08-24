@@ -637,6 +637,17 @@ export type PointSettings = {
   birthday: PointRule;
   /** 이 금액 이상부터 쓸 수 있습니다. */
   minUse: number;
+  /**
+   * 사용 단위 (원).
+   *
+   * ★★ 왜 단위를 두는가
+   *   1원 단위로 쓰게 두면 3,247P 를 한 번에 털어 쓰고 잔액이 0 이 됩니다.
+   *   포인트는 다음 구매를 부르는 장치인데, 그 힘이 한 번에 사라집니다.
+   *   1,000원 단위로 끊으면 247P 가 남아 다음 주문의 이유가 됩니다.
+   * ★ 남는 포인트는 소멸시키지 않습니다. 그대로 두어 다음에 쓰게 합니다.
+   * ★ 1 이면 단위 제한이 없는 것과 같습니다. 0 도 1 로 봅니다.
+   */
+  useUnit: number;
   /** 상품금액 대비 최대 사용 비율 (%) */
   maxUseRate: number;
   /** 포인트 유효기간 (개월). 0 이면 소멸하지 않습니다. */
@@ -654,6 +665,7 @@ export const DEFAULT_POINTS: PointSettings = {
   purchase: { enabled: true, amount: 2 },
   birthday: { enabled: true, amount: 5000 },
   minUse: 1000,
+  useUnit: 1000,
   maxUseRate: 100,
   expireMonths: 12,
   popupEnabled: true,
@@ -725,6 +737,21 @@ export function maxUsablePoints(
   if (balance <= 0) return 0;
   const byRate = Math.floor((itemsTotal * settings.maxUseRate) / 100);
   return Math.max(0, Math.min(balance, byRate, itemsTotal));
+}
+
+/**
+ * 사용 단위에 맞춰 내림합니다. 3,247P · 1,000원 단위 → 3,000P.
+ *
+ * ★★ 올리지 않고 반드시 내립니다.
+ *   올리면 없는 포인트를 쓰게 되거나 한도를 넘습니다.
+ * ★ 이 함수 하나만 씁니다. 화면(주문서)과 서버(주문 저장)가 서로 다른 방식으로
+ *   깎으면 손님이 본 금액과 실제 할인액이 어긋납니다.
+ */
+export function roundPointsToUnit(value: number, unit: number): number {
+  const safe = Math.max(0, Math.trunc(Number(value) || 0));
+  const step = Math.max(1, Math.trunc(Number(unit) || 0));
+  if (step <= 1) return safe;
+  return Math.floor(safe / step) * step;
 }
 
 /* ── 판매정보 (3-B) ───────────────────────────────────────── */
@@ -1330,7 +1357,7 @@ export const COPY_META: Record<
     title: '결제 수단 안내 (주문하기 버튼 아래)',
     where:
       '장바구니·주문 페이지 오른쪽 요약 상자 · [주문하기] 버튼 바로 아래 (장바구니에 상품이 있어야 보입니다)',
-    hint: '★ 결제 수단을 알리는 문구는 이 항목 하나뿐입니다. 결제 방식이 바뀌면 여기만 고치면 됩니다. ★ 취소·환불에 걸리는 기간은 KSNET 확인 중이라 기본 문구에 “며칠”로 두었습니다. 정확한 기간을 확인하신 뒤 여기서 고쳐 주세요. 지키지 못할 기간을 적으면 분쟁이 됩니다.',
+    hint: '★ 결제 수단을 알리는 문구는 이 항목 하나뿐입니다. 결제 방식이 바뀌면 여기만 고치면 됩니다. ★ 취소·환불 기간은 KSNET 에 확인한 “영업일 기준 2~3일”입니다. 약관 제9조 ④항·주문 상태 안내와 같은 말을 해야 하니, 여기만 따로 고치지 마세요.',
     path: '/order#payment-notice',
     blockLabel: '문단',
     limits: '소제목은 화면에 나오지 않습니다. 본문만 나갑니다.',

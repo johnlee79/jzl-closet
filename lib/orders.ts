@@ -29,7 +29,7 @@ import {
   getPointSettings,
   getShippingSettings,
 } from '@/lib/settings';
-import { isRemoteArea, maxUsablePoints } from '@/lib/site-config';
+import { isRemoteArea, maxUsablePoints, roundPointsToUnit } from '@/lib/site-config';
 import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
 import { getBrands } from '@/lib/taxonomy';
 import { notifyDiscountMismatch } from '@/lib/telegram';
@@ -975,7 +975,15 @@ export async function resolveUsedPoints(
   if (settings.minUse > 0 && want < settings.minUse) return 0;
 
   const limit = maxUsablePoints(itemsTotal, balance, settings);
-  return Math.min(want, limit);
+
+  /*
+   * ★★ 사용 단위로 내리는 것이 마지막입니다.
+   *   화면도 같은 규칙으로 깎아서 보여 주지만, 결정하는 쪽은 여기입니다.
+   *   화면 값을 믿고 그대로 쓰면 손댄 요청이 그대로 통과합니다.
+   * ★ 한도까지 먼저 깎고 나서 단위로 내립니다. 순서를 바꾸면
+   *   단위에 맞춘 값이 한도를 넘길 수 있습니다.
+   */
+  return roundPointsToUnit(Math.min(want, limit), settings.useUnit);
 }
 
 /**

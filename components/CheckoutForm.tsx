@@ -25,6 +25,7 @@ import {
   EARN_PAYOUT_NOTE,
   expectedPurchasePoints,
   maxUsablePoints,
+  roundPointsToUnit,
   type PaymentMethod,
   type ShippingSettings,
 } from '@/lib/site-config';
@@ -60,6 +61,8 @@ const MEMO_PRESETS = [
 export type PointInfo = {
   balance: number;
   minUse: number;
+  /** 사용 단위 (원). 관리자 설정값입니다. 화면에 숫자를 박지 않습니다. */
+  useUnit: number;
   maxUseRate: number;
 };
 
@@ -275,10 +278,27 @@ export default function CheckoutForm({
   const { points: sitePoints, store } = useSite();
 
   const pointLimit = points ? maxUsablePoints(total, points.balance, points) : 0;
+
+  /*
+   * ★★ 포인트는 사용 단위(기본 1,000원)로만 씁니다.
+   *   3,247P 를 들고 계셔도 이번에 쓸 수 있는 것은 3,000P 입니다.
+   *   남는 247P 는 사라지지 않고 그대로 남아 다음 주문에 쓰입니다.
+   *
+   * ★ 한도를 먼저 적용하고 그 다음에 단위로 내립니다. 순서를 바꾸면
+   *   단위에 맞춘 값이 한도를 넘어 서버에서 다시 깎이고,
+   *   손님이 본 금액과 실제 할인액이 어긋납니다.
+   * ★ 서버(resolveUsedPoints)가 똑같은 계산을 다시 합니다. 여기 값은 미리보기입니다.
+   */
+  const pointUnit = Math.max(1, points?.useUnit ?? 1);
+  /** 실제로 쓸 수 있는 최대 — 단위로 내린 값입니다. [전액] 이 넣는 값이기도 합니다. */
+  const pointCap = roundPointsToUnit(pointLimit, pointUnit);
+
   const canUsePoints = Boolean(
-    points && points.balance > 0 && pointLimit >= (points.minUse || 0)
+    points && points.balance > 0 && pointCap > 0 && pointCap >= (points.minUse || 0)
   );
-  const appliedPoints = canUsePoints ? Math.min(usePoints, pointLimit) : 0;
+  const appliedPoints = canUsePoints
+    ? roundPointsToUnit(Math.min(usePoints, pointCap), pointUnit)
+    : 0;
 
   // ★ 이번 주문으로 쌓일 예상 적립.
   //   기준은 배송비를 뺀 상품금액에서 쓴 포인트를 뺀 값입니다. (서버 계산과 같습니다)
@@ -1016,39 +1036,70 @@ export default function CheckoutForm({
                           id="use-points"
                           type="number"
                           min={0}
-                          max={pointLimit}
-                          step={100}
+                          max={pointCap}
+                          step={pointUnit}
                           value={usePoints === 0 ? '' : usePoints}
+                          /*
+                            ★ 치는 동안에는 단위로 깎지 않습니다.
+                              3247 을 넣으려면 3 → 32 → 324 를 지나가는데,
+                              그때마다 내리면 전부 0 이 되어 아무것도 못 칩니다.
+                              칸을 벗어날 때 한 번 정리합니다. (onBlur)
+                          */
                           onChange={(event) => {
                             const next = Math.max(
                               0,
-                              Math.min(pointLimit, Number(event.target.value) || 0)
+                              Math.min(pointCap, Number(event.target.value) || 0)
                             );
                             setUsePoints(next);
                           }}
+                          onBlur={() =>
+                            setUsePoints((prev) => roundPointsToUnit(prev, pointUnit))
+                          }
                           placeholder="0"
                           className="min-h-[48px] w-full border border-stone bg-transparent px-4 py-3 text-right text-[16px] tabular-nums text-ink outline-none focus:border-ink"
                         />
+                        {/* ★ 보유 포인트가 아니라 "단위로 내린 한도" 를 넣습니다. (3,247P → 3,000P) */}
                         <button
                           type="button"
-                          onClick={() => setUsePoints(pointLimit)}
+                          onClick={() => setUsePoints(pointCap)}
                           className="btn-secondary min-h-[48px] shrink-0 px-4 py-0 text-[15px]"
                         >
                           전액
                         </button>
                       </div>
                       <p className="mt-2 text-[14px] leading-relaxed text-muted">
-                        최대 {formatPrice(pointLimit)}원까지 쓸 수 있습니다.
+                        최대 {formatPrice(pointCap)}원까지 쓸 수 있습니다.
+                        {pointUnit > 1
+                          ? ` ${formatPrice(pointUnit)}원 단위로 사용하실 수 있습니다.`
+                          : ''}
                         {points.minUse > 0
                           ? ` ${formatPrice(points.minUse)}원 이상부터 사용 가능합니다.`
                           : ''}
                       </p>
+                      {/*
+                        ★ 단위 때문에 못 쓰고 남는 포인트가 있으면 그것을 먼저 말해 줍니다.
+                          말해 주지 않으면 "왜 다 안 쓰이지" 라는 문의가 그대로 옵니다.
+                          사라지는 게 아니라 남는다는 것까지 한 문장에 담습니다.
+                      */}
+                      {points.balance > pointCap ? (
+                        <p className="mt-1 text-[14px] leading-relaxed text-muted">
+                          남는 {formatPrice(points.balance - pointCap)}원은 그대로 남아
+                          다음 주문에 쓰실 수 있습니다.
+                        </p>
+                      ) : null}
                     </>
                   ) : (
+                    /*
+                     * ★ 쓸 수 없는 이유를 나눠서 말합니다.
+                     *   "1,000원 이상부터" 한 문장으로 뭉뚱그리면,
+                     *   3,247P 를 들고 있는데 그 말이 나와 손님이 이해하지 못합니다.
+                     */
                     <p className="mt-2 text-[14px] leading-relaxed text-muted">
                       {points.balance <= 0
                         ? '아직 사용할 수 있는 포인트가 없습니다.'
-                        : `${formatPrice(points.minUse)}원 이상부터 사용하실 수 있습니다.`}
+                        : pointCap <= 0 && pointUnit > 1
+                          ? `${formatPrice(pointUnit)}원 단위로 사용하실 수 있습니다. 이번 주문에는 쓸 수 있는 만큼이 모이지 않았습니다.`
+                          : `${formatPrice(points.minUse)}원 이상부터 사용하실 수 있습니다.`}
                     </p>
                   )}
                 </div>

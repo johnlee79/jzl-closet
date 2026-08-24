@@ -39,6 +39,10 @@ export default async function MypagePointsPage() {
           {settings.minUse > 0
             ? `${formatPrice(settings.minUse)}원 이상부터 주문할 때 사용하실 수 있습니다.`
             : '주문할 때 바로 사용하실 수 있습니다.'}
+          {/* ★ 주문서와 같은 말을 해야 합니다. 한쪽만 고치면 두 화면이 서로 다른 말을 합니다. */}
+          {settings.useUnit > 1
+            ? ` ${formatPrice(settings.useUnit)}원 단위로 사용하실 수 있으며, 남는 포인트는 그대로 남아 다음 주문에 쓰실 수 있습니다.`
+            : ''}
           {settings.maxUseRate < 100
             ? ` 상품금액의 ${settings.maxUseRate}%까지 쓸 수 있습니다.`
             : ''}

@@ -198,6 +198,35 @@ export default function RewardForm({
             </p>
           </div>
           <div>
+            <label className="admin-label" htmlFor="use-unit">
+              사용 단위 (원)
+            </label>
+            <input
+              id="use-unit"
+              type="number"
+              min={1}
+              step={100}
+              value={points.useUnit}
+              onChange={(event) =>
+                setPoints((prev) => ({
+                  ...prev,
+                  useUnit: Math.max(1, Number(event.target.value) || 1),
+                }))
+              }
+              className="admin-input tabular-nums"
+            />
+            {/*
+              ★★ 1원 단위로 열어 두면 손님이 잔액을 한 번에 털어 씁니다.
+                포인트는 다음 구매를 부르는 장치인데 그 힘이 한 번에 사라집니다.
+                1,000원 단위로 끊으면 3,247P 중 3,000P 만 쓰이고 247P 가 남습니다.
+              ★ 남는 포인트는 없어지지 않습니다. 그대로 다음 주문에 쓰입니다.
+            */}
+            <p className="mt-1 text-[14px] text-slate-500">
+              이 단위로만 쓸 수 있고 나머지는 남습니다. 예) 1000이면 3,247P 중 3,000P
+              사용, 247P 는 다음 주문에. 1이면 제한 없음.
+            </p>
+          </div>
+          <div>
             <label className="admin-label" htmlFor="max-rate">
               최대 사용 비율 (%)
             </label>

@@ -89,7 +89,11 @@ export const ORDER_STATUS_META: Record<OrderStatus, StatusMeta> = {
   cancel_requested: {
     label: '취소요청',
     tone: 'wait',
-    hint: '취소 요청을 접수했습니다. 환불까지는 영업일 기준 며칠이 걸릴 수 있습니다.',
+    /*
+     * ★ 기간은 KSNET 에 확인한 값입니다. (2026-08-24 답변)
+     *   약관 제9조 ④항 · 결제 수단 안내와 같은 말을 합니다. 한쪽만 고치지 마세요.
+     */
+    hint: '취소 요청을 접수했습니다. 카드사 환불까지는 영업일 기준 2~3일이 걸립니다.',
   },
   cancelled: {
     label: '취소완료',

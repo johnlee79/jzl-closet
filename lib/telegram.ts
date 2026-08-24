@@ -258,7 +258,8 @@ export async function notifyKsnetNotify(
 
 /**
  * ↩️ 취소 요청 접수 (관리자가 누름).
- * ★ 실제 환불은 대행사를 통해 사람이 처리합니다. 며칠 걸립니다.
+ * ★ 실제 환불은 대행사를 통해 사람이 처리합니다.
+ *   대금 반환 뒤 카드사에서 영업일 기준 2~3일이 더 걸립니다. (KSNET 확인)
  *   대행사에 연락할 때 필요한 거래번호·승인번호를 함께 보냅니다.
  */
 export async function notifyCancelAccepted(order: Order, memo: string): Promise<void> {
@@ -273,6 +274,7 @@ export async function notifyCancelAccepted(order: Order, memo: string): Promise<
     ...(memo ? ['', `메모: ${escapeHtml(memo)}`] : []),
     '',
     '★ 취소는 대행사를 통해 사람이 처리합니다. 위 번호로 접수해 주세요.',
+    '  카드사 환불까지 영업일 기준 2~3일이 걸립니다. 손님께 그대로 안내해 주세요.',
     '  환불이 실제로 끝나면 관리자에서 [취소 완료] 를 눌러 주세요.',
     `확인: ${SITE_URL}/admin/orders/${order.id}`,
   ];

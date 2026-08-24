@@ -55,6 +55,7 @@ export async function GET() {
       pointBalance: balance,
       pointExpiringSoon: expiringSoon,
       pointMinUse: points.minUse,
+      pointUseUnit: points.useUnit,
       pointPopupEnabled: points.popupEnabled,
       pointPopupIntervalHours: points.popupIntervalHours,
     },

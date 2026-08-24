@@ -713,6 +713,8 @@ export function normalizePoints(value: unknown): PointSettings {
     })(),
     birthday: normalizeRule(raw.birthday, DEFAULT_POINTS.birthday),
     minUse: count(raw.minUse, DEFAULT_POINTS.minUse),
+    // ★ 0 이나 빈 값이면 1 로 봅니다. 0 으로 나누면 계산이 통째로 무너집니다.
+    useUnit: Math.max(1, count(raw.useUnit, DEFAULT_POINTS.useUnit)),
     maxUseRate: Math.min(100, Math.max(0, rate)),
     // 0 이면 소멸하지 않습니다. 너무 짧으면 실수로 다 날아가므로 최대 120개월로 둡니다.
     expireMonths: Math.min(120, count(raw.expireMonths, DEFAULT_POINTS.expireMonths)),

@@ -68,6 +68,7 @@ export default async function CheckoutPage() {
       ? {
           balance: profile.pointBalance,
           minUse: pointSettings.minUse,
+          useUnit: pointSettings.useUnit,
           maxUseRate: pointSettings.maxUseRate,
         }
       : null;
