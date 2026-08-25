@@ -72,7 +72,15 @@ export default function PaymentForm({
   const toggleMethod = (key: string, on: boolean) =>
     setForm((prev) => ({ ...prev, methods: { ...prev.methods, [key]: on } }));
 
-  const onCount = PAYMENT_METHODS.filter((method) => form.methods[method.key]).length;
+  /*
+   * ★ 켜진 개수는 "코드가 열어 둔 수단" 중에서만 셉니다. (2026-08-25)
+   *   닫아 둔 수단(ready:false)이 저장값으로는 켜져 있을 수 있는데,
+   *   그것까지 세면 실제로는 주문서에 하나도 안 나오는데 "2개 켜져 있음" 이라고
+   *   말하게 됩니다. 마지막 하나를 지키는 검사도 헛돕니다.
+   */
+  const onCount = PAYMENT_METHODS.filter(
+    (method) => method.ready && form.methods[method.key]
+  ).length;
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -87,20 +95,36 @@ export default function PaymentForm({
         <ul className="mt-4 flex flex-col gap-3">
           {PAYMENT_METHODS.map((method) => {
             const on = form.methods[method.key] === true;
+            /*
+             * ★ 코드에서 닫아 둔 수단입니다. 여기서 켜도 주문서에 나오지 않습니다.
+             *   목록에서 아예 감추지 않는 이유는, 예전에 받던 수단이 소리 없이
+             *   사라지면 "내가 껐나?" 하고 헤매게 되기 때문입니다.
+             *   보여 주되 못 켜게 하고, 왜 못 켜는지 적어 둡니다.
+             */
+            const closed = !method.ready;
             // 마지막 하나를 끄려는 순간을 막습니다. (주문을 못 받게 됩니다)
             const lastOne = on && onCount <= 1;
             return (
               <li key={method.key} className="border-b border-slate-100 pb-3 last:border-b-0">
-                <label className="flex items-start gap-2 text-[16px] text-slate-800">
+                <label
+                  className={`flex items-start gap-2 text-[16px] ${
+                    closed ? 'text-slate-400' : 'text-slate-800'
+                  }`}
+                >
                   <input
                     type="checkbox"
-                    checked={on}
-                    disabled={lastOne}
+                    checked={on && !closed}
+                    disabled={lastOne || closed}
                     onChange={(event) => toggleMethod(method.key, event.target.checked)}
                     className="mt-0.5 h-4 w-4"
                   />
                   <span>
                     <strong className="font-medium">{method.label}</strong>
+                    {closed ? (
+                      <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[13px] text-slate-600">
+                        받지 않음
+                      </span>
+                    ) : null}
                     <span className="mt-1 block text-[14px] leading-relaxed text-slate-500">
                       {PAYMENT_METHOD_HINTS[method.key]}
                     </span>
@@ -324,7 +348,7 @@ export default function PaymentForm({
             <span>
               결제대기로 남은 카드 주문을 자동으로 정리하기
               <span className="mt-1 block text-[14px] leading-relaxed text-slate-500">
-                아래 시간이 지난 <strong>카드·간편결제</strong> 결제대기 주문을 KSNET 에
+                아래 시간이 지난 <strong>신용카드</strong> 결제대기 주문을 KSNET 에
                 확인해 정리합니다. <strong>무통장입금은 위 스위치가 따로 맡습니다.</strong>
               </span>
               <span className="mt-1 block text-[14px] leading-relaxed text-amber-800">
@@ -349,7 +373,7 @@ export default function PaymentForm({
             className="admin-input tabular-nums"
           />
           <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
-            이 시간이 지난 <strong>결제대기 카드·간편결제 주문</strong>은 KSNET 에 승인 여부를
+            이 시간이 지난 <strong>결제대기 신용카드 주문</strong>은 KSNET 에 승인 여부를
             확인한 뒤 정리합니다. 승인이 났으면 결제완료로 바꾸고, 안 났으면 결제실패로 바꾸며
             재고와 사용 포인트를 되돌립니다.
           </p>

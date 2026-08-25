@@ -11,7 +11,12 @@ import type {
 } from '@/lib/payments/types';
 
 /**
- * KSNET (KSPay V1.4) — 신용카드 · 카카오페이 · 네이버페이 · 계좌이체.
+ * KSNET (KSPay V1.4).
+ *
+ * ★ KSNET 계약에는 신용카드 · 카카오페이 · 네이버페이가 열려 있지만,
+ *   우리가 손님에게 여는 것은 신용카드뿐입니다. (2026-08-25)
+ *   어느 수단을 열지는 lib/site-config.ts 의 PAYMENT_METHODS 가 정합니다.
+ *   이 파일은 그 결정을 따라갈 뿐이라 손댈 것이 없습니다.
  *
  * ★ 이 파일은 "어떻게 시작하는가" 만 다룹니다.
  *   실제 승인 확인은 lib/payments/ksnet/approve.ts,

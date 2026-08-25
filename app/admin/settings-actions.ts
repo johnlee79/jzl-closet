@@ -183,7 +183,14 @@ export async function savePaymentAction(input: PaymentSettings): Promise<ActionR
    *   화면에서도 막지만, 여기서 한 번 더 받칩니다.
    *   저장 버튼 한 번으로 사이트가 주문을 못 받는 상태가 되면 안 됩니다.
    */
-  const onCount = PAYMENT_METHODS.filter((method) => input.methods?.[method.key]).length;
+  /*
+   * ★ 코드에서 닫아 둔 수단(ready:false)은 세지 않습니다. (2026-08-25)
+   *   저장값으로는 켜져 있어도 주문서에 나오지 않으므로, 그것만 켜 두고
+   *   저장하면 "하나는 켜져 있다" 며 통과해 놓고 실제로는 주문을 못 받습니다.
+   */
+  const onCount = PAYMENT_METHODS.filter(
+    (method) => method.ready && input.methods?.[method.key]
+  ).length;
   if (onCount === 0) {
     return {
       ok: false,

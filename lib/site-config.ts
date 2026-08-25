@@ -350,11 +350,23 @@ export function emptyBanner(id: string): Banner {
  *   필요한 값이라, 주문서에서 미리 고르게 하고 그 수단 하나만 열어 줍니다.
  * ★ ready 는 "코드가 준비되었는지" 입니다. 실제로 손님에게 보일지는
  *   관리자 설정(PaymentSettings.methods)이 정합니다.
+ *
+ * ★★ 간편결제(카카오페이·네이버페이)를 닫았습니다. (2026-08-25)
+ *   ready 를 false 로 두고 목록에서 지우지는 않았습니다. 지우면
+ *   이미 그 수단으로 결제된 과거 주문이 세 군데에서 한꺼번에 망가집니다.
+ *     · paymentMethodLabel  — '카카오페이' 대신 'kakaopay' 라고 그대로 보입니다
+ *     · isPgMethod          — false 가 되어 PG 주문이 아닌 것으로 취급됩니다
+ *                             (취소·환불 처리가 무통장입금 길로 잘못 갑니다)
+ *     · 관리자 주문 필터     — 그 수단으로 걸러 볼 수 없게 됩니다
+ *   ready:false 면 손님 주문서에서만 사라지고 위 셋은 그대로 살아 있습니다.
+ *
+ *   다시 열려면 여기 ready 와 아래 DEFAULT_PAYMENT_METHOD_FLAGS 를 되돌리고,
+ *   관리자 > 설정 > 결제·주문 에서 켜면 됩니다. KSNET 쪽은 손댈 것이 없습니다.
  */
 export const PAYMENT_METHODS = [
   { key: 'card', label: '신용카드', ready: true },
-  { key: 'kakaopay', label: '카카오페이', ready: true },
-  { key: 'naverpay', label: '네이버페이', ready: true },
+  { key: 'kakaopay', label: '카카오페이', ready: false },
+  { key: 'naverpay', label: '네이버페이', ready: false },
   { key: 'pg_banktransfer', label: '계좌이체 (실시간)', ready: true },
   { key: 'bank_transfer', label: '무통장입금', ready: true },
 ] as const;
@@ -407,11 +419,20 @@ export function acceptsCashReceipt(key: string): boolean {
   return key === 'bank_transfer';
 }
 
-/** 결제수단 켜고 끄기의 기본값. 계좌이체만 꺼 둡니다. */
+/**
+ * 결제수단 켜고 끄기의 기본값. 신용카드와 무통장입금만 켭니다.
+ *
+ * ★★ 이 값은 "아직 한 번도 저장한 적이 없는 항목" 에만 쓰입니다.
+ *   관리자에서 설정을 저장한 적이 있으면 DB 에 든 값이 이깁니다.
+ *   그래서 여기를 false 로 바꾸는 것만으로는 이미 켜져 있던 수단이
+ *   꺼지지 않습니다. 실제로 꺼지는 것은 위 PAYMENT_METHODS 의 ready 입니다.
+ *   (enabledPaymentMethods 가 ready 와 저장값을 모두 봅니다)
+ */
 export const DEFAULT_PAYMENT_METHOD_FLAGS: Record<PaymentMethod, boolean> = {
   card: true,
-  kakaopay: true,
-  naverpay: true,
+  // ★ 닫았습니다. (2026-08-25) 위 PAYMENT_METHODS 의 ready 도 함께 false 입니다.
+  kakaopay: false,
+  naverpay: false,
   // ★ KSNET 오픈이 확인되지 않았습니다. 확인 후 관리자에서 켜세요.
   pg_banktransfer: false,
   bank_transfer: true,
@@ -420,8 +441,10 @@ export const DEFAULT_PAYMENT_METHOD_FLAGS: Record<PaymentMethod, boolean> = {
 /** 관리자 설정 화면에 함께 보여 줄 한 줄 설명 */
 export const PAYMENT_METHOD_HINTS: Record<PaymentMethod, string> = {
   card: '국내 신용카드. KSNET 에 오픈되어 있습니다.',
-  kakaopay: '카카오페이. KSNET 에 오픈되어 있습니다.',
-  naverpay: '네이버페이. KSNET 에 오픈되어 있습니다.',
+  kakaopay:
+    '카카오페이 — 지금은 받지 않습니다. 코드에서 닫아 두어 켜도 주문서에 나오지 않습니다. 다시 받으려면 개발자에게 말씀해 주세요.',
+  naverpay:
+    '네이버페이 — 지금은 받지 않습니다. 코드에서 닫아 두어 켜도 주문서에 나오지 않습니다. 다시 받으려면 개발자에게 말씀해 주세요.',
   pg_banktransfer: '계좌이체 — KSNET 오픈 확인 후 켜세요. 확인 전에는 결제창이 열리지 않습니다.',
   bank_transfer: '무통장입금. PG 를 거치지 않고 통장으로 직접 확인합니다. 현금영수증 신청도 이 수단에서만 받습니다.',
 };

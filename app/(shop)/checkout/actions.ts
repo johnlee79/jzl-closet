@@ -90,11 +90,11 @@ function validate(input: CheckoutInput, enabled: string[]): string | null {
 
   /*
    * ★ 현금영수증은 무통장입금에만 해당합니다.
-   *   카드·간편결제는 현금영수증 대상이 아닙니다. (카드 매출전표가 그 역할을 합니다)
+   *   신용카드 결제는 현금영수증 대상이 아닙니다. (카드 매출전표가 그 역할을 합니다)
    *   화면에서도 감추지만, 값이 섞여 들어오면 여기서 막습니다.
    */
   if (!acceptsCashReceipt(input.paymentMethod) && input.cashReceiptType !== 'none') {
-    return '카드·간편결제는 현금영수증 신청 대상이 아닙니다.';
+    return '신용카드 결제는 현금영수증 신청 대상이 아닙니다.';
   }
 
   if (input.cashReceiptType !== 'none') {
@@ -199,7 +199,7 @@ export type PlaceOrderResult = {
   /**
    * 이 주소로 보내세요.
    *   무통장입금 → /checkout/complete (주문 완료 · 계좌 안내)
-   *   카드·간편결제 → /checkout/pay   (KSNET 결제창)
+   *   신용카드 → /checkout/pay   (KSNET 결제창)
    * ★ 어디로 보낼지는 서버가 정합니다. 클라이언트가 판단하면
    *   결제수단이 늘어날 때마다 두 곳을 고쳐야 하고 언젠가 한쪽이 빠집니다.
    */
@@ -275,7 +275,7 @@ export async function placeOrderAction(
   }
 
   // 결제 시작. 무통장입금은 계좌 안내 문구만 돌려주고 끝납니다.
-  // 카드·간편결제는 결제창으로 넘어갈 주소를 돌려줍니다.
+  // 신용카드는 결제창으로 넘어갈 주소를 돌려줍니다.
   const needsPayment = isPgMethod(order.paymentMethod);
   try {
     await provider.createPayment(order);
