@@ -2,12 +2,16 @@
 
 import { revalidatePath } from 'next/cache';
 import { getActiveMember } from '@/lib/auth';
-import { claimOrder, confirmReceipt, getOrderOfUser, requestCancel } from '@/lib/orders';
+import {
+  claimOrder,
+  confirmReceipt,
+  getOrderOfUser,
+  requestCancelByCustomer,
+} from '@/lib/orders';
 import { canRequestCancel } from '@/lib/order-status';
 import { isSocialProvider, updateProfile, withdrawProfile } from '@/lib/profiles';
-import { getPaymentSettings } from '@/lib/settings';
 import { createAuthClient } from '@/lib/supabase/auth-server';
-import { notifyCancelRequest } from '@/lib/telegram';
+import { isTelegramConfigured, notifyCancelRequest } from '@/lib/telegram';
 
 /**
  * 마이페이지 서버 액션.
@@ -115,20 +119,38 @@ export async function memberCancelRequestAction(
     };
   }
 
+  let cancelled;
   try {
-    await requestCancel(order.id, reason);
+    cancelled = await requestCancelByCustomer(order.id, reason);
   } catch (error) {
     const message = error instanceof Error ? error.message : '요청을 접수하지 못했습니다.';
     return { ok: false, error: message };
   }
 
-  const payment = await getPaymentSettings();
-  if (payment.telegramEnabled) {
-    try {
-      await notifyCancelRequest(order, reason);
-    } catch (error) {
-      console.warn('[mypage] 취소 요청 알림 실패:', error);
-    }
+  /*
+   * ── 텔레그램 — 알림 토글과 무관하게 보냅니다 (2026-08-25) ──
+   *
+   * ★★ 예전에는 payment.telegramEnabled 가 켜져 있을 때만 보냈습니다.
+   *   그 토글은 "새 주문마다 울릴지" 를 정하는 것입니다. 주문 알림은 많으면
+   *   성가시니 끌 수 있어야 합니다.
+   *
+   *   취소 요청은 성격이 다릅니다. 놓치면 손님은 취소된 줄 알고 기다리고,
+   *   우리는 모른 채 물건을 보냅니다. 그대로 분쟁이 됩니다.
+   *   하루에 몇 건 오지도 않습니다. 끌 이유가 없는 알림입니다.
+   *
+   * ★ 환경변수가 아예 없으면 조용히 false 가 돌아옵니다. 그때도 알 수 있게
+   *   로그를 남깁니다. 조용히 넘어가면 나중에 아무도 못 찾습니다.
+   */
+  try {
+    await notifyCancelRequest(cancelled, reason);
+  } catch (error) {
+    console.warn('[mypage] 취소 요청 텔레그램 알림 실패:', order.orderNo, error);
+  }
+  if (!isTelegramConfigured()) {
+    console.warn(
+      `[mypage] 취소 요청 알림을 보내지 못했습니다 (${order.orderNo}): ` +
+        '텔레그램 환경변수가 비어 있습니다. 관리자 주문 목록의 취소요청 탭을 확인하세요.'
+    );
   }
 
   revalidatePath(`/mypage/orders/${order.id}`);

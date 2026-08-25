@@ -9,7 +9,7 @@ import {
   depositDeadline,
   getOrderForLookup,
   readCartLines,
-  requestCancel,
+  requestCancelByCustomer,
   type CartLineState,
 } from '@/lib/orders';
 import { getCurrentUser } from '@/lib/auth';
@@ -25,7 +25,11 @@ import {
   hasBankAccount,
   isPgMethod,
 } from '@/lib/site-config';
-import { notifyCancelRequest, notifyNewOrder } from '@/lib/telegram';
+import {
+  isTelegramConfigured,
+  notifyCancelRequest,
+  notifyNewOrder,
+} from '@/lib/telegram';
 import type { CashReceiptType, CheckoutInput, Order } from '@/lib/types';
 
 /**
@@ -440,20 +444,42 @@ export async function requestCancelAction(
     };
   }
 
+  let cancelled: Order;
   try {
-    await requestCancel(order.id, reason);
+    cancelled = await requestCancelByCustomer(order.id, reason);
   } catch (error) {
     const message = error instanceof Error ? error.message : '요청을 접수하지 못했습니다.';
     return { ok: false, error: message };
   }
 
-  const payment = await getPaymentSettings();
-  if (payment.telegramEnabled) {
-    try {
-      await notifyCancelRequest(order, reason);
-    } catch (error) {
-      console.warn('[checkout] 취소 요청 알림 실패:', error);
-    }
+  /*
+   * ── 텔레그램 — 알림 토글과 무관하게 보냅니다 (2026-08-25) ──
+   *
+   * ★★ 예전에는 payment.telegramEnabled 가 켜져 있을 때만 보냈습니다.
+   *   그 토글은 "새 주문이 들어올 때마다 울릴지" 를 정하는 것입니다.
+   *   주문 알림은 많이 오면 성가시니 끌 수 있어야 합니다.
+   *
+   *   하지만 취소 요청은 성격이 다릅니다. 놓치면 손님은 취소된 줄 알고
+   *   기다리고, 우리는 모른 채 물건을 보냅니다. 그대로 분쟁이 됩니다.
+   *   하루에 몇 건 오지도 않습니다. 끌 이유가 없는 알림입니다.
+   *
+   * ★ 텔레그램 환경변수가 아예 없으면 sendTelegramMessage 가 조용히
+   *   false 를 돌려줍니다. 그때도 알 수 있도록 로그를 남깁니다.
+   *   조용히 넘어가면 나중에 아무도 못 찾습니다.
+   *
+   * ★ 알림이 실패해도 취소 요청은 이미 접수되어 있습니다.
+   *   상태가 cancel_requested 로 바뀌었으므로 관리자 목록에는 뜹니다.
+   */
+  try {
+    await notifyCancelRequest(cancelled, reason);
+  } catch (error) {
+    console.warn('[checkout] 취소 요청 텔레그램 알림 실패:', order.orderNo, error);
+  }
+  if (!isTelegramConfigured()) {
+    console.warn(
+      `[checkout] 취소 요청 알림을 보내지 못했습니다 (${order.orderNo}): ` +
+        '텔레그램 환경변수가 비어 있습니다. 관리자 주문 목록의 취소요청 탭을 확인하세요.'
+    );
   }
 
   revalidatePath('/admin/orders');

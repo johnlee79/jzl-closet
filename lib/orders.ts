@@ -3,6 +3,7 @@ import { assertWritten } from '@/lib/db-write';
 import { sendOrderMail, sendShippingMail } from '@/lib/mail';
 
 import {
+  CANCELABLE_BY_CUSTOMER,
   ORDER_STATUSES,
   UNSHIPPED_STATUSES,
   isOrderStatus,
@@ -2372,15 +2373,80 @@ export async function setCashReceiptIssued(id: string, issued: boolean): Promise
 }
 
 /** 손님의 취소 요청 — 상태는 바꾸지 않고 이력에만 남깁니다. */
-export async function requestCancel(orderId: string, reason: string): Promise<void> {
-  const order = await getOrderById(orderId);
-  if (!order) throw new Error('주문을 찾을 수 없습니다.');
+/**
+ * ============================================================
+ * 손님이 보낸 주문 취소 요청
+ * ============================================================
+ *
+ * ★★ 이름을 requestCancel 에서 바꿨습니다. (2026-08-25)
+ *   관리자용 requestOrderCancel 과 한 글자 차이라 헷갈렸고,
+ *   실제로 두 함수가 전혀 다른 일을 하고 있었습니다.
+ *
+ * ★★ 무엇이 문제였나
+ *   예전에는 이력에 메모 한 줄만 남기고 주문 상태를 건드리지 않았습니다.
+ *     addHistory(id, order.status, order.status, '[손님 취소 요청] …')
+ *   그래서 손님은 "취소 요청을 접수했습니다" 를 보는데,
+ *   관리자 목록에서는 어디에도 나타나지 않았습니다.
+ *     · 취소요청 탭 — status 로 거르므로 0건
+ *     · 확인 필요 뱃지 — cancel_requested 를 보는데 상태가 안 바뀌니 안 잡힘
+ *     · 주문 목록 — 결제대기 그대로
+ *   주문 상세를 열어 이력을 펼쳐야만 보였습니다. 아무도 그렇게 안 봅니다.
+ *
+ *   손님은 취소했다고 믿고 우리는 모르는 상태입니다. 무통장이면 입금 기한이
+ *   지나 우연히 정리되지만, 카드였다면 결제완료로 남아 발송까지 나갑니다.
+ *
+ * ★★ 이제 관리자용과 같은 일을 합니다.
+ *   status·cancel_requested_at·cancel_memo 를 채웁니다.
+ *
+ * ★ 재고와 환불은 건드리지 않습니다. "요청 접수" 와 "환불 완료" 는 반드시
+ *   나눠야 합니다. KSNET 은 가맹점에 취소 권한을 주지 않아 실제 환불은
+ *   사람이 대행사를 통해 처리하고 며칠이 걸립니다. 여기서 취소완료로
+ *   만들면 "취소됐다는데 돈이 안 들어온다" 는 분쟁이 반드시 납니다.
+ *
+ * ★ 메모에 [손님 요청] 을 붙입니다. 관리자가 누른 것과 구분해야 합니다.
+ */
+export async function requestCancelByCustomer(
+  orderId: string,
+  reason: string
+): Promise<Order> {
+  const supabase = requireSupabaseAdmin();
+  const before = await getOrderById(orderId);
+  if (!before) throw new Error('주문을 찾을 수 없습니다.');
+
+  /*
+   * ★ 상태가 그 사이 바뀌었을 수 있습니다.
+   *   손님이 취소 버튼을 누르는 동안 관리자가 상품준비중으로 옮겼다면
+   *   덮어쓰면 안 됩니다. DB 수준에서 조건을 걸어 막습니다.
+   *   0건이면 이미 취소를 못 하는 상태로 넘어간 것입니다.
+   */
+  const claimed = await supabase
+    .from(ORDERS)
+    .update({
+      status: 'cancel_requested',
+      cancel_requested_at: new Date().toISOString(),
+      cancel_memo: `[손님 요청] ${reason.trim() || '사유 미입력'}`,
+    })
+    .eq('id', orderId)
+    .in('status', CANCELABLE_BY_CUSTOMER)
+    .select('id');
+
+  if (claimed.error) {
+    throw new Error(`취소 요청을 접수하지 못했습니다: ${claimed.error.message}`);
+  }
+  if (!claimed.data || claimed.data.length === 0) {
+    throw new Error(
+      '이미 상품 준비가 시작되었거나 처리가 끝난 주문입니다. 고객센터로 문의해 주세요.'
+    );
+  }
+
   await addHistory(
     orderId,
-    order.status,
-    order.status,
+    before.status,
+    'cancel_requested',
     `[손님 취소 요청] ${reason.trim() || '사유 미입력'}`
   );
+
+  return (await getOrderById(orderId)) ?? before;
 }
 
 /* ------------------------------------------------------------------
