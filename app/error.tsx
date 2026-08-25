@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import LeavingScreen from '@/components/LeavingScreen';
 import { isLeaving } from '@/lib/leaving';
+import { reportUiError } from '@/lib/ui-error';
 
 /**
  * ============================================================
@@ -39,28 +40,15 @@ export default function ShopError({
    * ★ userAgent — 아이폰에서만 나는 문제를 로그로 가르는 유일한 단서입니다.
    * ★ digest — 서버 오류 번호. Vercel 함수 로그에서 같은 건을 찾을 수 있습니다.
    */
+  /*
+   * ★★ 반드시 남깁니다. 브라우저 콘솔에 찍고, 서버로도 한 줄 보냅니다.
+   *   콘솔은 우리가 볼 수 없습니다. 특히 아이폰은 맥이 있어야 들여다볼 수
+   *   있어 사실상 막혀 있습니다. 서버로 보내야 Vercel 로그에서 볼 수 있습니다.
+   * ★ 무엇을 어떻게 남기는지는 lib/ui-error.ts 한 곳에 있습니다.
+   *   같은 코드를 두 경계에 두 벌 두면 반드시 한쪽만 고쳐집니다.
+   */
   useEffect(() => {
-    const where = typeof window !== 'undefined' ? window.location.href : '';
-    const agent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-
-    if (isLeaving()) {
-      console.warn(
-        '[ui] 화면을 떠나는 중에 끊겼습니다 (고장 아님) —',
-        `message: ${error?.message ?? ''} |`,
-        `digest: ${error?.digest ?? '없음'} |`,
-        `주소: ${where} |`,
-        `userAgent: ${agent}`
-      );
-      return;
-    }
-
-    console.error(
-      '[ui] 화면 오류 —',
-      `message: ${error?.message ?? ''} |`,
-      `digest: ${error?.digest ?? '없음'} |`,
-      `주소: ${where} |`,
-      `userAgent: ${agent}`
-    );
+    reportUiError(error, '화면 안쪽');
   }, [error]);
 
   /*

@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import LeavingScreen from '@/components/LeavingScreen';
 import { isLeaving } from '@/lib/leaving';
+import { reportUiError } from '@/lib/ui-error';
 import './globals.css';
 
 /**
@@ -40,29 +41,14 @@ export default function GlobalError({
    * ★ digest 는 서버에서 난 오류에 붙는 번호입니다. 이 번호로 Vercel
    *   함수 로그에서 같은 오류를 찾을 수 있습니다.
    */
+  /*
+   * ★★ 반드시 남깁니다. 브라우저 콘솔에 찍고, 서버로도 한 줄 보냅니다.
+   *   userAgent 와 stack 이 함께 갑니다. "아이폰에서만" 과 "어느 코드가
+   *   터졌는지" 는 그 둘로만 갈립니다.
+   * ★ 자세한 내용은 lib/ui-error.ts 에 한 곳으로 모아 두었습니다.
+   */
   useEffect(() => {
-    const where = typeof window !== 'undefined' ? window.location.href : '';
-    const agent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-
-    if (isLeaving()) {
-      // 떠나면서 끊긴 것입니다. 고장이 아니라서 화면에는 아무것도 안 그립니다.
-      console.warn(
-        '[ui] 화면을 떠나는 중에 끊겼습니다 (고장 아님) —',
-        `message: ${error?.message ?? ''} |`,
-        `digest: ${error?.digest ?? '없음'} |`,
-        `주소: ${where} |`,
-        `userAgent: ${agent}`
-      );
-      return;
-    }
-
-    console.error(
-      '[ui] 화면 오류 (최상위) —',
-      `message: ${error?.message ?? ''} |`,
-      `digest: ${error?.digest ?? '없음'} |`,
-      `주소: ${where} |`,
-      `userAgent: ${agent}`
-    );
+    reportUiError(error, '최상위');
   }, [error]);
 
   /*
