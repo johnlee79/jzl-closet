@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import WelcomeNotice from '@/components/WelcomeNotice';
-import { getActiveMember } from '@/lib/auth';
+import { requireMember } from '@/lib/auth';
+import MemberOnlyNotice from '@/components/MemberOnlyNotice';
 import { countInquiriesOfUser } from '@/lib/inquiries';
 import { MYPAGE_ORDER_TABS, statusLabel } from '@/lib/order-status';
 import { countOrdersOfUser, depositDeadline, getOrdersOfUser } from '@/lib/orders';
@@ -22,8 +23,13 @@ export const metadata = { title: '요약' };
 const HIGHLIGHT = ['checking', 'shipping', 'delivered'] as const;
 
 export default async function MypageHomePage() {
-  const member = await getActiveMember();
-  if (!member) return null;
+  /*
+   * ★ 비로그인이면 로그인 화면으로 보냅니다. (로그인 뒤 여기로 돌아옵니다)
+   *   로그인은 했지만 쇼핑몰 회원이 아니면 안내 화면을 그립니다.
+   *   예전에는 둘 다 null 이라 본문이 통째로 빈 화면이 나왔습니다.
+   */
+  const member = await requireMember('/mypage');
+  if (!member) return <MemberOnlyNotice />;
 
   const [counts, recent, inquiryCounts, event, payment] = await Promise.all([
     countOrdersOfUser(member.user.id),

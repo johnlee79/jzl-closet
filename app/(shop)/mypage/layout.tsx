@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import MypageNav from '@/components/MypageNav';
 import PhonePrompt from '@/components/PhonePrompt';
-import { getActiveMember } from '@/lib/auth';
+import { requireMember } from '@/lib/auth';
+import MemberOnlyNotice from '@/components/MemberOnlyNotice';
 
 /**
  * 마이페이지 공통 껍데기.
@@ -22,8 +22,35 @@ export default async function MypageLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const member = await getActiveMember();
-  if (!member) redirect('/login?next=/mypage');
+  /*
+   * ============================================================
+   * ★★ 여기가 "텅 빈 마이페이지" 의 진짜 원인이었습니다 (2026-08-25)
+   * ============================================================
+   *
+   * 예전에는 이랬습니다.
+   *     const member = await getActiveMember();
+   *     if (!member) redirect('/login?next=/mypage');
+   *
+   * 비로그인이면 맞는 동작입니다. 문제는 다른 경우입니다.
+   *
+   *   로그인은 했는데 쇼핑몰 회원이 아닌 계정 — profiles 행이 없거나 탈퇴한 계정.
+   *   이 상태에서 /mypage 에 오면
+   *     이 레이아웃이 /login 으로 보냄
+   *       → 미들웨어가 "로그인한 사람" 으로 보고 /mypage 로 되돌려 보냄
+   *         → 이 레이아웃이 또 /login 으로 보냄 … 끝없이 반복
+   *   화면을 옮기는 도중이라 바깥 껍데기(헤더·푸터)는 그대로 남고 가운데만
+   *   비어 보입니다. 손님 눈에는 "본문이 통째로 없는 화면" 입니다.
+   *
+   *   이런 계정이 실제로 있습니다. 관리자 이메일로 로그인하면 Supabase 세션이
+   *   생기는데, 그 계정은 쇼핑몰 회원으로 가입한 적이 없어 profiles 가 없습니다.
+   *
+   * ★ requireMember 가 둘을 갈라 줍니다.
+   *     비로그인            → /login?next=… (여기서 리다이렉트)
+   *     로그인했지만 회원 아님 → null (아래에서 안내 화면을 그립니다)
+   *   두 번째를 돌려보내지 않는 것이 반복을 끊는 핵심입니다.
+   */
+  const member = await requireMember('/mypage');
+  if (!member) return <MemberOnlyNotice />;
 
   return (
     // 좌측 메뉴 + 우측 내용 구조는 그대로 두고 전체를 가운데 정렬합니다.

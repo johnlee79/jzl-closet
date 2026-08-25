@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ReviewForm from '@/components/ReviewForm';
-import { getActiveMember } from '@/lib/auth';
+import { requireMember } from '@/lib/auth';
+import MemberOnlyNotice from '@/components/MemberOnlyNotice';
 import { getOrderOfUser } from '@/lib/orders';
 import { hasReviewed } from '@/lib/reviews';
 import { getPointSettings, getReviewSettings } from '@/lib/settings';
@@ -11,8 +12,13 @@ export const metadata = { title: '후기 쓰기' };
 type PageProps = { searchParams: { order?: string; product?: string } };
 
 export default async function NewReviewPage({ searchParams }: PageProps) {
-  const member = await getActiveMember();
-  if (!member) return null;
+  /*
+   * ★ 비로그인이면 로그인 화면으로 보냅니다. (로그인 뒤 여기로 돌아옵니다)
+   *   로그인은 했지만 쇼핑몰 회원이 아니면 안내 화면을 그립니다.
+   *   예전에는 둘 다 null 이라 본문이 통째로 빈 화면이 나왔습니다.
+   */
+  const member = await requireMember('/mypage/reviews/new');
+  if (!member) return <MemberOnlyNotice />;
 
   const orderId = (searchParams.order ?? '').trim();
   const productSlug = (searchParams.product ?? '').trim();
