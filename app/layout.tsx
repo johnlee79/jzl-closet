@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
 import {
   getCachedAnalytics,
@@ -17,6 +17,18 @@ import './globals.css';
  * 파비콘과 브랜드명·소개 문구는 관리자 > 설정 에서 저장한 값을 씁니다.
  * 저장한 값이 없으면 lib/site-config.ts 의 기본값으로 갑니다.
  */
+/**
+ * 주소창·상단 막대 색.
+ *
+ * ★ Next 14 부터 themeColor 는 metadata 가 아니라 viewport 에 둡니다.
+ *   metadata 에 넣으면 빌드에서 경고가 나고 무시됩니다.
+ * ★ 홈 화면에서 앱처럼 열었을 때 위쪽 띠 색이 됩니다.
+ *   manifest 의 theme_color 와 같은 값이어야 화면이 어긋나지 않습니다.
+ */
+export const viewport: Viewport = {
+  themeColor: '#14141A',
+};
+
 export async function generateMetadata(): Promise<Metadata> {
   const [branding, store] = await Promise.all([getCachedBranding(), getCachedStore()]);
 
@@ -80,6 +92,21 @@ export async function generateMetadata(): Promise<Metadata> {
     verification: {
       google: SITE_VERIFICATION.google,
       other: { 'naver-site-verification': SITE_VERIFICATION.naver },
+    },
+    /*
+     * ★ 홈 화면에 추가(PWA) — app/manifest.ts 가 만드는 주소를 가리킵니다.
+     *   브라우저가 이걸 읽어야 "추가할 수 있는 사이트" 로 봅니다.
+     */
+    manifest: '/manifest.webmanifest',
+    /*
+     * ★★ iOS 는 manifest 를 거의 보지 않습니다. 이 값들을 봅니다.
+     *   capable 이 있어야 홈 화면에서 열 때 주소창 없이 뜹니다.
+     *   title 은 홈 화면 아이콘 밑에 적히는 이름입니다.
+     */
+    appleWebApp: {
+      capable: true,
+      title: 'JZL CLOSET',
+      statusBarStyle: 'default',
     },
     icons: {
       icon,

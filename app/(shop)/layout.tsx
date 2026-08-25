@@ -2,6 +2,7 @@ import AnchorFlash from '@/components/AnchorFlash';
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
 import MemberSync from '@/components/MemberSync';
+import InstallPrompt from '@/components/InstallPrompt';
 import PaymentReturnWatch from '@/components/PaymentReturnWatch';
 import PointPopup from '@/components/PointPopup';
 import PopupLayer from '@/components/PopupLayer';
@@ -136,6 +137,11 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
               경우를 잡는 유일한 길입니다. 그때는 303 도 스크립트도 실행되지 않습니다.
           */}
           <PaymentReturnWatch />
+          {/*
+            홈 화면에 추가 안내. 두 번 넘게 오신 손님에게만, 닫으면 30일 쉽니다.
+            ★ 서비스 워커 등록도 이 컴포넌트가 합니다. 캐시는 하지 않습니다.
+          */}
+          <InstallPrompt />
           {/* 연락처 미입력 같은 안내 줄. 로그인 상태는 브라우저에서 확인합니다. */}
           <SiteNotices />
           <main id="main">{children}</main>

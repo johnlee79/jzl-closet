@@ -47,8 +47,27 @@ import { useEffect, useRef, useState } from 'react';
  *   그쯤이면 사람이 봐야 하는 상황입니다.
  */
 
-/** 얼마나 자주 물어보는지 */
+/**
+ * 얼마나 자주 물어보는지.
+ *
+ * ★★ 처음 몇 번을 빠르게 합니다. (2026-08-25)
+ *   전에는 처음부터 끝까지 2초 간격이라, 승인이 이미 끝나 있어도
+ *   손님은 최소 2초를 기다렸습니다. 실제로 2~3초가 보였습니다.
+ *
+ *   승인 확인은 대개 1~2초면 끝납니다. 그 언저리를 촘촘히 훑고,
+ *   그때도 안 끝났으면 사람이 봐야 하는 쪽에 가까우므로 간격을 늘립니다.
+ *   빠르게 묻는 것은 앞의 세 번뿐이라 서버에 부담이 없습니다.
+ *
+ * ★ 상태 확인 창구의 제한은 1분에 120회입니다. (status/route.ts)
+ *   이 차례대로면 2분 동안 60번쯤이라 넉넉히 들어갑니다.
+ */
+const FIRST_INTERVALS_MS = [400, 800, 1500];
 const INTERVAL_MS = 2000;
+
+/** 몇 번째 확인인지에 따른 다음 간격 */
+function nextDelay(attempt: number): number {
+  return FIRST_INTERVALS_MS[attempt] ?? INTERVAL_MS;
+}
 /** 이 시간이 지나면 그만 묻습니다. */
 const GIVE_UP_MS = 2 * 60 * 1000;
 
@@ -100,6 +119,8 @@ export default function PaymentStatusRefresh({
 
     let alive = true;
     let timer: number | undefined;
+    /** 몇 번 물어봤는지 — 앞의 몇 번을 더 빠르게 하려고 셉니다. */
+    let attempt = 0;
     const startedAt = Date.now();
 
     /**
@@ -170,7 +191,8 @@ export default function PaymentStatusRefresh({
         log('물어보지 못했습니다', String(error));
       }
 
-      timer = window.setTimeout(ask, INTERVAL_MS);
+      timer = window.setTimeout(ask, nextDelay(attempt));
+      attempt += 1;
     };
 
     /*
