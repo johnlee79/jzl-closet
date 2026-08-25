@@ -13,12 +13,22 @@ import { useNavTransition } from '@/lib/use-nav-transition';
  */
 export default function OrderFilters({
   counts,
-  total,
+  activeTotal,
 }: {
-  /** 상태별 건수. 탭 뱃지에 씁니다. */
+  /**
+   * 탭 뱃지 숫자. 상태 키 말고 'all' · 'needs_check' · 'unshipped' 도 들어 있습니다.
+   * ★ 지금 조건(검색·기간·결제수단)을 이미 반영한 값입니다.
+   */
   counts: Record<string, number>;
-  /** 전체 건수 */
-  total: number;
+  /**
+   * 지금 보고 있는 목록이 스스로 센 건수.
+   *
+   * ★★ 활성 탭에는 이 값을 씁니다. 목록과 같은 응답에서 나온 값이라
+   *   눈앞의 줄 수와 절대 어긋날 수 없습니다.
+   *   위 counts 는 다른 조회라, 그 사이에 주문이 하나 들어오면
+   *   "탭은 4건인데 목록에는 5줄" 이 됩니다. 실제로 그랬습니다.
+   */
+  activeTotal: number;
 }) {
   // ★ 필터를 바꿔도 새 데이터가 올 때까지 지금 표가 그대로 남습니다.
   const { pending, go } = useNavTransition();
@@ -67,7 +77,13 @@ export default function OrderFilters({
         <ul className="flex min-w-max gap-1 border-b border-slate-200">
           {STATUS_TABS.map((tab) => {
             const active = tab.key === status;
-            const count = tab.key === 'all' ? total : (counts[tab.key] ?? 0);
+            /*
+             * ★ 지금 보고 있는 탭만 목록이 센 값을 씁니다.
+             *   나머지는 한 번의 집계에서 온 값입니다. 그 값들끼리는 서로 같은
+             *   시점이라 어긋나지 않고, 사람이 목록과 대조할 수 있는 것은
+             *   어차피 지금 보고 있는 탭 하나뿐입니다.
+             */
+            const count = active ? activeTotal : (counts[tab.key] ?? 0);
             return (
               <li key={tab.key}>
                 <button

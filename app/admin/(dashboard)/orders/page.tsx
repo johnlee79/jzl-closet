@@ -82,11 +82,19 @@ export default async function AdminOrdersPage({
     offset: (page - 1) * PAGE_SIZE,
   };
 
-  const [{ orders, total }, counts] = configured
-    ? await Promise.all([getOrders(filter), countOrdersByStatus()])
-    : [{ orders: [], total: 0 }, {}];
+  /*
+   * ★★ 탭 건수도 목록과 같은 조건으로 셉니다. (2026-08-25)
+   *   상태만 빼고 전부 같은 필터를 넘깁니다. 검색·기간·결제수단을 걸어 두고
+   *   탭에는 전체 숫자가 보이면, 탭과 목록이 서로 다른 세계를 보는 셈이라
+   *   어느 쪽을 믿어야 할지 알 수 없습니다.
+   *   limit·offset 도 뺍니다. 건수는 페이지와 상관이 없습니다.
+   */
+  const { status: _unusedStatus, limit: _unusedLimit, offset: _unusedOffset, ...countFilter } = filter;
 
-  const allCount = Object.values(counts).reduce((sum, value) => sum + value, 0);
+  const [{ orders, total }, counts] = configured
+    ? await Promise.all([getOrders(filter), countOrdersByStatus(countFilter)])
+    : [{ orders: [], total: 0 }, {} as Record<string, number>];
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   /** 페이지 번호만 바꾼 주소 */
@@ -122,7 +130,13 @@ export default async function AdminOrdersPage({
 
       <div className="admin-card mt-5 p-4">
         <Suspense fallback={<p className="text-[15px] text-slate-500">불러오는 중…</p>}>
-          <OrderFilters counts={counts} total={allCount} />
+          {/*
+            ★★ 지금 보고 있는 탭의 숫자는 목록이 스스로 센 값을 그대로 씁니다.
+              목록과 그 건수는 한 응답에서 나온 값이라 어긋날 수가 없습니다.
+              그래서 "탭에는 4건인데 목록에는 5줄" 같은 일이 구조적으로 불가능해집니다.
+              나머지 탭은 위 한 번의 집계에서 옵니다. (역시 서로 같은 시점)
+          */}
+          <OrderFilters counts={counts} activeTotal={total} />
         </Suspense>
       </div>
 

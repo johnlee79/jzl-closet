@@ -335,6 +335,53 @@ function applyStatusFilter<T>(query: T, status: string | undefined): T {
 }
 
 /**
+ * 상태별 건수를 셀 때 한 번에 훑는 최대 행 수.
+ *
+ * ★ 이 숫자를 넘으면 상태별 집계를 포기하고 전체 건수만 알려 줍니다.
+ *   틀린 숫자를 조용히 보여 주는 것보다 낫습니다.
+ *   그때가 오면 DB 함수(group by status)로 옮기세요.
+ */
+const COUNT_SCAN_MAX = 5000;
+
+/**
+ * 목록·건수가 공통으로 거는 조건.
+ *
+ * ★★ 상태 필터는 여기 없습니다. 부르는 쪽이 정합니다.
+ *   목록은 상태로 거르고, 상태별 건수는 걸면 안 됩니다.
+ *
+ * ★★ 세 곳(목록·페이지 밖 건수·상태별 건수)이 같은 조건을 봐야 합니다.
+ *   예전에는 이 조건이 두 곳에 복사되어 있었습니다. 한쪽만 고치면
+ *   화면이 스스로 어긋나는데, 그게 왜인지는 화면만 봐서는 알 수 없습니다.
+ */
+function applyOrderFilters<T extends { [key: string]: any }>(query: T, filter: OrderFilter): T {
+  let q = query;
+  if (filter.from) q = q.gte('created_at', kstStart(filter.from));
+  if (filter.to) q = q.lte('created_at', kstEnd(filter.to));
+  if (filter.paymentMethod) q = q.eq('payment_method', filter.paymentMethod);
+  /*
+   * 현금영수증 필터 (4-A).
+   * ★ 'todo' 는 아직 발급하지 않은 건입니다.
+   *   cash_receipt_issued 는 나중에 추가한 컬럼이라 예전 주문에는 null 입니다.
+   *   eq('cash_receipt_issued', false) 로 걸면 null 인 예전 주문이 통째로 빠집니다.
+   *   그래서 "true 가 아닌 것" 으로 겁니다.
+   */
+  if (filter.cashReceipt) {
+    q = q.neq('cash_receipt_type', 'none');
+    if (filter.cashReceipt === 'todo') q = q.not('cash_receipt_issued', 'is', true);
+  }
+  const expression = searchExpressionFor(filter.search);
+  if (expression) q = q.or(expression);
+  return q;
+}
+
+/** 검색어는 or() 안에 들어가므로 구분자로 쓰이는 글자를 미리 걸러 냅니다. */
+function searchExpressionFor(search: string | undefined): string {
+  const term = (search ?? '').replace(/[%,().]/g, '').trim();
+  if (!term) return '';
+  return `order_no.ilike.%${term}%,orderer_name.ilike.%${term}%,orderer_phone.ilike.%${term}%,depositor_name.ilike.%${term}%,receiver_name.ilike.%${term}%`;
+}
+
+/**
  * 조건에 맞는 주문 건수만 셉니다.
  *
  * ★ 평소에는 쓰지 않습니다. 목록 조회가 건수까지 함께 돌려주기 때문입니다.
@@ -345,21 +392,9 @@ async function countOrders(filter: OrderFilter): Promise<number> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return 0;
 
-  const term = (filter.search ?? '').replace(/[%,().]/g, '').trim();
-  const searchExpression = term
-    ? `order_no.ilike.%${term}%,orderer_name.ilike.%${term}%,orderer_phone.ilike.%${term}%,depositor_name.ilike.%${term}%,receiver_name.ilike.%${term}%`
-    : '';
-
   let query = supabase.from(ORDERS).select('id', { count: 'exact', head: true });
   query = applyStatusFilter(query, filter.status);
-  if (filter.from) query = query.gte('created_at', kstStart(filter.from));
-  if (filter.to) query = query.lte('created_at', kstEnd(filter.to));
-  if (filter.paymentMethod) query = query.eq('payment_method', filter.paymentMethod);
-  if (filter.cashReceipt) {
-    query = query.neq('cash_receipt_type', 'none');
-    if (filter.cashReceipt === 'todo') query = query.not('cash_receipt_issued', 'is', true);
-  }
-  if (searchExpression) query = query.or(searchExpression);
+  query = applyOrderFilters(query, filter);
 
   const { count, error } = await query;
   return error ? 0 : (count ?? 0);
@@ -371,12 +406,6 @@ export async function getOrders(
 ): Promise<{ orders: Order[]; total: number }> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return { orders: [], total: 0 };
-
-  // 검색어는 or() 안에 들어가므로 구분자로 쓰이는 글자를 미리 걸러 냅니다.
-  const term = (filter.search ?? '').replace(/[%,().]/g, '').trim();
-  const searchExpression = term
-    ? `order_no.ilike.%${term}%,orderer_name.ilike.%${term}%,orderer_phone.ilike.%${term}%,depositor_name.ilike.%${term}%,receiver_name.ilike.%${term}%`
-    : '';
 
   try {
     /*
@@ -398,21 +427,7 @@ export async function getOrders(
      */
     let listQuery = supabase.from(ORDERS).select('*', { count: 'exact' });
     listQuery = applyStatusFilter(listQuery, filter.status);
-    if (filter.from) listQuery = listQuery.gte('created_at', kstStart(filter.from));
-    if (filter.to) listQuery = listQuery.lte('created_at', kstEnd(filter.to));
-    if (filter.paymentMethod) listQuery = listQuery.eq('payment_method', filter.paymentMethod);
-    /*
-     * 현금영수증 필터 (4-A).
-     * ★ 'todo' 는 아직 발급하지 않은 건입니다.
-     *   cash_receipt_issued 는 나중에 추가한 컬럼이라 예전 주문에는 null 입니다.
-     *   eq('cash_receipt_issued', false) 로 걸면 null 인 예전 주문이 통째로 빠집니다.
-     *   그래서 "true 가 아닌 것" 으로 겁니다.
-     */
-    if (filter.cashReceipt) {
-      listQuery = listQuery.neq('cash_receipt_type', 'none');
-      if (filter.cashReceipt === 'todo') listQuery = listQuery.not('cash_receipt_issued', 'is', true);
-    }
-    if (searchExpression) listQuery = listQuery.or(searchExpression);
+    listQuery = applyOrderFilters(listQuery, filter);
 
     listQuery = listQuery.order('created_at', { ascending: false });
     if (filter.limit !== undefined) {
@@ -2317,32 +2332,97 @@ export async function requestCancel(orderId: string, reason: string): Promise<vo
  * 통계
  * ------------------------------------------------------------------ */
 
-/** 상태별 건수. 목록 탭의 뱃지와 대시보드 카드에 씁니다. */
 /**
- * 상태별 주문 건수.
+ * 상태별 주문 건수. 목록 탭의 뱃지와 대시보드 카드에 씁니다.
  *
- * ★ 예전에는 status 컬럼 전체를 가져와 세었습니다.
- *   주문이 쌓일수록 전송량이 계속 늘어납니다.
- *   지금은 상태마다 count 쿼리를 던지고 한 번에 기다립니다. (행을 가져오지 않습니다)
+ * ============================================================
+ * ★★ 한 번만 묻습니다. 열세 번이 아니라. (2026-08-25)
+ * ============================================================
+ *
+ * 전에는 상태마다 count 쿼리를 던졌습니다. 행을 안 가져와 가볍다는 이유였는데,
+ * 대신 **열세 개가 각자 다른 순간의 DB 를 봤습니다.** 그리고 전체 탭은 그
+ * 열세 개를 더한 값이었습니다.
+ *
+ * 주문 하나가 세는 도중에 상태를 바꾸면
+ *   옛 상태를 먼저 세고 새 상태를 나중에 세면  → 두 번 세어집니다 (합계 +1)
+ *   반대 순서면                                → 한 번도 안 세어집니다 (−1)
+ * card-sweep 이 결제대기 여러 건을 한꺼번에 옮기는 중에 목록을 열면
+ * 오차가 여러 건 쌓입니다. 실제로 전체 24 · 목록 19 로 어긋났습니다.
+ *
+ * 지금은 status 한 칸만 한 번에 읽어 코드에서 셉니다.
+ * 한 응답 = 한 시점이라 어긋날 수가 없고, 전체는 더한 값이 아니라 행 수 그 자체입니다.
+ * 조회 수도 13 → 1 로 줄어 화면이 빨라집니다.
+ *
+ * ★★ 필터를 함께 받습니다. 검색·기간·결제수단·현금영수증 조건을 목록과 똑같이 겁니다.
+ *   안 그러면 "홍길동" 을 검색해 놓고 탭에는 전체 숫자가 보입니다.
+ *   탭과 목록이 서로 다른 세계를 보는 셈이라, 어느 쪽을 믿어야 할지 알 수 없습니다.
+ *   ★ 상태 필터만 빼고 겁니다. 탭 하나하나의 숫자를 만들어야 하니까요.
+ *
+ * ★ 돌려주는 값에는 상태 키 말고 세 가지가 더 들어 있습니다.
+ *     all           조건에 맞는 전체
+ *     needs_check   확인 필요 (승인확인실패 + 검토필요)
+ *     unshipped     미출고 (결제완료 + 상품준비중)
  */
-export async function countOrdersByStatus(): Promise<Record<string, number>> {
+export async function countOrdersByStatus(
+  filter: OrderFilter = {}
+): Promise<Record<string, number>> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return {};
 
-  const results = await Promise.all(
-    ORDER_STATUSES.map(async (status) => {
-      const { count, error } = await supabase
-        .from(ORDERS)
-        .select('id', { count: 'exact', head: true })
-        .eq('status', status);
-      return { status, count: error ? 0 : (count ?? 0) };
-    })
+  /*
+   * ★ 상태 필터는 일부러 걸지 않습니다. 탭 하나하나의 숫자를 만들어야 하므로
+   *   "상태만 빼고 나머지 조건은 목록과 똑같은" 집합을 봐야 합니다.
+   */
+  let query = supabase.from(ORDERS).select('status', { count: 'exact' });
+  query = applyOrderFilters(query, filter);
+  query = query.range(0, COUNT_SCAN_MAX - 1);
+
+  const { data, count, error } = await query;
+  if (error) {
+    if (!isMissingTable(error.code)) {
+      console.error('[orders] 상태별 건수 조회 실패:', error.message);
+    }
+    return {};
+  }
+
+  const rows = (data ?? []) as { status: string | null }[];
+  const total = count ?? rows.length;
+
+  /*
+   * ★★ 상한에 걸리면 상태별 숫자를 만들 수 없습니다.
+   *   그때는 조용히 틀린 숫자를 보여 주지 않고 전체만 알려 줍니다.
+   *   틀린 숫자는 없는 숫자보다 나쁩니다. 이 줄이 로그에 보이면
+   *   상태별 집계를 DB 함수(group by)로 옮길 때가 된 것입니다.
+   */
+  if (rows.length < total) {
+    console.warn(
+      `[orders] 주문이 ${COUNT_SCAN_MAX}건을 넘어 상태별 건수를 세지 못했습니다. (전체 ${total}건)`
+    );
+    return { all: total };
+  }
+
+  const result: Record<string, number> = { all: total };
+  for (const row of rows) {
+    const status = row.status ?? '';
+    if (!status) continue;
+    result[status] = (result[status] ?? 0) + 1;
+  }
+
+  /*
+   * ★ 묶음 탭 두 개도 같은 데이터에서 만듭니다. (확인 필요 · 미출고)
+   *   예전에는 이 두 탭에 넣을 값이 아예 없어서 언제나 0 이 찍혔습니다.
+   *   사이드바는 제대로 된 숫자를 보여 주고 있어서, 같은 화면 두 곳이
+   *   서로 다른 말을 하고 있었습니다.
+   */
+  result[NEEDS_CHECK_TAB] = NEEDS_CHECK_STATUSES.reduce(
+    (sum, status) => sum + (result[status] ?? 0),
+    0
+  );
+  result[UNSHIPPED_TAB] = UNSHIPPED_STATUSES.reduce(
+    (sum, status) => sum + (result[status] ?? 0),
+    0
   );
 
-  const result: Record<string, number> = {};
-  for (const row of results) {
-    if (row.count > 0) result[row.status] = row.count;
-  }
   return result;
 }
 
