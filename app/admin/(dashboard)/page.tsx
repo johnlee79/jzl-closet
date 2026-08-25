@@ -132,6 +132,7 @@ export default async function AdminDashboardPage() {
     lastMonthAmount: 0,
     todayCount: 0,
     pendingPaymentCount: 0,
+    pendingPaymentAmount: 0,
     unshippedCount: 0,
     countByStatus: {},
     recentOrders: [],
@@ -184,10 +185,18 @@ export default async function AdminDashboardPage() {
         >
           <div>
             <p className="text-[17px] font-semibold text-amber-900">
-              입금대기 {stats.pendingPaymentCount}건
+              입금대기 {stats.pendingPaymentCount}건 ·{' '}
+              {stats.pendingPaymentAmount.toLocaleString('ko-KR')}원
             </p>
+            {/*
+              ★★ 금액을 함께 보여 줍니다. (2026-08-25)
+                결제대기를 매출에서 뺐기 때문에, 이 금액이 어디에도 안 보이면
+                "얼마가 들어올 예정인지" 를 알 방법이 없어집니다.
+                빼는 것과 안 보이게 하는 것은 다릅니다.
+            */}
             <p className="mt-1 text-[15px] text-amber-800">
-              통장을 확인하고 입금된 주문은 결제완료로 바꿔 주세요.
+              아직 매출에 들어가지 않은 금액입니다. 통장을 확인하고 입금된 주문은
+              결제완료로 바꿔 주세요.
             </p>
           </div>
           <span className="admin-btn-primary bg-amber-600 border-amber-600 hover:bg-amber-700">

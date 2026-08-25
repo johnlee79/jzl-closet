@@ -557,6 +557,21 @@ export function isPaidStatus(status: string): boolean {
  * ★ 취소요청은 아직 환불 전이라 매출로 셉니다. 취소완료가 되면 빠집니다.
  */
 export const NON_SALES_STATUSES: OrderStatus[] = [
+  /*
+   * ★★ 결제대기를 뺐습니다. (2026-08-25)
+   *   무통장입금은 손님이 아직 입금하지 않은 상태이고,
+   *   카드 결제대기는 승인이 아직 안 떨어진 상태입니다.
+   *   둘 다 돈이 들어오지 않았습니다.
+   *
+   *   전에는 매출로 셌습니다. 그래서 회원 한 명이 입금도 안 한 주문 두 건으로
+   *   "총 구매금액 201,800원" 이 되었습니다. 그 숫자로 등급을 매기거나
+   *   재구매 손님을 가려내면 판단이 통째로 틀어집니다.
+   *
+   * ★ 대신 "얼마가 들어올 예정인지" 는 따로 보여 줍니다.
+   *   빼는 것과 안 보이게 하는 것은 다릅니다.
+   *   대시보드의 입금 대기 금액과 통계 화면의 결제대기 칸이 그 자리입니다.
+   */
+  'pending_payment',
   'cancelled',
   'returned',
   'failed',
@@ -566,6 +581,19 @@ export const NON_SALES_STATUSES: OrderStatus[] = [
 
 export function isSalesStatus(status: string): boolean {
   return !NON_SALES_STATUSES.includes(status as OrderStatus);
+}
+
+/**
+ * 아직 돈이 안 들어왔지만 들어올 예정인 상태.
+ *
+ * ★★ 매출이 아닌 것(NON_SALES_STATUSES)은 두 종류입니다.
+ *     들어올 예정   결제대기            ← 이 함수
+ *     끝난 것       취소·반품·실패 등
+ *   통계 화면에서 이 둘을 한 칸에 넣으면, 입금 전 주문이 "취소·반품" 으로
+ *   집계됩니다. 숫자는 맞아도 뜻이 거짓말이 됩니다. 그래서 나눕니다.
+ */
+export function isAwaitingPayment(status: string): boolean {
+  return status === 'pending_payment';
 }
 
 /** 미출고 = 결제완료 + 상품준비중. 사장님이 매일 확인하는 숫자입니다. */

@@ -187,12 +187,32 @@ export default async function AdminStatsPage({
         <StatCard label="총 매출" value={sales.totalSales} suffix="원" />
         <StatCard label="주문 건수" value={sales.orderCount} suffix="건" />
         <StatCard label="평균 객단가" value={sales.averageOrder} suffix="원" />
+        {/*
+          ★★ 결제대기를 따로 보여 줍니다. (2026-08-25)
+            매출에서는 뺐지만 "얼마가 들어올 예정인지" 는 봐야 합니다.
+            빼는 것과 안 보이게 하는 것은 다릅니다.
+          ★ 취소·반품 칸에 섞지 않습니다. 취소한 적 없는 주문이 취소로
+            집계되면 그 숫자로는 아무 판단도 할 수 없습니다.
+        */}
+        <StatCard
+          label={`입금·승인 대기 (${sales.pendingCount}건)`}
+          value={sales.pendingAmount}
+          suffix="원"
+        />
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label={`취소·반품 (${sales.cancelledCount}건)`}
           value={sales.cancelledAmount}
           suffix="원"
           tone="warn"
         />
+        <p className="text-[14px] leading-relaxed text-slate-500 sm:col-span-3">
+          총 매출에는 <strong>결제가 확인된 주문만</strong> 들어갑니다. 무통장입금은 입금 전,
+          카드는 승인 전인 주문이 <strong>입금·승인 대기</strong> 로 따로 잡힙니다.
+          취소·반품·결제실패와 검토필요·승인확인실패도 매출에서 빠집니다.
+        </p>
       </div>
 
       {/* ── 일자별 추이 ───────────────────────────────── */}

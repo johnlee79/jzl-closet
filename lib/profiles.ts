@@ -1,6 +1,7 @@
 import 'server-only';
 import { assertWritten } from '@/lib/db-write';
 
+import { isSalesStatus } from '@/lib/order-status';
 import { toProvider, type AuthProvider } from '@/lib/auth-provider';
 import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
 import { notifyProfileFillFailed } from '@/lib/telegram';
@@ -239,7 +240,19 @@ export async function getMembers(
   }
 }
 
-/** 회원별 주문 수와 총 구매금액. 취소·반품·결제실패는 금액에서 뺍니다. */
+/**
+ * 회원별 주문 수와 총 구매금액.
+ *
+ * ★★ 무엇을 매출로 볼지는 lib/order-status.ts 의 isSalesStatus 하나만 씁니다.
+ *   (2026-08-25) 여기에 목록을 따로 적어 두고 있었습니다.
+ *     ['cancelled', 'returned', 'failed']
+ *   그래서 검토필요·승인확인실패 주문이 대시보드 매출에서는 빠지는데
+ *   회원 총 구매금액에는 잡혔습니다. 같은 회사가 두 숫자를 말하고 있었습니다.
+ *
+ *   NON_SALES_STATUSES 위의 주석에 "예전에 목록이 세 곳에 흩어져 있어 매출이
+ *   서로 다르게 나와서 모았다" 고 적혀 있는데, 이 한 곳이 안 모아져 있었습니다.
+ *   목록을 두 곳에 두면 반드시 또 어긋납니다.
+ */
 export async function getOrderStats(
   userIds: string[]
 ): Promise<Map<string, { count: number; amount: number }>> {
@@ -263,8 +276,9 @@ export async function getOrderStats(
   }[]) {
     if (!row.user_id) continue;
     const current = result.get(row.user_id) ?? { count: 0, amount: 0 };
+    // ★ 주문 수는 전부 셉니다. 금액만 매출 기준으로 거릅니다.
     current.count += 1;
-    if (!['cancelled', 'returned', 'failed'].includes(row.status)) {
+    if (isSalesStatus(row.status)) {
       current.amount += row.total_amount ?? 0;
     }
     result.set(row.user_id, current);

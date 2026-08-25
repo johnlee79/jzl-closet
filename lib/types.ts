@@ -382,6 +382,11 @@ export type DashboardStats = {
   lastMonthAmount: number;
   todayCount: number;
   pendingPaymentCount: number;
+  /**
+   * 입금·승인 대기 중인 금액 합계. (2026-08-25)
+   * ★ 매출에는 안 들어갑니다. 들어올 예정인 돈이라 따로 보여 줍니다.
+   */
+  pendingPaymentAmount: number;
   unshippedCount: number;
   countByStatus: Record<string, number>;
   recentOrders: Order[];

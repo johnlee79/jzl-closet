@@ -3,7 +3,7 @@ import 'server-only';
 import { brandLabel } from '@/lib/brands';
 import { categoryNameKo } from '@/lib/categories';
 import { kstEnd, kstStart } from '@/lib/orders';
-import { isSalesStatus } from '@/lib/order-status';
+import { isAwaitingPayment, isSalesStatus } from '@/lib/order-status';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { getBrands, getCachedCategories } from '@/lib/taxonomy';
 
@@ -25,6 +25,9 @@ export type SalesStats = {
   averageOrder: number;
   cancelledAmount: number;
   cancelledCount: number;
+  /** 아직 입금·승인 전이라 매출에서 뺀 금액. 들어올 예정입니다. */
+  pendingAmount: number;
+  pendingCount: number;
   /** 일자별 매출 (오래된 날짜부터) */
   daily: { day: string; amount: number; count: number }[];
   /** 상태별 주문 건수 */
@@ -45,6 +48,8 @@ export function emptySales(): SalesStats {
     averageOrder: 0,
     cancelledAmount: 0,
     cancelledCount: 0,
+    pendingAmount: 0,
+    pendingCount: 0,
     daily: [],
     byStatus: {},
   };
@@ -100,10 +105,28 @@ export async function getSalesStats(from: string, to: string): Promise<SalesStat
   let orderCount = 0;
   let cancelledAmount = 0;
   let cancelledCount = 0;
+  let pendingAmount = 0;
+  let pendingCount = 0;
 
   for (const row of rows) {
     byStatus[row.status] = (byStatus[row.status] ?? 0) + 1;
     const amount = row.total_amount ?? 0;
+
+    /*
+     * ★★ 매출이 아닌 것을 두 종류로 나눕니다. (2026-08-25)
+     *     들어올 예정  결제대기        → pendingAmount
+     *     끝난 것      취소·반품·실패  → cancelledAmount
+     *
+     *   전에는 한 칸이었습니다. 결제대기를 매출에서 빼기 시작하면서
+     *   입금 전 주문이 화면의 "취소·반품" 칸으로 들어가게 됩니다.
+     *   숫자는 맞아도 뜻이 거짓말이 됩니다. 취소한 적 없는 손님의 주문이
+     *   취소로 집계되면 그 숫자로는 아무 판단도 할 수 없습니다.
+     */
+    if (isAwaitingPayment(row.status)) {
+      pendingAmount += amount;
+      pendingCount += 1;
+      continue;
+    }
 
     if (!isSalesStatus(row.status)) {
       cancelledAmount += amount;
@@ -135,6 +158,8 @@ export async function getSalesStats(from: string, to: string): Promise<SalesStat
     averageOrder: orderCount > 0 ? Math.round(totalSales / orderCount) : 0,
     cancelledAmount,
     cancelledCount,
+    pendingAmount,
+    pendingCount,
     daily,
     byStatus,
   };

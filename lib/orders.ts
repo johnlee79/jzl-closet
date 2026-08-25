@@ -2613,6 +2613,7 @@ export async function getDashboardStats(now = new Date()): Promise<DashboardStat
     lastMonthAmount: 0,
     todayCount: 0,
     pendingPaymentCount: 0,
+    pendingPaymentAmount: 0,
     unshippedCount: 0,
     countByStatus: {},
     recentOrders: [],
@@ -2643,6 +2644,7 @@ export async function getDashboardStats(now = new Date()): Promise<DashboardStat
       todayCountResult,
       countByStatus,
       recent,
+      pendingRows,
     ] = await Promise.all([
       sumAmount(kstStart(today), kstEnd(today)),
       sumAmount(kstStart(yesterday), kstEnd(yesterday)),
@@ -2655,7 +2657,19 @@ export async function getDashboardStats(now = new Date()): Promise<DashboardStat
         .lte('created_at', kstEnd(today)),
       countOrdersByStatus(),
       getOrders({ limit: 10 }),
+      /*
+       * ★★ 입금·승인 대기 금액. (2026-08-25)
+       *   매출에서는 뺐지만 "얼마가 들어올 예정인지" 는 봐야 합니다.
+       *   빼는 것과 안 보이게 하는 것은 다릅니다.
+       *
+       * ★ 기간을 걸지 않습니다. 지난달에 들어온 미입금 주문도 여전히
+       *   들어올 돈입니다. 오늘 매출과 성격이 다릅니다.
+       */
+      supabase.from(ORDERS).select('total_amount').eq('status', 'pending_payment'),
     ]);
+
+    const pendingPaymentAmount = ((pendingRows.data ?? []) as { total_amount: number | null }[])
+      .reduce((sum, row) => sum + (row.total_amount ?? 0), 0);
 
     const unshippedCount = UNSHIPPED_STATUSES.reduce(
       (sum, status) => sum + (countByStatus[status] ?? 0),
@@ -2669,6 +2683,7 @@ export async function getDashboardStats(now = new Date()): Promise<DashboardStat
       lastMonthAmount,
       todayCount: todayCountResult.count ?? 0,
       pendingPaymentCount: countByStatus.pending_payment ?? 0,
+      pendingPaymentAmount,
       unshippedCount,
       countByStatus,
       recentOrders: recent.orders,
