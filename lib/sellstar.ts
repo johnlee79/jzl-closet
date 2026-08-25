@@ -333,13 +333,38 @@ function normalize(id: number, result: Record<string, unknown>): SellstarProduct
     const parts = arr(variant.variantOptions).map((option) => str(option.valueName));
     const key = parts.length > 0 ? parts.join('/') : str(variant.optionLabel).replace(/\s*\/\s*/g, '/');
     const active = str(variant.status, 'ACTIVE') === 'ACTIVE';
-    const stock = num(variant.availableStock, 0);
+    /*
+     * ★★ 재고 숫자를 가져오지 않습니다. (2026-08-25)
+     *
+     *   우리는 물건을 사입해 갖고 있지 않습니다. 뉴욕트렌딕에서 받아 파는
+     *   구조라 "우리 재고" 라는 것이 없습니다. 숫자를 세면 실제와 맞을 수가
+     *   없고, 맞지 않는 숫자 때문에 팔 수 있는 물건이 막힙니다.
+     *
+     *   전에는 availableStock 을 그대로 가져와 stock 에 넣었습니다. 그러면
+     *     · 그 숫자가 0 이면 그 조합이 품절로 잠기고
+     *     · 0 이 아니어도 주문이 들어올 때마다 줄어들어 언젠가 0 이 됩니다
+     *   둘 다 우리가 원하는 동작이 아닙니다.
+     *
+     * ★ stock 을 null 로 두면 "재고를 관리하지 않는 조합" 이 됩니다.
+     *   apply_stock_changes 가 그런 조합은 아예 건드리지 않고 지나갑니다.
+     *   (schema-4c.sql — "재고를 관리하지 않는 조합입니다" 로 continue)
+     *   그래서 재고가 모자라 주문이 막히는 일이 구조적으로 없어집니다.
+     *   관리자에서 새 옵션을 만들 때의 기본값(defaultCombination)과도 같습니다.
+     *
+     * ★ 품절은 이제 두 가지로만 정합니다.
+     *     · 셀스타에서 판매중지(status ≠ ACTIVE) → 이 조합만 품절
+     *     · 관리자에서 [품절] 체크                → 상품 전체 품절
+     *   숫자가 아니라 사람과 공급처의 판단으로 정합니다.
+     *
+     * ★ 숫자로 관리하고 싶어지면 아래 stock 을 num(variant.availableStock, 0)
+     *   으로 되돌리면 됩니다. 그 한 줄뿐입니다.
+     */
     return {
       key,
       label: str(variant.optionLabel, key),
-      stock,
-      // ACTIVE 가 아니거나 재고가 없으면 품절로 봅니다.
-      soldOut: !active || stock <= 0,
+      stock: null,
+      // ★ 재고 0 은 더 이상 품절 근거가 아닙니다. 판매중지만 봅니다.
+      soldOut: !active,
       price: salePrice,
     };
   });
