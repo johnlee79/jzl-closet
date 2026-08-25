@@ -77,6 +77,13 @@ export async function deleteProductAction(id: string): Promise<ActionResult> {
 
   try {
     const before = await getProductById(id);
+    /*
+     * ★ 이미 지워져 있어도 성공입니다. (deleteProduct 가 false 를 돌려줍니다)
+     *   원한 결과는 이미 이뤄져 있습니다. 여기서 오류를 내면 사장님이
+     *   "안 지워졌구나" 하고 또 누르게 됩니다.
+     * ★ 그래도 화면은 반드시 새로 그립니다. 목록에 남아 있는 옛 줄을
+     *   치우는 것이 이 상황에서 정말 필요한 일입니다.
+     */
     await deleteProduct(id);
     await revalidateStorefront([before]);
     revalidatePath('/admin/products');

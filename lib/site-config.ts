@@ -1202,6 +1202,14 @@ export const COPY_KEYS = [
   'terms',
   'privacy',
   'notFound',
+  /*
+   * 손님에게 보내는 메일 (2026-08-25)
+   * ★ 이름을 orderMail·shippingMail 로 둡니다. mailOrder 는 이 파일에서
+   *   이미 통신판매업신고번호를 뜻합니다. 같은 이름을 두 뜻으로 쓰면
+   *   나중에 반드시 헷갈립니다.
+   */
+  'orderMail',
+  'shippingMail',
 ] as const;
 
 export type CopyKey = (typeof COPY_KEYS)[number];
@@ -1280,6 +1288,7 @@ export const COPY_GROUPS = [
   { key: 'about', label: '편집숍 소개' },
   { key: 'order', label: '주문·배송 안내' },
   { key: 'legal', label: '약관·기타' },
+  { key: 'mail', label: '손님에게 보내는 메일' },
 ] as const;
 
 export type CopyGroupKey = (typeof COPY_GROUPS)[number]['key'];
@@ -1468,6 +1477,25 @@ export const COPY_META: Record<
     path: '/privacy',
     blockLabel: '항목',
   },
+  orderMail: {
+    group: 'mail',
+    title: '주문 접수 메일',
+    where: '주문이 접수되면 손님 이메일로 나가는 메일의 인사말과 맺음말',
+    hint: '★ 주문번호·상품·금액·배송지·입금 계좌는 코드가 채웁니다. 여기서 고칠 수 없습니다. 첫 문단이 인사말, 둘째 문단이 맺음말입니다. ★ 무통장입금은 주문 저장 직후, 신용카드는 결제가 확인된 뒤에 나갑니다. ★ RESEND_API_KEY 가 없으면 메일이 나가지 않습니다.',
+    path: '',
+    blockLabel: '문단',
+    limits: '문단 두 개만 씁니다. 첫째가 인사말, 둘째가 맺음말입니다. 소제목은 메일에 나오지 않습니다.',
+  },
+  shippingMail: {
+    group: 'mail',
+    title: '배송 안내 메일',
+    where: '송장을 등록하면 손님 이메일로 나가는 메일의 인사말과 맺음말',
+    hint: '★ 택배사·송장번호·조회 링크·상품은 코드가 채웁니다. 첫 문단이 인사말, 둘째 문단이 맺음말입니다. ★ 송장을 처음 넣어 배송중으로 바뀔 때만 나갑니다. 송장을 고칠 때는 나가지 않습니다.',
+    path: '',
+    blockLabel: '문단',
+    limits: '문단 두 개만 씁니다. 첫째가 인사말, 둘째가 맺음말입니다. 소제목은 메일에 나오지 않습니다.',
+  },
+
   notFound: {
     group: 'legal',
     title: '404 페이지 문구',

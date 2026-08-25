@@ -1,5 +1,6 @@
 import 'server-only';
 import { assertWritten } from '@/lib/db-write';
+import { sendOrderMail, sendShippingMail } from '@/lib/mail';
 
 import {
   ORDER_STATUSES,
@@ -1821,7 +1822,30 @@ export async function setTracking(
     );
 
   if (shouldShip) {
-    return updateOrderStatus(id, 'shipping', `송장 등록 (${courier} ${trackingNo})`);
+    const shipped = await updateOrderStatus(id, 'shipping', `송장 등록 (${courier} ${trackingNo})`);
+
+    /*
+     * ── 손님에게 배송 안내 메일 ──────────────────────────
+     *
+     * ★★ 여기 한 곳에서만 보냅니다.
+     *   관리자 주문 상세(setTrackingAction)와 일괄 송장 등록이 둘 다 이
+     *   함수를 거칩니다. 두 곳에 따로 넣으면 나중에 한쪽만 고치게 됩니다.
+     *
+     * ★★ 상태가 실제로 '배송중' 으로 바뀔 때만입니다.
+     *   아래 '송장 수정' 갈래에는 넣지 않았습니다. 오타를 고칠 때마다
+     *   손님에게 "상품을 보냈습니다" 가 또 가면 안 됩니다.
+     *
+     * ★ 메일이 실패해도 송장 등록은 그대로 끝납니다.
+     *   sendShippingMail 은 예외를 던지지 않지만, 혹시 모를 일까지
+     *   막으려고 한 번 더 감쌉니다. 송장을 넣는 일이 메일 때문에
+     *   실패하면 안 됩니다.
+     */
+    try {
+      await sendShippingMail(shipped);
+    } catch (error) {
+      console.warn('[orders] 배송 안내 메일 실패:', shipped.orderNo, error);
+    }
+    return shipped;
   }
 
   await addHistory(id, before.status, before.status, `송장 수정 (${courier} ${trackingNo})`);
@@ -2189,7 +2213,38 @@ export async function applyKsnetApproval(
     `카드 결제 승인 (승인번호 ${facts.authno} · 거래번호 ${facts.trno})`
   );
 
-  return { outcome: 'paid', order: await getOrderById(order.id), reason: '' };
+  const paid = await getOrderById(order.id);
+
+  /*
+   * ── 손님에게 주문 접수 메일 (카드) ────────────────────
+   *
+   * ★★ 왜 하필 여기인가 — 중복을 막는 유일한 자리이기 때문입니다.
+   *   카드 주문이 결제완료로 끝나는 길은 셋입니다.
+   *     ① 결제창 복귀(return)  ② 노티(notify)  ③ 카드 정리(card-sweep)
+   *   세 곳에 각각 메일을 넣으면 같은 손님에게 두세 통이 갑니다.
+   *
+   *   바로 위의 조건부 UPDATE(.eq('status','pending_payment'))가 DB 수준에서
+   *   딱 한 번만 통과합니다. 여기까지 온 요청은 "이번에 내가 결제완료로
+   *   바꿨다" 가 확실한 하나뿐입니다. 그래서 여기에 답니다.
+   *
+   * ★★ 주문 저장 시점에는 보내지 않습니다.
+   *   결제창을 열었다 닫은 손님에게 "주문이 접수되었습니다" 가 가면 안 됩니다.
+   *   텔레그램 알림도 같은 이유로 카드는 결제 후에 보냅니다.
+   *
+   * ★ 무통장입금은 이 길로 오지 않습니다. 그쪽은 주문 저장 직후에
+   *   checkout/actions.ts 가 보냅니다. 계좌를 바로 알려야 하기 때문입니다.
+   *
+   * ★ 메일이 실패해도 결제 처리는 이미 끝났습니다. 삼키고 넘어갑니다.
+   */
+  if (paid) {
+    try {
+      await sendOrderMail(paid);
+    } catch (error) {
+      console.warn('[orders] 주문 접수 메일 실패:', paid.orderNo, error);
+    }
+  }
+
+  return { outcome: 'paid', order: paid, reason: '' };
 }
 
 /**

@@ -6,6 +6,7 @@ import {
   CheckoutError,
   calcShipping,
   createOrder,
+  depositDeadline,
   getOrderForLookup,
   readCartLines,
   requestCancel,
@@ -14,6 +15,7 @@ import {
 import { getCurrentUser } from '@/lib/auth';
 import { canRequestCancel } from '@/lib/order-status';
 import { createOrderToken } from '@/lib/order-token';
+import { sendOrderMail } from '@/lib/mail';
 import { getPaymentProvider } from '@/lib/payments';
 import { clientIp, rateLimit } from '@/lib/rate-limit';
 import { getPaymentSettings } from '@/lib/settings';
@@ -67,7 +69,22 @@ function validate(input: CheckoutInput, enabled: string[]): string | null {
   if (!PHONE_PATTERN.test(input.receiverPhone.trim())) {
     return '받는 분 연락처를 다시 확인해 주세요.';
   }
-  if (input.ordererEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.ordererEmail.trim())) {
+  /*
+   * ★★ 이메일을 필수로 받습니다. (2026-08-25)
+   *   전에는 값이 있을 때만 형식을 봤습니다. 비워 두면 그냥 통과했습니다.
+   *   그런데 주문 접수·배송 안내 메일이 여기 적힌 주소로만 나갑니다.
+   *   비워 둔 손님은 주문번호도, 입금 계좌도, 송장번호도 받지 못하고
+   *   주문 조회 화면을 스스로 찾아 들어와야 합니다.
+   *   못 받는 불편이 한 칸 더 적는 불편보다 큽니다.
+   *
+   * ★ 화면에서도 필수로 표시합니다. 서버에서만 막으면 손님은 저장을
+   *   눌러 보고 나서야 알게 됩니다.
+   */
+  const email = input.ordererEmail.trim();
+  if (!email) {
+    return '이메일 주소를 입력해 주세요. 주문 확인과 배송 안내를 보내 드립니다.';
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return '이메일 주소를 다시 확인해 주세요.';
   }
   /*
@@ -296,6 +313,45 @@ export async function placeOrderAction(
       await notifyNewOrder(order, payment.depositHours);
     } catch (error) {
       console.warn('[checkout] 텔레그램 알림 실패:', error);
+    }
+  }
+
+  /*
+   * ── 손님에게 주문 접수 메일 (무통장입금만) ────────────
+   *
+   * ★★ 카드 주문은 여기서 보내지 않습니다.
+   *   바로 위 텔레그램과 똑같은 이유입니다. 결제창을 열었다가 그냥 닫는
+   *   손님이 아주 많은데, 그때마다 "주문이 접수되었습니다" 가 가면
+   *   결제하지 않은 손님이 물건을 기다립니다.
+   *   카드는 승인이 확인되는 순간(applyKsnetApproval)에 보냅니다.
+   *
+   * ★ 무통장입금은 반대로 지금 보내야 합니다. 계좌와 기한을 알려 드려야
+   *   손님이 입금할 수 있습니다. 이 메일이 곧 청구서입니다.
+   *
+   * ★ 계좌·기한은 관리자 설정에서 읽어 넘깁니다. 메일에 숫자를 박지 않습니다.
+   *   설정에서 기한을 바꾸면 메일 문구도 같이 바뀝니다.
+   *
+   * ★ 실패해도 주문은 이미 저장되어 있습니다. 로그만 남깁니다.
+   */
+  if (!needsPayment) {
+    try {
+      const deadline = depositDeadline(order.createdAt, payment.depositHours);
+      await sendOrderMail(order, {
+        bankName: payment.bankName,
+        accountNo: payment.accountNo,
+        accountHolder: payment.accountHolder,
+        deadline: deadline
+          ? deadline.toLocaleString('ko-KR', {
+              timeZone: 'Asia/Seoul',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            }) + ' 까지'
+          : '',
+      });
+    } catch (error) {
+      console.warn('[checkout] 주문 접수 메일 실패:', error);
     }
   }
 

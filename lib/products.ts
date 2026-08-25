@@ -1,5 +1,5 @@
 import 'server-only';
-import { assertWritten } from '@/lib/db-write';
+import { assertWritten, countWritten } from '@/lib/db-write';
 
 import { findCategory } from '@/lib/categories';
 import {
@@ -653,12 +653,35 @@ export async function patchProduct(
   return rowToProduct(data as ProductRow);
 }
 
-export async function deleteProduct(id: string): Promise<void> {
+/**
+ * 상품 삭제.
+ *
+ * ★★ 이미 지워져 있으면 "성공" 으로 봅니다. (2026-08-25)
+ *
+ *   전에는 assertWritten 을 썼습니다. 0건이면
+ *     "대상을 찾지 못해 아무것도 저장되지 않았습니다"
+ *   라는 오류를 던졌습니다. 저장·수정에는 맞는 판단이지만 삭제에는 틀립니다.
+ *
+ *   지우려는 것이 이미 없다면, 사장님이 원한 결과(그 상품이 없는 상태)는
+ *   이미 이뤄져 있습니다. 그런데 빨간 오류가 뜨니 "안 지워졌구나" 하고
+ *   다시 누르게 됩니다. 실제로 그렇게 겪었습니다 — 첫 삭제는 성공했는데
+ *   목록이 아직 옛 화면이라 한 번 더 눌렀고, 그때 이 오류가 났습니다.
+ *
+ * ★ 저장·수정은 지금처럼 0건이면 오류로 둡니다.
+ *   그건 "바꾸려던 것이 사라졌다" 는 뜻이라 정말 이상한 상황입니다.
+ *   삭제만 다릅니다.
+ *
+ * ★ 통신 오류(result.error)는 그대로 던집니다. 그건 진짜 실패입니다.
+ *
+ * @returns 이번 호출이 실제로 지웠는지. false 면 이미 없었다는 뜻입니다.
+ */
+export async function deleteProduct(id: string): Promise<boolean> {
   const supabase = requireSupabaseAdmin();
-  assertWritten(
+  const removed = countWritten(
     await supabase.from(TABLE).delete().eq('id', id).select('id'),
     '삭제에 실패했습니다'
   );
+  return removed > 0;
 }
 
 /** 상품 복제 — 이름 뒤 " (사본)", slug 뒤 "-copy". 이미지는 그대로 참조합니다. */

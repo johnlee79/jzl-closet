@@ -671,6 +671,43 @@ const notFound: CopySection = [
   },
 ];
 
+
+/*
+ * 손님에게 보내는 메일 (2026-08-25)
+ *
+ * ★ 블록 하나가 문단 하나입니다.
+ *     첫째 — 인사말 (본문 맨 위)
+ *     둘째 — 맺음말 (본문 맨 아래)
+ * ★ 주문번호·상품·금액·배송지·계좌·송장번호는 코드가 채웁니다.
+ *   여기에 그 값을 글자로 적지 마세요. 바뀌면 두 곳이 서로 다른 말을 합니다.
+ * ★ heading 은 쓰지 않습니다. 메일 제목은 코드가 정합니다.
+ */
+const orderMail: CopySection = [
+  {
+    heading: '',
+    body: p('주문해 주셔서 감사합니다. 아래 내용으로 접수되었습니다.'),
+  },
+  {
+    heading: '',
+    body: p(
+      '주문번호와 주문하신 연락처로 주문 조회를 하실 수 있습니다. 궁금한 점은 이 메일에 그대로 답장해 주세요.'
+    ),
+  },
+];
+
+const shippingMail: CopySection = [
+  {
+    heading: '',
+    body: p('주문하신 상품을 발송했습니다.'),
+  },
+  {
+    heading: '',
+    body: p(
+      '택배사에 정보가 올라오기까지 몇 시간 걸릴 수 있습니다. 배송 중 문제가 있으면 이 메일에 답장해 주세요.'
+    ),
+  },
+];
+
 export const DEFAULT_COPY: CopySettings = {
   homeHero,
   homeStory,
@@ -690,6 +727,8 @@ export const DEFAULT_COPY: CopySettings = {
   terms,
   privacy,
   notFound,
+  orderMail,
+  shippingMail,
 };
 
 /** 항목 하나의 기본값 — [기본값으로 되돌리기] 가 이 값을 씁니다. */

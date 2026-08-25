@@ -669,18 +669,30 @@ export default function CheckoutForm({
                   </p>
                 </div>
                 <div>
+                  {/*
+                    ★ 2026-08-25 부터 필수입니다.
+                      주문 접수·배송 안내 메일이 이 주소로만 나갑니다.
+                      비워 두면 주문번호도, 입금 계좌도, 송장번호도 받지 못하고
+                      주문 조회 화면을 스스로 찾아 들어와야 합니다.
+                    ★ 서버(checkout/actions.ts)에서도 같이 막습니다.
+                      화면에서만 막으면 요청을 직접 만들어 보낼 때 빈 값이 들어옵니다.
+                  */}
                   <label htmlFor="ordererEmail" className="label-xs block">
-                    이메일 (선택)
+                    이메일
                   </label>
                   <input
                     id="ordererEmail"
                     type="email"
+                    required
                     value={form.ordererEmail}
                     onChange={(event) => set('ordererEmail', event.target.value)}
                     placeholder="hello@example.com"
                     autoComplete="email"
                     className={`mt-2 ${inputClass('ordererEmail')}`}
                   />
+                  <p className="mt-2 text-[14px] leading-relaxed text-muted">
+                    주문 확인과 배송 안내를 이 주소로 보내드립니다.
+                  </p>
                 </div>
               </div>
             </section>
