@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import KsnetPayLauncher from '@/components/KsnetPayLauncher';
 import { getOrderByNo } from '@/lib/orders';
 import { verifyOrderToken } from '@/lib/order-token';
+import { ksnetResultUrl } from '@/lib/payments/ksnet/result-url';
 import {
   KSPAY_FRAME_HEIGHT,
   KSPAY_FRAME_NAME,
@@ -12,7 +14,6 @@ import {
 import { buildKsnetForm, isMobileUserAgent } from '@/lib/payments/ksnet/fields';
 import { getCachedStore, getPaymentSettings } from '@/lib/settings';
 import { isPgMethod } from '@/lib/site-config';
-import { statusLabel } from '@/lib/order-status';
 
 /**
  * 결제창으로 넘어가는 중간 화면.
@@ -52,15 +53,29 @@ export default async function CheckoutPayPage({ searchParams }: PageProps) {
     return <Problem message="이 주문은 카드결제 대상이 아닙니다." orderNo={order.orderNo} />;
   }
 
-  // 이미 결제가 끝났거나 취소된 주문의 결제창을 다시 열면 이중결제가 납니다.
+  /*
+   * ── ★★ 안전망 — 뒤로가기로 여기 돌아온 손님을 결과 화면으로 보냅니다 ──
+   *   (2026-08-25)
+   *
+   * 이미 결제가 끝났거나 취소된 주문의 결제창은 절대 다시 열지 않습니다.
+   * 그건 그대로입니다. 바뀐 것은 "그 다음에 무엇을 보여 주는가" 입니다.
+   *
+   * ★★ 예전에는 "결제를 진행할 수 없습니다 / 이 주문은 이미 결제완료
+   *   상태입니다" 라는 막다른 화면을 보여 줬습니다. 이게 위험했습니다.
+   *
+   *   모바일에서 결제 후 화면이 안 넘어가면 손님이 제일 먼저 하는 것이
+   *   뒤로가기입니다. 그러면 이 주소로 돌아옵니다. 결제는 됐는데 화면은
+   *   "진행할 수 없습니다" 라고 하니, 손님은 결제가 실패한 줄 압니다.
+   *   그대로 다시 결제하면 이중결제입니다.
+   *
+   * ★ 그래서 상태에 맞는 결과 화면으로 그냥 보냅니다.
+   *   결제창 복귀(return 라우트)·상태 확인 창구와 같은 ksnetResultUrl 을 씁니다.
+   *   세 곳이 같은 함수를 쓰므로 서로 다른 곳으로 보낼 일이 없습니다.
+   *
+   * ★ 여기까지 온 사람은 이미 서명(k)을 통과했습니다. 남의 주문이 아닙니다.
+   */
   if (order.status !== 'pending_payment') {
-    return (
-      <Problem
-        message={`이 주문은 이미 "${statusLabel(order.status)}" 상태입니다. 결제창을 다시 열지 않습니다.`}
-        orderNo={order.orderNo}
-        lookup
-      />
-    );
+    redirect(await ksnetResultUrl(order.status, order.orderNo));
   }
 
   // 관리자가 그 사이 결제수단을 껐을 수 있습니다.

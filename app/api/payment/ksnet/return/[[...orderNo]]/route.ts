@@ -35,11 +35,18 @@ import {
  * ★ ①에서 받은 값은 손님 브라우저를 거쳐 옵니다. 금액을 여기서 읽어 쓰면 안 됩니다.
  *   승인 확인에 넣는 금액도, 대조에 쓰는 금액도 전부 DB 에서 다시 읽습니다.
  *
- * ★ 응답을 리다이렉트(3xx)가 아니라 HTML 한 장으로 돌려줍니다.
- *   PC 는 결제창이 레이어(iframe) 안에서 열립니다. 그 안에서 리다이렉트하면
- *   레이어 안에서만 화면이 바뀌고 뒤의 페이지는 주문서 그대로 남습니다.
- *   그래서 최상위 창을 옮기는 스크립트를 담은 페이지를 돌려줍니다.
- *   모바일은 페이지째 이동한 상태라 같은 스크립트가 그냥 현재 창을 옮깁니다.
+ * ★★ 답하는 방법이 기기에 따라 다릅니다. (2026-08-25)
+ *
+ *   PC     — HTML 한 장 (아래 htmlRedirect)
+ *            결제창이 레이어(iframe) 안에 있습니다. 그 안에서 리다이렉트하면
+ *            레이어만 바뀌고 뒤 페이지는 주문서 그대로 남습니다. 바깥 창을
+ *            옮기려면 스크립트가 반드시 필요합니다.
+ *
+ *   모바일  — 진짜 리다이렉트 303 (sndReply 에 m=1 이 붙어 옵니다)
+ *            프레임이 없어 옮길 창이 이 창 하나뿐입니다. 스크립트를 쓸 이유가
+ *            없는데, 예전에는 모바일에도 HTML 을 줬습니다. PC 는 길이 셋이라
+ *            하나 막혀도 넘어가지만 모바일은 그 스크립트가 유일한 길이었고,
+ *            늦거나 막히면 3초짜리 meta refresh 가 마지막이었습니다.
  */
 /**
  * 손님이 기다리는 길에서 승인 확인에 쓸 수 있는 시간.
@@ -139,6 +146,35 @@ async function handle(request: NextRequest, context: RouteContext): Promise<Resp
   const commConId = pick(payload, COMM_ID_KEYS);
   const cancelled = pick(payload, CANCEL_KEYS) === '1';
 
+  /*
+   * ── ★★ 모바일이면 진짜 리다이렉트로 답합니다 (2026-08-25) ──────
+   *
+   * 모바일은 프레임이 없습니다. 페이지째 KSNET 으로 넘어갔다가 페이지째
+   * 돌아옵니다. 그래서 옮겨야 하는 창은 지금 이 창 하나뿐입니다.
+   *
+   * ★★ 그런데 지금까지는 모바일에도 스크립트가 든 HTML 을 돌려줬습니다.
+   *   그 스크립트가 바깥 창을 찾다가(없음) 마지막에 이 창을 옮깁니다.
+   *   PC 는 그 스크립트 말고도 길이 셋(신호·top 이동·바깥창 자체확인)이라
+   *   하나가 막혀도 넘어가지만, 모바일은 그 스크립트가 유일한 길입니다.
+   *   스크립트가 늦거나 막히면 3초짜리 meta refresh 가 마지막이었습니다.
+   *
+   * ★ 303 은 브라우저가 응답 헤더만 보고 따라갑니다.
+   *   스크립트도, 프레임도, 로딩 시간도 끼어들지 않습니다.
+   *   POST 로 들어온 요청을 GET 으로 바꿔 보내 주는 것도 303 의 규격입니다.
+   *   (302 를 쓰면 브라우저에 따라 POST 를 그대로 다시 보냅니다)
+   *
+   * ★ PC 는 그대로 HTML 을 씁니다. 아이프레임 안에서 답하는 것이라
+   *   바깥 창을 옮기려면 스크립트가 반드시 필요합니다.
+   */
+  const isMobileFlow = request.nextUrl.searchParams.get('m') === '1';
+  const sendTo = (url: string): Response =>
+    isMobileFlow
+      ? new Response(null, {
+          status: 303,
+          headers: { Location: url, 'Cache-Control': 'no-store' },
+        })
+      : htmlRedirect(url);
+
   // ★ 무엇보다 먼저 원문을 남깁니다. 이 아래에서 무슨 일이 나든 근거는 남아야 합니다.
   await writePaymentLog({
     kind: 'return',
@@ -196,7 +232,7 @@ async function handle(request: NextRequest, context: RouteContext): Promise<Resp
     }
 
     const query = orderNo ? `no=${encodeURIComponent(orderNo)}&reason=cancelled` : 'reason=cancelled';
-    return htmlRedirect(`${SITE_URL}/checkout/failed?${query}`);
+    return sendTo(`${SITE_URL}/checkout/failed?${query}`);
   }
 
   if (!orderNo) {
@@ -222,18 +258,18 @@ async function handle(request: NextRequest, context: RouteContext): Promise<Resp
           `결제 Key(${commConId})는 받았지만 어느 주문인지 알 수 없습니다. KSNET 거래내역과 대조해 주세요.`
         )
       );
-      return htmlRedirect(`${SITE_URL}/checkout/pending`);
+      return sendTo(`${SITE_URL}/checkout/pending`);
     }
 
     // 결제 Key 도 없으면 결제가 시작되지 않은 것입니다. 돈은 오가지 않았습니다.
-    return htmlRedirect(`${SITE_URL}/checkout/failed?reason=noorder`);
+    return sendTo(`${SITE_URL}/checkout/failed?reason=noorder`);
   }
 
   /* ── 결제 Key 가 없으면 승인 확인 자체를 할 수 없습니다 ──
    * 취소(reCnclType=1)는 위에서 이미 걸렀습니다. 여기까지 왔는데 Key 가 없다면
    * 결제가 시작되지 않은 것으로 봅니다. 주문은 결제대기 그대로 둡니다. */
   if (!commConId) {
-    return htmlRedirect(
+    return sendTo(
       `${SITE_URL}/checkout/failed?no=${encodeURIComponent(orderNo)}&reason=cancelled`
     );
   }
@@ -263,7 +299,7 @@ async function handle(request: NextRequest, context: RouteContext): Promise<Resp
       remoteIp: ip,
       note: '주문을 찾지 못했습니다.',
     });
-    return htmlRedirect(`${SITE_URL}/checkout/failed?reason=noorder`);
+    return sendTo(`${SITE_URL}/checkout/failed?reason=noorder`);
   }
 
   /*
@@ -274,7 +310,7 @@ async function handle(request: NextRequest, context: RouteContext): Promise<Resp
    *   실제로는 아직 확인 중인데 완료된 줄 알고 발송을 기다립니다.
    */
   if (order.status !== 'pending_payment') {
-    return htmlRedirect(await resultUrl(order.status, orderNo));
+    return sendTo(await resultUrl(order.status, orderNo));
   }
 
   /*
@@ -328,7 +364,7 @@ async function handle(request: NextRequest, context: RouteContext): Promise<Resp
      *     저절로 풀리지 않습니다.
      */
     if (approval?.result.timedOut) {
-      return htmlRedirect(
+      return sendTo(
         `${SITE_URL}/checkout/pending?no=${encodeURIComponent(orderNo)}`
       );
     }
@@ -337,7 +373,7 @@ async function handle(request: NextRequest, context: RouteContext): Promise<Resp
     await safeNotify(() => notifyPaymentUnconfirmed(marked.order, orderNo, reason));
 
     // 손님에게는 "확인 중" 으로 안내합니다. 실패라고 말하지 않습니다.
-    return htmlRedirect(
+    return sendTo(
       `${SITE_URL}/checkout/pending?no=${encodeURIComponent(orderNo)}`
     );
   }
@@ -376,7 +412,7 @@ async function handle(request: NextRequest, context: RouteContext): Promise<Resp
     await safeNotify(() =>
       notifyPaymentUnconfirmed(order, orderNo, `승인 반영 실패 — ${reason}`)
     );
-    return htmlRedirect(`${SITE_URL}/checkout/pending?no=${encodeURIComponent(orderNo)}`);
+    return sendTo(`${SITE_URL}/checkout/pending?no=${encodeURIComponent(orderNo)}`);
   }
 
   if (applied.outcome === 'review') {
@@ -400,11 +436,11 @@ async function handle(request: NextRequest, context: RouteContext): Promise<Resp
       })
     );
     // 손님에게는 확인 중으로 안내합니다. 물건은 나가지 않습니다.
-    return htmlRedirect(`${SITE_URL}/checkout/pending?no=${encodeURIComponent(orderNo)}`);
+    return sendTo(`${SITE_URL}/checkout/pending?no=${encodeURIComponent(orderNo)}`);
   }
 
   if (applied.outcome === 'declined') {
-    return htmlRedirect(
+    return sendTo(
       `${SITE_URL}/checkout/failed?no=${encodeURIComponent(orderNo)}&reason=declined`
     );
   }
@@ -428,7 +464,7 @@ async function handle(request: NextRequest, context: RouteContext): Promise<Resp
     if (payment.telegramEnabled) {
       await safeNotify(() => notifyNewOrder(paidOrder, 0));
     }
-    return htmlRedirect(await resultUrl('paid', orderNo));
+    return sendTo(await resultUrl('paid', orderNo));
   }
 
   /*
@@ -436,7 +472,7 @@ async function handle(request: NextRequest, context: RouteContext): Promise<Resp
    * ★ 그 요청이 결제완료로 끝냈는지, 검토필요로 끝냈는지 알 수 없습니다.
    *   지금 주문 상태를 보고 그에 맞는 화면으로 보냅니다.
    */
-  return htmlRedirect(await resultUrl(applied.order?.status ?? '', orderNo));
+  return sendTo(await resultUrl(applied.order?.status ?? '', orderNo));
 }
 
 /* ------------------------------------------------------------------

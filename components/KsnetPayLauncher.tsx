@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { markPendingPayment } from '@/lib/pending-payment';
 
 /**
  * ============================================================
@@ -223,6 +224,32 @@ export default function KsnetPayLauncher({
     if (!form) {
       setError('결제 정보를 준비하지 못했습니다.');
       return;
+    }
+
+    /*
+     * ── ★★ 안전망 — 모바일은 넘어가기 전에 표시를 남깁니다 (2026-08-25) ──
+     *
+     * 모바일은 target=_self 라 이 페이지가 통째로 KSNET 으로 넘어갑니다.
+     * 그 순간 이 컴포넌트가 사라지고, 위의 "스스로 확인하기" 도 함께 죽습니다.
+     * PC 는 아이프레임 뒤에 이 페이지가 살아 있어 계속 물어볼 수 있지만
+     * 모바일에는 물어볼 주체 자체가 없어집니다.
+     *
+     * ★★ 그래서 실시간 대신 "다음에 우리 사이트를 열 때" 확인하게 합니다.
+     *   여기에 표시를 남겨 두면, PaymentReturnWatch 가 손님이 다음에 어느
+     *   페이지를 열든 그 표시를 보고 딱 한 번 물어봅니다.
+     *
+     * ★★ 이것이 잡는 것은 다른 길이 못 잡는 경우입니다 —
+     *   결제창에서 우리 서버로 돌아오는 요청이 아예 일어나지 않은 경우.
+     *   (카드 앱을 다녀오다 브라우저가 페이지를 버리거나, 통신이 끊기거나)
+     *   303 도 스크립트도 그때는 실행될 기회조차 없습니다.
+     *
+     * ★ sessionStorage 가 아니라 localStorage 입니다.
+     *   카드 앱을 다녀오면 새 탭이 될 수 있는데 sessionStorage 는 탭마다
+     *   따로라 그때 사라집니다.
+     * ★ 저장에 실패해도 결제는 그대로 진행합니다. 안전망일 뿐입니다.
+     */
+    if (isMobile) {
+      markPendingPayment(orderNo, token);
     }
 
     /*

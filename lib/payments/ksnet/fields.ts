@@ -64,10 +64,22 @@ export type KsnetFormResult = {
  * ★ 경로와 쿼리 두 군데에 넣습니다. 한쪽이 잘리거나 다듬어져도 다른 쪽으로 찾습니다.
  * ★ 주문번호는 비밀이 아닙니다. 이 값으로 하는 일은 "어느 주문인지" 찾는 것뿐이고,
  *   금액은 그 주문을 DB 에서 다시 읽어 씁니다. 승인 응답의 ordno 와도 대조합니다.
+ *
+ * ★★ m=1 은 "모바일에서 시작한 결제" 라는 표시입니다. (2026-08-25)
+ *   모바일은 프레임 없이 페이지째 넘어갑니다. 그래서 결제창이 돌아왔을 때
+ *   옮겨야 하는 창이 바로 그 창 하나뿐이고, 자바스크립트로 바깥 창을 찾을
+ *   이유가 없습니다. 이 표시가 있으면 return 라우트가 스크립트가 든 HTML 대신
+ *   진짜 리다이렉트(303)로 답합니다. 브라우저가 헤더만 보고 따라가므로
+ *   스크립트 차단·프레임 정책·느린 로딩에 걸리지 않습니다.
+ *
+ * ★ 이 표시는 "어떻게 답할지" 만 정합니다. 승인·금액·주문 판단에는 쓰이지 않습니다.
+ *   손님이 주소를 고쳐 m=1 을 붙이거나 떼도 결제 결과가 달라지지 않습니다.
+ *   최악이라도 답이 HTML 이냐 리다이렉트냐가 바뀔 뿐입니다.
  */
-export function ksnetReplyUrl(orderNo: string): string {
+export function ksnetReplyUrl(orderNo: string, isMobile = false): string {
   const encoded = encodeURIComponent(orderNo);
-  return `${SITE_URL}/api/payment/ksnet/return/${encoded}?no=${encoded}`;
+  const base = `${SITE_URL}/api/payment/ksnet/return/${encoded}?no=${encoded}`;
+  return isMobile ? `${base}&m=1` : base;
 }
 
 export function buildKsnetForm(
@@ -76,7 +88,7 @@ export function buildKsnetForm(
   /** ★ User-Agent 로 판단한 값입니다. 화면 폭으로 정하지 마세요. */
   isMobile: boolean,
   /** 결제 결과를 받을 절대경로 */
-  replyUrl = ksnetReplyUrl(order.orderNo)
+  replyUrl = ksnetReplyUrl(order.orderNo, isMobile)
 ): KsnetFormResult {
   const action = isMobile ? KSPAY_MOBILE_ACTION : KSPAY_PC_ACTION;
 

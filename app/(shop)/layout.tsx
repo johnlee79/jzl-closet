@@ -2,6 +2,7 @@ import AnchorFlash from '@/components/AnchorFlash';
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
 import MemberSync from '@/components/MemberSync';
+import PaymentReturnWatch from '@/components/PaymentReturnWatch';
 import PointPopup from '@/components/PointPopup';
 import PopupLayer from '@/components/PopupLayer';
 import ReferralCapture from '@/components/ReferralCapture';
@@ -126,6 +127,15 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
               서로 다른 순간에 답을 받아 화면이 여러 번 움찔거렸습니다.
           */}
           <MemberSync />
+          {/*
+            결제하고 돌아왔는데 결과 화면을 못 본 손님을 붙잡습니다. (2026-08-25)
+
+            ★ 결제창으로 넘어갈 때 남긴 표시가 있을 때만 딱 한 번 물어봅니다.
+              표시가 없으면 요청이 아예 나가지 않습니다. 대부분의 방문이 여기입니다.
+            ★ 모바일에서 결제창→우리 서버로 돌아오는 요청이 아예 일어나지 않은
+              경우를 잡는 유일한 길입니다. 그때는 303 도 스크립트도 실행되지 않습니다.
+          */}
+          <PaymentReturnWatch />
           {/* 연락처 미입력 같은 안내 줄. 로그인 상태는 브라우저에서 확인합니다. */}
           <SiteNotices />
           <main id="main">{children}</main>
