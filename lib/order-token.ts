@@ -21,19 +21,16 @@ import 'server-only';
  *   관리자 비밀번호를 바꾸는 일이 손님 결제를 건드리면 안 됩니다.
  *   그래서 손님용 서명 키를 따로 뗐습니다.
  *
- * ★★ 두 방향 모두 끊기지 않게 만들었습니다.
+ * ★★ 옛 키(ADMIN_PASSWORD)로 만든 토큰을 받아 주던 임시 다리는 지웠습니다.
+ *   (2026-08-25) ORDER_TOKEN_SECRET 을 넣고 하루가 지나, 옛 키로 서명된
+ *   토큰은 전부 만료됐습니다. 토큰 수명이 6시간이라 그 뒤로는 건널 사람이
+ *   없습니다. 다리를 남겨 두면 관리자 비밀번호가 계속 "손님 토큰을 열 수 있는
+ *   열쇠" 로 남아, 떼어 놓은 의미가 반쯤 사라집니다.
  *
- *   1) ORDER_TOKEN_SECRET 을 아직 안 넣었으면 ADMIN_PASSWORD 로 서명합니다.
- *      → 배포만 먼저 해도 지금과 똑같이 동작합니다.
+ *   이제 이 파일은 ORDER_TOKEN_SECRET 만 씁니다.
+ *   관리자 비밀번호를 바꿔도 손님 주문 토큰은 아무 영향을 받지 않습니다.
  *
- *   2) ORDER_TOKEN_SECRET 을 넣은 뒤에는 새 키로 서명하되,
- *      옛 키(ADMIN_PASSWORD)로 만든 토큰도 확인만은 받아 줍니다.
- *      → 키를 바꾸는 순간에도 이미 결제를 끝낸 손님이 안 막힙니다.
- *
- *   옛 키를 받아 주는 부분은 4단계에서 지웁니다.
- *   토큰 수명이 6시간이라, 키를 바꾸고 하루만 지나면 필요 없어집니다.
- *
- * ★ 키가 하나도 없으면 토큰을 발급하지도, 인정하지도 않습니다.
+ * ★ 키가 없으면 토큰을 발급하지도, 인정하지도 않습니다.
  */
 
 /** 발급 후 이 시간이 지나면 만료됩니다. 주문 직후 한 번 보는 화면이라 짧게 둡니다. */
@@ -44,22 +41,29 @@ function clean(value: string | undefined): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-/** 지금 서명에 쓰는 키. 새 키가 있으면 새 키, 없으면 옛 키입니다. */
-function getSecret(): string | null {
-  return clean(process.env.ORDER_TOKEN_SECRET) ?? clean(process.env.ADMIN_PASSWORD);
-}
-
 /**
- * 확인만 받아 주는 옛 키.
+ * 지금 서명에 쓰는 키.
  *
- * ★ 지금 쓰는 키와 같으면 돌려주지 않습니다. 같은 걸 두 번 볼 이유가 없습니다.
- * ★ 4단계에서 이 함수와 아래 쓰는 자리를 함께 지웁니다.
+ * ★★ ORDER_TOKEN_SECRET 이 없을 때만 ADMIN_PASSWORD 로 내려앉습니다.
+ *   이건 "환경변수를 깜빡했을 때 손님 결제가 통째로 멈추는" 사고를 막는
+ *   안전망입니다. 여기서 아예 null 을 돌려주면 완료 화면이 열리지 않습니다.
+ *
+ * ★★ 다만 이 길로 내려앉은 상태에서 관리자 비밀번호를 바꾸면,
+ *   그때는 예전처럼 손님 토큰이 무효가 됩니다. 그래서 조용히 넘어가지 않고
+ *   기록을 남깁니다. 로그에 이 줄이 보이면 ORDER_TOKEN_SECRET 을 넣어야 합니다.
  */
-function getLegacySecret(): string | null {
-  const current = getSecret();
-  const legacy = clean(process.env.ADMIN_PASSWORD);
-  if (!legacy || legacy === current) return null;
-  return legacy;
+function getSecret(): string | null {
+  const current = clean(process.env.ORDER_TOKEN_SECRET);
+  if (current) return current;
+
+  const fallback = clean(process.env.ADMIN_PASSWORD);
+  if (fallback) {
+    console.warn(
+      '[order-token] ORDER_TOKEN_SECRET 이 비어 있어 ADMIN_PASSWORD 로 서명합니다. ' +
+        '이 상태에서 관리자 비밀번호를 바꾸면 손님 주문 토큰이 무효가 됩니다.'
+    );
+  }
+  return fallback;
 }
 
 function toHex(buffer: ArrayBuffer): string {
@@ -120,22 +124,5 @@ export async function verifyOrderToken(
 
   const message = `order:${orderNo}:${expiresAt}`;
 
-  if (safeEqual(signature, await sign(message, secret))) return true;
-
-  /*
-   * ★ 옛 키로 만든 토큰도 받아 줍니다. (4단계에서 지웁니다)
-   *   서명 키를 바꾼 직후, 이미 결제를 끝낸 손님의 완료 화면이 막히면 안 됩니다.
-   *   토큰 수명이 6시간이라 하루만 지나면 이 길로 오는 사람이 없어집니다.
-   *
-   * ★ 만료 검사는 위에서 이미 끝났습니다. 옛 키라고 더 오래 살지 않습니다.
-   */
-  const legacy = getLegacySecret();
-  if (legacy && safeEqual(signature, await sign(message, legacy))) {
-    console.warn(
-      '[order-token] 옛 서명 키로 만든 토큰을 받았습니다. 6시간 안에 발급된 것입니다.'
-    );
-    return true;
-  }
-
-  return false;
+  return safeEqual(signature, await sign(message, secret));
 }
