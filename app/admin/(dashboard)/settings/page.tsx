@@ -155,6 +155,55 @@ export default async function AdminSettingsPage({
               problem: ksnetConfigProblem(),
               liveMidIgnored: ksnetLiveMidIgnored(),
             }}
+            /*
+             * ★★ 값이 아니라 "들어왔는지" 만 넘깁니다. (2026-08-25)
+             *   Boolean() 으로 감싸 참·거짓만 만듭니다. 값 자체는 이 화면으로
+             *   내려가지 않습니다. 관리자 화면이라도 비밀을 그리면 안 됩니다.
+             * ★ 이 칸을 만든 이유 — Vercel 에 넣은 값이 실제 서버까지 닿았는지
+             *   확인할 방법이 없어 매번 헤맸습니다. 이제 눈으로 봅니다.
+             */
+            env={[
+              {
+                name: 'RESEND_API_KEY',
+                set: Boolean(process.env.RESEND_API_KEY?.trim()),
+                note: '없으면 주문·배송 메일이 나가지 않습니다. 주문은 정상 저장됩니다.',
+              },
+              {
+                name: 'MAIL_FROM',
+                set: Boolean(process.env.MAIL_FROM?.trim()),
+                note: '보내는 사람. 비어 있으면 기본값을 씁니다. Resend 에서 인증한 도메인이어야 합니다.',
+              },
+              {
+                name: 'MAIL_REPLY_TO',
+                set: Boolean(process.env.MAIL_REPLY_TO?.trim()),
+                note: '손님이 답장할 주소. 비어 있으면 보내는 사람 주소로 답장이 갑니다.',
+              },
+              {
+                name: 'ADMIN_EMAILS',
+                set: Boolean(process.env.ADMIN_EMAILS?.trim()),
+                note: '없으면 이메일 로그인이 켜지지 않고 관리자 비밀번호로만 들어옵니다.',
+              },
+              {
+                name: 'ORDER_TOKEN_SECRET',
+                set: Boolean(process.env.ORDER_TOKEN_SECRET?.trim()),
+                note: '손님 주문 완료 화면을 여는 열쇠. 없으면 관리자 비밀번호를 대신 쓰고, 비밀번호를 바꾸면 손님 화면이 막힙니다.',
+              },
+              {
+                name: 'KSNET_MID',
+                set: Boolean(process.env.KSNET_MID?.trim()),
+                note: '운영 상점아이디. KSNET_MODE 가 live 일 때만 쓰입니다.',
+              },
+              {
+                name: 'KSNET_MODE',
+                set: Boolean(process.env.KSNET_MODE?.trim()),
+                note: 'live 여야 실제 결제입니다. 그 밖의 값이거나 없으면 테스트입니다.',
+              },
+              {
+                name: 'TELEGRAM_BOT_TOKEN',
+                set: Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim()),
+                note: '관리자에게 가는 주문 알림. 손님 메일과는 무관합니다.',
+              },
+            ]}
           />
         ) : null}
 

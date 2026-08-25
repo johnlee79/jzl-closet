@@ -335,6 +335,12 @@ export async function placeOrderAction(
    */
   if (!needsPayment) {
     try {
+      /*
+       * ★ 여기까지 왔다는 것을 남깁니다. (2026-08-25)
+       *   메일이 안 왔을 때 "코드가 안 불린 것" 과 "불렸는데 건너뛴 것" 을
+       *   구분할 방법이 없어 한참 헤맸습니다. 그 갈림길을 로그로 만듭니다.
+       */
+      console.log(`[checkout] 주문 접수 메일을 부릅니다 (${order.orderNo})`);
       const deadline = depositDeadline(order.createdAt, payment.depositHours);
       await sendOrderMail(order, {
         bankName: payment.bankName,

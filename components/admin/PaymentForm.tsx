@@ -23,6 +23,7 @@ export default function PaymentForm({
   initial,
   telegramConfigured,
   ksnet,
+  env,
 }: {
   initial: PaymentSettings;
   /** TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID 가 채워져 있는지 */
@@ -33,6 +34,10 @@ export default function PaymentForm({
    *   운영 상점아이디를 관리자 화면에서 바꿀 수 있게 하면,
    *   실수로 한 번 눌러 진짜 결제가 열리는 사고가 납니다.
    */
+  /**
+   * 환경변수가 서버까지 닿았는지. ★ 값은 절대 넘기지 않습니다. 있는지 없는지만.
+   */
+  env: { name: string; set: boolean; note: string }[];
   ksnet: {
     mode: string;
     modeLabel: string;
@@ -153,6 +158,47 @@ export default function PaymentForm({
           지금 켜져 있는 수단 {onCount}개. 무통장입금만 켜 둔 경우에는 아래 입금 계좌를
           반드시 채워야 주문을 받을 수 있습니다.
         </p>
+      </section>
+
+      {/*
+        ── 환경변수 상태 (2026-08-25) ──────────────────────
+        ★★ 왜 이 칸이 필요한가
+          Vercel 에 넣은 값이 실제로 돌아가는 서버까지 닿았는지 확인할 방법이
+          지금까지 없었습니다. 넣고 Redeploy 했는데 동작하지 않을 때,
+          "값이 안 들어간 것" 인지 "코드가 잘못된 것" 인지 가릴 수가 없어
+          매번 한참 헤맸습니다. (관리자 비밀번호 때도, 주문 메일 때도)
+
+        ★★ 값은 절대 보여 주지 않습니다. 있는지 없는지만 보여 줍니다.
+          여기에 값을 찍으면 관리자 화면을 여는 순간 비밀이 새어 나갑니다.
+      */}
+      <section className="admin-card p-4 md:p-5">
+        <h2 className="text-[18px] font-semibold text-slate-900">환경변수 상태</h2>
+        <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
+          Vercel 에 넣은 값이 지금 돌아가는 서버까지 닿았는지 보여 줍니다.
+          <strong> 값은 보여 주지 않습니다. 들어왔는지만 확인합니다.</strong>
+          넣었는데 &ldquo;없음&rdquo; 이면 Production 에 체크했는지, Redeploy 했는지 확인하세요.
+        </p>
+
+        <ul className="mt-4 flex flex-col gap-2">
+          {env.map((item) => (
+            <li
+              key={item.name}
+              className="flex flex-wrap items-center gap-2 border-b border-slate-100 pb-2 last:border-b-0"
+            >
+              <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[14px]">{item.name}</code>
+              <span
+                className={`admin-badge ${
+                  item.set ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {item.set ? '들어옴' : '없음'}
+              </span>
+              <span className="w-full text-[14px] leading-relaxed text-slate-500">
+                {item.note}
+              </span>
+            </li>
+          ))}
+        </ul>
       </section>
 
       {/* ── KSNET 연결 상태 (4-A) ─────────────────────── */}

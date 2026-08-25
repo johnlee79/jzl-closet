@@ -105,11 +105,36 @@ async function send(options: {
   /** 로그에 남길 이름표. 개인정보가 아닌 값만 넣으세요. */
   tag: string;
 }): Promise<boolean> {
+  /*
+   * ★★ 건너뛸 때도 반드시 남깁니다. (2026-08-25)
+   *
+   *   처음에는 "환경변수가 없으면 조용히 넘어간다" 로 만들었습니다.
+   *   텔레그램과 같은 원칙이라 그렇게 했는데, 실제로 메일이 안 나갔을 때
+   *   아무 흔적이 없어 원인을 찾을 수가 없었습니다.
+   *   Resend 쪽에도 기록이 없고 우리 로그에도 없으니, 코드가 안 불린 것인지
+   *   불렸는데 건너뛴 것인지조차 구분이 안 됐습니다.
+   *
+   *   "조용히" 는 손님 화면에 대한 약속이지 로그에 대한 약속이 아닙니다.
+   *   주문은 그대로 저장되고 화면도 그대로지만, 왜 안 보냈는지는 남깁니다.
+   *
+   * ★ 그래도 본문·주소·이름은 남기지 않습니다. 주문번호와 이유만 남깁니다.
+   */
   const key = apiKey();
-  if (!key) return false;
+  if (!key) {
+    console.warn(
+      `[mail] 건너뜁니다 (${options.tag}): RESEND_API_KEY 가 비어 있습니다. ` +
+        'Vercel 환경변수에 넣고 Redeploy 했는지, Production 에 체크했는지 확인하세요.'
+    );
+    return false;
+  }
 
   const to = options.to.trim();
-  if (!to) return false;
+  if (!to) {
+    console.warn(`[mail] 건너뜁니다 (${options.tag}): 받는 주소가 비어 있습니다.`);
+    return false;
+  }
+
+  console.log(`[mail] 보냅니다 (${options.tag}) → Resend`);
 
   try {
     const response = await fetch(API_URL, {
@@ -133,9 +158,25 @@ async function send(options: {
     });
 
     if (!response.ok) {
-      console.warn(`[mail] 보내지 못했습니다 (${options.tag}): HTTP ${response.status}`);
+      /*
+       * ★ Resend 가 왜 거절했는지 함께 남깁니다.
+       *   가장 흔한 것이 "인증하지 않은 도메인으로 보내려 함" 인데,
+       *   상태 코드만으로는 알 수 없습니다. 응답 본문에 이유가 들어 있습니다.
+       * ★ 응답 본문에는 우리가 보낸 메일 내용이 들어 있지 않습니다.
+       *   거절 사유만 있습니다. 그래서 남겨도 안전합니다.
+       */
+      let detail = '';
+      try {
+        detail = (await response.text()).slice(0, 300);
+      } catch {
+        /* 본문을 못 읽어도 상태 코드는 남습니다. */
+      }
+      console.warn(
+        `[mail] 보내지 못했습니다 (${options.tag}): HTTP ${response.status} ${detail}`
+      );
       return false;
     }
+    console.log(`[mail] 보냈습니다 (${options.tag})`);
     return true;
   } catch (error) {
     console.warn(
@@ -268,7 +309,12 @@ export async function sendOrderMail(
   bank?: { bankName: string; accountNo: string; accountHolder: string; deadline: string } | null
 ): Promise<boolean> {
   const to = (order.ordererEmail ?? '').trim();
-  if (!to) return false;
+  if (!to) {
+    // ★ 주소가 왜 없는지 알아야 합니다. 2026-08-25 부터 주문서에서 필수인데
+    //   여기까지 빈 값이 온다면 그전에 들어온 주문이거나 다른 길로 만든 주문입니다.
+    console.warn(`[mail] 주문 접수 메일 건너뜀 (${order.orderNo}): 이메일이 비어 있습니다.`);
+    return false;
+  }
 
   const lookup = `${SITE_URL}/order-lookup`;
   const [greeting, closing] = await copyLines('orderMail', [
@@ -331,7 +377,10 @@ export async function sendOrderMail(
  */
 export async function sendShippingMail(order: Order): Promise<boolean> {
   const to = (order.ordererEmail ?? '').trim();
-  if (!to) return false;
+  if (!to) {
+    console.warn(`[mail] 배송 안내 메일 건너뜀 (${order.orderNo}): 이메일이 비어 있습니다.`);
+    return false;
+  }
 
   const link = trackingUrl(order.courier, order.trackingNo);
   const name = courierName(order.courier);
