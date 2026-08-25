@@ -374,12 +374,27 @@ export default function OrderDetail({
               </dl>
 
               {/*
-                ★ KSNET 거래번호와 승인번호 (4-A)
+                ★ KSNET 거래번호 · 승인번호 · 결제 Key (4-A)
                   취소를 대행사에 요청할 때 반드시 필요한 값입니다.
                   취소요청 상태에서는 크게 보여 줍니다. 눈으로 옮겨 적다 틀리면
                   접수가 며칠 밀립니다. 그래서 복사 버튼을 둡니다.
+
+                ★★ 결제 Key 를 여기로 올렸습니다. (2026-08-25)
+                  전에는 "확인 필요"(승인확인실패·검토필요) 상자 안에만 있어서,
+                  결제가 잘 끝난 주문에서는 아예 보이지 않았습니다.
+                  결제가 잘 된 주문일수록 근거를 볼 수 없는 셈이었습니다.
+
+                  이 값이 필요한 자리는 문제가 난 뒤만이 아닙니다.
+                    · 무슨 일이 생겼을 때 "결제 Key 가 남아 있는지" 를 가장 먼저 봅니다.
+                      없으면 결제창이 우리 서버로 돌아오지 않았다는 뜻입니다.
+                    · 결제완료 주문이라도 KSNET 에 문의할 일이 생깁니다.
+                      승인 재조회는 이 값으로만 됩니다. 주문번호로는 못 묻습니다.
+
+                ★ 값이 비어 있으면 그 줄만 빠집니다. 빈칸을 보여 주지 않습니다.
+                ★ 승인 조회 이력은 지금처럼 "확인 필요" 에만 둡니다.
+                  그건 대조하는 동안에만 쓰는 것이라 평소에는 자리만 차지합니다.
               */}
-              {order.pgTid || order.pgAuthNo ? (
+              {order.pgTid || order.pgAuthNo || order.pgCommConId ? (
                 <div
                   className={`mt-4 flex flex-col gap-3 rounded-md p-3 ${
                     cancelPending ? 'bg-amber-50' : 'bg-slate-50'
@@ -387,11 +402,22 @@ export default function OrderDetail({
                 >
                   {cancelPending ? (
                     <p className="text-[15px] font-medium leading-relaxed text-amber-900">
-                      취소 접수 중입니다. 아래 두 번호를 대행사에 알려 주세요.
+                      취소 접수 중입니다. 아래 번호를 대행사에 알려 주세요.
                     </p>
                   ) : null}
-                  <CopyValue label="KSNET 거래번호 (trno)" value={order.pgTid ?? ''} large={cancelPending} />
-                  <CopyValue label="승인번호" value={order.pgAuthNo} large={cancelPending} />
+                  {order.pgTid ? (
+                    <CopyValue
+                      label="KSNET 거래번호 (trno)"
+                      value={order.pgTid}
+                      large={cancelPending}
+                    />
+                  ) : null}
+                  {order.pgAuthNo ? (
+                    <CopyValue label="승인번호" value={order.pgAuthNo} large={cancelPending} />
+                  ) : null}
+                  {order.pgCommConId ? (
+                    <CopyValue label="결제 Key (reCommConId)" value={order.pgCommConId} />
+                  ) : null}
                 </div>
               ) : null}
 
@@ -412,10 +438,17 @@ export default function OrderDetail({
                       : '승인 여부를 확인하지 못했습니다. 결제되지 않았다고 단정할 수 없습니다.'}
                   </p>
 
+                  {/*
+                    ★ 결제 Key·거래번호는 바로 위 상자로 옮겼습니다. (2026-08-25)
+                      이제 결제완료 주문에서도 보이므로 여기서 또 보여 줄 이유가 없습니다.
+                      같은 값을 한 화면에 두 번 두면 어느 쪽이 맞는지 헷갈립니다.
+                      대조할 때 필요한 주문번호만 남깁니다.
+                  */}
                   <div className="mt-3 flex flex-col gap-3">
-                    <CopyValue label="결제 Key (reCommConId)" value={order.pgCommConId} />
-                    <CopyValue label="KSNET 거래번호 (trno)" value={order.pgTid ?? ''} />
                     <CopyValue label="주문번호" value={order.orderNo} />
+                    <p className="text-[14px] leading-relaxed text-amber-900">
+                      결제 Key와 거래번호는 위 결제 정보 상자에 있습니다.
+                    </p>
                   </div>
 
                   {/* ── 조회 이력 ── */}
