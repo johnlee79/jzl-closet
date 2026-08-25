@@ -120,16 +120,57 @@ function load(): Promise<MemberInfo> {
   if (inFlight) return inFlight;
 
   inFlight = (async () => {
-    let next = GUEST;
+    /*
+     * ============================================================
+     * ★★ 못 물어봤을 때 "비회원" 으로 확정하지 않습니다 (2026-08-25)
+     * ============================================================
+     *
+     * 예전에는 이랬습니다.
+     *     let next = GUEST;
+     *     try { ...물어보기... } catch {}
+     *     publish(next);          ← 실패해도 GUEST 를 뿌림
+     *
+     * 그래서 통신이 한 번만 삐끗해도 화면 전체가 즉시 "로그아웃" 이 됐습니다.
+     * 서버 세션은 멀쩡한데요. 실제로 이런 일이 났습니다.
+     *   · 헤더에는 "로그인 / 회원가입" 이 뜨고
+     *   · 그 로그인을 누르면 미들웨어가 마이페이지로 보냄
+     * 미들웨어는 쿠키를 직접 보고, 헤더는 이 fetch 결과를 봅니다.
+     * 두 판단이 갈리면 손님은 "로그인이 됐다는 건지 아니라는 건지" 를 모릅니다.
+     *
+     * ★★ 이제 로그아웃은 서버가 "비회원" 이라고 답했을 때만 확정합니다.
+     *   못 물어봤으면 아무것도 바꾸지 않습니다.
+     *     이전 답이 있으면  → 그대로 유지 (회원이면 회원인 채로)
+     *     이전 답이 없으면  → '모름' 그대로 (화면이 그 자리를 비워 둡니다)
+     *   틀린 상태를 보여 주느니 모르는 채로 두는 편이 낫습니다.
+     *
+     * ★★ 그리고 반드시 로그를 남깁니다.
+     *   조용히 넘어가면 아무도 원인을 못 찾습니다. 실제로 두 번 겪었습니다.
+     */
+    let next: MemberInfo | null = null;
     try {
       const response = await fetch('/api/auth/me', { cache: 'no-store' });
-      if (response.ok) next = normalize(await response.json());
-    } catch {
-      /* 통신이 끊겼습니다. 비회원으로 봅니다. */
+      if (response.ok) {
+        next = normalize(await response.json());
+      } else {
+        console.warn(
+          `[member] 로그인 상태를 확인하지 못했습니다: HTTP ${response.status}. ` +
+            '이전 상태를 그대로 둡니다.'
+        );
+      }
+    } catch (error) {
+      console.warn(
+        '[member] 로그인 상태를 확인하지 못했습니다:',
+        error instanceof Error ? error.message : String(error),
+        '— 이전 상태를 그대로 둡니다.'
+      );
     }
+
     inFlight = null;
-    publish(next);
-    return next;
+
+    // ★ 답을 못 받았으면 아무것도 바꾸지 않습니다. 이전 값(또는 '모름')이 남습니다.
+    if (next) publish(next);
+
+    return next ?? cache ?? GUEST;
   })();
 
   return inFlight;

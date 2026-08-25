@@ -2,7 +2,8 @@ import AnchorFlash from '@/components/AnchorFlash';
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
 import MemberSync from '@/components/MemberSync';
-import InstallPrompt from '@/components/InstallPrompt';
+// ★ 홈 화면 추가 안내는 잠시 내렸습니다. (2026-08-25) 아래 레이아웃의 주석 참고
+// import InstallPrompt from '@/components/InstallPrompt';
 import PaymentReturnWatch from '@/components/PaymentReturnWatch';
 import PointPopup from '@/components/PointPopup';
 import PopupLayer from '@/components/PopupLayer';
@@ -138,10 +139,22 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
           */}
           <PaymentReturnWatch />
           {/*
-            홈 화면에 추가 안내. 두 번 넘게 오신 손님에게만, 닫으면 30일 쉽니다.
-            ★ 서비스 워커 등록도 이 컴포넌트가 합니다. 캐시는 하지 않습니다.
+            ★★ 홈 화면에 추가 안내(InstallPrompt)를 잠시 내렸습니다. (2026-08-25)
+
+              오픈 직후 로그인 상태가 헤더와 서버에서 다르게 보이는 일이 있었습니다.
+              원인은 lib/member.ts 가 확인에 실패했을 때 "비회원" 으로 확정하던
+              것이었고 이 컴포넌트와는 무관합니다. 그래도 그날 새로 들어간
+              전역 장치를 남겨 두면 다음에 무슨 일이 나도 매번 다시 의심하게
+              되므로, 로그인이 안정될 때까지 내려 둡니다.
+
+              ★ 이 컴포넌트가 서비스 워커를 등록했습니다. 여기서 빼면 새로
+                등록되지 않고, 이미 설치된 손님 브라우저에서는 public/sw.js 가
+                스스로 해제합니다.
+              ★ 다시 켤 때 — 아래 주석을 풀고 public/sw.js 를 예전 내용으로
+                되돌리면 됩니다. app/manifest.ts 와 아이콘은 그대로 두었습니다.
+                그것들은 정적 파일이라 아무 동작도 하지 않습니다.
           */}
-          <InstallPrompt />
+          {/* <InstallPrompt /> */}
           {/* 연락처 미입력 같은 안내 줄. 로그인 상태는 브라우저에서 확인합니다. */}
           <SiteNotices />
           <main id="main">{children}</main>
