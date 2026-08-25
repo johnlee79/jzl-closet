@@ -24,7 +24,12 @@ import {
   getStoreSettings,
 } from '@/lib/settings';
 import { ksnetModeLabel } from '@/lib/payments/ksnet';
-import { ksnetConfigProblem, ksnetMid, ksnetMode } from '@/lib/payments/ksnet/config';
+import {
+  ksnetConfigProblem,
+  ksnetLiveMidIgnored,
+  ksnetMid,
+  ksnetMode,
+} from '@/lib/payments/ksnet/config';
 import { isTelegramConfigured } from '@/lib/telegram';
 
 /** 설정 화면은 항상 최신 DB 값을 봐야 하므로 캐시하지 않습니다. */
@@ -148,6 +153,7 @@ export default async function AdminSettingsPage({
               modeLabel: ksnetModeLabel(),
               mid: ksnetMid(),
               problem: ksnetConfigProblem(),
+              liveMidIgnored: ksnetLiveMidIgnored(),
             }}
           />
         ) : null}

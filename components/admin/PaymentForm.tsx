@@ -33,7 +33,15 @@ export default function PaymentForm({
    *   운영 상점아이디를 관리자 화면에서 바꿀 수 있게 하면,
    *   실수로 한 번 눌러 진짜 결제가 열리는 사고가 납니다.
    */
-  ksnet: { mode: string; modeLabel: string; mid: string; problem: string | null };
+  ksnet: {
+    mode: string;
+    modeLabel: string;
+    /** ★ 실제로 결제창에 실려 나가는 값입니다. 설정한 값이 아닙니다. */
+    mid: string;
+    problem: string | null;
+    /** 운영 아이디를 넣어 뒀지만 모드가 test 라 안 쓰이고 있는 상태 */
+    liveMidIgnored: boolean;
+  };
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -168,7 +176,12 @@ export default function PaymentForm({
             </dd>
           </div>
           <div className="rounded-md bg-slate-50 px-3 py-2">
-            <dt className="text-[14px] text-slate-500">상점아이디 (KSNET_MID)</dt>
+            {/*
+              ★ "설정한 값" 이 아니라 "지금 결제창에 실려 나가는 값" 입니다.
+                모드가 test 면 KSNET_MID 를 넣어 두었더라도 테스트 아이디가 나갑니다.
+                설정값을 보여 주면 화면이 사실과 다른 말을 하게 됩니다.
+            */}
+            <dt className="text-[14px] text-slate-500">지금 나가는 상점아이디</dt>
             <dd className="mt-0.5 font-mono font-semibold text-slate-900">{ksnet.mid}</dd>
           </div>
         </dl>
@@ -186,8 +199,37 @@ export default function PaymentForm({
             바꾸려면 Vercel 환경변수에 <code className="rounded bg-white px-1">KSNET_MID</code>
             를 운영 상점아이디로, <code className="rounded bg-white px-1">KSNET_MODE</code> 를{' '}
             <code className="rounded bg-white px-1">live</code> 로 넣고 재배포하세요.
+            {/*
+              ★★ 운영 아이디를 넣어 두고 모드를 안 바꾼 상태를 그대로 알려 줍니다.
+                이 안내가 없으면 "운영 아이디를 넣었는데 왜 테스트지" 를 한참 헤맵니다.
+                반대로 이 상태를 오류로 막으면 테스트 결제 자체가 안 됩니다.
+            */}
+            {ksnet.liveMidIgnored ? (
+              <>
+                <br />
+                <br />
+                <strong>KSNET_MID 를 넣어 두셨지만 지금은 쓰이지 않습니다.</strong>{' '}
+                <code className="rounded bg-white px-1">KSNET_MODE</code> 가{' '}
+                <code className="rounded bg-white px-1">live</code> 가 아니면 무엇을 넣어
+                두셨든 테스트 아이디로 나갑니다. 실제 결제를 받으시려면 모드를 바꾸세요.
+              </>
+            ) : null}
           </p>
-        ) : null}
+        ) : (
+          <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-[15px] leading-relaxed text-red-800">
+            <strong>실제 결제가 이루어집니다.</strong> 손님 카드에서 진짜 돈이 빠져나갑니다.
+            카드 취소는 우리 쪽에서 할 수 없고 KSNET 에 연락해야 합니다.
+            {/*
+              ★ 되돌리는 방법을 여기 적어 둡니다. 급할 때 찾아 헤매면 안 됩니다.
+              ★ MID 를 지우라고 하지 않습니다. 이제 모드가 진짜 스위치라 그럴 필요가 없습니다.
+            */}
+            <br />
+            <br />
+            테스트로 되돌리려면 <code className="rounded bg-white px-1">KSNET_MODE</code> 를{' '}
+            <code className="rounded bg-white px-1">test</code> 로 바꾸고 재배포하세요.
+            KSNET_MID 는 지우지 않아도 됩니다. 모드가 live 가 아니면 쓰이지 않습니다.
+          </p>
+        )}
 
         {/* ── 노티 자동 완료 ─────────────────────────── */}
         <div className="mt-5 border-t border-slate-200 pt-5">

@@ -39,21 +39,58 @@ export function ksnetMode(): KsnetMode {
 }
 
 /**
- * 상점아이디.
- * ★ KSNET_MID 를 넣지 않으면 테스트 아이디로 동작합니다.
- *   운영 모드인데 MID 가 비어 있으면 테스트 아이디로 결제가 되어 버리므로,
- *   호출부(ksnetPaymentFields)가 그 조합을 막습니다.
+ * 실제로 결제창에 실려 나가는 상점아이디.
+ *
+ * ★★★ 실제 돈이 오가는지를 정하는 것은 이 값 하나뿐입니다. (2026-08-25)
+ *   결제창 주소는 테스트와 운영이 같습니다. 우리가 보내는 sndStoreid 가
+ *   운영 아이디면 그 순간부터 손님 카드에서 진짜 돈이 빠져나갑니다.
+ *
+ * ★★ 그래서 KSNET_MODE 가 live 가 아니면 무조건 테스트 아이디를 씁니다.
+ *   예전에는 MID 만 보고 모드를 보지 않았습니다. 그러면 이런 일이 났습니다.
+ *
+ *     KSNET_MODE=test  +  KSNET_MID=운영아이디
+ *       → 실제 결제가 그대로 나가는데
+ *         관리자 화면은 "테스트 — 실제 결제가 아닙니다" 라고 말합니다.
+ *
+ *   운영에서 테스트로 되돌릴 때 MODE 만 바꾸고 MID 를 안 지우면
+ *   정확히 이 상태가 됩니다. 되돌렸다고 믿는 동안 진짜 결제가 나갑니다.
+ *   가장 위험한 종류의 거짓말이라 모드를 진짜 스위치로 만들었습니다.
+ *
+ * ★ 이제 되돌리는 방법은 하나입니다 — KSNET_MODE 를 live 가 아닌 값으로.
+ *   MID 는 남겨 두어도 쓰이지 않습니다.
+ *
+ * ★ 반대 방향(MID 만 넣고 MODE 를 안 바꿈)은 테스트로 남습니다.
+ *   틀렸을 때 손해가 없는 쪽으로 넘어지게 두는 것이 맞습니다.
+ *   그 상태는 관리자 설정 화면이 눈에 띄게 알려 줍니다.
  */
 export function ksnetMid(): string {
+  if (ksnetMode() !== 'live') return KSNET_TEST_MID;
   return process.env.KSNET_MID?.trim() || KSNET_TEST_MID;
 }
 
-/** 운영 모드인데 상점아이디를 안 넣었으면 결제를 열면 안 됩니다. */
+/**
+ * 운영 모드인데 상점아이디를 안 넣었으면 결제를 열면 안 됩니다.
+ *
+ * ★ 이 값이 있으면 호출부(buildKsnetForm)가 결제창을 아예 열지 않습니다.
+ *   그래서 "테스트로 동작 중" 같은 안내는 여기 넣지 않습니다.
+ *   그건 문제가 아니라 상태이고, 여기 넣으면 결제가 통째로 막힙니다.
+ */
 export function ksnetConfigProblem(): string | null {
   if (ksnetMode() === 'live' && !process.env.KSNET_MID?.trim()) {
     return 'KSNET_MODE 가 live 인데 KSNET_MID 가 비어 있습니다. 운영 상점아이디를 넣어 주세요.';
   }
   return null;
+}
+
+/**
+ * 운영 상점아이디를 넣어 두었는데 모드가 test 라 안 쓰이고 있는 상태인지.
+ *
+ * ★ 문제가 아니라 알림입니다. 결제를 막지 않습니다.
+ *   "운영 아이디를 넣었는데 왜 테스트로 나가지" 를 헤매지 않도록
+ *   관리자 설정 화면에서 이 사실을 그대로 보여 줍니다.
+ */
+export function ksnetLiveMidIgnored(): boolean {
+  return ksnetMode() !== 'live' && Boolean(process.env.KSNET_MID?.trim());
 }
 
 /* ------------------------------------------------------------------
