@@ -475,7 +475,14 @@ export default function AdminShell({
           </svg>
           메뉴
         </button>
-        <span className="text-[17px] font-semibold">JZL CLOSET 관리자</span>
+        {/*
+          ★ 누르면 대시보드로 갑니다. (2026-08-25)
+            로고를 누르면 처음 화면으로 가는 것이 웹에서 굳어진 약속입니다.
+            지금까지는 글자였을 뿐이라 눌러도 아무 일도 없었습니다.
+        */}
+        <Link href="/admin" className="text-[17px] font-semibold hover:underline">
+          JZL CLOSET 관리자
+        </Link>
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <button type="button" onClick={handleLogout} className="admin-btn">
@@ -492,10 +499,13 @@ export default function AdminShell({
           } border-b border-slate-200 bg-white p-4 lg:sticky lg:top-0 lg:block lg:h-screen lg:w-[228px] lg:shrink-0 lg:overflow-y-auto lg:border-b-0 lg:border-r print:hidden`}
         >
           <div className="mb-6 hidden items-start justify-between gap-2 lg:flex">
-            <div>
-              <p className="text-[17px] font-semibold text-slate-900">JZL CLOSET</p>
+            {/* ★ 사이드바 로고도 같습니다. 두 곳이 다르게 동작하면 더 헷갈립니다. */}
+            <Link href="/admin" className="group">
+              <p className="text-[17px] font-semibold text-slate-900 group-hover:underline">
+                JZL CLOSET
+              </p>
               <p className="text-[15px] text-slate-600">관리자</p>
-            </div>
+            </Link>
             <ThemeToggle />
           </div>
 
