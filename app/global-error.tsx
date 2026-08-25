@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import LeavingScreen from '@/components/LeavingScreen';
 import { isLeaving } from '@/lib/leaving';
 import './globals.css';
 
@@ -65,9 +66,12 @@ export default function GlobalError({
   }, [error]);
 
   /*
-   * ★★ 우리가 일부러 다른 사이트로 떠나는 중이면 아무것도 그리지 않습니다.
+   * ★★ 우리가 일부러 다른 사이트로 떠나는 중이면 고장이 아닙니다.
    *   구글·카카오 동의 화면으로 넘어가는 그 짧은 사이입니다.
    *   여기서 오류 화면을 그리면 손님은 "고장 났다" 고 봅니다.
+   *
+   * ★★ 그렇다고 빈 화면을 두면 그것도 고장으로 보입니다.
+   *   손님이 뒤로가기를 눌러 로그인이 중단됩니다. 옮기는 중이라고 말해 줍니다.
    *
    * ★ markLeaving() 을 우리가 직접 부른 경우에만 참입니다.
    *   진짜 고장은 아래 화면이 그대로 다 나옵니다. (lib/leaving.ts 설명 참고)
@@ -76,7 +80,9 @@ export default function GlobalError({
   if (isLeaving()) {
     return (
       <html lang="ko">
-        <body className="bg-paper" />
+        <body className="bg-paper text-ink antialiased">
+          <LeavingScreen />
+        </body>
       </html>
     );
   }

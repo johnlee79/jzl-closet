@@ -33,14 +33,27 @@
 /** 표시를 켜 두는 시간. 이 안에 화면이 안 바뀌면 이동이 무산된 것으로 봅니다. */
 const WINDOW_MS = 10_000;
 
+/** 어디로 가는지 못 받았을 때 쓰는 말. */
+const FALLBACK_MESSAGE = '화면을 옮기고 있습니다';
+
 let leavingUntil = 0;
+let message = '';
 
 /**
  * 다른 사이트로 떠나기 직전에 부릅니다.
  * ★ window.location.assign() 바로 앞에 두세요. 뒤에 두면 늦습니다.
+ *
+ * @param going 손님에게 보여 줄 한 줄. 어디로 가는지 적어 주세요.
+ *   예) '로그인 화면으로 이동하고 있습니다' · '결제 화면으로 이동하고 있습니다'
+ *
+ *   ★★ 일부러 기본값을 두지 않고 반드시 받게 했습니다.
+ *     이 말이 그대로 손님 화면에 뜹니다. 부르는 쪽이 어디로 가는지 알고
+ *     있으니 그쪽이 적는 것이 맞습니다. 기본값을 두면 엉뚱한 자리에서
+ *     "로그인 화면으로…" 같은 틀린 안내가 나갑니다.
  */
-export function markLeaving(): void {
+export function markLeaving(going: string): void {
   leavingUntil = Date.now() + WINDOW_MS;
+  message = going.trim();
 }
 
 /** 지금 우리가 일부러 떠나는 중인가. */
@@ -48,7 +61,13 @@ export function isLeaving(): boolean {
   return Date.now() < leavingUntil;
 }
 
+/** 손님에게 보여 줄 한 줄. */
+export function leavingMessage(): string {
+  return message || FALLBACK_MESSAGE;
+}
+
 /** 이동이 무산된 것을 알았을 때 즉시 표시를 끕니다. */
 export function clearLeaving(): void {
   leavingUntil = 0;
+  message = '';
 }

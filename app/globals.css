@@ -721,3 +721,61 @@
     box-shadow: 0 0 0 6px rgb(106 46 60 / 0.09);
   }
 }
+
+/* ============================================================
+   "다른 화면으로 옮기는 중" 점 세 개 (components/LeavingScreen.tsx)
+
+   ★ 구글·카카오 로그인처럼 다른 사이트로 넘어갈 때 잠깐 뜹니다.
+     빈 화면을 두면 손님이 고장으로 보고 뒤로가기를 눌러 버립니다.
+     그러면 로그인이 진짜로 중단됩니다. 그래서 살아 움직여야 합니다.
+   ★ CSS 만 씁니다. 이 움직임 하나 때문에 라이브러리를 들이지 않습니다.
+   ============================================================ */
+
+@keyframes jzl-dot {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.55);
+    opacity: 0.3;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.jzl-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.jzl-dots > span {
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  background-color: var(--ink);
+  animation: jzl-dot 1.25s ease-in-out infinite;
+}
+
+/* 순서대로 커지도록 조금씩 늦춥니다. 셋이 같이 움직이면 심장박동처럼 보입니다. */
+.jzl-dots > span:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.jzl-dots > span:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /*
+    움직임을 줄이신 손님에게는 멈춘 채로 또렷하게 보여 줍니다.
+    ★ 위쪽 공통 규칙이 애니메이션을 0.001ms 로 만들어 버리므로,
+      그대로 두면 가장 작고 흐린 상태로 굳어 거의 안 보입니다.
+  */
+  .jzl-dots > span {
+    animation: none !important;
+    transform: none !important;
+    opacity: 0.55 !important;
+  }
+}
