@@ -30,15 +30,30 @@ export function createAuthClient(): SupabaseClient | null {
       set(name: string, value: string, options: CookieOptions) {
         try {
           store.set({ name, value, ...options });
-        } catch {
-          // 서버 컴포넌트에서 호출된 경우입니다. 미들웨어가 갱신을 맡습니다.
+        } catch (error) {
+          /*
+           * ★★ 조용히 넘어가지 않습니다 (2026-08-25)
+           *   서버 컴포넌트에서는 쿠키를 쓸 수 없어 Next.js 가 예외를 던집니다.
+           *   여기까지 왔다는 것은 "토큰이 갱신됐는데 저장하지 못했다" 는 뜻입니다.
+           *   갱신된 토큰을 버리면 브라우저에는 이미 소모된 옛 토큰이 남고,
+           *   다음 갱신이 실패해 손님이 로그아웃됩니다. 흔한 일은 아니지만
+           *   일어나면 반드시 알아야 하는 일이라 남깁니다.
+           */
+          console.warn(
+            `[auth] 갱신된 세션 쿠키를 저장하지 못했습니다 (서버 컴포넌트): ${name} —`,
+            error instanceof Error ? error.message : String(error)
+          );
         }
       },
       remove(name: string, options: CookieOptions) {
         try {
           store.set({ name, value: '', ...options, maxAge: 0 });
-        } catch {
-          // 위와 같습니다.
+        } catch (error) {
+          // 위와 같습니다. 로그아웃이 반쪽만 된 상태일 수 있어 남깁니다.
+          console.warn(
+            `[auth] 세션 쿠키를 지우지 못했습니다 (서버 컴포넌트): ${name} —`,
+            error instanceof Error ? error.message : String(error)
+          );
         }
       },
     },

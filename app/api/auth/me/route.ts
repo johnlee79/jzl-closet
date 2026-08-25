@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrentProfile, getCurrentUser, displayName } from '@/lib/auth';
+import { isActiveMember } from '@/lib/member-session';
 import { earnBirthdayPoints } from '@/lib/points';
 import { getCachedPoints } from '@/lib/settings';
 
@@ -23,8 +24,12 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const [user, profile] = await Promise.all([getCurrentUser(), getCurrentProfile()]);
 
-  // 탈퇴한 계정은 로그인하지 않은 것으로 봅니다.
-  const active = Boolean(user && profile && profile.status !== 'withdrawn');
+  /*
+   * ★ 회원 판정 규칙은 lib/member-session.ts 한 곳에만 있습니다.
+   *   전에는 이 줄에 규칙이 직접 적혀 있었고, 미들웨어에는 다른 규칙이
+   *   적혀 있어 헤더와 로그인 화면이 서로 다른 말을 했습니다.
+   */
+  const active = Boolean(user) && isActiveMember(profile);
   const name = active ? displayName(profile, user) : '';
 
   // ★ 구글 로그인은 연락처를 주지 않습니다. 주문에 필요하므로 안내 배너를 띄웁니다.

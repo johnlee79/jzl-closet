@@ -148,7 +148,38 @@ export async function getProfile(userId: string): Promise<Profile | null> {
     .eq('id', userId)
     .maybeSingle();
 
-  if (error || !data) return null;
+  /*
+   * ============================================================
+   * ★★ 빈 값을 돌려줄 때는 반드시 이유를 남깁니다 (2026-08-25)
+   * ============================================================
+   *
+   * 예전에는 이 한 줄이었습니다.
+   *     if (error || !data) return null;
+   *
+   * DB 조회가 실패한 것과 "그런 회원이 없다" 는 것을 같은 null 로 뭉갰습니다.
+   * 이 값이 비면 손님 화면 세 곳이 한꺼번에 어긋납니다.
+   *   · 헤더가 "로그인 / 회원가입" 으로 바뀝니다        (api/auth/me 가 이 값을 봅니다)
+   *   · 그 로그인을 누르면 미들웨어가 마이페이지로 보냅니다 (미들웨어는 이 값을 안 봅니다)
+   *   · 마이페이지는 "이 계정으로는 쓸 수 없습니다" 를 띄웁니다
+   * 그런데 왜 비었는지가 아무 데도 남지 않아 원인을 가릴 수 없었습니다.
+   *
+   * ★ 돌려주는 값은 그대로 null 입니다. 동작은 하나도 바뀌지 않습니다.
+   *   로그만 늘립니다.
+   *
+   * ★ [profile] 로 시작합니다. Vercel 함수 로그에서 이 말로 찾으시면 됩니다.
+   */
+  if (error) {
+    console.error(
+      `[profile] 조회 실패 — user id ${userId}:`,
+      error.message,
+      error.code ? `(code ${error.code})` : ''
+    );
+    return null;
+  }
+  if (!data) {
+    console.warn(`[profile] 해당 id 의 프로필이 없습니다 — user id ${userId}`);
+    return null;
+  }
   return rowToProfile(data as ProfileRow);
 }
 

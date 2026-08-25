@@ -3,6 +3,7 @@ import 'server-only';
 import { redirect } from 'next/navigation';
 import { cache } from 'react';
 import { createAuthClient } from '@/lib/supabase/auth-server';
+import { isActiveMember, isJustLoggedOut } from '@/lib/member-session';
 import { getProfile, type Profile } from '@/lib/profiles';
 
 /**
@@ -26,9 +27,28 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
     // getUser() 는 토큰을 Supabase 서버에서 다시 확인합니다.
     // 쿠키만 믿는 getSession() 보다 안전합니다.
     const { data, error } = await supabase.auth.getUser();
+
+    /*
+     * ★★ 왜 비었는지 남깁니다 (2026-08-25)
+     *   전에는 `if (error || !data.user) return null;` 한 줄이었습니다.
+     *   토큰 갱신이 실패한 것과 그냥 로그인을 안 한 것이 똑같이 null 이었고,
+     *   아무 흔적도 남지 않아 "로그인이 풀린다" 를 추적할 수 없었습니다.
+     *
+     * ★ 돌려주는 값은 그대로입니다. 로그만 늘립니다.
+     * ★ 비로그인은 남기지 않습니다. 손님이 상품 페이지를 열 때마다
+     *   /api/auth/me 가 불리므로, 그것까지 찍으면 진짜 문제가 묻힙니다.
+     */
+    if (error && !isJustLoggedOut(error)) {
+      console.warn('[auth] 로그인 확인 실패:', error.message);
+      return null;
+    }
     if (error || !data.user) return null;
     return { id: data.user.id, email: data.user.email ?? '' };
-  } catch {
+  } catch (error) {
+    console.warn(
+      '[auth] 로그인 확인 중 오류:',
+      error instanceof Error ? error.message : String(error)
+    );
     return null;
   }
 });
@@ -93,7 +113,8 @@ export const getActiveMember = cache(
     const user = await getCurrentUser();
     if (!user) return null;
     const profile = await getProfile(user.id);
-    if (!profile || profile.status === 'withdrawn') return null;
+    // ★ 회원 판정 규칙은 lib/member-session.ts 한 곳에만 있습니다.
+    if (!isActiveMember(profile)) return null;
     return { user, profile };
   }
 );
