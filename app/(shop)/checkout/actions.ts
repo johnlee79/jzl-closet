@@ -371,6 +371,28 @@ export async function placeOrderAction(
     revalidatePath(`/products/${item.productSlug}`);
   }
 
+  /*
+   * ============================================================
+   * ★★ 관리자 주문 목록도 무효화합니다 (2026-08-25)
+   * ============================================================
+   *
+   * 이 줄이 없어서 **새로 들어온 주문이 관리자 목록에 안 나타났습니다.**
+   * 손님은 주문을 마쳤는데 사장님 화면에는 없습니다. 물건이 안 나갑니다.
+   *
+   * ★ 다른 길은 전부 하고 있었습니다. 여기만 빠져 있었습니다.
+   *     손님 취소 요청   checkout/actions.ts (아래)
+   *     손님 수령 확인   mypage/actions.ts
+   *     관리자 상태 변경 admin/order-actions.ts
+   *   그래서 "상태를 바꾸면 그제야 새 주문도 같이 보이는" 이상한 증상이 났습니다.
+   *   무효화가 일어나는 순간에 목록 전체가 새로 그려지기 때문입니다.
+   *
+   * ★ /admin 도 함께 무효화합니다. 대시보드의 입금대기 건수·금액과
+   *   최근 주문 목록이 같은 데이터를 씁니다. 한쪽만 갱신하면 두 화면이
+   *   서로 다른 말을 합니다.
+   */
+  revalidatePath('/admin/orders');
+  revalidatePath('/admin');
+
   const token = await createOrderToken(order.orderNo);
   const query = new URLSearchParams({ no: order.orderNo, k: token });
 

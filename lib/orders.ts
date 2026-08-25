@@ -1,4 +1,5 @@
 import 'server-only';
+import { revalidatePath } from 'next/cache';
 import { assertWritten } from '@/lib/db-write';
 import { sendOrderMail, sendShippingMail } from '@/lib/mail';
 
@@ -2215,6 +2216,30 @@ export async function applyKsnetApproval(
   );
 
   const paid = await getOrderById(order.id);
+
+  /*
+   * ============================================================
+   * ★★ 관리자 화면을 무효화합니다 (2026-08-25)
+   * ============================================================
+   *
+   * 카드 주문이 결제완료로 바뀌는 길은 셋입니다.
+   *   결제창 복귀(return) · 노티(notify) · 카드 정리(card-sweep)
+   * 셋 다 revalidatePath 를 부르지 않아, 결제가 끝난 주문이 관리자 목록에
+   * 나타나지 않았습니다. 사장님이 모르면 물건이 안 나갑니다.
+   *
+   * ★ 세 곳에 각각 넣지 않고 여기 한 곳에 둡니다. 메일과 같은 이유입니다.
+   *   바로 위 조건부 UPDATE 가 DB 수준에서 딱 한 번만 통과하므로,
+   *   여기까지 온 요청이 "이번에 상태를 바꾼" 하나뿐입니다.
+   *
+   * ★ 요청 밖(예: 나중에 다른 곳에서 부를 때)에서는 revalidatePath 가
+   *   예외를 던집니다. 그것 때문에 결제 처리가 실패하면 안 되므로 삼킵니다.
+   */
+  try {
+    revalidatePath('/admin/orders');
+    revalidatePath('/admin');
+  } catch (error) {
+    console.warn('[orders] 관리자 화면 무효화 실패:', order.orderNo, error);
+  }
 
   /*
    * ── 손님에게 주문 접수 메일 (카드) ────────────────────
