@@ -1,4 +1,5 @@
 import 'server-only';
+import { revalidatePath } from 'next/cache';
 
 import {
   autoCancelUnpaidOrders,
@@ -43,6 +44,26 @@ export async function runAutoCancel(force = false): Promise<SweepResult> {
   lastRun = Date.now();
 
   const result = await autoCancelUnpaidOrders(payment.depositHours);
+
+  /*
+   * ★★ 관리자 화면을 무효화합니다. (2026-08-26)
+   *   여기는 크론이 주문 상태를 바꾸는 자리입니다. 사람이 누른 것이 아니라
+   *   관리자 화면 쪽에서는 아무 일도 안 일어납니다. 그래서 무효화가
+   *   빠져 있었고, 취소된 주문이 목록에 그대로 남을 수 있었습니다.
+   *   (updateOrderStatus 는 무효화를 부르지 않습니다. 확인했습니다)
+   *
+   * ★ 취소된 건이 있을 때만 부릅니다. 매번 부르면 10분마다 헛일을 합니다.
+   * ★ 요청 밖에서 부르면 예외가 날 수 있어 삼킵니다. 크론이 죽으면 안 됩니다.
+   */
+  if (result.cancelled.length > 0) {
+    try {
+      revalidatePath('/admin/orders');
+      revalidatePath('/admin');
+      revalidatePath('/admin/products');
+    } catch (error) {
+      console.warn('[auto-cancel] 관리자 화면 무효화 실패:', error);
+    }
+  }
 
   if (result.cancelled.length > 0 && payment.telegramEnabled) {
     try {

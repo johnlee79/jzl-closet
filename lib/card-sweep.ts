@@ -1,4 +1,5 @@
 import 'server-only';
+import { revalidatePath } from 'next/cache';
 
 import {
   applyKsnetApproval,
@@ -235,6 +236,20 @@ async function handleOne(
     if (moved) {
       await releaseOrderStock(order, '결제 신호 없음 — 자동정리');
       result.noKey.push(order);
+      /*
+       * ★★ 재고를 되돌렸으니 관리자 상품·주문 목록도 무효화합니다. (2026-08-26)
+       *   applyKsnetApproval 은 승인될 때만 무효화합니다. 이 길(승인 못 받고
+       *   재고만 되돌리는 길)은 아무것도 무효화하지 않아, 관리자 화면에
+       *   품절이 그대로 남을 수 있었습니다.
+       * ★ 크론이 죽으면 안 되므로 실패는 삼킵니다.
+       */
+      try {
+        revalidatePath('/admin/orders');
+        revalidatePath('/admin/products');
+        revalidatePath('/admin');
+      } catch (error) {
+        console.warn('[card-sweep] 관리자 화면 무효화 실패:', order.orderNo, error);
+      }
     }
     await writePaymentLog({
       kind: 'error',

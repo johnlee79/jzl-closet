@@ -392,6 +392,13 @@ export async function placeOrderAction(
    */
   revalidatePath('/admin/orders');
   revalidatePath('/admin');
+  /*
+   * ★★ 재고가 줄었으니 관리자 상품 목록도 무효화합니다. (2026-08-26)
+   *   손님 상품 화면(/products)은 위에서 이미 무효화하는데 관리자 쪽은
+   *   빠져 있었습니다. 그래서 관리자 상품 목록에 품절이 판매중으로
+   *   보일 수 있었습니다. 그 화면을 보고 발주하면 사고가 납니다.
+   */
+  revalidatePath('/admin/products');
 
   const token = await createOrderToken(order.orderNo);
   const query = new URLSearchParams({ no: order.orderNo, k: token });

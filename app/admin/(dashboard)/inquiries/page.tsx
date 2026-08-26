@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import InquiryTable from '@/components/admin/InquiryTable';
+import StaleWarning from '@/components/admin/StaleWarning';
 import { countInquiriesByStatus, getInquiries } from '@/lib/inquiries';
 import { isSupabaseConfigured } from '@/lib/supabase/server';
 
@@ -66,6 +67,12 @@ export default async function AdminInquiriesPage({
 
       <div className="mt-5">
         <Suspense fallback={<p className="text-[15px] text-slate-500">불러오는 중…</p>}>
+          <StaleWarning
+            total={total}
+            shown={inquiries.length}
+            totalPages={totalPages}
+            where="문의 목록"
+          />
           <InquiryTable inquiries={inquiries} counts={counts} total={allCount} />
         </Suspense>
       </div>

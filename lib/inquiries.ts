@@ -3,7 +3,7 @@ import 'server-only';
 import { assertWritten } from '@/lib/db-write';
 import { maskName } from '@/lib/mask-name';
 import { hashPassword, verifyPassword } from '@/lib/password';
-import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
+import { getSupabaseAdmin, requireSupabaseAdmin, getSupabaseAdminFresh } from '@/lib/supabase/server';
 import { INQUIRY_STATUSES, type InquiryStatus } from '@/lib/inquiry-status';
 
 /**
@@ -383,7 +383,12 @@ function inquirySearchExpression(search: string | undefined): string {
 export async function getInquiries(
   filter: InquiryFilter = {}
 ): Promise<{ inquiries: Inquiry[]; total: number }> {
-  const supabase = getSupabaseAdmin();
+  /*
+   * ★ 관리자 목록은 저장된 답을 쓰지 않는 클라이언트로 읽습니다. (2026-08-26)
+   *   회원 목록에 DB 에 없는 사람이 11명 뜬 일이 있었습니다.
+   *   까닭은 lib/supabase/server.ts 의 getSupabaseAdminFresh 설명에 있습니다.
+   */
+  const supabase = getSupabaseAdminFresh();
   if (!supabase) return { inquiries: [], total: 0 };
 
   const searchExpression = inquirySearchExpression(filter.search);
@@ -448,7 +453,12 @@ export async function countInquiriesByStatus(
    *
    * ★ 본보기는 주문 화면입니다. 상태만 빼고 나머지는 그대로 넘깁니다.
    */
-  const supabase = getSupabaseAdmin();
+  /*
+   * ★ 관리자 목록은 저장된 답을 쓰지 않는 클라이언트로 읽습니다. (2026-08-26)
+   *   회원 목록에 DB 에 없는 사람이 11명 뜬 일이 있었습니다.
+   *   까닭은 lib/supabase/server.ts 의 getSupabaseAdminFresh 설명에 있습니다.
+   */
+  const supabase = getSupabaseAdminFresh();
   if (!supabase) {
     console.warn('[inquiries] 상태별 건수를 세지 못했습니다: Supabase 연결 정보가 없습니다.');
     return {};

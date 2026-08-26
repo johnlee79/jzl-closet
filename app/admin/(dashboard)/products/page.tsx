@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import ProductTable from '@/components/admin/ProductTable';
+import StaleWarning from '@/components/admin/StaleWarning';
 import ProductFilters from '@/components/admin/ProductFilters';
 import { filterableCategories } from '@/lib/categories';
 import { getProductsWithCount } from '@/lib/products';
@@ -102,6 +103,12 @@ export default async function AdminProductsPage({
       </div>
 
       <div className="mt-5">
+        <StaleWarning
+          total={total}
+          shown={products.length}
+          totalPages={totalPages}
+          where="상품 목록"
+        />
         <ProductTable
           products={products}
           categories={allCategories}

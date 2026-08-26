@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import MemberTable from '@/components/admin/MemberTable';
+import StaleWarning from '@/components/admin/StaleWarning';
 import { countMembersByStatus, getMembers } from '@/lib/profiles';
 import { isSupabaseConfigured } from '@/lib/supabase/server';
 
@@ -88,6 +89,12 @@ export default async function AdminMembersPage({
 
       <div className="mt-5">
         <Suspense fallback={<p className="text-[15px] text-slate-500">불러오는 중…</p>}>
+          <StaleWarning
+            total={total}
+            shown={members.length}
+            totalPages={totalPages}
+            where="회원 목록"
+          />
           <MemberTable members={members} counts={counts} total={allCount} />
         </Suspense>
       </div>

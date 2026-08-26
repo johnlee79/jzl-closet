@@ -9,7 +9,7 @@ import {
   isProductSoldOut,
   rebuildCombinations,
 } from '@/lib/product-utils';
-import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
+import { getSupabaseAdmin, requireSupabaseAdmin, getSupabaseAdminFresh } from '@/lib/supabase/server';
 import { getCachedCategories } from '@/lib/taxonomy';
 import type {
   DetailBlock,
@@ -392,7 +392,12 @@ async function readProducts(
 export async function getProductsWithCount(
   filter: ProductFilter = {}
 ): Promise<{ products: Product[]; total: number; totalAll: number }> {
-  const supabase = getSupabaseAdmin();
+  /*
+   * ★ 관리자 목록은 저장된 답을 쓰지 않는 클라이언트로 읽습니다. (2026-08-26)
+   *   회원 목록에 DB 에 없는 사람이 11명 뜬 일이 있었습니다.
+   *   까닭은 lib/supabase/server.ts 의 getSupabaseAdminFresh 설명에 있습니다.
+   */
+  const supabase = getSupabaseAdminFresh();
   if (!supabase) return { products: [], total: 0, totalAll: 0 };
 
   // 검색어에 걸리는 브랜드는 한 번만 찾아서 목록·건수·전체건수에 함께 씁니다.

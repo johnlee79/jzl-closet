@@ -33,7 +33,7 @@ import {
   getShippingSettings,
 } from '@/lib/settings';
 import { isRemoteArea, maxUsablePoints, roundPointsToUnit } from '@/lib/site-config';
-import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
+import { getSupabaseAdmin, requireSupabaseAdmin, getSupabaseAdminFresh } from '@/lib/supabase/server';
 import { getBrands } from '@/lib/taxonomy';
 import { notifyDiscountMismatch } from '@/lib/telegram';
 import { brandLabel } from '@/lib/brands';
@@ -407,7 +407,12 @@ async function countOrders(filter: OrderFilter): Promise<number> {
 export async function getOrders(
   filter: OrderFilter = {}
 ): Promise<{ orders: Order[]; total: number }> {
-  const supabase = getSupabaseAdmin();
+  /*
+   * ★ 관리자 목록은 저장된 답을 쓰지 않는 클라이언트로 읽습니다. (2026-08-26)
+   *   회원 목록에 DB 에 없는 사람이 11명 뜬 일이 있었습니다.
+   *   까닭은 lib/supabase/server.ts 의 getSupabaseAdminFresh 설명에 있습니다.
+   */
+  const supabase = getSupabaseAdminFresh();
   if (!supabase) return { orders: [], total: 0 };
 
   try {
@@ -2511,7 +2516,12 @@ export async function requestCancelByCustomer(
 export async function countOrdersByStatus(
   filter: OrderFilter = {}
 ): Promise<Record<string, number>> {
-  const supabase = getSupabaseAdmin();
+  /*
+   * ★ 관리자 목록은 저장된 답을 쓰지 않는 클라이언트로 읽습니다. (2026-08-26)
+   *   회원 목록에 DB 에 없는 사람이 11명 뜬 일이 있었습니다.
+   *   까닭은 lib/supabase/server.ts 의 getSupabaseAdminFresh 설명에 있습니다.
+   */
+  const supabase = getSupabaseAdminFresh();
   if (!supabase) return {};
 
   /*

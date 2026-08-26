@@ -5,7 +5,7 @@ import { isSalesStatus } from '@/lib/order-status';
 import { toProvider, type AuthProvider } from '@/lib/auth-provider';
 import { MEMBER_STATUSES, isKnownMemberStatus } from '@/lib/member-status';
 import type { MemberStatus } from '@/lib/member-status';
-import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
+import { getSupabaseAdmin, requireSupabaseAdmin, getSupabaseAdminFresh } from '@/lib/supabase/server';
 import { notifyProfileFillFailed } from '@/lib/telegram';
 
 /**
@@ -277,7 +277,12 @@ export async function getMembers(
   members: (Profile & { orderCount: number; totalSpent: number })[];
   total: number;
 }> {
-  const supabase = getSupabaseAdmin();
+  /*
+   * ★ 관리자 목록은 저장된 답을 쓰지 않는 클라이언트로 읽습니다. (2026-08-26)
+   *   회원 목록에 DB 에 없는 사람이 11명 뜬 일이 있었습니다.
+   *   까닭은 lib/supabase/server.ts 의 getSupabaseAdminFresh 설명에 있습니다.
+   */
+  const supabase = getSupabaseAdminFresh();
   if (!supabase) return { members: [], total: 0 };
 
   const searchExpression = memberSearchExpression(filter.search);
@@ -403,7 +408,12 @@ export async function countMembersByStatus(
    *   상태를 빼는 이유는 탭마다 상태가 다르기 때문입니다.
    *   페이지(limit·offset)도 뺍니다. 건수는 페이지와 상관이 없습니다.
    */
-  const supabase = getSupabaseAdmin();
+  /*
+   * ★ 관리자 목록은 저장된 답을 쓰지 않는 클라이언트로 읽습니다. (2026-08-26)
+   *   회원 목록에 DB 에 없는 사람이 11명 뜬 일이 있었습니다.
+   *   까닭은 lib/supabase/server.ts 의 getSupabaseAdminFresh 설명에 있습니다.
+   */
+  const supabase = getSupabaseAdminFresh();
   if (!supabase) {
     console.warn('[members] 상태별 인원을 세지 못했습니다: Supabase 연결 정보가 없습니다.');
     return {};

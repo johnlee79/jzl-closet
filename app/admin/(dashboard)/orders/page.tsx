@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import BulkTrackingPanel from '@/components/admin/BulkTrackingPanel';
+import StaleWarning from '@/components/admin/StaleWarning';
 import OrderFilters from '@/components/admin/OrderFilters';
 import OrderTable from '@/components/admin/OrderTable';
 import CardSweepButton from '@/components/admin/CardSweepButton';
@@ -152,6 +153,12 @@ export default async function AdminOrdersPage({
         <BulkTrackingPanel />
 
         <Suspense fallback={<p className="text-[15px] text-slate-500">불러오는 중…</p>}>
+          <StaleWarning
+            total={total}
+            shown={orders.length}
+            totalPages={totalPages}
+            where="주문 목록"
+          />
           <OrderTable orders={orders} />
         </Suspense>
       </div>
