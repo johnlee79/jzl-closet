@@ -4,7 +4,7 @@ import { brandLabel } from '@/lib/brands';
 import { categoryNameKo } from '@/lib/categories';
 import { kstEnd, kstStart } from '@/lib/orders';
 import { isAwaitingPayment, isSalesStatus } from '@/lib/order-status';
-import { getSupabaseAdmin } from '@/lib/supabase/server';
+import { getSupabaseAdminFresh } from '@/lib/supabase/server';
 import { getBrands, getCachedCategories } from '@/lib/taxonomy';
 
 /**
@@ -80,7 +80,14 @@ function dayRange(from: string, to: string): string[] {
  * ------------------------------------------------------------------ */
 
 export async function getSalesStats(from: string, to: string): Promise<SalesStats> {
-  const supabase = getSupabaseAdmin();
+  /*
+   * ** 저장된 답을 쓰지 않는 클라이언트로 읽습니다. (2026-08-26)
+   *   관리자 전용 화면입니다. 손님 화면은 이 함수를 부르지 않습니다.
+   *   회원 목록에 DB 에 없는 사람이 11명 뜬 일과 같은 뿌리를 막습니다.
+   *   까닭은 lib/supabase/server.ts 의 getSupabaseAdminFresh 설명에 있습니다.
+   * * 세는 조건은 한 글자도 바꾸지 않았습니다. 조회를 보내는 방법만 바꿉니다.
+   */
+  const supabase = getSupabaseAdminFresh();
   if (!supabase) return emptySales();
 
   const { data, error } = await supabase
@@ -171,7 +178,14 @@ export async function getSalesStats(from: string, to: string): Promise<SalesStat
 
 export async function getProductStats(from: string, to: string): Promise<ProductStats> {
   const empty: ProductStats = { top: [], byCategory: [], byBrand: [] };
-  const supabase = getSupabaseAdmin();
+  /*
+   * ** 저장된 답을 쓰지 않는 클라이언트로 읽습니다. (2026-08-26)
+   *   관리자 전용 화면입니다. 손님 화면은 이 함수를 부르지 않습니다.
+   *   회원 목록에 DB 에 없는 사람이 11명 뜬 일과 같은 뿌리를 막습니다.
+   *   까닭은 lib/supabase/server.ts 의 getSupabaseAdminFresh 설명에 있습니다.
+   * * 세는 조건은 한 글자도 바꾸지 않았습니다. 조회를 보내는 방법만 바꿉니다.
+   */
+  const supabase = getSupabaseAdminFresh();
   if (!supabase) return empty;
 
   // 기간 안의 "살아 있는" 주문 id 만 모읍니다.

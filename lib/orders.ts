@@ -2675,7 +2675,10 @@ export async function countCancelRequested(): Promise<number> {
 
 /** 기간 내 매출 합계 — 취소·반품·결제실패는 빼고 셉니다. */
 async function sumAmount(fromIso: string, toIso: string): Promise<number> {
-  const supabase = getSupabaseAdmin();
+  /*
+   * ** getDashboardStats 전용 보조입니다. 위 대시보드와 같은 이유로 새로 묻습니다.
+   */
+  const supabase = getSupabaseAdminFresh();
   if (!supabase) return 0;
 
   const { data, error } = await supabase
@@ -2708,7 +2711,14 @@ export async function getDashboardStats(now = new Date()): Promise<DashboardStat
     recentOrders: [],
   };
 
-  const supabase = getSupabaseAdmin();
+  /*
+   * ** 저장된 답을 쓰지 않는 클라이언트로 읽습니다. (2026-08-26)
+   *   관리자 전용 화면입니다. 손님 화면은 이 함수를 부르지 않습니다.
+   *   회원 목록에 DB 에 없는 사람이 11명 뜬 일과 같은 뿌리를 막습니다.
+   *   까닭은 lib/supabase/server.ts 의 getSupabaseAdminFresh 설명에 있습니다.
+   * * 세는 조건은 한 글자도 바꾸지 않았습니다. 조회를 보내는 방법만 바꿉니다.
+   */
+  const supabase = getSupabaseAdminFresh();
   if (!supabase) return empty;
 
   const today = kstToday(now);
@@ -3117,7 +3127,14 @@ export type OrdererSummary = {
 export async function getOrdererSummaries(
   limit = 500
 ): Promise<OrdererSummary[]> {
-  const supabase = getSupabaseAdmin();
+  /*
+   * ** 저장된 답을 쓰지 않는 클라이언트로 읽습니다. (2026-08-26)
+   *   관리자 전용 화면입니다. 손님 화면은 이 함수를 부르지 않습니다.
+   *   회원 목록에 DB 에 없는 사람이 11명 뜬 일과 같은 뿌리를 막습니다.
+   *   까닭은 lib/supabase/server.ts 의 getSupabaseAdminFresh 설명에 있습니다.
+   * * 세는 조건은 한 글자도 바꾸지 않았습니다. 조회를 보내는 방법만 바꿉니다.
+   */
+  const supabase = getSupabaseAdminFresh();
   if (!supabase) return [];
 
   const { data, error } = await supabase

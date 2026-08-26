@@ -471,7 +471,14 @@ export async function countUnrepliedReviews(): Promise<number> {
 }
 
 export async function countReviewsToday(): Promise<{ today: number; lowRating: number }> {
-  const supabase = getSupabaseAdmin();
+  /*
+   * ** 저장된 답을 쓰지 않는 클라이언트로 읽습니다. (2026-08-26)
+   *   관리자 전용 화면입니다. 손님 화면은 이 함수를 부르지 않습니다.
+   *   회원 목록에 DB 에 없는 사람이 11명 뜬 일과 같은 뿌리를 막습니다.
+   *   까닭은 lib/supabase/server.ts 의 getSupabaseAdminFresh 설명에 있습니다.
+   * * 세는 조건은 한 글자도 바꾸지 않았습니다. 조회를 보내는 방법만 바꿉니다.
+   */
+  const supabase = getSupabaseAdminFresh();
   if (!supabase) return { today: 0, lowRating: 0 };
 
   // 한국 시간 기준 오늘
@@ -587,7 +594,14 @@ export async function deleteReview(id: string): Promise<void> {
 export async function getReviewStats(): Promise<
   { productSlug: string; count: number; average: number }[]
 > {
-  const supabase = getSupabaseAdmin();
+  /*
+   * ** 저장된 답을 쓰지 않는 클라이언트로 읽습니다. (2026-08-26)
+   *   관리자 전용 화면입니다. 손님 화면은 이 함수를 부르지 않습니다.
+   *   회원 목록에 DB 에 없는 사람이 11명 뜬 일과 같은 뿌리를 막습니다.
+   *   까닭은 lib/supabase/server.ts 의 getSupabaseAdminFresh 설명에 있습니다.
+   * * 세는 조건은 한 글자도 바꾸지 않았습니다. 조회를 보내는 방법만 바꿉니다.
+   */
+  const supabase = getSupabaseAdminFresh();
   if (!supabase) return [];
 
   const { data, error } = await supabase
