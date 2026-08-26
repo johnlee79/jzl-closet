@@ -6,7 +6,7 @@ import {
   signInWithGoogleAction,
   signInWithKakaoAction,
 } from '@/app/(shop)/auth-actions';
-import { markLeaving } from '@/lib/leaving';
+import { isLeaving, markLeaving } from '@/lib/leaving';
 
 /**
  * ============================================================
@@ -92,6 +92,13 @@ type SocialButtonProps = {
   action: StartAction;
   next: string;
   label: string;
+  /**
+   * * 안내 문구와 로그에 쓰는 짧은 이름입니다. (예: '구글' · '카카오')
+   *   label 은 버튼에 적는 글자라("Google로 계속하기") 문장에 넣으면
+   *   "Google로 계속하기 로그인을 시작하지 못했습니다" 처럼 어색해집니다.
+   *   서버(app/(shop)/auth-actions.ts)가 쓰는 이름과 같게 맞춥니다.
+   */
+  name: string;
   icon: React.ReactNode;
   /** 버튼 껍데기(배경·글씨·테두리)만 지정합니다. 크기는 SOCIAL_BUTTON 이 잡습니다. */
   skin: string;
@@ -115,6 +122,7 @@ function SocialButton({
   action,
   next,
   label,
+  name,
   icon,
   skin,
   style,
@@ -149,14 +157,15 @@ function SocialButton({
     timers.current.push(window.setTimeout(() => setStage(3), 15000));
 
     startTransition(async () => {
-      const result = await action(next);
-      if (!result.ok) {
-        clearTimers();
-        setStage(0);
-        onBusyChange(false);
-        onError(result.error);
-        return;
-      }
+      try {
+        const result = await action(next);
+        if (!result.ok) {
+          clearTimers();
+          setStage(0);
+          onBusyChange(false);
+          onError(result.error);
+          return;
+        }
       /*
        * ============================================================
        * ★★ 떠나는 중이라고 표시합니다 (2026-08-25)
@@ -173,10 +182,64 @@ function SocialButton({
        * ★ 이 말이 그대로 손님 화면에 뜹니다. 어디로 가는지 적습니다.
        * ★ assign() 바로 앞이어야 합니다. 뒤에 두면 늦습니다.
        */
-      markLeaving('로그인 화면으로 이동하고 있습니다');
+        markLeaving('로그인 화면으로 이동하고 있습니다');
 
-      // 동의 화면으로 넘어갑니다. (여기서 페이지가 통째로 바뀝니다)
-      window.location.assign(result.data.url);
+        /*
+         * ============================================================
+         * ** 떠나기 전에 타이머를 끕니다 (2026-08-26)
+         * ============================================================
+         *
+         * ** 3초 뒤와 15초 뒤에 화면을 바꾸도록 걸어 둔 타이머가 있습니다.
+         *   여기까지 왔으면 동의 화면으로 넘어가는 중이라 그 타이머가
+         *   할 일이 없습니다.
+         *
+         *   그런데 아이폰 사파리는 다른 화면으로 넘어갈 때 이 화면을
+         *   버리지 않고 **얼려 두었다가 뒤로가기로 되살립니다.**
+         *   (bfcache) 되살아나면 얼어 있던 타이머가 마저 돌아서,
+         *   손님이 뒤로가기로 돌아온 순간 "다시 시도하기" 로 바뀌거나
+         *   "잠시만 기다려 주세요" 가 뜹니다. 아무것도 안 하고 있는데요.
+         *
+         * * assign() 바로 앞이어야 합니다. 뒤에 두면 이미 늦습니다.
+         */
+        clearTimers();
+
+        // 동의 화면으로 넘어갑니다. (여기서 페이지가 통째로 바뀝니다)
+        window.location.assign(result.data.url);
+      } catch (error) {
+        /*
+         * ============================================================
+         * ** 여기서 끊기는 것을 고장으로 오해하지 않습니다 (2026-08-26)
+         * ============================================================
+         *
+         * ** 아이폰에서 이 버튼을 누르면 오류 화면이 잠깐 떴습니다.
+         *   서버 액션 응답을 받는 도중에 페이지가 통째로 바뀌면, 그 요청이
+         *   중간에 끊기면서 여기로 옵니다. 고장이 아니라 떠나는 중입니다.
+         *
+         * ** 그래서 markLeaving 이 켜져 있으면 조용히 넘어갑니다.
+         *   손님은 이미 동의 화면으로 가고 있습니다. 그 위에 오류를 띄우면
+         *   멀쩡히 되는 로그인을 실패한 것처럼 보이게 만듭니다.
+         *
+         * ** 진짜 실패는 반드시 알립니다.
+         *   떠나는 중이 아닌데 여기로 왔다면 인증 시작 자체가 안 된 것입니다.
+         *   그때는 버튼을 되돌리고 무엇을 하면 되는지 알려 줍니다.
+         *
+         * * 어느 쪽이든 로그는 남깁니다. 조용히 지나가면 나중에 아무도
+         *   못 찾습니다. 떠나는 중인지 아닌지도 함께 적습니다.
+         */
+        const detail = error instanceof Error ? error.message : String(error);
+        if (isLeaving()) {
+          console.warn(`[auth] ${name} 로그인 — 떠나는 중에 끊겼습니다 (정상): ${detail}`);
+          return;
+        }
+
+        console.warn(`[auth] ${name} 로그인을 시작하지 못했습니다: ${detail}`);
+        clearTimers();
+        setStage(0);
+        onBusyChange(false);
+        onError(
+          `${name} 로그인을 시작하지 못했습니다. 잠시 후 다시 시도해 주시거나 이메일로 로그인해 주세요.`
+        );
+      }
     });
   };
 
@@ -231,6 +294,7 @@ export default function SocialAuthButtons({
           action={signInWithGoogleAction}
           next={next}
           label="Google로 계속하기"
+          name="구글"
           icon={<GoogleLogo />}
           skin="border border-[#DADCE0] bg-white text-[#1F1F1F] hover:bg-[#F8F9FA]"
           onError={setError}
@@ -242,6 +306,7 @@ export default function SocialAuthButtons({
           action={signInWithKakaoAction}
           next={next}
           label="카카오로 계속하기"
+          name="카카오"
           icon={<KakaoSymbol />}
           skin="hover:opacity-90"
           style={{ backgroundColor: KAKAO_YELLOW, color: KAKAO_INK }}
