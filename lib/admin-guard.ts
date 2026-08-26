@@ -3,7 +3,8 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { cache } from 'react';
 import { ADMIN_COOKIE, isAdminEmail, verifySessionToken } from '@/lib/admin-auth';
-import { createAuthClient } from '@/lib/supabase/auth-server';
+import { isJustLoggedOut } from '@/lib/member-session';
+import { createAdminAuthClient } from '@/lib/supabase/auth-server';
 
 /**
  * ============================================================
@@ -52,17 +53,87 @@ export const isAdmin = cache(async (): Promise<boolean> => {
  *   getSession 은 쿠키에 든 토큰을 그대로 믿습니다. getUser 는 Supabase
  *   서버에 다시 물어 확인합니다. 관리자 문에서 쿠키만 믿으면 안 됩니다.
  *
- * ★ 실패는 전부 "관리자 아님" 입니다. 조용히 false 를 돌려줍니다.
+ * ★ 실패는 전부 "관리자 아님" 입니다. 돌려주는 값은 언제나 false 입니다.
+ *
+ * ============================================================
+ * ★★ 왜 실패했는지 반드시 남깁니다 (2026-08-26)
+ * ============================================================
+ *
+ * ★★ 전에는 이 함수 전체가 이랬습니다.
+ *     if (error || !data.user) return false;
+ *     ...
+ *     } catch { return false; }
+ *   아무 데도 아무것도 남지 않았습니다.
+ *
+ * ★★ 여기가 [저장] 을 눌렀을 때 「로그인이 필요합니다」 가 뜨는 자리입니다.
+ *   상품 등록 화면에서 튕기는 일이 실제로 있었는데, 그때 무슨 일이
+ *   있었는지 알아낼 방법이 전혀 없었습니다. 미들웨어에는 로그를 넣었지만
+ *   서버 액션·API 는 미들웨어를 거치지 않고 이 문으로 옵니다.
+ *
+ * ★★ 세 가지를 구분합니다. 원인이 완전히 다릅니다.
+ *   (가) 세션이 아예 없음        — 만료됐거나 로그아웃된 상태
+ *   (나) 세션은 있는데 관리자 아님 — 손님 계정으로 덮어써진 상태
+ *   (다) 조회 자체가 실패        — Supabase 와 통신이 안 된 상태
+ *
+ * ★★ error 만 믿지 않습니다. 회원 뱃지에서 배운 것입니다.
+ *   그때 없는 표를 조회하니 HTTP 204 에 **error 는 null** 이었습니다.
+ *   "값이 비었는데 오류도 없는" 경우를 따로 봅니다.
+ *
+ * ★ "그냥 로그인 안 함" 은 남기지 않습니다.
+ *   관리자 주소를 우연히 연 손님에게마다 찍히면 진짜 문제가 묻힙니다.
+ *
+ * ★ 이메일은 남기지 않습니다. id 앞 8자리만 남깁니다.
+ *   어느 계정인지 대조는 되어야 하고, 손님 이메일이 로그에 쌓이면 안 됩니다.
+ *
+ * ★ 로그가 폭주하지 않습니다. isAdmin() 이 cache() 로 감싸져 있어
+ *   한 요청에 실제로는 한 번만 돕니다. 그리고 이 문을 부르는 곳은
+ *   app/admin/** 과 app/api/admin|upload/** 뿐입니다. 손님 경로에서는
+ *   한 곳도 부르지 않습니다.
  */
 async function isAdminBySupabase(): Promise<boolean> {
-  const supabase = createAuthClient();
-  if (!supabase) return false;
+  const supabase = createAdminAuthClient();
+  if (!supabase) {
+    console.warn('[auth] 관리자 확인 — 로그인 설정이 없습니다. (환경변수 미설정)');
+    return false;
+  }
 
   try {
     const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) return false;
-    return isAdminEmail(data.user.email);
-  } catch {
+
+    /* (다) 조회 자체가 실패 */
+    if (error && !isJustLoggedOut(error)) {
+      console.warn(
+        `[auth] 관리자 확인 실패 (서버): ${error.message || '(오류 메시지 없음)'}`
+      );
+      return false;
+    }
+
+    /* (가) 세션이 아예 없음 */
+    if (!data.user) {
+      if (!error) {
+        console.warn(
+          '[auth] 관리자 확인 — 값이 비었는데 오류도 없습니다. ' +
+            'Supabase 응답이 비어 온 경우입니다. 자주 보이면 알려 주세요.'
+        );
+      }
+      return false;
+    }
+
+    /* (나) 세션은 있는데 관리자 이메일이 아님 */
+    if (!isAdminEmail(data.user.email)) {
+      console.warn(
+        '[auth] 관리자 아닌 계정이 관리자 기능을 불렀습니다. ' +
+          `손님으로 로그인한 상태입니다. (id ${data.user.id.slice(0, 8)})`
+      );
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.warn(
+      '[auth] 관리자 확인 중 오류:',
+      error instanceof Error ? error.message : String(error)
+    );
     return false;
   }
 }

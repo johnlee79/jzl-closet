@@ -1,12 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { NextResponse, type NextRequest } from 'next/server';
-import {
-  ADMIN_COOKIE,
-  isAdminEmail,
-  isAdminEmailConfigured,
-  verifySessionToken,
-} from '@/lib/admin-auth';
+import { ADMIN_AUTH_COOKIE, ADMIN_COOKIE, isAdminEmail, isAdminEmailConfigured, verifySessionToken } from '@/lib/admin-auth';
 import { isActiveMember, isJustLoggedOut } from '@/lib/member-session';
 
 /**
@@ -185,6 +180,13 @@ async function isAdminBySupabaseSession(
 
   try {
     const supabase = createServerClient(url, anonKey, {
+      /*
+       * ★★ 관리자는 손님과 다른 쿠키 칸을 씁니다 (2026-08-26)
+       *   전에는 한 칸을 같이 써서, 관리자로 들어와 있다가 손님 화면에서
+       *   구글 카카오 로그인을 누르면 관리자 세션이 덮어써졌습니다.
+       *   이름의 뜻과 되돌리는 법은 lib/admin-auth.ts 에 적어 두었습니다.
+       */
+      cookieOptions: { name: ADMIN_AUTH_COOKIE },
       cookies: {
         get(name: string) {
           return request.cookies.get(name)?.value;
@@ -234,7 +236,31 @@ async function isAdminBySupabaseSession(
       }
       return false;
     }
-    return isAdminEmail(data.user.email);
+    /*
+     * ============================================================
+     * ** 여기가 마지막 남은 조용한 구멍이었습니다 (2026-08-26)
+     * ============================================================
+     *
+     * ** 로그인은 돼 있는데 관리자 이메일이 아닌 경우입니다.
+     *   data.user 는 있고 error 도 없어서 위 두 로그를 둘 다 비껴갑니다.
+     *   전에는 이 줄 하나뿐이라 아무 흔적 없이 튕겼습니다.
+     *
+     * ** 세션을 나눈 뒤에도 이 로그는 남겨 둡니다.
+     *   덮어쓰기는 없어졌지만, 만료 갱신 실패 다른 이유로 관리자가
+     *   튕기는 일은 또 생깁니다. 그때 왜 튕겼는지 남는 곳이 여기뿐입니다.
+     *
+     * * 이메일은 남기지 않습니다. id 앞 8자리만 남깁니다.
+     *   어느 계정인지 대조는 되어야 하고, 남의 이메일이 로그에 쌓이면 안 됩니다.
+     */
+    if (!isAdminEmail(data.user.email)) {
+      console.warn(
+        `[auth] 관리자 아닌 계정으로 관리자 주소에 들어왔습니다 (${pathname}). ` +
+          `(id ${data.user.id.slice(0, 8)})`
+      );
+      return false;
+    }
+
+    return true;
   } catch (error) {
     console.warn(
       `[auth] 관리자 세션 확인 중 오류 (${pathname}):`,

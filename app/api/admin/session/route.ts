@@ -1,4 +1,4 @@
-import { createAuthClient } from '@/lib/supabase/auth-server';
+import { createAdminAuthClient } from '@/lib/supabase/auth-server';
 import { isJustLoggedOut } from '@/lib/member-session';
 
 /**
@@ -30,7 +30,7 @@ import { isJustLoggedOut } from '@/lib/member-session';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const supabase = createAuthClient();
+  const supabase = createAdminAuthClient();
   if (!supabase) return new Response(null, { status: 204 });
 
   try {

@@ -3,7 +3,7 @@
 import { headers } from 'next/headers';
 import { isAdminEmail, isAdminEmailConfigured } from '@/lib/admin-auth';
 import { clientIp, rateLimit } from '@/lib/rate-limit';
-import { createAuthClient } from '@/lib/supabase/auth-server';
+import { createAdminAuthClient } from '@/lib/supabase/auth-server';
 
 /**
  * ============================================================
@@ -70,7 +70,7 @@ export async function adminEmailLoginAction(
     return { ok: false, error: '이메일 또는 비밀번호가 올바르지 않습니다.' };
   }
 
-  const supabase = createAuthClient();
+  const supabase = createAdminAuthClient();
   if (!supabase) {
     return { ok: false, error: '로그인 설정이 아직 준비되지 않았습니다.' };
   }
@@ -121,7 +121,7 @@ export async function adminEmailLoginAction(
  *   여기서는 Supabase 쪽만 맡습니다.
  */
 export async function adminSignOutAction(): Promise<void> {
-  const supabase = createAuthClient();
+  const supabase = createAdminAuthClient();
   if (!supabase) return;
   try {
     await supabase.auth.signOut();

@@ -71,6 +71,13 @@ export async function sendResetMailAction(userId: string): Promise<ActionResult>
     return { ok: false, error: '이 회원의 이메일이 없어 메일을 보낼 수 없습니다.' };
   }
 
+  /*
+   * * 여기만 손님용 클라이언트를 그대로 씁니다. 일부러입니다. (2026-08-26)
+   *   관리자 쪽 세션은 전부 createAdminAuthClient() 로 옮겼지만,
+   *   이 자리는 resetPasswordForEmail() 만 부릅니다. 세션을 읽지도 쓰지도
+   *   않아서 어느 쿠키 칸을 보든 하는 일이 똑같습니다.
+   *   빠뜨린 것이 아니라 옮길 이유가 없어서 두었습니다.
+   */
   const supabase = createAuthClient();
   if (!supabase) {
     return { ok: false, error: 'Supabase 설정이 없어 메일을 보낼 수 없습니다.' };
