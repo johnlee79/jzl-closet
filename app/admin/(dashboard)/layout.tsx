@@ -1,5 +1,6 @@
 import AdminShell from '@/components/admin/AdminShell';
 import { countPendingInquiries } from '@/lib/inquiries';
+import { countUnrepliedReviews } from '@/lib/reviews';
 import {
   countCancelRequested,
   countNeedsCheck,
@@ -46,7 +47,7 @@ export default async function AdminDashboardLayout({
   /*
    * 매일 확인해야 하는 숫자를 사이드바 뱃지로 보여 줍니다.
    *
-   * ★ 다섯 조회를 한꺼번에 보냅니다. 줄 세워 보내면 사이드바가 그만큼 늦게 그려집니다.
+   * ★ 여섯 조회를 한꺼번에 보냅니다. 줄 세워 보내면 사이드바가 그만큼 늦게 그려집니다.
    * ★ 전부 건수만 세는 조회(head: true)라 행을 읽지 않습니다.
    *
    * ** 취소요청을 함께 셉니다. (2026-08-26)
@@ -59,6 +60,7 @@ export default async function AdminDashboardLayout({
     unshippedCount,
     cancelRequestedCount,
     pendingInquiryCount,
+    unrepliedReviewCount,
   ] = isSupabaseConfigured()
     ? await Promise.all([
         countPendingPayment(),
@@ -66,8 +68,9 @@ export default async function AdminDashboardLayout({
         countUnshipped(),
         countCancelRequested(),
         countPendingInquiries(),
+        countUnrepliedReviews(),
       ])
-    : [0, 0, 0, 0, 0];
+    : [0, 0, 0, 0, 0, 0];
 
   return (
     <AdminShell
@@ -76,6 +79,7 @@ export default async function AdminDashboardLayout({
       unshippedCount={unshippedCount}
       cancelRequestedCount={cancelRequestedCount}
       pendingInquiryCount={pendingInquiryCount}
+      unrepliedReviewCount={unrepliedReviewCount}
     >
       {/*
         ============================================================

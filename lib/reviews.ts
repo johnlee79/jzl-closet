@@ -2,7 +2,11 @@ import 'server-only';
 import { assertWritten } from '@/lib/db-write';
 
 import { maskName } from '@/lib/mask-name';
-import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
+import {
+  getSupabaseAdmin,
+  getSupabaseAdminFresh,
+  requireSupabaseAdmin,
+} from '@/lib/supabase/server';
 
 /**
  * 상품 리뷰. 서버 전용이며 service_role 로만 접근합니다.
@@ -323,6 +327,15 @@ export type ReviewFilter = {
   photo?: string;
   visible?: string;
   sponsored?: string;
+  /**
+   * ** 답글을 달았는지로 거르기 (2026-08-26)
+   *   'no'  답글이 아직 없는 것만  ← 사이드바 '리뷰 관리' 뱃지가 세는 것과 같은 조건
+   *   'yes' 답글을 단 것만
+   *
+   * * 뱃지 숫자와 목록이 반드시 같아야 해서 넣었습니다.
+   *   숫자를 누르면 그 숫자만큼 나와야 합니다.
+   */
+  replied?: string;
   search?: string;
   limit?: number;
   offset?: number;
@@ -361,6 +374,19 @@ export async function getReviews(
       countQuery = countQuery.eq('is_sponsored', value);
       listQuery = listQuery.eq('is_sponsored', value);
     }
+
+    /*
+     * ** 답글 여부. 뱃지가 세는 조건과 글자 하나까지 같아야 합니다.
+     *   답글을 지우면 admin_reply 가 다시 null 이 됩니다.
+     *   (replyToReview 가 `trimmed || null` 로 저장합니다)
+     */
+    if (filter.replied === 'no') {
+      countQuery = countQuery.is('admin_reply', null);
+      listQuery = listQuery.is('admin_reply', null);
+    } else if (filter.replied === 'yes') {
+      countQuery = countQuery.not('admin_reply', 'is', null);
+      listQuery = listQuery.not('admin_reply', 'is', null);
+    }
     if (searchExpression) {
       countQuery = countQuery.or(searchExpression);
       listQuery = listQuery.or(searchExpression);
@@ -395,6 +421,53 @@ export async function getReviews(
     console.error('[reviews] 목록 조회 실패:', error);
     return { reviews: [], total: 0 };
   }
+}
+
+/**
+ * ============================================================
+ * ** 아직 답글을 안 단 리뷰 건수 — 사이드바 뱃지 (2026-08-26)
+ * ============================================================
+ *
+ * ** '미답변 문의' 와 같은 방식입니다. 새 방식을 만들지 않았습니다.
+ *   관리자가 답글을 달면 이 숫자가 줄어듭니다.
+ *   눌러서 처리하면 사라지는, 뱃지다운 숫자입니다.
+ *
+ * ** 왜 이것으로 셌는가 — 리뷰에는 '봤다' 를 적는 칸이 없습니다.
+ *   문의처럼 status 값도 없습니다. 리뷰는 승인 절차 없이 바로 노출됩니다.
+ *   reviews 테이블에 있는 것 중 "관리자가 처리했는지" 를 나타내는 것은
+ *   admin_reply 하나뿐입니다.
+ *
+ *   '오늘 등록된 리뷰' 로 세는 방법도 있었지만 뱃지로는 맞지 않습니다.
+ *   자정이 지나면 저절로 0 이 되어 어제 리뷰를 놓치고, 메뉴를 눌러도
+ *   숫자가 줄지 않습니다.
+ *
+ * ** ★ 한계 — 나중에 이 주석을 보고 판단해 주세요. (사장님 지시, 2026-08-26)
+ *   모든 리뷰에 답글을 달지 않으면 이 숫자는 계속 쌓이기만 합니다.
+ *   그러면 뱃지가 "처리할 일" 이 아니라 "그냥 리뷰 총수" 가 되어 뜻을 잃습니다.
+ *   그때는 둘 중 하나로 바꿔야 합니다.
+ *     · 낮은 별점(3점 이하) 중 답글 없는 것만 세기 — 꼭 봐야 하는 것만 남습니다
+ *     · 뱃지를 아예 빼기
+ *   정확히 하려면 reviews 에 '관리자가 봤음' 칸이 필요한데, 그건 DB 구조를
+ *   바꾸는 일이라 하지 않았습니다.
+ *
+ * * 목록 링크에도 같은 조건이 걸려 있습니다. (?replied=no)
+ *   숫자와 목록이 다르면 그게 다음 버그가 됩니다.
+ */
+export async function countUnrepliedReviews(): Promise<number> {
+  /*
+   * * 저장된 답을 쓰지 않는 클라이언트로 읽습니다.
+   *   사이드바 뱃지는 지금 값이어야 합니다.
+   *   까닭은 lib/supabase/server.ts 의 getSupabaseAdminFresh 설명에 있습니다.
+   */
+  const supabase = getSupabaseAdminFresh();
+  if (!supabase) return 0;
+
+  const { count, error } = await supabase
+    .from(TABLE)
+    .select('id', { count: 'exact', head: true })
+    .is('admin_reply', null);
+  if (error) return 0;
+  return count ?? 0;
 }
 
 export async function countReviewsToday(): Promise<{ today: number; lowRating: number }> {

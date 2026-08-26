@@ -1,4 +1,5 @@
 import { countPendingInquiries } from '@/lib/inquiries';
+import { countUnrepliedReviews } from '@/lib/reviews';
 import {
   countCancelRequested,
   countNeedsCheck,
@@ -24,13 +25,13 @@ import { isSupabaseConfigured } from '@/lib/supabase/server';
  *   서버가 이미 열려 있는 관리자 창에게 먼저 말을 걸 방법은 없습니다.
  *
  * ★★ 세는 방법을 새로 만들지 않았습니다.
- *   레이아웃(app/admin/(dashboard)/layout.tsx)이 쓰는 그 함수 다섯 개를
+ *   레이아웃(app/admin/(dashboard)/layout.tsx)이 쓰는 그 함수 여섯 개를
  *   그대로 부릅니다. 두 곳이 다른 방법으로 세면 반드시 어긋납니다.
  *
  * ★ 전부 개수만 세는 조회입니다. 행을 읽지 않습니다.
  *   주문이 몇 만 건으로 늘어도 이 주소의 비용은 늘지 않습니다.
  *
- * ★ 다섯 개를 한꺼번에 보냅니다. 줄 세워 보내면 그만큼 느려집니다.
+ * ★ 여섯 개를 한꺼번에 보냅니다. 줄 세워 보내면 그만큼 느려집니다.
  *
  * ★★ 이 주소가 관리자 세션도 이어 줍니다.
  *   아래 isAdmin() 이 getUser() 를 부르고, 그때 만료된 액세스 토큰이
@@ -56,20 +57,22 @@ export async function GET(): Promise<Response> {
       pendingPayment: 0,
       unshipped: 0,
       inquiries: 0,
+      reviews: 0,
     });
   }
 
-  const [needsCheck, cancelRequested, pendingPayment, unshipped, inquiries] =
+  const [needsCheck, cancelRequested, pendingPayment, unshipped, inquiries, reviews] =
     await Promise.all([
       countNeedsCheck(),
       countCancelRequested(),
       countPendingPayment(),
       countUnshipped(),
       countPendingInquiries(),
+      countUnrepliedReviews(),
     ]);
 
   return Response.json(
-    { needsCheck, cancelRequested, pendingPayment, unshipped, inquiries },
+    { needsCheck, cancelRequested, pendingPayment, unshipped, inquiries, reviews },
     {
       /*
        * ★ 중간에 아무도 이 답을 보관하지 못하게 합니다.

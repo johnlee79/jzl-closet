@@ -29,7 +29,13 @@ type Leaf = {
   /** 같은 화면을 상태로 나눠 쓰는 경우 (주문) — ?status= 값까지 맞아야 활성 */
   status?: string;
   /** 어떤 숫자를 뱃지로 붙일지 */
-  badge?: 'pendingPayment' | 'needsCheck' | 'unshipped' | 'cancelRequested' | 'inquiries';
+  badge?:
+    | 'pendingPayment'
+    | 'needsCheck'
+    | 'unshipped'
+    | 'cancelRequested'
+    | 'inquiries'
+    | 'reviews';
 };
 
 /**
@@ -186,8 +192,13 @@ const MENU: Group[] = [
     ),
     items: [
       { href: '/admin/members', label: '회원 목록' },
-      { href: '/admin/inquiries', label: '문의 목록', badge: 'inquiries' },
-      { href: '/admin/reviews', label: '리뷰 관리' },
+      /*
+        ** 링크에 뱃지와 같은 조건을 겁니다. (2026-08-26)
+          '미답변' 을 눌렀는데 전체 목록이 나오면 숫자와 목록이 어긋납니다.
+          숫자를 누르면 그 숫자만큼 나와야 합니다. '입금대기' 와 같은 원칙입니다.
+      */
+      { href: '/admin/inquiries?status=pending', label: '문의 목록', badge: 'inquiries' },
+      { href: '/admin/reviews?replied=no', label: '리뷰 관리', badge: 'reviews' },
       { href: '/admin/referrals', label: '추천 관리', exact: true },
       { href: '/admin/referrals/goals', label: '목표·사은품' },
       { href: '/admin/referrals/rewards', label: '보상 처리' },
@@ -281,6 +292,7 @@ export default function AdminShell({
   unshippedCount = 0,
   cancelRequestedCount = 0,
   pendingInquiryCount = 0,
+  unrepliedReviewCount = 0,
 }: {
   children: React.ReactNode;
   /** 입금대기 건수 — '입금대기' 메뉴 옆에 뱃지로 붙습니다. (전에는 '주문 목록' 옆) */
@@ -293,6 +305,8 @@ export default function AdminShell({
   cancelRequestedCount?: number;
   /** 미답변 문의 건수 — 문의 관리 옆에 뱃지로 붙습니다. */
   pendingInquiryCount?: number;
+  /** 아직 답글을 안 단 리뷰 건수 — 리뷰 관리 옆에 뱃지로 붙습니다. */
+  unrepliedReviewCount?: number;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -333,6 +347,7 @@ export default function AdminShell({
     unshipped: unshippedCount,
     cancelRequested: cancelRequestedCount,
     inquiries: pendingInquiryCount,
+    reviews: unrepliedReviewCount,
   });
 
   /** 방금 늘어난 뱃지 — 잠깐 깜빡입니다. */
@@ -351,6 +366,7 @@ export default function AdminShell({
       unshipped: unshippedCount,
       cancelRequested: cancelRequestedCount,
       inquiries: pendingInquiryCount,
+      reviews: unrepliedReviewCount,
     });
   }, [
     pendingCount,
@@ -358,6 +374,7 @@ export default function AdminShell({
     unshippedCount,
     cancelRequestedCount,
     pendingInquiryCount,
+    unrepliedReviewCount,
   ]);
 
   /** 이 간격으로 물어봅니다. 이유는 위 설명에 있습니다. */
