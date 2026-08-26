@@ -24,8 +24,15 @@ export default function SiteNotices() {
   const pathname = usePathname();
   const member = useMember();
 
-  // 아직 모르는 동안에는 그리지 않습니다. 연락처를 넣는 화면에서도 안 그립니다.
-  if (!member?.needsPhone || pathname === '/mypage/profile') return null;
+  // 아직 모르는 동안에는 그리지 않습니다. 고치는 화면에서도 안 그립니다.
+  if (pathname === '/mypage/profile') return null;
 
-  return <PhonePrompt />;
+  /*
+   * * 연락처가 먼저입니다. 둘 다 해당해도 한 번에 하나만 보여 줍니다.
+   *   줄이 두 개 쌓이면 헤더가 밀리고, 둘 다 읽히지 않습니다.
+   *   연락처를 넣고 나면 다음 방문에 이름 안내가 보입니다.
+   */
+  if (member?.needsPhone) return <PhonePrompt />;
+  if (member?.needsRealName) return <PhonePrompt kind="name" />;
+  return null;
 }

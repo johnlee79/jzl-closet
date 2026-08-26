@@ -70,6 +70,22 @@ export default async function MypageLayout({
         </div>
       ) : null}
 
+      {/*
+        ** 이름이 아직 소셜 닉네임 그대로면 안내합니다. (2026-08-26)
+          그 이름이 주문서 입금자명으로 들어가는데, 통장에 찍히는 이름과
+          다르면 입금 확인이 안 되어 배송이 밀립니다.
+        * 연락처 안내와 동시에 두 개가 뜨지 않게 합니다. 하나씩 처리하는 편이
+          실제로 채워집니다.
+        * 판정 기준은 app/api/auth/me/route.ts 와 같아야 합니다.
+      */}
+      {member.profile.phone &&
+      member.user.nickname.trim() !== '' &&
+      member.profile.name.trim() === member.user.nickname.trim() ? (
+        <div className="mt-8">
+          <PhonePrompt variant="inline" kind="name" />
+        </div>
+      ) : null}
+
       <div className="mt-12 grid grid-cols-1 gap-10 lg:grid-cols-[200px_1fr] lg:gap-16">
         <MypageNav />
         <div className="min-w-0">{children}</div>

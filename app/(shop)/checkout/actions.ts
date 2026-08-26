@@ -101,9 +101,21 @@ function validate(input: CheckoutInput, enabled: string[]): string | null {
     return '지금 이용할 수 없는 결제 수단입니다. 다른 수단을 골라 주세요.';
   }
 
-  // 입금자명은 무통장입금에만 필요합니다. 카드 주문에는 받지 않습니다.
-  if (input.paymentMethod === 'bank_transfer' && !input.depositorName.trim()) {
-    return '입금자명을 입력해 주세요.';
+  /*
+   * 입금자명은 무통장입금에만 필요합니다. 카드 주문에는 받지 않습니다.
+   *
+   * ** 화면에서도 막지만 여기서 한 번 더 봅니다. 화면 검사는 우회할 수 있습니다.
+   * ** 공백을 뺀 글자 수로 셉니다. "홍 길동" 은 3자, "JOHN LEE" 는 7자입니다.
+   * * 문자 종류는 검사하지 않습니다. 영문 통장과 법인 상호를 막으면
+   *   실제로 주문을 못 하는 손님이 생깁니다.
+   * * 앞뒤 공백을 잘라 저장하는 것은 lib/orders.ts 가 이미 하고 있습니다.
+   *   (depositor_name: input.depositorName.trim() || null)
+   */
+  if (input.paymentMethod === 'bank_transfer') {
+    const bare = input.depositorName.replace(/\s/g, '');
+    if (!bare) return '입금자명을 입력해 주세요.';
+    if (bare.length < 2) return '입금자명을 2자 이상 적어 주세요.';
+    if (bare.length > 20) return '입금자명은 20자까지 적을 수 있습니다.';
   }
   if (input.items.length === 0) {
     return '장바구니가 비어 있습니다.';

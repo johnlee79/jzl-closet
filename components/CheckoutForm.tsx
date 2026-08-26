@@ -244,8 +244,37 @@ export default function CheckoutForm({
     }));
   }, [form.sameAsOrderer, form.ordererName, form.ordererPhone]);
 
-  /** 입금자명은 기본으로 주문자 이름을 따라갑니다. (직접 고치면 그대로 둡니다) */
-  const depositorTouched = useRef(Boolean(member?.name));
+  /**
+   * 입금자명은 기본으로 주문자 이름을 따라갑니다. (직접 고치면 그대로 둡니다)
+   *
+   * ============================================================
+   * ** 회원이어도 false 로 시작합니다 (2026-08-26)
+   * ============================================================
+   *
+   * ** 전에는 useRef(Boolean(member?.name)) 이었습니다.
+   *   회원이면 처음부터 "손댔음" 으로 쳐서, 가입할 때 들어온 이름에 묶인 채
+   *   주문자명을 고쳐도 입금자명이 따라가지 않았습니다.
+   *
+   *   구글 카카오로 가입하면 그쪽 닉네임이 이름으로 들어옵니다.
+   *   그 닉네임이 그대로 입금자명이 되어 통장에 찍히는 이름과 달랐고,
+   *   입금 확인이 안 되어 배송이 밀렸습니다.
+   *
+   * * 손님이 입금자명 칸을 직접 고치면 그때부터 안 따라갑니다. (지금과 같음)
+   */
+  const depositorTouched = useRef(false);
+
+  /*
+   * ** 입금자명을 한 번 확인했는지. (2026-08-26)
+   *   무통장일 때 주문 버튼을 누르면 확인창을 한 번 띄웁니다.
+   *   [확인했습니다] 를 누르면 여기가 true 가 되고 주문이 이어집니다.
+   *
+   * * 이름이 바뀌면 다시 false 로 되돌립니다. 고친 이름은 아직 확인받지
+   *   않은 이름입니다. 되돌리지 않으면 [수정하기] 로 고친 뒤에는 확인창이
+   *   영영 안 뜹니다.
+   */
+  const depositorConfirmed = useRef(false);
+  const depositorRef = useRef<HTMLInputElement>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   useEffect(() => {
     if (depositorTouched.current) return;
     setForm((prev) => ({ ...prev, depositorName: prev.ordererName }));
@@ -269,6 +298,18 @@ export default function CheckoutForm({
     setForm((prev) =>
       prev.cashReceiptType === 'none' ? prev : { ...prev, cashReceiptType: 'none' }
     );
+  }, [isBank]);
+
+  /*
+   * ** 결제수단을 바꾸면 입금자명 확인을 되돌립니다. (2026-08-26)
+   *   무통장 -> 카드 -> 무통장 으로 돌아왔을 때, 앞서 눌러 둔 [확인했습니다]
+   *   가 남아 있으면 확인창이 안 뜬 채 주문이 나갑니다.
+   *   그 사이에 이름이 바뀌었을 수도 있습니다. 다시 묻는 편이 맞습니다.
+   * * 열려 있던 창도 닫습니다. 카드로 바꿨는데 창이 떠 있으면 안 됩니다.
+   */
+  useEffect(() => {
+    depositorConfirmed.current = false;
+    setConfirmOpen(false);
   }, [isBank]);
 
   /* ── 포인트 사용 ─────────────────────────────────────
@@ -348,8 +389,29 @@ export default function CheckoutForm({
       return { message: '주소를 검색해 주세요.', field: 'postcode', section: 'receiver' };
     if (!form.address1.trim())
       return { message: '주소를 검색해 주세요.', field: 'address1', section: 'receiver' };
-    if (isBank && !form.depositorName.trim())
-      return { message: '입금자명을 입력해 주세요.', field: 'depositorName', section: 'payment' };
+    if (isBank) {
+      /*
+       * ** 공백을 뺀 글자 수로 셉니다.
+       *   "홍 길동" 은 3자, "JOHN LEE" 는 7자입니다.
+       * * 문자 종류는 검사하지 않습니다. 영문 통장과 법인 상호를 막으면
+       *   실제로 주문을 못 하는 손님이 생깁니다.
+       */
+      const bare = form.depositorName.replace(/\s/g, '');
+      if (!bare)
+        return { message: '입금자명을 입력해 주세요.', field: 'depositorName', section: 'payment' };
+      if (bare.length < 2)
+        return {
+          message: '입금자명을 2자 이상 적어 주세요.',
+          field: 'depositorName',
+          section: 'payment',
+        };
+      if (bare.length > 20)
+        return {
+          message: '입금자명은 20자까지 적을 수 있습니다.',
+          field: 'depositorName',
+          section: 'payment',
+        };
+    }
     if (isBank && form.cashReceiptType !== 'none') {
       const digits = form.cashReceiptNo.replace(/[^0-9]/g, '');
       if (!digits)
@@ -387,8 +449,12 @@ export default function CheckoutForm({
    */
   const orderLines = live.lines.filter((line) => line.orderable);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  /*
+   * * event 가 없을 수도 있습니다. 입금자명 확인창의 [확인했습니다] 가
+   *   같은 흐름을 그대로 다시 타기 때문입니다. 검사도 전부 다시 돕니다.
+   */
+  const handleSubmit = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
     if (pending) return;
 
     /*
@@ -413,6 +479,28 @@ export default function CheckoutForm({
     }
 
     setError('');
+
+    /*
+     * ============================================================
+     * ** 입금자명을 한 번 더 묻습니다 (2026-08-26)
+     * ============================================================
+     *
+     * ** 무통장일 때만입니다. 카드는 묻지 않습니다.
+     *   입금자명이 통장에 찍히는 이름과 다르면 입금 확인이 안 되어
+     *   배송이 밀립니다. 주문이 들어온 뒤에는 고치기 어렵습니다.
+     *
+     * * 막는 것이 아니라 한 번 멈추게 하는 것입니다.
+     *   [확인했습니다] 를 누르면 이 함수가 그대로 다시 돌고, 그때는
+     *   depositorConfirmed 가 true 라 이 관문을 지나갑니다.
+     *
+     * * 자리가 중요합니다. 검사를 모두 통과한 뒤여야 합니다.
+     *   앞에 두면 주소도 안 넣은 상태에서 이름부터 묻게 됩니다.
+     */
+    if (isBank && !depositorConfirmed.current) {
+      setConfirmOpen(true);
+      return;
+    }
+
     startTransition(async () => {
       const result = await placeOrderAction({
         ordererName: form.ordererName,
@@ -424,8 +512,8 @@ export default function CheckoutForm({
         address1: form.address1,
         address2: form.address2,
         deliveryMemo: form.deliveryMemo,
-        // 입금자명은 무통장입금에만 씁니다.
-        depositorName: isBank ? form.depositorName : '',
+        // 입금자명은 무통장입금에만 씁니다. 앞뒤 공백은 잘라서 보냅니다.
+        depositorName: isBank ? form.depositorName.trim() : '',
         paymentMethod: form.paymentMethod,
         cashReceiptType: isBank ? form.cashReceiptType : 'none',
         cashReceiptNo: isBank ? form.cashReceiptNo : '',
@@ -897,10 +985,18 @@ export default function CheckoutForm({
                     </label>
                     <input
                       id="depositorName"
+                      ref={depositorRef}
                       type="text"
                       value={form.depositorName}
                       onChange={(event) => {
                         depositorTouched.current = true;
+                        /*
+                         * * 이름을 고치면 확인을 되돌립니다.
+                         *   고친 이름은 아직 확인받지 않은 이름입니다.
+                         *   되돌리지 않으면 [수정하기] 로 고친 뒤 확인창이
+                         *   다시 뜨지 않습니다.
+                         */
+                        depositorConfirmed.current = false;
                         set('depositorName', event.target.value);
                       }}
                       className={`mt-2 ${inputClass('depositorName')}`}
@@ -1220,6 +1316,75 @@ export default function CheckoutForm({
           </aside>
         </div>
       </form>
+
+      {/*
+        ============================================================
+        ** 입금자명 확인창 (2026-08-26)
+        ============================================================
+
+        ** 무통장일 때 주문 버튼을 누르면 한 번 뜹니다. 카드는 안 뜹니다.
+          입금자명이 통장에 찍히는 이름과 다르면 입금 확인이 안 됩니다.
+
+        * 브라우저 기본 confirm 을 쓰지 않습니다. 사이트 안에서 그립니다.
+          기본 confirm 은 글꼴도 문구도 우리가 못 정하고, 아이폰에서는
+          주소창 아래 낯선 자리에 뜹니다.
+
+        * 모바일에서는 화면 아래에 붙습니다. (items-end)
+          작은 화면에서 가운데에 띄우면 키보드가 올라올 때 잘립니다.
+          components/ReceiptConfirm.tsx 와 같은 방식입니다.
+
+        * 이름은 손님이 실제로 적은 값 그대로입니다. 예시가 아닙니다.
+      */}
+      {confirmOpen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="입금자명 확인"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-ink/60 p-4 md:items-center"
+        >
+          <div className="w-full max-w-[380px] border border-stone bg-paper p-6">
+            <p className="text-[17px] leading-relaxed text-ink">
+              입금자명이{' '}
+              <strong className="font-semibold">{form.depositorName.trim()}</strong> 이(가) 맞습니까?
+            </p>
+            <p className="mt-3 text-[15px] leading-relaxed text-muted">
+              통장에 찍히는 이름과 달라야 하면 지금 고쳐 주세요.
+            </p>
+
+            <div className="mt-6 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmOpen(false);
+                  /*
+                   * * 창이 사라진 뒤에 커서를 옮깁니다.
+                   *   같은 순간에 부르면 아직 창이 덮고 있어 커서가 안 갑니다.
+                   */
+                  window.setTimeout(() => {
+                    depositorRef.current?.focus();
+                    depositorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }, 0);
+                }}
+                className="btn-secondary min-h-[48px] px-4 py-0 text-[15px]"
+              >
+                수정하기
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  depositorConfirmed.current = true;
+                  setConfirmOpen(false);
+                  // 같은 제출 흐름을 그대로 다시 탑니다. 검사도 다시 돕니다.
+                  handleSubmit();
+                }}
+                className="btn-primary min-h-[48px] px-4 py-0 text-[15px]"
+              >
+                확인했습니다
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

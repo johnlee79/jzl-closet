@@ -44,6 +44,25 @@ export type { MemberStatus } from '@/lib/member-status';
 export { SOCIAL_PROVIDERS, isSocialProvider, providerLabel } from '@/lib/auth-provider';
 export type { AuthProvider } from '@/lib/auth-provider';
 
+/**
+ * ============================================================
+ * ** 소셜이 준 닉네임 (2026-08-26)
+ * ============================================================
+ *
+ * ** 구글 카카오로 가입하면 이 값이 profiles.name 으로 들어갑니다.
+ *   닉네임인 경우가 많습니다. 그대로 두면 주문서 입금자명에 닉네임이
+ *   들어가고, 통장에 찍히는 이름과 달라 입금 확인이 안 됩니다.
+ *
+ * * 뽑는 규칙은 가입 때(app/auth/callback/route.ts)와 똑같아야 합니다.
+ *   달라지면 "고쳤는지" 판정이 어긋납니다. 그래서 여기 한 곳에 둡니다.
+ */
+export function socialNickname(metadata: unknown): string {
+  const md = (metadata ?? {}) as Record<string, unknown>;
+  if (typeof md.full_name === 'string') return md.full_name;
+  if (typeof md.name === 'string') return md.name;
+  return '';
+}
+
 export type Profile = {
   id: string;
   name: string;

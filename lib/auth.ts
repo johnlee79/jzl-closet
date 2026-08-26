@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { cache } from 'react';
 import { createAuthClient } from '@/lib/supabase/auth-server';
 import { isActiveMember, isJustLoggedOut } from '@/lib/member-session';
-import { getProfile, type Profile } from '@/lib/profiles';
+import { getProfile, socialNickname, type Profile } from '@/lib/profiles';
 
 /**
  * "지금 누가 로그인했는지"를 알려 주는 헬퍼.
@@ -16,6 +16,12 @@ import { getProfile, type Profile } from '@/lib/profiles';
 export type SessionUser = {
   id: string;
   email: string;
+  /**
+   * * 소셜이 준 닉네임. 이메일 가입이면 빈 값입니다.
+   *   "회원이 이름을 실명으로 고쳤는가" 를 볼 때 씁니다.
+   *   지금 이름이 이 값과 같으면 가입할 때 들어온 그대로라는 뜻입니다.
+   */
+  nickname: string;
 };
 
 /** 로그인한 계정. 없으면 null. */
@@ -43,7 +49,11 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
       return null;
     }
     if (error || !data.user) return null;
-    return { id: data.user.id, email: data.user.email ?? '' };
+    return {
+      id: data.user.id,
+      email: data.user.email ?? '',
+      nickname: socialNickname(data.user.user_metadata),
+    };
   } catch (error) {
     console.warn(
       '[auth] 로그인 확인 중 오류:',

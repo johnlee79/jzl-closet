@@ -140,7 +140,7 @@ export default function ProfileForm({
 
           <div>
             <label htmlFor="profile-name" className="label-xs block">
-              이름
+              이름 (실명)
             </label>
             <input
               id="profile-name"
@@ -151,6 +151,14 @@ export default function ProfileForm({
               aria-invalid={problems.has('name') || undefined}
               className={problems.inputClass('name', inputClass)}
             />
+            {/*
+              ** 구글 카카오로 가입하면 그쪽 닉네임이 이 칸에 들어옵니다.
+                그대로 두면 주문서 입금자명에 닉네임이 들어가고, 통장에
+                찍히는 이름과 달라 입금 확인이 안 됩니다.
+            */}
+            <p className="mt-2 text-[14px] leading-relaxed text-muted">
+              입금자명과 배송에 쓰입니다. 통장에 찍히는 이름으로 적어 주세요.
+            </p>
             <FieldError message={problems.messageFor('name')} />
           </div>
 

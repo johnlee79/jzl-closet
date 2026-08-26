@@ -9,6 +9,15 @@
 --           → "새 주문이 관리자 목록에 뜨는지" 확인하려고 만든 주문입니다.
 --             주문자 개발시험 / 010-0000-0000 / dev-test@example.com
 --
+--   ★ 2026-08-26 추가
+--     주문  ORD-20260826-0003  (카드, 결제대기, 250,000원)
+--           → 입금자명 확인창을 시험하다 "카드는 확인창이 안 뜬다" 를
+--             확인하려고 결제 버튼을 눌렀는데, 확인창 대신 주문이 만들어지고
+--             KSNET 결제창이 열렸습니다. 결제는 진행하지 않고 바로 나왔습니다.
+--             주문자 이몽룡 / 010-1234-5678 / zz-test@example.com
+--             상품은 실제 상품(아미 폴로)입니다. 재고는 미관리라 안 줄었습니다.
+--             결제를 안 했으므로 payment_logs 에 승인 기록이 없습니다.
+--
 -- ★ 주문은 관리자 화면에 삭제 기능이 없습니다. 아래 SQL 로만 지울 수 있습니다.
 -- ★ 상품은 이 SQL 로 지워도 되고, 관리자 상품 목록에서 [삭제] 를 눌러도 됩니다.
 --   다만 주문을 먼저 지우세요. 주문이 이 상품을 가리키고 있습니다.
@@ -20,16 +29,19 @@
 -- ── ① 먼저 무엇이 지워질지 확인하세요 (읽기만) ────────────
 select order_no, status, total_amount, orderer_name, orderer_phone, created_at
   from public.orders
- where order_no in ('ORD-20260825-0007', 'ORD-20260825-0008')
+ where order_no in ('ORD-20260825-0007', 'ORD-20260825-0008', 'ORD-20260826-0003')
  order by order_no;
 
 select name, slug, price, is_visible, sort_order
   from public.products
  where slug = 'zz-test-do-not-order';
 
--- ↑ 주문 2줄, 상품 1줄만 나와야 합니다.
---   주문자가 둘 다 "개발시험 / 010-0000-0000" 인지 꼭 확인하세요.
---   다른 이름이 섞여 있으면 멈추고 알려 주세요.
+-- ↑ 주문 3줄, 상품 1줄만 나와야 합니다.
+--   주문자가 "개발시험 / 010-0000-0000" 둘, "이몽룡 / 010-1234-5678" 하나인지
+--   꼭 확인하세요. 다른 이름이 섞여 있으면 멈추고 알려 주세요.
+--
+--   ★ ORD-20260826-0003 은 결제대기(pending_payment) 여야 합니다.
+--     결제완료로 바뀌어 있으면 실제 결제가 일어난 것이니 멈추고 알려 주세요.
 
 
 -- ── ② 확인한 뒤에만 아래를 돌리세요 ───────────────────────
@@ -43,13 +55,13 @@ select name, slug, price, is_visible, sort_order
 -- 맨 앞의 -- 두 개를 지운 뒤 실행하세요.
 
 -- begin;
--- delete from public.orders   where order_no in ('ORD-20260825-0007', 'ORD-20260825-0008');
+-- delete from public.orders   where order_no in ('ORD-20260825-0007', 'ORD-20260825-0008', 'ORD-20260826-0003');
 -- delete from public.products where slug = 'zz-test-do-not-order';
 -- commit;
 
 
 -- ── ③ 지운 뒤 확인 (읽기만) ───────────────────────────────
 -- select count(*) from public.orders
---  where order_no in ('ORD-20260825-0007', 'ORD-20260825-0008');   -- 0
+--  where order_no in ('ORD-20260825-0007', 'ORD-20260825-0008', 'ORD-20260826-0003');   -- 0
 -- select count(*) from public.products where slug = 'zz-test-do-not-order';  -- 0
 -- select count(*) from public.products;                             -- 37 로 돌아옵니다

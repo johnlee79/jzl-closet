@@ -38,6 +38,12 @@ export type MemberInfo = {
   name: string;
   /** 구글 로그인은 연락처를 주지 않습니다. 주문에 필요해서 따로 받습니다. */
   needsPhone: boolean;
+  /**
+   * * 이름이 아직 소셜 닉네임 그대로인지.
+   *   닉네임이 입금자명으로 들어가면 입금 확인이 안 됩니다.
+   *   판정 근거는 app/api/auth/me/route.ts 에 적어 두었습니다.
+   */
+  needsRealName: boolean;
   pointBalance: number;
   pointExpiringSoon: number;
   pointMinUse: number;
@@ -57,6 +63,7 @@ const GUEST: MemberInfo = {
   loggedIn: false,
   name: '',
   needsPhone: false,
+  needsRealName: false,
   pointBalance: 0,
   pointExpiringSoon: 0,
   pointMinUse: 0,
@@ -78,6 +85,7 @@ function normalize(raw: unknown): MemberInfo {
     loggedIn,
     name: typeof data.name === 'string' ? data.name : '',
     needsPhone: data.needsPhone === true,
+    needsRealName: data.needsRealName === true,
     pointBalance: num(data.pointBalance, 0),
     pointExpiringSoon: num(data.pointExpiringSoon, 0),
     pointMinUse: num(data.pointMinUse, 0),
