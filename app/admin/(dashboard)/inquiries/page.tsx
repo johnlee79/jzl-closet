@@ -20,16 +20,23 @@ export default async function AdminInquiriesPage({
   const configured = isSupabaseConfigured();
   const page = Math.max(1, Number(searchParams.page ?? '1') || 1);
 
+  const listFilter = {
+    status: searchParams.status,
+    search: searchParams.q,
+    limit: PAGE_SIZE,
+    offset: (page - 1) * PAGE_SIZE,
+  };
+
+  /*
+   * ★★ 탭 건수도 목록과 같은 조건으로 셉니다. (2026-08-26)
+   *   회원 화면과 똑같은 규칙입니다. 한 곳만 고치면 다른 곳에서 또 납니다.
+   *   상태·페이지만 빼고 나머지 조건은 그대로 넘깁니다.
+   */
+  const { status: _unusedStatus, limit: _unusedLimit, offset: _unusedOffset, ...countFilter } =
+    listFilter;
+
   const [{ inquiries, total }, counts] = configured
-    ? await Promise.all([
-        getInquiries({
-          status: searchParams.status,
-          search: searchParams.q,
-          limit: PAGE_SIZE,
-          offset: (page - 1) * PAGE_SIZE,
-        }),
-        countInquiriesByStatus(),
-      ])
+    ? await Promise.all([getInquiries(listFilter), countInquiriesByStatus(countFilter)])
     : [{ inquiries: [], total: 0 }, {}];
 
   const allCount = Object.values(counts).reduce((sum, value) => sum + value, 0);

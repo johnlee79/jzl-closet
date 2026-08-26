@@ -169,8 +169,19 @@ function LoginForm() {
           </p>
         ) : null}
 
+        {/*
+          ★★ 두 로그인의 유지 시간이 다릅니다. (2026-08-26)
+            전에는 "한 번 로그인하면 7일 동안 유지됩니다" 한 줄이었습니다.
+            그 7일은 아래 [관리자 비밀번호] 쿠키(lib/admin-auth.ts 의
+            SESSION_MAX_AGE)를 말하는 것입니다. 위 이메일 로그인은 Supabase
+            세션이라 수명이 다른데, 문구가 둘을 뭉뚱그려 "7일" 이라고
+            약속하고 있었습니다. 실제로는 그보다 훨씬 자주 끊깁니다.
+        */}
         <p className="mt-5 border-t border-slate-200 pt-4 text-center text-[14px] leading-relaxed text-slate-500">
-          한 번 로그인하면 7일 동안 유지됩니다.
+          아래 <strong>관리자 비밀번호</strong>로 들어오시면 7일 동안 유지됩니다.
+          <br />
+          위 이메일 로그인은 유지 시간이 이보다 짧아, 한동안 쓰지 않으면 다시 로그인이
+          필요합니다.
         </p>
       </div>
 

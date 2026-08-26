@@ -2397,7 +2397,6 @@ export async function setCashReceiptIssued(id: string, issued: boolean): Promise
   );
 }
 
-/** 손님의 취소 요청 — 상태는 바꾸지 않고 이력에만 남깁니다. */
 /**
  * ============================================================
  * 손님이 보낸 주문 취소 요청

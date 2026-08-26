@@ -34,18 +34,30 @@ export default async function AdminMembersPage({
   const configured = isSupabaseConfigured();
   const page = Math.max(1, Number(searchParams.page ?? '1') || 1);
 
+  const listFilter = {
+    status: searchParams.status,
+    search: searchParams.q,
+    from: searchParams.from ? kstStart(searchParams.from) : undefined,
+    to: searchParams.to ? kstEnd(searchParams.to) : undefined,
+    limit: PAGE_SIZE,
+    offset: (page - 1) * PAGE_SIZE,
+  };
+
+  /*
+   * ★★ 탭 건수도 목록과 같은 조건으로 셉니다. (2026-08-26)
+   *   상태만 빼고 전부 같은 조건을 넘깁니다. 검색어나 가입기간을 걸어 두고
+   *   탭에는 전체 숫자가 보이면, 탭과 목록이 서로 다른 세계를 보는 셈이라
+   *   어느 쪽을 믿어야 할지 알 수 없습니다.
+   *   limit·offset 도 뺍니다. 건수는 페이지와 상관이 없습니다.
+   *
+   *   ★ 주문 화면(admin/(dashboard)/orders/page.tsx)과 같은 규칙입니다.
+   *     그쪽이 먼저 고쳐졌고, 여기가 옛 방식으로 남아 있었습니다.
+   */
+  const { status: _unusedStatus, limit: _unusedLimit, offset: _unusedOffset, ...countFilter } =
+    listFilter;
+
   const [{ members, total }, counts] = configured
-    ? await Promise.all([
-        getMembers({
-          status: searchParams.status,
-          search: searchParams.q,
-          from: searchParams.from ? kstStart(searchParams.from) : undefined,
-          to: searchParams.to ? kstEnd(searchParams.to) : undefined,
-          limit: PAGE_SIZE,
-          offset: (page - 1) * PAGE_SIZE,
-        }),
-        countMembersByStatus(),
-      ])
+    ? await Promise.all([getMembers(listFilter), countMembersByStatus(countFilter)])
     : [{ members: [], total: 0 }, {}];
 
   const allCount = Object.values(counts).reduce((sum, value) => sum + value, 0);

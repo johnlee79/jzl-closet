@@ -207,6 +207,22 @@ export type MemberFilter = {
   offset?: number;
 };
 
+/** 목록과 건수가 같은 조건을 보게, 상태·페이지만 뺀 나머지 */
+export type MemberCountFilter = Omit<MemberFilter, 'status' | 'limit' | 'offset'>;
+
+/**
+ * 검색어를 조회식으로 바꿉니다.
+ *
+ * ★★ 목록과 건수가 이 함수 하나를 같이 씁니다.
+ *   전에는 같은 식이 두 곳에 적혀 있었습니다. 한쪽만 고치면 목록과 탭이
+ *   서로 다른 세계를 보게 됩니다. 실제로 그런 일이 있었습니다.
+ */
+function memberSearchExpression(search: string | undefined): string {
+  const term = (search ?? '').replace(/[%,().]/g, '').trim();
+  if (!term) return '';
+  return `name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`;
+}
+
 /** 관리자 회원 목록. 주문 수·총 구매금액을 함께 계산해 돌려줍니다. */
 export async function getMembers(
   filter: MemberFilter = {}
@@ -217,10 +233,7 @@ export async function getMembers(
   const supabase = getSupabaseAdmin();
   if (!supabase) return { members: [], total: 0 };
 
-  const term = (filter.search ?? '').replace(/[%,().]/g, '').trim();
-  const searchExpression = term
-    ? `name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`
-    : '';
+  const searchExpression = memberSearchExpression(filter.search);
 
   try {
     let countQuery = supabase.from(TABLE).select('id', { count: 'exact', head: true });
@@ -321,19 +334,77 @@ export async function getOrderStats(
  * 상태별 회원 수.
  * ★ 행을 가져와 세지 않고 상태마다 count 쿼리를 던집니다.
  */
-export async function countMembersByStatus(): Promise<Record<string, number>> {
+export async function countMembersByStatus(
+  filter: MemberCountFilter = {}
+): Promise<Record<string, number>> {
+  /*
+   * ============================================================
+   * ★★ 탭 건수도 목록과 같은 조건으로 셉니다 (2026-08-26)
+   * ============================================================
+   *
+   * ★★ 무엇이 문제였나
+   *   전에는 이 함수가 조건을 아예 받지 않았습니다. 그래서 검색어나
+   *   가입기간을 걸어 두면 **목록만 걸러지고 탭 숫자는 전체**를 보여 줬습니다.
+   *   화면에 「전체 3」 인데 목록에는 1명만 나옵니다. 어느 쪽을 믿어야
+   *   할지 알 수 없습니다.
+   *
+   *   탭을 눌러도 검색어는 그대로 따라갑니다. (MemberTable 의 buildHref)
+   *   그러니 조건을 안 보는 쪽이 틀린 것입니다.
+   *
+   * ★ 주문 화면이 이미 이 방식입니다. (admin/(dashboard)/orders/page.tsx)
+   *   같은 규칙을 따릅니다 — 상태만 빼고 나머지 조건은 전부 그대로.
+   *   상태를 빼는 이유는 탭마다 상태가 다르기 때문입니다.
+   *   페이지(limit·offset)도 뺍니다. 건수는 페이지와 상관이 없습니다.
+   */
   const supabase = getSupabaseAdmin();
-  if (!supabase) return {};
+  if (!supabase) {
+    console.warn('[members] 상태별 인원을 세지 못했습니다: Supabase 연결 정보가 없습니다.');
+    return {};
+  }
 
+  // ★ 목록과 똑같은 검색식을 씁니다. 두 벌로 두면 반드시 어긋납니다.
+  const searchExpression = memberSearchExpression(filter.search);
   const statuses: MemberStatus[] = ['active', 'inactive', 'withdrawn'];
 
   const results = await Promise.all(
     statuses.map(async (status) => {
-      const { count, error } = await supabase
+      let query = supabase
         .from(TABLE)
         .select('id', { count: 'exact', head: true })
         .eq('status', status);
-      return { status, count: error ? 0 : (count ?? 0) };
+      if (filter.from) query = query.gte('created_at', filter.from);
+      if (filter.to) query = query.lte('created_at', filter.to);
+      if (searchExpression) query = query.or(searchExpression);
+
+      const { count, error, status: httpStatus } = await query;
+
+      /*
+       * ============================================================
+       * ★★ 조용히 0 으로 뭉개지 않습니다 (2026-08-26)
+       * ============================================================
+       *
+       * 전에는 `count: error ? 0 : (count ?? 0)` 한 줄이었습니다.
+       * 조회가 실패해도 그냥 0 이 되어 탭이 전부 0 으로 보였습니다.
+       * 실제로 그 화면을 봤는데 왜 그런지 알 방법이 없었습니다.
+       * ("회원이 없다" 와 "못 셌다" 가 화면에서 똑같이 0 입니다)
+       *
+       * ★★ error 만 봐서는 못 잡습니다. 실제로 확인한 결과입니다.
+       *     없는 표를 조회  → HTTP 204 · count null · **error 는 null**
+       *     없는 칼럼을 조회 → HTTP 400 · count null · error.message 가 빈 문자열
+       *   head:true 조회는 본문이 없어서 오류가 제대로 안 실려 옵니다.
+       *   그래서 **count 가 비었는지**를 기준으로 봅니다. 그게 유일하게
+       *   믿을 수 있는 신호입니다. HTTP 상태도 함께 남깁니다.
+       */
+      if (error || count === null || count === undefined) {
+        console.error(
+          `[members] 상태별 인원을 세지 못했습니다 (${status}): ` +
+            `HTTP ${httpStatus ?? '?'} · ` +
+            `${error?.message || '오류 메시지 없음'}` +
+            `${error?.code ? ` (code ${error.code})` : ''}`
+        );
+        return { status, count: 0 };
+      }
+      return { status, count };
     })
   );
 

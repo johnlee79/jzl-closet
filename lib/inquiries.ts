@@ -364,16 +364,29 @@ export type InquiryFilter = {
   offset?: number;
 };
 
+/** 목록과 건수가 같은 조건을 보게, 상태·페이지만 뺀 나머지 */
+export type InquiryCountFilter = Omit<InquiryFilter, 'status' | 'limit' | 'offset'>;
+
+/**
+ * 검색어를 조회식으로 바꿉니다.
+ *
+ * ★★ 목록과 건수가 이 함수 하나를 같이 씁니다.
+ *   같은 식을 두 곳에 두면 한쪽만 고쳐져 목록과 탭이 어긋납니다.
+ *   회원 화면(lib/profiles.ts)도 같은 방식입니다.
+ */
+function inquirySearchExpression(search: string | undefined): string {
+  const term = (search ?? '').replace(/[%,().]/g, '').trim();
+  if (!term) return '';
+  return `inquiry_no.ilike.%${term}%,title.ilike.%${term}%,content.ilike.%${term}%,writer_name.ilike.%${term}%`;
+}
+
 export async function getInquiries(
   filter: InquiryFilter = {}
 ): Promise<{ inquiries: Inquiry[]; total: number }> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return { inquiries: [], total: 0 };
 
-  const term = (filter.search ?? '').replace(/[%,().]/g, '').trim();
-  const searchExpression = term
-    ? `inquiry_no.ilike.%${term}%,title.ilike.%${term}%,content.ilike.%${term}%,writer_name.ilike.%${term}%`
-    : '';
+  const searchExpression = inquirySearchExpression(filter.search);
 
   try {
     let countQuery = supabase.from(TABLE).select('id', { count: 'exact', head: true });
@@ -418,17 +431,62 @@ export async function getInquiries(
  * 상태별 문의 건수.
  * ★ 행을 가져와 세지 않고 상태마다 count 쿼리를 던져 한 번에 기다립니다.
  */
-export async function countInquiriesByStatus(): Promise<Record<string, number>> {
+export async function countInquiriesByStatus(
+  filter: InquiryCountFilter = {}
+): Promise<Record<string, number>> {
+  /*
+   * ============================================================
+   * ★★ 탭 건수도 목록과 같은 조건으로 셉니다 (2026-08-26)
+   * ============================================================
+   *
+   * 회원 화면(lib/profiles.ts 의 countMembersByStatus)과 **똑같이** 고칩니다.
+   * 한 곳만 고치면 다른 곳에서 같은 증상이 또 납니다.
+   *
+   * 전에는 조건을 안 받아서, 검색어를 걸면 목록만 걸러지고 탭에는
+   * 전체 숫자가 남았습니다. 탭을 눌러도 검색어는 따라가므로
+   * (InquiryTable 의 buildHref) 조건을 안 보는 쪽이 틀린 것입니다.
+   *
+   * ★ 본보기는 주문 화면입니다. 상태만 빼고 나머지는 그대로 넘깁니다.
+   */
   const supabase = getSupabaseAdmin();
-  if (!supabase) return {};
+  if (!supabase) {
+    console.warn('[inquiries] 상태별 건수를 세지 못했습니다: Supabase 연결 정보가 없습니다.');
+    return {};
+  }
+
+  // ★ 목록과 똑같은 검색식을 씁니다.
+  const searchExpression = inquirySearchExpression(filter.search);
 
   const results = await Promise.all(
     INQUIRY_STATUSES.map(async (status) => {
-      const { count, error } = await supabase
+      let query = supabase
         .from(TABLE)
         .select('id', { count: 'exact', head: true })
         .eq('status', status);
-      return { status, count: error ? 0 : (count ?? 0) };
+      if (searchExpression) query = query.or(searchExpression);
+
+      const { count, error, status: httpStatus } = await query;
+
+      /*
+       * ★★ 조용히 0 으로 뭉개지 않습니다. (2026-08-26)
+       *   "문의가 없다" 와 "못 셌다" 가 화면에서는 똑같이 0 입니다.
+       *   왜 0 인지는 로그에만 남길 수 있습니다.
+       *
+       * ★★ error 만 봐서는 못 잡습니다. head:true 조회는 본문이 없어서
+       *   오류가 제대로 안 실려 옵니다. (없는 표 → HTTP 204 · error null)
+       *   count 가 비었는지를 기준으로 봅니다.
+       *   회원 화면(lib/profiles.ts)과 똑같은 판단 기준입니다.
+       */
+      if (error || count === null || count === undefined) {
+        console.error(
+          `[inquiries] 상태별 건수를 세지 못했습니다 (${status}): ` +
+            `HTTP ${httpStatus ?? '?'} · ` +
+            `${error?.message || '오류 메시지 없음'}` +
+            `${error?.code ? ` (code ${error.code})` : ''}`
+        );
+        return { status, count: 0 };
+      }
+      return { status, count };
     })
   );
 
