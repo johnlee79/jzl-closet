@@ -153,8 +153,14 @@ const MENU: Group[] = [
         status: 'cancel_requested',
         badge: 'cancelRequested',
       },
+      /*
+        ** 무통장입금만입니다. (2026-08-26)
+          카드 주문도 pending_payment 로 시작하지만, 카드는 입금할 것이
+          없습니다. 뱃지가 무통장만 세므로 목록에도 같은 조건을 겁니다.
+          숫자와 목록이 다르면 그게 다음 버그가 됩니다.
+      */
       {
-        href: '/admin/orders?status=pending_payment',
+        href: '/admin/orders?status=pending_payment&method=bank_transfer',
         label: '입금대기',
         status: 'pending_payment',
         badge: 'pendingPayment',

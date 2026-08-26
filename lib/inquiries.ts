@@ -509,7 +509,13 @@ export async function countInquiriesByStatus(
 
 /** 사이드바 뱃지에 쓰는 미답변 건수 */
 export async function countPendingInquiries(): Promise<number> {
-  const supabase = getSupabaseAdmin();
+  /*
+   * ** 저장된 답을 쓰지 않는 클라이언트로 읽습니다. (2026-08-26)
+   *   사이드바 뱃지에 쓰는 숫자입니다. 주문 쪽 넷은 먼저 바꿨는데
+   *   문의만 빠져 있어서, 손님이 문의를 넣어도 옛 숫자가 보일 수 있었습니다.
+   *   까닭은 lib/supabase/server.ts 의 getSupabaseAdminFresh 설명에 있습니다.
+   */
+  const supabase = getSupabaseAdminFresh();
   if (!supabase) return 0;
   const { count, error } = await supabase
     .from(TABLE)

@@ -2599,14 +2599,35 @@ export async function countOrdersByStatus(
  * * 세는 기준은 바꾸지 않았습니다. 조회를 보내는 방법만 바꿨습니다.
  */
 
-/** 사이드바 뱃지에 쓰는 입금대기 건수 */
+/**
+ * 사이드바 뱃지에 쓰는 입금대기 건수.
+ *
+ * ============================================================
+ * ** 무통장입금만 셉니다 (2026-08-26)
+ * ============================================================
+ *
+ * ** 카드 주문도 pending_payment 로 시작합니다.
+ *   주문을 만드는 자리(위 base 의 status)가 결제수단을 가리지 않기 때문입니다.
+ *   카드는 그 뒤 결제창을 거쳐 paid / failed / payment_unconfirmed 로 옮겨갑니다.
+ *
+ *   그래서 전에는 "카드 결제창을 열어놓고 안 끝낸 주문" 이 '입금대기' 에
+ *   떴습니다. 입금할 것이 없는데 입금대기였습니다.
+ *   메뉴 이름이 곧 그 숫자의 뜻이어야 한다는 이번 작업의 취지와 어긋납니다.
+ *
+ * ** 주문 상태 로직은 건드리지 않았습니다. 세는 조건만 좁혔습니다.
+ *
+ * * 목록 쪽 링크에도 같은 조건을 걸어 두었습니다.
+ *   (components/admin/AdminShell.tsx 의 '입금대기' 메뉴 — &method=bank_transfer)
+ *   숫자와 목록이 다른 것을 보여 주면 그게 다음 버그가 됩니다.
+ */
 export async function countPendingPayment(): Promise<number> {
   const supabase = getSupabaseAdminFresh();
   if (!supabase) return 0;
   const { count, error } = await supabase
     .from(ORDERS)
     .select('id', { count: 'exact', head: true })
-    .eq('status', 'pending_payment');
+    .eq('status', 'pending_payment')
+    .eq('payment_method', 'bank_transfer');
   if (error) return 0;
   return count ?? 0;
 }
