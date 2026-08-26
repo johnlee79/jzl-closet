@@ -3,6 +3,8 @@ import { assertWritten } from '@/lib/db-write';
 
 import { isSalesStatus } from '@/lib/order-status';
 import { toProvider, type AuthProvider } from '@/lib/auth-provider';
+import { MEMBER_STATUSES, isKnownMemberStatus } from '@/lib/member-status';
+import type { MemberStatus } from '@/lib/member-status';
 import { getSupabaseAdmin, requireSupabaseAdmin } from '@/lib/supabase/server';
 import { notifyProfileFillFailed } from '@/lib/telegram';
 
@@ -25,7 +27,18 @@ export function missingProfilesTableError(): Error {
   );
 }
 
-export type MemberStatus = 'active' | 'inactive' | 'withdrawn';
+/*
+ * ★ 회원 상태 목록은 lib/member-status.ts 한 곳에만 있습니다.
+ *   화면 파일(클라이언트)도 같은 목록을 써야 해서 그쪽에 두었습니다.
+ *   여기서는 그대로 다시 내보내 기존 import 를 깨지 않습니다.
+ */
+export {
+  MEMBER_STATUSES,
+  isKnownMemberStatus,
+  memberStatusLabel,
+  memberStatusBadgeClass,
+} from '@/lib/member-status';
+export type { MemberStatus } from '@/lib/member-status';
 
 // 가입 경로 판단은 클라이언트 컴포넌트에서도 필요해 lib/auth-provider.ts 로 뺐습니다.
 export { SOCIAL_PROVIDERS, isSocialProvider, providerLabel } from '@/lib/auth-provider';
@@ -39,7 +52,12 @@ export type Profile = {
   postcode: string;
   address1: string;
   address2: string;
-  status: MemberStatus;
+  /*
+   * ★ DB 에 든 값 그대로입니다. MemberStatus 로 좁히지 않습니다.
+   *   좁히면 모르는 값을 어딘가에서 다시 뭉개야 하고, 그게 이 문제였습니다.
+   *   아는 값인지 볼 때는 isKnownMemberStatus() 를 쓰세요.
+   */
+  status: string;
   agreeTerms: boolean;
   agreePrivacy: boolean;
   agreeAge14: boolean;
@@ -90,8 +108,37 @@ type ProfileRow = {
   updated_at: string | null;
 };
 
-function toStatus(value: string | null): MemberStatus {
-  return value === 'inactive' || value === 'withdrawn' ? value : 'active';
+/**
+ * ============================================================
+ * ★★ 모르는 상태값을 「활성」으로 뭉개지 않습니다 (2026-08-26)
+ * ============================================================
+ *
+ * 전에는 이 한 줄이었습니다.
+ *     return value === 'inactive' || value === 'withdrawn' ? value : 'active';
+ *
+ * 'active'·'inactive'·'withdrawn' 이 아닌 값은 **전부 활성**이 됐습니다.
+ * NULL 도, 빈 값도, 대문자 'ACTIVE' 도, 아예 모르는 값도 활성이었습니다.
+ *
+ * 그런데 세는 쪽(countMembersByStatus)은 그 세 값과 **정확히 일치**할 때만
+ * 셉니다. 그래서 이상한 값이 든 행이 있으면 이렇게 됩니다.
+ *     목록  — 그 행까지 전부 「활성」으로 보임
+ *     탭    — 그 행은 안 세어짐
+ *   숫자만 어긋나고, 왜 어긋나는지는 화면 어디에도 안 보입니다.
+ *
+ * ★ 이제 있는 그대로 돌려줍니다. 화면이 빨간 「알 수 없음 · 원래값」
+ *   딱지로 보여 줍니다. (lib/member-status.ts 의 memberStatusLabel)
+ * ★ 그리고 반드시 로그를 남깁니다. 다음에 이상한 행이 들어오는 순간
+ *   Vercel 함수 로그에 바로 드러납니다.
+ */
+function readStatus(value: string | null, userId: string): string {
+  const raw = (value ?? '').trim();
+  if (isKnownMemberStatus(raw)) return raw;
+
+  console.error(
+    `[members] 모르는 상태값입니다: ${raw === '' ? '(비어 있음)' : `'${raw}'`} — user id ${userId}`
+  );
+  // ★ 뭉개지 않고 그대로 돌려줍니다. 감추는 것이 이 문제의 원인이었습니다.
+  return raw;
 }
 
 function rowToProfile(row: ProfileRow): Profile {
@@ -103,7 +150,7 @@ function rowToProfile(row: ProfileRow): Profile {
     postcode: row.postcode ?? '',
     address1: row.address1 ?? '',
     address2: row.address2 ?? '',
-    status: toStatus(row.status),
+    status: readStatus(row.status, row.id),
     agreeTerms: Boolean(row.agree_terms),
     agreePrivacy: Boolean(row.agree_privacy),
     agreeAge14: Boolean(row.agree_age14),
@@ -364,7 +411,8 @@ export async function countMembersByStatus(
 
   // ★ 목록과 똑같은 검색식을 씁니다. 두 벌로 두면 반드시 어긋납니다.
   const searchExpression = memberSearchExpression(filter.search);
-  const statuses: MemberStatus[] = ['active', 'inactive', 'withdrawn'];
+  // ★ 그리는 쪽과 같은 목록을 씁니다. (lib/member-status.ts)
+  const statuses: readonly MemberStatus[] = MEMBER_STATUSES;
 
   const results = await Promise.all(
     statuses.map(async (status) => {
@@ -435,7 +483,9 @@ export async function getProviderByEmail(email: string): Promise<AuthProvider | 
 
   if (error || !data) return null;
   const row = data as { provider: string | null; status: string | null };
-  if (toStatus(row.status) === 'withdrawn') return null;
+  // ★ 탈퇴한 계정은 가입 경로를 알려 주지 않습니다.
+  //   값을 뭉치지 않고 그대로 비교합니다. (readStatus 와 같은 원칙)
+  if ((row.status ?? '').trim() === 'withdrawn') return null;
   return toProvider(row.provider);
 }
 

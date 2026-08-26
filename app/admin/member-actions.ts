@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { isAdmin } from '@/lib/admin-guard';
-import { adminUpdateProfile, getProfile, type MemberStatus } from '@/lib/profiles';
+import { adminUpdateProfile, getProfile } from '@/lib/profiles';
+import { MEMBER_STATUSES, type MemberStatus } from '@/lib/member-status';
 import { SITE_URL } from '@/lib/store';
 import { createAuthClient } from '@/lib/supabase/auth-server';
 
@@ -23,7 +24,8 @@ function fail(error: unknown, fallback: string): { ok: false; error: string } {
   return { ok: false, error: message };
 }
 
-const STATUSES: MemberStatus[] = ['active', 'inactive', 'withdrawn'];
+// ★ 화면·집계와 같은 목록을 씁니다. (lib/member-status.ts)
+const STATUSES: readonly MemberStatus[] = MEMBER_STATUSES;
 
 export async function updateMemberAction(
   userId: string,

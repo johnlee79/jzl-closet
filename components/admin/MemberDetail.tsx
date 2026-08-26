@@ -11,16 +11,31 @@ import { formatPrice } from '@/lib/product-utils';
 import { pointReasonLabel } from '@/lib/site-config';
 import type { PointTransaction } from '@/lib/points';
 import { isSocialProvider, providerLabel } from '@/lib/auth-provider';
+import {
+  MEMBER_STATUSES,
+  MEMBER_STATUS_LABEL,
+  type MemberStatus,
+} from '@/lib/member-status';
 import type { Profile } from '@/lib/profiles';
 import type { Order } from '@/lib/types';
 
 type Message = { tone: 'ok' | 'error'; text: string } | null;
 
-const STATUS_OPTIONS = [
-  { key: 'active', label: '활성' },
-  { key: 'inactive', label: '비활성 (로그인 차단)' },
-  { key: 'withdrawn', label: '탈퇴' },
-];
+/*
+ * ★ 고를 수 있는 값은 lib/member-status.ts 의 목록에서 가져옵니다. (2026-08-26)
+ *   여기에 또 적어 두면 목록이 갈라집니다. 실제로 다섯 벌이었습니다.
+ *   덧붙이는 설명만 이 화면이 정합니다.
+ */
+const STATUS_NOTE: Record<MemberStatus, string> = {
+  active: '',
+  inactive: ' (로그인 차단)',
+  withdrawn: '',
+};
+
+const STATUS_OPTIONS = MEMBER_STATUSES.map((key) => ({
+  key,
+  label: `${MEMBER_STATUS_LABEL[key]}${STATUS_NOTE[key]}`,
+}));
 
 function Agreement({ label, agreed }: { label: string; agreed: boolean }) {
   return (

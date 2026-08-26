@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { memberStatusBadgeClass, memberStatusLabel } from '@/lib/member-status';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useNavTransition } from '@/lib/use-nav-transition';
 import { useState } from 'react';
@@ -17,17 +18,12 @@ const STATUS_TABS = [
   { key: 'withdrawn', label: '탈퇴' },
 ] as const;
 
-const STATUS_BADGE: Record<string, string> = {
-  active: 'bg-green-100 text-green-800',
-  inactive: 'bg-amber-100 text-amber-800',
-  withdrawn: 'bg-slate-100 text-slate-600',
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  active: '활성',
-  inactive: '비활성',
-  withdrawn: '탈퇴',
-};
+/*
+ * ★★ 상태 이름과 색은 lib/member-status.ts 한 곳에서 가져옵니다. (2026-08-26)
+ *   전에는 여기에 목록을 또 적어 두었습니다. 세는 쪽·저장 검사·상세 화면까지
+ *   같은 목록이 다섯 벌이었고, 그중 하나가 달라 화면과 숫자가 어긋났습니다.
+ *   모르는 값은 이제 빨간 「알 수 없음 · 원래값」 딱지로 드러납니다.
+ */
 
 export default function MemberTable({
   members,
@@ -202,10 +198,8 @@ export default function MemberTable({
                     {member.phone || '—'}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5">
-                    <span
-                      className={`admin-badge ${STATUS_BADGE[member.status] ?? 'bg-slate-100 text-slate-700'}`}
-                    >
-                      {STATUS_LABEL[member.status] ?? member.status}
+                    <span className={`admin-badge ${memberStatusBadgeClass(member.status)}`}>
+                      {memberStatusLabel(member.status)}
                     </span>
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums text-slate-700">
