@@ -1,4 +1,5 @@
 import AdminShell from '@/components/admin/AdminShell';
+import AdminSessionKeeper from '@/components/admin/AdminSessionKeeper';
 import { countPendingInquiries } from '@/lib/inquiries';
 import { countNeedsCheck, countPendingPayment, countUnshipped } from '@/lib/orders';
 import { isSupabaseConfigured } from '@/lib/supabase/server';
@@ -61,6 +62,12 @@ export default async function AdminDashboardLayout({
       unshippedCount={unshippedCount}
       pendingInquiryCount={pendingInquiryCount}
     >
+      {/*
+        ★ 관리자 로그인이 쓰는 동안 안 끊기게 조용히 이어 줍니다. (2026-08-26)
+          상품 등록 화면에 오래 머물다 [저장]을 누르면 로그아웃되던 문제입니다.
+          아무것도 그리지 않습니다. 자세한 내용은 그 파일의 설명을 보세요.
+      */}
+      <AdminSessionKeeper />
       {children}
     </AdminShell>
   );

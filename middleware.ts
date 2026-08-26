@@ -146,19 +146,37 @@ async function isActiveMemberSession(
 /**
  * Supabase 로 로그인한 사람이 관리자 이메일인지. (2단계)
  *
- * ★ 여기서는 쿠키를 갱신하지 않습니다. 읽기만 합니다.
- *   관리자 화면은 손님 화면 갱신 흐름(아래 2번)을 타지 않으므로,
- *   토큰 갱신은 손님 쪽에서 하던 대로 그쪽에 맡깁니다.
- *   여기서 갱신까지 하려 들면 응답 쿠키를 만들어 돌려줘야 하는데,
- *   통과할 때는 NextResponse.next() 를 그대로 쓰는 편이 단순합니다.
+ * ★★★ 갱신된 쿠키를 반드시 저장합니다 — 되돌리지 마세요 (2026-08-26)
+ *
+ *   전에는 여기 set()·remove() 가 빈 함수였고, 주석에 "읽기만 합니다" 라고
+ *   적혀 있었습니다. 그게 관리자가 자꾸 로그아웃되던 원인이었습니다.
+ *
+ *   getUser() 는 액세스 토큰이 만료됐으면 **리프레시 토큰을 써서 갱신**합니다.
+ *   Supabase 리프레시 토큰은 한 번 쓰면 새 것으로 바뀝니다.
+ *   그런데 set() 이 비어 있어 새 토큰이 어디에도 저장되지 않았습니다.
+ *   → 브라우저에는 **이미 써 버린 옛 토큰**이 남고, 다음 요청에서 갱신이
+ *     실패합니다. 그대로 로그아웃입니다.
+ *
+ *   상품 등록 화면에 오래 머무는 것이 정확히 이 조건입니다. 한 시간 넘게
+ *   아무 요청도 안 하다가 [저장]을 누르는 순간 만료된 토큰으로 처음
+ *   말을 겁니다.
+ *
+ *   ★ 손님 경로(아래 2번)는 처음부터 올바르게 하고 있었습니다.
+ *     같은 방식 그대로 맞췄습니다 — 요청과 응답 양쪽에 씁니다.
  *
  * ★ getUser() 를 씁니다. 쿠키에 든 토큰을 그대로 믿는 getSession() 이 아닙니다.
  *   관리자 문에서 쿠키만 믿으면 안 됩니다.
  *
  * ★ 목록이 비어 있으면 Supabase 에 물어보지도 않습니다.
  *   아직 이메일 로그인을 쓰지 않는 동안 쓸데없는 왕복을 만들지 않습니다.
+ *
+ * @param response 갱신된 쿠키를 실어 보낼 응답. 부르는 쪽이 이것을 돌려줘야 합니다.
  */
-async function isAdminBySupabaseSession(request: NextRequest): Promise<boolean> {
+async function isAdminBySupabaseSession(
+  request: NextRequest,
+  response: NextResponse,
+  pathname: string
+): Promise<boolean> {
   if (!isAdminEmailConfigured()) return false;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -171,19 +189,57 @@ async function isAdminBySupabaseSession(request: NextRequest): Promise<boolean> 
         get(name: string) {
           return request.cookies.get(name)?.value;
         },
-        set() {
-          /* 읽기만 합니다. */
+        set(name: string, value: string, options: CookieOptions) {
+          // 요청과 응답 양쪽에 반영해야 이번 요청에서도 새 토큰이 쓰입니다.
+          request.cookies.set({ name, value, ...options });
+          response.cookies.set({ name, value, ...options });
         },
-        remove() {
-          /* 읽기만 합니다. */
+        remove(name: string, options: CookieOptions) {
+          request.cookies.set({ name, value: '', ...options });
+          response.cookies.set({ name, value: '', ...options, maxAge: 0 });
         },
       },
     });
 
     const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) return false;
+
+    /*
+     * ============================================================
+     * ★★ 조용히 false 를 돌려주지 않습니다 (2026-08-26)
+     * ============================================================
+     *
+     * 전에는 `if (error || !data.user) return false;` 한 줄이었습니다.
+     * 관리자가 왜 튕겼는지 아무 데도 남지 않았습니다.
+     *
+     * ★★ error 만 봐서는 안 됩니다. 회원 뱃지에서 배운 것입니다.
+     *   그때 없는 표를 조회하니 HTTP 204 에 **error 는 null** 이었습니다.
+     *   그래서 "값이 비었는데 오류도 없는" 경우를 따로 봅니다.
+     *   그것이 가장 위험한 경우입니다 — 아무 흔적 없이 튕깁니다.
+     *
+     * ★ "그냥 로그인 안 함" 은 남기지 않습니다. 관리자 주소를 모르고
+     *   들어온 사람에게도 찍히면 진짜 문제가 묻힙니다.
+     */
+    if (error && !isJustLoggedOut(error)) {
+      console.warn(
+        `[auth] 관리자 세션 확인 실패 (${pathname}): ${error.message || '(오류 메시지 없음)'}`
+      );
+      return false;
+    }
+    if (!data.user) {
+      if (!error) {
+        console.warn(
+          `[auth] 관리자 세션이 비었는데 오류도 없습니다 (${pathname}). ` +
+            'Supabase 응답이 비어 온 경우입니다. 자주 보이면 알려 주세요.'
+        );
+      }
+      return false;
+    }
     return isAdminEmail(data.user.email);
-  } catch {
+  } catch (error) {
+    console.warn(
+      `[auth] 관리자 세션 확인 중 오류 (${pathname}):`,
+      error instanceof Error ? error.message : String(error)
+    );
     return false;
   }
 }
@@ -211,14 +267,24 @@ export async function middleware(request: NextRequest) {
     if (await verifySessionToken(request.cookies.get(ADMIN_COOKIE)?.value)) {
       return NextResponse.next();
     }
-    if (await isAdminBySupabaseSession(request)) {
-      return NextResponse.next();
+
+    /*
+     * ★★ 갱신된 세션 쿠키를 담을 응답을 먼저 만듭니다. (2026-08-26)
+     *   아래 확인 중에 토큰이 갱신되면 이 응답에 새 쿠키가 실립니다.
+     *   통과할 때도 튕길 때도 **이 응답을 돌려줘야** 새 토큰이 저장됩니다.
+     *   전에는 NextResponse.next() 를 새로 만들어 돌려줘서 매번 버렸습니다.
+     */
+    const adminResponse = NextResponse.next({ request: { headers: request.headers } });
+
+    if (await isAdminBySupabaseSession(request, adminResponse, pathname)) {
+      return adminResponse;
     }
 
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = '/admin/login';
     loginUrl.search = `?next=${encodeURIComponent(`${pathname}${search}`)}`;
-    return NextResponse.redirect(loginUrl);
+    // ★ 튕길 때도 갱신된 쿠키를 실어 보냅니다. (손님 경로와 같은 방식)
+    return redirectKeepingCookies(adminResponse, loginUrl);
   }
 
   /* ── 2. 회원 세션 ──────────────────────────────────────── */
