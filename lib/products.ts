@@ -165,6 +165,12 @@ export function rowToProduct(row: ProductRow): Product {
     subCategorySlug: row.sub_category_slug,
     price: row.price,
     originalPrice: row.original_price,
+    /*
+     * ** 아직 칸이 없는 환경도 있어 undefined 가 올 수 있습니다. (2026-08-27)
+     *   그때는 null 로 둡니다. "원가를 안 넣은 상품" 과 같은 취급이라
+     *   수익 계산에서 빠지고 화면에 "원가 미입력" 으로 셉니다.
+     */
+    costPrice: row.cost_price ?? null,
     summary: row.summary ?? '',
     origin: row.origin,
     manufacturer: row.manufacturer,
@@ -199,6 +205,12 @@ export function productToRow(input: ProductInput): Omit<ProductRow, 'id' | 'crea
     sub_category_slug: input.subCategorySlug,
     price: input.price,
     original_price: input.originalPrice,
+    /*
+     * ** 원가. 칸이 아직 없는 환경에서는 저장이 실패하는데,
+     *   그때는 아래 saveWithoutCost 가 이 칸만 빼고 다시 저장합니다.
+     *   (lib/orders.ts 의 isMissingColumn 과 같은 생각입니다)
+     */
+    cost_price: input.costPrice,
     summary: input.summary,
     origin: input.origin,
     manufacturer: input.manufacturer,
@@ -277,6 +289,14 @@ export async function getProducts(filter: ProductFilter = {}): Promise<Product[]
 
 /** 아직 없는 컬럼을 골랐을 때 오는 코드 */
 const MISSING_COLUMN = '42703';
+
+/**
+ * 쓰기(insert·update)에서 없는 칸을 건드리면 PostgREST 가 PGRST204 로 답합니다.
+ * ★ lib/orders.ts 의 isMissingColumn 과 같은 판단입니다. 두 곳이 달라지면 안 됩니다.
+ */
+function isMissingColumn(error: { code?: string } | null | undefined): boolean {
+  return Boolean(error?.code && (error.code === MISSING_COLUMN || error.code === 'PGRST204'));
+}
 
 /**
  * 검색어와 이름이 닮은 브랜드의 slug 를 찾아 둡니다.
@@ -609,27 +629,93 @@ export async function getProductSitemapRows(): Promise<
  * 저장 — 관리자 전용. 실패하면 예외를 던집니다.
  * ------------------------------------------------------------------ */
 
+/**
+ * ============================================================
+ * ** 원가 칸이 아직 없어도 상품 저장이 막히지 않게 합니다 (2026-08-27)
+ * ============================================================
+ *
+ * ** cost_price 는 정리SQL/11-원가-칸-추가.sql 을 돌려야 생깁니다.
+ *   그 전에 상품을 저장하면 PostgREST 가 "그런 칸 없다" 로 막습니다.
+ *   상품 등록이 통째로 안 되는 것은 너무 큰 대가라, 그 칸만 빼고
+ *   한 번 더 저장합니다. 원가는 안 들어가지만 상품은 저장됩니다.
+ *
+ * ** 조용히 넘어가지 않습니다. 왜 원가가 안 들어갔는지 로그로 남깁니다.
+ *   이 로그가 보이면 SQL 을 아직 안 돌린 것입니다.
+ *
+ * * SQL 을 돌리고 나면 이 우회는 저절로 안 쓰입니다. 지워도 됩니다.
+ */
+function withoutCost(row: Record<string, unknown>): Record<string, unknown> {
+  const copy = { ...row };
+  delete copy.cost_price;
+  return copy;
+}
+
 export async function createProduct(input: ProductInput): Promise<Product> {
   const supabase = requireSupabaseAdmin();
-  const { data, error } = await supabase
-    .from(TABLE)
-    .insert(productToRow(input))
-    .select('*')
-    .single();
-  if (error) throw new Error(`상품 저장에 실패했습니다: ${error.message}`);
-  return rowToProduct(data as ProductRow);
+  const row = productToRow(input);
+
+  let result = await supabase.from(TABLE).insert(row).select('*').single();
+  if (result.error && isMissingColumn(result.error)) {
+    console.warn(
+      '[products] cost_price 칸이 아직 없습니다. 원가를 빼고 저장합니다. ' +
+        '정리SQL/11-원가-칸-추가.sql 을 실행해 주세요.'
+    );
+    result = await supabase.from(TABLE).insert(withoutCost(row)).select('*').single();
+  }
+  if (result.error) throw new Error(`상품 저장에 실패했습니다: ${result.error.message}`);
+  return rowToProduct(result.data as ProductRow);
 }
 
 export async function updateProduct(id: string, input: ProductInput): Promise<Product> {
   const supabase = requireSupabaseAdmin();
-  const { data, error } = await supabase
-    .from(TABLE)
-    .update(productToRow(input))
-    .eq('id', id)
-    .select('*')
-    .single();
-  if (error) throw new Error(`상품 수정에 실패했습니다: ${error.message}`);
-  return rowToProduct(data as ProductRow);
+  const row = productToRow(input);
+
+  let result = await supabase.from(TABLE).update(row).eq('id', id).select('*').single();
+  if (result.error && isMissingColumn(result.error)) {
+    console.warn(
+      '[products] cost_price 칸이 아직 없습니다. 원가를 빼고 저장합니다. ' +
+        '정리SQL/11-원가-칸-추가.sql 을 실행해 주세요.'
+    );
+    result = await supabase.from(TABLE).update(withoutCost(row)).eq('id', id).select('*').single();
+  }
+  if (result.error) throw new Error(`상품 수정에 실패했습니다: ${result.error.message}`);
+  return rowToProduct(result.data as ProductRow);
+}
+
+/**
+ * 원가만 한 번에 저장합니다. (CSV 올리기)
+ *
+ * ** 상품 정보를 통째로 덮어쓰지 않습니다. cost_price 한 칸만 씁니다.
+ *   CSV 에 실수로 옛 판매가가 들어 있어도 상품이 망가지지 않습니다.
+ * * slug 로 찾습니다. 없는 slug 는 부르는 쪽에서 이미 걸러 옵니다.
+ */
+export async function setCostPrices(
+  rows: { slug: string; costPrice: number }[]
+): Promise<{ saved: number; error: string | null }> {
+  if (rows.length === 0) return { saved: 0, error: null };
+  const supabase = requireSupabaseAdmin();
+
+  let saved = 0;
+  for (const row of rows) {
+    // eslint-disable-next-line no-await-in-loop
+    const { error } = await supabase
+      .from(TABLE)
+      .update({ cost_price: row.costPrice })
+      .eq('slug', row.slug);
+    if (error) {
+      if (isMissingColumn(error)) {
+        return {
+          saved,
+          error:
+            '원가 칸(cost_price)이 아직 없습니다. 정리SQL/11-원가-칸-추가.sql 을 Supabase 에서 실행한 뒤 다시 올려 주세요.',
+        };
+      }
+      console.error('[products] 원가 저장 실패:', row.slug, error.message);
+      return { saved, error: `원가를 저장하지 못했습니다 (${row.slug}): ${error.message}` };
+    }
+    saved += 1;
+  }
+  return { saved, error: null };
 }
 
 /** 목록에서 바로 고치는 항목 (가격·품절·노출·진열순서) */
@@ -707,6 +793,8 @@ export async function duplicateProduct(id: string): Promise<Product> {
     //   같은 셀스타 번호가 두 상품에 붙으면 "다시 불러오기" 가 어느 쪽인지 알 수 없습니다.
     sellstarId: 0,
     sellstarSyncedAt: null,
+    // ** 사본에는 원가도 그대로 물려줍니다. 같은 물건이라 원가가 같습니다. (2026-08-27)
+    costPrice: original.costPrice,
     sellstarPrice: 0,
     sellstarSalePrice: 0,
     slug,

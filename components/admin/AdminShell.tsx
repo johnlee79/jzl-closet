@@ -223,6 +223,21 @@ const MENU: Group[] = [
       { href: '/admin/settings', label: '설정', exact: true },
     ],
   },
+  /*
+    ** 수익 관리를 통계 바로 위에 둡니다. (2026-08-27)
+      둘 다 "숫자를 보는 화면" 이라 나란히 있는 편이 찾기 쉽습니다.
+      통계처럼 그룹 없이 한 줄입니다. 뱃지는 붙이지 않습니다.
+  */
+  {
+    key: 'profit',
+    label: '수익 관리',
+    href: '/admin/profit',
+    icon: (
+      <Icon>
+        <path d="M8 2v12M11 4.5H6.5a1.8 1.8 0 000 3.6h3a1.8 1.8 0 010 3.6H5" />
+      </Icon>
+    ),
+  },
   {
     key: 'stats',
     label: '통계',

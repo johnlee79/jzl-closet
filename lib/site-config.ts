@@ -480,6 +480,30 @@ export type PaymentSettings = {
    *   63*          앞자리 일치
    *   40200        정확히 일치
    */
+  /**
+   * ============================================================
+   * ** 수익 계산에 쓰는 수수료 두 가지 (2026-08-27)
+   * ============================================================
+   *
+   * * 여기 두면 관리자 설정 화면에서 바꿀 수 있고, 저장하는 순간
+   *   revalidateTag(SETTINGS_TAG) 로 캐시가 비워져 즉시 반영됩니다.
+   *   (app/admin/settings-actions.ts)
+   */
+
+  /**
+   * 카드 결제 수수료율 (%). KSNET 계약 요율입니다. 예: 1.43
+   * ** 무통장입금에는 붙지 않습니다.
+   * * 체크/신용/할부를 나누지 않고 하나로 봅니다. (사장님 판단, 2026-08-27)
+   */
+  cardFeeRate: number;
+  /**
+   * 카드 결제 건당 이체 수수료 (원). 예: 200
+   * ** 카드에만 붙습니다. KSNET 즉시결제 구조 때문에 차감됩니다.
+   *   무통장입금에는 붙지 않습니다. (사장님 확인, 2026-08-27)
+   * * 주문 1건당입니다. 정산 1회당이 아닙니다.
+   */
+  transferFee: number;
+
   remoteAreaRules: string[];
   /**
    * 입금 기한이 지난 주문을 자동으로 취소할지.
@@ -602,6 +626,8 @@ export const DEFAULT_PAYMENT: PaymentSettings = {
   escrowLinkUrl: '',
   methods: DEFAULT_PAYMENT_METHOD_FLAGS,
   ksnetNotifyAutoComplete: false,
+  cardFeeRate: 1.43,
+  transferFee: 200,
 };
 
 /** 입금 계좌를 다 채웠는지 — 안 채웠으면 주문을 받을 수 없습니다. */

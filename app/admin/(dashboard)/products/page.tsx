@@ -2,6 +2,7 @@ import Link from 'next/link';
 import ProductTable from '@/components/admin/ProductTable';
 import StaleWarning from '@/components/admin/StaleWarning';
 import ProductFilters from '@/components/admin/ProductFilters';
+import CostCsvUploader from '@/components/admin/CostCsvUploader';
 import { filterableCategories } from '@/lib/categories';
 import { getProductsWithCount } from '@/lib/products';
 import { isSupabaseConfigured } from '@/lib/supabase/server';
@@ -94,6 +95,18 @@ export default async function AdminProductsPage({
       ) : null}
 
       <div className="admin-card mt-5 p-4">
+        {/*
+          ** 원가 CSV 올리기는 여기 둡니다. (2026-08-27)
+            「상품 가져오기」 메뉴가 아니라 상품 목록에 둔 이유입니다.
+            · 「상품 가져오기」는 셀스타에서 **새 상품을 만드는** 화면입니다.
+              원가 올리기는 **이미 있는 상품을 고치는** 일이라 성격이 다릅니다.
+            · 올린 결과를 바로 아래 목록에서 눈으로 확인할 수 있습니다.
+            · 원가를 넣는 일은 상품을 보면서 하는 일입니다.
+        */}
+        <div className="mt-6">
+          <CostCsvUploader />
+        </div>
+
         <ProductFilters
           categories={categories.map((category) => ({
             slug: category.slug,

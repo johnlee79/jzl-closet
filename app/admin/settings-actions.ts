@@ -25,6 +25,7 @@ import {
   normalizeAnalytics,
   normalizeDesign,
   normalizeEvent,
+  getPaymentSettings,
   normalizePayment,
   normalizePoints,
   normalizeReview,
@@ -231,6 +232,54 @@ export async function savePaymentAction(input: PaymentSettings): Promise<ActionR
     return { ok: true, data: undefined };
   } catch (error) {
     return fail(error, '결제 설정을 저장하지 못했습니다.');
+  }
+}
+
+/**
+ * ============================================================
+ * ** 수수료 두 개만 저장합니다 (2026-08-27)
+ * ============================================================
+ *
+ * ** 수익 관리 화면에서 요율을 바꿔 저장할 때 씁니다.
+ *   savePaymentAction 은 결제 설정을 통째로 받습니다. 수익 화면에는
+ *   계좌·결제수단·우편번호 규칙이 없으니, 그것을 그대로 보내면
+ *   빈 값으로 덮어써 가게가 주문을 못 받게 됩니다.
+ *   그래서 **지금 저장된 값을 읽어 두 칸만 갈아 끼웁니다.**
+ *
+ * ** 저장하면 revalidateTag(SETTINGS_TAG) 로 캐시를 비웁니다.
+ *   그래서 수익 화면 숫자가 즉시 다시 계산됩니다.
+ *
+ * * 값 범위는 normalizePayment 가 다시 한 번 다듬습니다. (0~100% · 0~10,000원)
+ */
+export async function saveFeesAction(input: {
+  cardFeeRate: number;
+  transferFee: number;
+}): Promise<ActionResult> {
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+
+  if (!Number.isFinite(input.cardFeeRate) || input.cardFeeRate < 0 || input.cardFeeRate > 100) {
+    return { ok: false, error: '카드 수수료율은 0~100 사이로 넣어 주세요.' };
+  }
+  if (!Number.isFinite(input.transferFee) || input.transferFee < 0 || input.transferFee > 10000) {
+    return { ok: false, error: '이체 수수료는 0~10,000원 사이로 넣어 주세요.' };
+  }
+
+  try {
+    const current = await getPaymentSettings();
+    await writeSetting(
+      PAYMENT_KEY,
+      normalizePayment({
+        ...current,
+        cardFeeRate: input.cardFeeRate,
+        transferFee: input.transferFee,
+      })
+    );
+    revalidateTag(SETTINGS_TAG);
+    revalidatePath('/admin/profit');
+    revalidatePath('/admin/settings');
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error, '수수료를 저장하지 못했습니다.');
   }
 }
 

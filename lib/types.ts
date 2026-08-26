@@ -69,6 +69,14 @@ export type Product = {
   subCategorySlug: string | null;
   price: number;
   originalPrice: number | null;
+  /**
+   * ** 매입 원가(원). 뉴욕 원가 + 택배비 합계입니다. (2026-08-27)
+   *   null 이면 "아직 안 넣음" 입니다. 0 과 다릅니다.
+   *   0 은 "정말 0원" 이고, null 은 수익 계산에서 빼고 "원가 미입력" 으로 셉니다.
+   * * 옵션(색 사이즈)별로 나누지 않습니다. 옷이라 원가가 같습니다.
+   * * 손님 화면에는 절대 내보내지 않습니다.
+   */
+  costPrice: number | null;
   summary: string;
   origin: string | null;
   manufacturer: string | null;
@@ -113,6 +121,8 @@ export type ProductRow = {
   sub_category_slug: string | null;
   price: number;
   original_price: number | null;
+  /** 매입 원가. 아직 칸이 없는 환경도 있어 선택 항목입니다. (2026-08-27) */
+  cost_price?: number | null;
   summary: string | null;
   origin: string | null;
   manufacturer: string | null;
@@ -212,6 +222,13 @@ export type OrderItem = {
   brandLabel: string;
   optionKey: string;
   unitPrice: number;
+  /**
+   * ** 주문한 그 순간의 개당 원가. (2026-08-27)
+   *   products.cost_price 를 복사해 둡니다. 상품 원가를 나중에 고쳐도
+   *   지나간 주문의 마진이 안 틀어집니다. unitPrice 와 같은 방식입니다.
+   * * null 이면 주문 당시 원가가 없었거나, 아직 칸이 없던 때의 주문입니다.
+   */
+  unitCost: number | null;
   quantity: number;
   lineTotal: number;
   thumbnailUrl: string;

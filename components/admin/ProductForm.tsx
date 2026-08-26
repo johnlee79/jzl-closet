@@ -52,6 +52,7 @@ function emptyInput(): ProductInput {
     subCategorySlug: null,
     price: 0,
     originalPrice: null,
+    costPrice: null,
     summary: '',
     origin: null,
     manufacturer: null,
@@ -468,6 +469,35 @@ export default function ProductForm({
                 onChange={(event) => set('price', Number(event.target.value))}
                 className="admin-input tabular-nums"
               />
+            </div>
+
+            {/*
+              ** 원가 — 수익 관리 화면이 쓰는 값입니다. (2026-08-27)
+                뉴욕 원가 + 택배비 합계를 여기 하나에 넣습니다. 나누지 않습니다.
+                옵션(색 사이즈)별로 나누지 않습니다. 옷이라 원가가 같습니다.
+              * 손님 화면에는 절대 안 나갑니다. 관리자만 봅니다.
+              * 비워 두면 "아직 안 넣음" 입니다. 0 과 다릅니다.
+                0 은 정말 0원이고, 비워 두면 수익 계산에서 빠집니다.
+            */}
+            <div>
+              <label className="admin-label" htmlFor="cost-price">
+                원가 (매입가)
+              </label>
+              <input
+                id="cost-price"
+                type="number"
+                min={0}
+                step={100}
+                value={form.costPrice ?? ''}
+                onChange={(event) =>
+                  set('costPrice', event.target.value ? Number(event.target.value) : null)
+                }
+                className="admin-input tabular-nums"
+                placeholder="비워 두면 수익 계산에서 빠집니다"
+              />
+              <p className="mt-1 text-[13px] text-slate-500">
+                뉴욕 원가 + 택배비를 더한 금액입니다. 손님에게는 보이지 않습니다.
+              </p>
             </div>
 
             <div>

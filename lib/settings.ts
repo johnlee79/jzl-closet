@@ -632,6 +632,23 @@ export function normalizePayment(value: unknown): PaymentSettings {
     methods: normalizeMethodFlags(raw.methods),
     // ★ 기본값은 반드시 false 입니다. 명시적으로 true 일 때만 켭니다. (lib/site-config.ts 주석 참고)
     ksnetNotifyAutoComplete: raw.ksnetNotifyAutoComplete === true,
+    /*
+     * ** 수수료 두 가지. (2026-08-27)
+     * * 요율은 소수점이 있어 count() 를 쓰지 않습니다. (count 는 정수로 만듭니다)
+     *   0 도 정상값입니다. 수수료가 없는 계약일 수 있습니다.
+     * * 말도 안 되는 값은 막습니다. 요율 0~100%, 이체수수료 0~10,000원.
+     *   잘못 넣으면 수익이 통째로 이상해집니다.
+     */
+    cardFeeRate: (() => {
+      const rate = Number(raw.cardFeeRate);
+      if (!Number.isFinite(rate) || rate < 0) return DEFAULT_PAYMENT.cardFeeRate;
+      return Math.min(100, rate);
+    })(),
+    transferFee: (() => {
+      const fee = Number(raw.transferFee);
+      if (!Number.isFinite(fee) || fee < 0) return DEFAULT_PAYMENT.transferFee;
+      return Math.min(10000, Math.round(fee));
+    })(),
   };
 }
 

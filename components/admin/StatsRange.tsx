@@ -2,31 +2,40 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { RANGE_PRESETS } from '@/lib/admin-range';
 
-const PRESETS = [
-  { key: 'today', label: '오늘' },
-  { key: '7d', label: '7일' },
-  { key: '30d', label: '30일' },
-  { key: 'month', label: '이번달' },
-  { key: 'lastMonth', label: '지난달' },
-];
+/*
+ * ** 버튼 목록을 여기 두지 않습니다. (2026-08-27)
+ *   lib/admin-range.ts 의 RANGE_PRESETS 하나만 씁니다.
+ *   버튼 목록과 기간을 푸는 코드가 갈라지면, 버튼은 '전일' 인데
+ *   실제로는 다른 기간을 보는 일이 생깁니다.
+ */
 
-/** 통계 화면의 기간 선택. 조건은 주소에 담아 새로고침해도 유지됩니다. */
+/**
+ * 관리자 화면의 기간 선택. 조건은 주소에 담아 새로고침해도 유지됩니다.
+ *
+ * ** 통계 화면과 수익 관리 화면이 같이 씁니다. (2026-08-27)
+ *   전에는 주소가 /admin/stats 로 박혀 있어 다른 화면에서 쓸 수 없었습니다.
+ *   basePath 를 받아 두 화면이 같은 컴포넌트를 쓰게 했습니다.
+ */
 export default function StatsRange({
   from,
   to,
   preset,
+  basePath,
 }: {
   from: string;
   to: string;
   preset: string;
+  /** 예: '/admin/stats' · '/admin/profit' */
+  basePath: string;
 }) {
   const router = useRouter();
   const [start, setStart] = useState(from);
   const [end, setEnd] = useState(to);
 
   const go = (query: Record<string, string>) => {
-    router.push(`/admin/stats?${new URLSearchParams(query).toString()}`);
+    router.push(`${basePath}?${new URLSearchParams(query).toString()}`);
   };
 
   return (
@@ -34,7 +43,7 @@ export default function StatsRange({
       <div>
         <span className="admin-label">기간</span>
         <div className="flex flex-wrap gap-2">
-          {PRESETS.map((item) => (
+          {RANGE_PRESETS.map((item) => (
             <button
               key={item.key}
               type="button"

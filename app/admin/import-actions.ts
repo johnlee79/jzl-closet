@@ -102,6 +102,9 @@ export async function importProductAction(
 
     const input: ProductInput = {
       slug,
+      // ** 셀스타에서 가져올 때는 원가를 모릅니다. 관리자가 나중에 넣습니다. (2026-08-27)
+      //   셀스타의 salePrice 는 우리 매입 원가가 아닙니다. (사장님 확인)
+      costPrice: null,
       name: payload.name.trim(),
       brandSlug: payload.brandSlug,
       categorySlug: payload.categorySlug,

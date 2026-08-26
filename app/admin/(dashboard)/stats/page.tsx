@@ -12,43 +12,10 @@ export const dynamic = 'force-dynamic';
 
 export const metadata = { title: '통계' };
 
-type SearchParams = { from?: string; to?: string; preset?: string };
+import { resolveRange, type RangeParams } from '@/lib/admin-range';
 
-/** preset 이름 → 기간 */
-function resolveRange(params: SearchParams): { from: string; to: string; preset: string } {
-  const today = kstToday();
-  const preset = params.preset ?? (params.from || params.to ? 'custom' : '7d');
+type SearchParams = RangeParams;
 
-  if (preset === 'custom' && (params.from || params.to)) {
-    return { from: params.from ?? today, to: params.to ?? today, preset: 'custom' };
-  }
-
-  const [year, month] = today.split('-').map(Number);
-  const pad = (value: number) => String(value).padStart(2, '0');
-
-  switch (preset) {
-    case 'today':
-      return { from: today, to: today, preset };
-    case '30d':
-      return { from: kstDaysAgo(29), to: today, preset };
-    case 'month':
-      return { from: `${year}-${pad(month)}-01`, to: today, preset };
-    case 'lastMonth': {
-      const lastYear = month === 1 ? year - 1 : year;
-      const last = month === 1 ? 12 : month - 1;
-      const start = `${lastYear}-${pad(last)}-01`;
-      // 이번 달 1일의 하루 전이 지난 달 마지막 날입니다.
-      const end = new Date(
-        new Date(`${year}-${pad(month)}-01T00:00:00Z`).getTime() - 24 * 60 * 60 * 1000
-      )
-        .toISOString()
-        .slice(0, 10);
-      return { from: start, to: end, preset };
-    }
-    default:
-      return { from: kstDaysAgo(6), to: today, preset: '7d' };
-  }
-}
 
 /** 막대그래프 한 줄 — 라이브러리 없이 폭만 조절해 그립니다. */
 function Bar({ label, value, max }: { label: string; value: number; max: number }) {
@@ -102,7 +69,9 @@ export default async function AdminStatsPage({
   searchParams: SearchParams;
 }) {
   const configured = isSupabaseConfigured();
-  const { from, to, preset } = resolveRange(searchParams);
+  // ** 기간 푸는 규칙은 lib/admin-range.ts 하나만 씁니다. (2026-08-27)
+  //   통계 화면의 기본은 지금까지대로 1주일입니다.
+  const { from, to, preset } = resolveRange(searchParams, '7d');
 
   const [sales, products, reviewStats, analytics] = configured
     ? await Promise.all([
@@ -174,7 +143,7 @@ export default async function AdminStatsPage({
 
       {/* ── 기간 선택 ─────────────────────────────────── */}
       <div className="admin-card mt-5 p-4">
-        <StatsRange from={from} to={to} preset={preset} />
+        <StatsRange from={from} to={to} preset={preset} basePath="/admin/stats" />
         <div className="mt-3">
           <a href={`/api/admin/export/stats?${exportQuery}`} download className="admin-btn">
             이 조건으로 CSV 내보내기

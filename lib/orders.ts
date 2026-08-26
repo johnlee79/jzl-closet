@@ -1,4 +1,5 @@
 import 'server-only';
+import { kstDaysAgo as kstDaysAgoPure, kstToday as kstTodayPure } from '@/lib/admin-range';
 import { revalidatePath } from 'next/cache';
 import { assertWritten } from '@/lib/db-write';
 import { sendOrderMail, sendShippingMail } from '@/lib/mail';
@@ -157,6 +158,8 @@ type OrderItemRow = {
   unit_price: number;
   quantity: number;
   line_total: number;
+  /** 주문 시점 원가 복사본. 아직 칸이 없는 환경도 있어 선택 항목입니다. (2026-08-27) */
+  unit_cost?: number | null;
   thumbnail_url: string | null;
   item_status: string | null;
 };
@@ -183,6 +186,8 @@ function rowToItem(row: OrderItemRow): OrderItem {
     brandLabel: row.brand_label ?? '',
     optionKey: row.option_key ?? '',
     unitPrice: row.unit_price,
+    // ** 아직 칸이 없는 환경이면 undefined 가 옵니다. null 로 둡니다. (2026-08-27)
+    unitCost: row.unit_cost ?? null,
     quantity: row.quantity,
     lineTotal: row.line_total,
     thumbnailUrl: row.thumbnail_url ?? '',
@@ -280,14 +285,13 @@ export function kstEnd(day: string): string {
 }
 
 /** 지금 한국 날짜 'yyyy-mm-dd' */
-export function kstToday(now = new Date()): string {
-  return new Date(now.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-}
-
-/** n일 전 한국 날짜 */
-export function kstDaysAgo(days: number, now = new Date()): string {
-  return kstToday(new Date(now.getTime() - days * 24 * 60 * 60 * 1000));
-}
+/*
+ * ** 정의는 lib/admin-range.ts 에 있습니다. (2026-08-27)
+ *   이 파일은 'server-only' 라, 클라이언트 컴포넌트가 쓰는 기간 선택이
+ *   여기서 가져가면 빌드가 깨집니다. 그래서 순수한 날짜 계산만 그쪽으로
+ *   옮기고 여기서는 다시 내보내기만 합니다. 부르던 곳은 그대로 씁니다.
+ */
+export { kstToday, kstDaysAgo } from '@/lib/admin-range';
 
 /* ------------------------------------------------------------------
  * 조회
@@ -719,6 +723,13 @@ type PricedLine = {
   brandLabel: string;
   optionKey: string;
   unitPrice: number;
+  /**
+   * ** 주문하는 그 순간의 개당 원가. (2026-08-27)
+   *   상품 표의 cost_price 를 그대로 가져옵니다. 옵션 추가금액은 안 더합니다.
+   *   원가는 옵션과 무관하게 같기 때문입니다. (옷)
+   * * 아직 칸이 없거나 원가를 안 넣은 상품이면 null 입니다.
+   */
+  unitCost: number | null;
   quantity: number;
   lineTotal: number;
   thumbnailUrl: string;
@@ -826,6 +837,12 @@ async function priceLines(
       brandLabel: row.brand_slug ? brandLabel(brands, row.brand_slug) : '',
       optionKey: item.optionKey,
       unitPrice,
+      /*
+       * ** 원가를 지금 복사해 둡니다. 나중에 상품 원가를 고쳐도
+       *   이 주문의 마진은 안 틀어집니다. unitPrice 와 같은 생각입니다.
+       * * 아직 칸이 없으면 undefined 라 null 이 됩니다. 그래도 주문은 됩니다.
+       */
+      unitCost: typeof row.cost_price === 'number' ? row.cost_price : null,
       quantity,
       lineTotal: unitPrice * quantity,
       thumbnailUrl: Array.isArray(row.thumbnails) ? String(row.thumbnails[0] ?? '') : '',
@@ -1462,24 +1479,58 @@ export async function createOrder(input: CheckoutInput): Promise<Order> {
     throw new Error(`주문을 저장하지 못했습니다: ${lastError?.message ?? '알 수 없는 오류'}`);
   }
 
-  const { data: itemData, error: itemError } = await supabase
-    .from(ITEMS)
-    .insert(
-      lines.map((line) => ({
-        order_id: row!.id,
-        product_id: line.productId,
-        product_slug: line.productSlug,
-        product_name: line.productName,
-        brand_label: line.brandLabel || null,
-        option_key: line.optionKey || null,
-        unit_price: line.unitPrice,
-        quantity: line.quantity,
-        line_total: line.lineTotal,
-        thumbnail_url: line.thumbnailUrl || null,
-        item_status: 'normal',
-      }))
-    )
-    .select('*');
+  /*
+   * ============================================================
+   * ** 원가 칸이 아직 없어도 주문이 막히지 않게 합니다 (2026-08-27)
+   * ============================================================
+   *
+   * ** unit_cost 는 정리SQL/11-원가-칸-추가.sql 을 돌려야 생깁니다.
+   *   그 전에 이 칸을 넣어 보내면 PostgREST 가 "그런 칸 없다" 로 막습니다.
+   *   **주문이 통째로 안 들어옵니다.** 절대 그러면 안 됩니다.
+   *   그래서 막히면 그 칸만 빼고 한 번 더 넣습니다.
+   *
+   * ** 조용히 넘어가지 않습니다. 왜 원가가 안 들어갔는지 로그로 남깁니다.
+   *   이 로그가 보이면 SQL 을 아직 안 돌린 것입니다.
+   *
+   * * 이미 있는 방식 그대로입니다. isMissingColumn 은 이 파일 위쪽에
+   *   schema-4b.sql 때문에 만들어 둔 것입니다. 새 방식이 아닙니다.
+   * * SQL 을 돌리고 나면 이 우회는 저절로 안 쓰입니다.
+   */
+  const itemRows = lines.map((line) => ({
+    order_id: row!.id,
+    product_id: line.productId,
+    product_slug: line.productSlug,
+    product_name: line.productName,
+    brand_label: line.brandLabel || null,
+    option_key: line.optionKey || null,
+    unit_price: line.unitPrice,
+    unit_cost: line.unitCost,
+    quantity: line.quantity,
+    line_total: line.lineTotal,
+    thumbnail_url: line.thumbnailUrl || null,
+    item_status: 'normal',
+  }));
+
+  let itemResult = await supabase.from(ITEMS).insert(itemRows).select('*');
+
+  if (itemResult.error && isMissingColumn(itemResult.error)) {
+    console.warn(
+      '[orders] order_items.unit_cost 칸이 아직 없습니다. 원가를 빼고 주문을 저장합니다. ' +
+        '정리SQL/11-원가-칸-추가.sql 을 실행해 주세요. (이 주문은 수익 계산에서 원가가 0 으로 잡힙니다)'
+    );
+    itemResult = await supabase
+      .from(ITEMS)
+      .insert(
+        itemRows.map((item) => {
+          const copy = { ...item } as Record<string, unknown>;
+          delete copy.unit_cost;
+          return copy;
+        })
+      )
+      .select('*');
+  }
+
+  const { data: itemData, error: itemError } = itemResult;
 
   if (itemError) {
     // 상품을 넣지 못했으면 껍데기 주문이 남습니다. 지우고 오류를 알립니다.
@@ -2721,8 +2772,8 @@ export async function getDashboardStats(now = new Date()): Promise<DashboardStat
   const supabase = getSupabaseAdminFresh();
   if (!supabase) return empty;
 
-  const today = kstToday(now);
-  const yesterday = kstDaysAgo(1, now);
+  const today = kstTodayPure(now);
+  const yesterday = kstDaysAgoPure(1, now);
 
   // 이번 달 · 지난 달 (한국 시간 기준)
   const [year, month] = today.split('-').map(Number);
@@ -2732,7 +2783,7 @@ export async function getDashboardStats(now = new Date()): Promise<DashboardStat
   const lastMonthStart = `${String(lastMonthYear).padStart(4, '0')}-${String(lastMonth).padStart(2, '0')}-01`;
   // 지난 달의 마지막 날 = 이번 달 1일의 하루 전
   const lastMonthEnd = new Date(new Date(`${monthStart}T00:00:00+09:00`).getTime() - 1000);
-  const lastMonthEndDay = kstToday(lastMonthEnd);
+  const lastMonthEndDay = kstTodayPure(lastMonthEnd);
 
   try {
     const [
