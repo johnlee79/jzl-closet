@@ -83,6 +83,7 @@ export default function MemberTable({
                         ? 'border-blue-700 font-semibold text-blue-700'
                         : 'border-transparent text-slate-600 hover:text-slate-900'
                     }`}
+                  prefetch={false}
                   >
                     {tab.label}
                     <span className="admin-badge bg-slate-100 text-slate-600">{count}</span>
@@ -152,7 +153,7 @@ export default function MemberTable({
           </a>
 
           {params.toString() ? (
-            <Link href={pathname} className="admin-btn">
+            <Link href={pathname} className="admin-btn" prefetch={false}>
               조건 초기화
             </Link>
           ) : null}
@@ -187,6 +188,7 @@ export default function MemberTable({
                     <Link
                       href={`/admin/members/${member.id}`}
                       className="font-medium text-blue-700 hover:underline"
+                    prefetch={false}
                     >
                       {member.name}
                     </Link>
@@ -215,7 +217,7 @@ export default function MemberTable({
                     {formatDate(member.createdAt)}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5">
-                    <Link href={`/admin/members/${member.id}`} className="admin-btn">
+                    <Link href={`/admin/members/${member.id}`} className="admin-btn" prefetch={false}>
                       상세
                     </Link>
                   </td>

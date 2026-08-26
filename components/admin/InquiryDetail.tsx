@@ -96,7 +96,7 @@ export default function InquiryDetail({
             {formatDateTime(inquiry.createdAt)}
           </p>
         </div>
-        <Link href="/admin/inquiries" className="admin-btn">
+        <Link href="/admin/inquiries" className="admin-btn" prefetch={false}>
           목록으로
         </Link>
       </div>
@@ -233,6 +233,7 @@ export default function InquiryDetail({
               <Link
                 href={`/admin/members/${inquiry.userId}`}
                 className="admin-btn mt-3 w-full"
+              prefetch={false}
               >
                 회원 상세 보기
               </Link>
@@ -274,7 +275,7 @@ export default function InquiryDetail({
                   ))}
               </ul>
 
-              <Link href={`/admin/orders/${order.id}`} className="admin-btn mt-3 w-full">
+              <Link href={`/admin/orders/${order.id}`} className="admin-btn mt-3 w-full" prefetch={false}>
                 주문 상세 보기
               </Link>
             </section>

@@ -545,7 +545,7 @@ export default function SellstarImporter({
         {existing ? (
           <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-[15px] leading-relaxed text-amber-900">
             ★ 이미 등록된 상품입니다 —{' '}
-            <Link href={`/admin/products?q=${existing.slug}`} className="underline">
+            <Link href={`/admin/products?q=${existing.slug}`} className="underline" prefetch={false}>
               {existing.name}
             </Link>
             . 그대로 등록하면 같은 상품이 하나 더 생깁니다. 기존 상품을 고치시려면 그쪽

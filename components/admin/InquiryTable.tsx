@@ -58,6 +58,7 @@ export default function InquiryTable({
                         ? 'border-blue-700 font-semibold text-blue-700'
                         : 'border-transparent text-slate-600 hover:text-slate-900'
                     }`}
+                  prefetch={false}
                   >
                     {tab.label}
                     <span
@@ -100,7 +101,7 @@ export default function InquiryTable({
             검색
           </button>
           {params.toString() ? (
-            <Link href={pathname} className="admin-btn">
+            <Link href={pathname} className="admin-btn" prefetch={false}>
               초기화
             </Link>
           ) : null}
@@ -138,6 +139,7 @@ export default function InquiryTable({
                     <Link
                       href={`/admin/inquiries/${inquiry.id}`}
                       className="font-medium text-blue-700 hover:underline"
+                    prefetch={false}
                     >
                       {inquiry.inquiryNo}
                     </Link>
@@ -160,6 +162,7 @@ export default function InquiryTable({
                       <Link
                         href={`/admin/orders/${inquiry.orderId}`}
                         className="text-blue-700 hover:underline"
+                      prefetch={false}
                       >
                         주문 보기
                       </Link>
@@ -176,7 +179,7 @@ export default function InquiryTable({
                     {formatDate(inquiry.createdAt)}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5">
-                    <Link href={`/admin/inquiries/${inquiry.id}`} className="admin-btn">
+                    <Link href={`/admin/inquiries/${inquiry.id}`} className="admin-btn" prefetch={false}>
                       {inquiry.status === 'pending' ? '답변하기' : '상세'}
                     </Link>
                   </td>

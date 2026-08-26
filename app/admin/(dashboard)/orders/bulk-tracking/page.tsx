@@ -21,7 +21,7 @@ export default function AdminBulkTrackingPage() {
             공급처가 회신한 송장을 붙여넣으면 주문번호로 찾아 한 번에 넣습니다.
           </p>
         </div>
-        <Link href="/admin/orders" className="admin-btn">
+        <Link href="/admin/orders" className="admin-btn" prefetch={false}>
           주문 목록으로
         </Link>
       </div>

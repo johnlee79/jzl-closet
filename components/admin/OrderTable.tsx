@@ -214,7 +214,7 @@ export default function OrderTable({ orders }: { orders: Order[] }) {
                 <p className="mt-2 text-[15px] text-amber-800">
                   지금 걸려 있는 조건: {activeFilters.join(' · ')}
                 </p>
-                <Link href={pathname} className="admin-btn mt-3 inline-flex">
+                <Link href={pathname} className="admin-btn mt-3 inline-flex" prefetch={false}>
                   조건 모두 지우고 전체 보기
                 </Link>
               </>
@@ -274,6 +274,7 @@ export default function OrderTable({ orders }: { orders: Order[] }) {
                     <Link
                       href={`/admin/orders/${order.id}`}
                       className="font-medium text-blue-700 hover:underline"
+                    prefetch={false}
                     >
                       {order.orderNo}
                     </Link>
@@ -331,7 +332,7 @@ export default function OrderTable({ orders }: { orders: Order[] }) {
                     )}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5">
-                    <Link href={`/admin/orders/${order.id}`} className="admin-btn">
+                    <Link href={`/admin/orders/${order.id}`} className="admin-btn" prefetch={false}>
                       상세
                     </Link>
                   </td>

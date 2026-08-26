@@ -73,7 +73,7 @@ function StatCard({
   } ${href ? 'transition-colors hover:bg-slate-50' : ''}`;
 
   return href ? (
-    <Link href={href} className={className}>
+    <Link href={href} className={className} prefetch={false}>
       {body}
     </Link>
   ) : (
@@ -94,6 +94,7 @@ function RecentRow({ order }: { order: Order }) {
         <Link
           href={`/admin/orders/${order.id}`}
           className="font-medium text-blue-700 hover:underline"
+        prefetch={false}
         >
           {order.orderNo}
         </Link>
@@ -182,6 +183,7 @@ export default async function AdminDashboardPage() {
         <Link
           href="/admin/orders?status=pending_payment"
           className="admin-card mt-5 flex flex-wrap items-center justify-between gap-3 border-amber-400 bg-amber-50 p-5 transition-colors hover:bg-amber-100"
+        prefetch={false}
         >
           <div>
             <p className="text-[17px] font-semibold text-amber-900">
@@ -210,6 +212,7 @@ export default async function AdminDashboardPage() {
         <Link
           href="/admin/inquiries?status=pending"
           className="admin-card mt-4 flex flex-wrap items-center justify-between gap-3 border-amber-400 bg-amber-50 p-5 transition-colors hover:bg-amber-100"
+        prefetch={false}
         >
           <div>
             <p className="text-[17px] font-semibold text-amber-900">
@@ -289,6 +292,7 @@ export default async function AdminDashboardPage() {
                       ? 'border-amber-300 bg-amber-50'
                       : ''
                   }`}
+                  prefetch={false}
                 >
                   <span className={`admin-badge ${statusBadgeClass(status)}`}>
                     {statusLabel(status)}
@@ -307,7 +311,7 @@ export default async function AdminDashboardPage() {
       <section className="mt-8">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-[18px] font-semibold text-slate-900">최근 주문 10건</h2>
-          <Link href="/admin/orders" className="admin-btn">
+          <Link href="/admin/orders" className="admin-btn" prefetch={false}>
             전체 보기
           </Link>
         </div>

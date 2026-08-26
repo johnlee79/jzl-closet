@@ -118,11 +118,11 @@ export default function ProductTable({
         </p>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
           {hasFilter ? (
-            <Link href={clearHref} className="admin-btn">
+            <Link href={clearHref} className="admin-btn" prefetch={false}>
               조건 지우기{totalAll > 0 ? ` (전체 ${totalAll}개 보기)` : ''}
             </Link>
           ) : null}
-          <Link href="/admin/products/new" className="admin-btn-primary">
+          <Link href="/admin/products/new" className="admin-btn-primary" prefetch={false}>
             + 새 상품 등록
           </Link>
         </div>
@@ -202,6 +202,7 @@ export default function ProductTable({
                     <Link
                       href={`/admin/products/${product.id}`}
                       className="font-medium text-blue-700 hover:underline"
+                    prefetch={false}
                     >
                       {product.name}
                     </Link>
@@ -287,6 +288,7 @@ export default function ProductTable({
                       <Link
                         href={`/admin/products/${product.id}`}
                         className="admin-btn px-2.5 py-1.5"
+                      prefetch={false}
                       >
                         수정
                       </Link>

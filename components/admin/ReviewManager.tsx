@@ -224,7 +224,7 @@ export default function ReviewManager({
           </div>
 
           {params.toString() ? (
-            <Link href={pathname} className="admin-btn">
+            <Link href={pathname} className="admin-btn" prefetch={false}>
               초기화
             </Link>
           ) : null}

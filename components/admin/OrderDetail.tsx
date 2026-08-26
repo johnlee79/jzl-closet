@@ -172,10 +172,10 @@ export default function OrderDetail({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href={`/admin/orders/${order.id}/print`} className="admin-btn">
+          <Link href={`/admin/orders/${order.id}/print`} className="admin-btn" prefetch={false}>
             주문서 인쇄
           </Link>
-          <Link href="/admin/orders" className="admin-btn">
+          <Link href="/admin/orders" className="admin-btn" prefetch={false}>
             목록으로
           </Link>
         </div>

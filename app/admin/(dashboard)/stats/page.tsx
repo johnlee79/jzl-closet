@@ -148,7 +148,7 @@ export default async function AdminStatsPage({
           ) : (
             <span className="ml-2 text-[15px]">
               (측정 ID 가 아직 등록되지 않았습니다 —{' '}
-              <Link href="/admin/settings?tab=analytics" className="underline">
+              <Link href="/admin/settings?tab=analytics" className="underline" prefetch={false}>
                 설정 &gt; 분석
               </Link>
               )

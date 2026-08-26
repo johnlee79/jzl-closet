@@ -229,7 +229,7 @@ export default function OrderFilters({
         </div>
 
         {params.toString() ? (
-          <Link href={pathname} className="admin-btn">
+          <Link href={pathname} className="admin-btn" prefetch={false}>
             조건 초기화
           </Link>
         ) : null}

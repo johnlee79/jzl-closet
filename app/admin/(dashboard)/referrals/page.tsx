@@ -108,7 +108,7 @@ export default async function AdminReferralsPage({
         {stats.heldCount > 0 ? (
           <p className="mt-3 text-[15px] text-amber-700">
             같은 기기·회선으로 보여 확인이 필요한 건이 {stats.heldCount}건 있습니다.{' '}
-            <Link href="/admin/referrals/review" className="underline">
+            <Link href="/admin/referrals/review" className="underline" prefetch={false}>
               검토하러 가기
             </Link>
           </p>

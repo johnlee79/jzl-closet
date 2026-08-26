@@ -185,6 +185,51 @@ function basePath(href: string): string {
   return href.split('?')[0];
 }
 
+/*
+ * ============================================================
+ * ★★★ 관리자 화면의 링크는 전부 prefetch={false} 입니다 (2026-08-26)
+ * ============================================================
+ *
+ * ★★ 되돌리지 마세요. 느려서 끈 것이 아니라 틀린 화면이 떠서 끈 것입니다.
+ *
+ * ★★ 무슨 일이 있었는가
+ *   회원 관리 화면에 **DB 에 없는 사람이 11명** 떴습니다.
+ *   서버는 정상이었습니다 — CSV 내보내기는 3줄이었고, 같은 주소를
+ *   55번 요청해도 전부 3행이었습니다. Supabase 에서 직접 센 것도 3명입니다.
+ *   그런데 화면에는 11행이 나왔고, 상단 숫자와 탭은 새것인데 목록만
+ *   옛것이었습니다. 한 화면에 두 시점이 섞여 있었습니다.
+ *
+ * ★★ 원인 — 브라우저가 미리 당겨 둔 화면 조각을 다시 쓴 것입니다
+ *   Next.js 의 <Link> 는 기본으로 화면을 미리 당겨 옵니다.
+ *   그 조각이 브라우저 안에 얼마나 남는지는 next.config.mjs 의
+ *   experimental.staleTimes 가 정합니다. 우리는 dynamic: 0 을 넣어
+ *   껐다고 생각했는데, 그것은 반쪽이었습니다.
+ *
+ *   Next 내부(prefetch-cache-utils.js)를 열어 보면 이렇습니다.
+ *       if (kind === "auto") {
+ *         if (Date.now() < prefetchTime + STATIC_STALETIME_MS) return stale;
+ *       }
+ *   <Link> 가 만든 항목은 kind 가 'auto' 라, dynamic 을 0 으로 해도
+ *   **static 창(기본 5분)** 동안 따로 살아남습니다.
+ *   실제로 배포된 번들에서 값을 확인했습니다 —  dynamic 0초 / static 300초.
+ *   그래서 사이드바를 한 번 훑기만 해도 관리자 화면들이 5분짜리로 쌓입니다.
+ *
+ * ★★ layout.tsx 의 fetchCache = 'force-no-store' 로는 못 막습니다.
+ *   그것은 **서버**가 Supabase 응답을 저장하지 않게 하는 설정입니다.
+ *   브라우저 안의 저장소와는 아무 상관이 없습니다.
+ *
+ * ★★ 왜 이 방법을 골랐는가
+ *   staleTimes.static 을 0 으로 두면 확실하지만 **손님 화면까지** 느려집니다.
+ *   이 사이트는 손님 화면의 체감 속도를 건드리지 않기로 되어 있습니다.
+ *   그래서 관리자 링크만 껐습니다. 손님 화면은 그대로 빠릅니다.
+ *
+ * ★★ 관리자는 조금 느린 것보다 틀린 화면이 훨씬 나쁜 곳입니다.
+ *   주문·회원·재고를 보고 물건을 내보내는 화면입니다. 옛 목록을 보고
+ *   판단하면 물건이 잘못 나갑니다. 0.2초 빠른 것과 바꿀 수 없습니다.
+ *
+ * ★ 관리자 화면 안에서도 **손님 화면으로 가는 링크**(상품 미리보기,
+ *   공지 보기 등)에는 넣지 않았습니다. 그쪽은 손님 화면이라 그대로 둡니다.
+ */
 export default function AdminShell({
   children,
   pendingCount = 0,
@@ -343,6 +388,7 @@ export default function AdminShell({
               className={`flex items-center gap-2 rounded-md px-3 py-2.5 text-[16px] font-medium transition-colors ${
                 active ? 'bg-blue-700 text-white' : 'text-slate-800 hover:bg-slate-100'
               }`}
+            prefetch={false}
             >
               {group.icon}
               {group.label}
@@ -439,6 +485,7 @@ export default function AdminShell({
                             ? 'bg-blue-700 font-medium text-white'
                             : 'text-slate-700 hover:bg-slate-100'
                         }`}
+                      prefetch={false}
                       >
                         {item.label}
                         <Badge
@@ -480,7 +527,7 @@ export default function AdminShell({
             로고를 누르면 처음 화면으로 가는 것이 웹에서 굳어진 약속입니다.
             지금까지는 글자였을 뿐이라 눌러도 아무 일도 없었습니다.
         */}
-        <Link href="/admin" className="text-[17px] font-semibold hover:underline">
+        <Link href="/admin" className="text-[17px] font-semibold hover:underline" prefetch={false}>
           JZL CLOSET 관리자
         </Link>
         <div className="flex items-center gap-2">
@@ -500,7 +547,7 @@ export default function AdminShell({
         >
           <div className="mb-6 hidden items-start justify-between gap-2 lg:flex">
             {/* ★ 사이드바 로고도 같습니다. 두 곳이 다르게 동작하면 더 헷갈립니다. */}
-            <Link href="/admin" className="group">
+            <Link href="/admin" className="group" prefetch={false}>
               <p className="text-[17px] font-semibold text-slate-900 group-hover:underline">
                 JZL CLOSET
               </p>

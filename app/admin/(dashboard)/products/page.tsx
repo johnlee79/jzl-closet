@@ -79,7 +79,7 @@ export default async function AdminProductsPage({
             {totalPages > 1 ? ` · ${page}/${totalPages} 페이지` : ''}
           </p>
         </div>
-        <Link href="/admin/products/new" className="admin-btn-primary">
+        <Link href="/admin/products/new" className="admin-btn-primary" prefetch={false}>
           + 새 상품 등록
         </Link>
       </div>
@@ -132,6 +132,7 @@ export default async function AdminProductsPage({
                     ? 'border-blue-700 bg-blue-700 font-semibold text-white'
                     : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
                 }`}
+              prefetch={false}
               >
                 {number}
               </Link>

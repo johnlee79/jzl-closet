@@ -284,7 +284,7 @@ export default function ProductForm({
             <p className="mt-1 text-[15px] text-slate-500">/products/{product.slug}</p>
           ) : null}
         </div>
-        <Link href="/admin/products" className="admin-btn">
+        <Link href="/admin/products" className="admin-btn" prefetch={false}>
           목록으로
         </Link>
       </div>

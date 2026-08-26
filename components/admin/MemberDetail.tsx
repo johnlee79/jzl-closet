@@ -139,7 +139,7 @@ export default function MemberDetail({
             {profile.email || '이메일 없음'} · 가입 {formatDate(profile.createdAt)}
           </p>
         </div>
-        <Link href="/admin/members" className="admin-btn">
+        <Link href="/admin/members" className="admin-btn" prefetch={false}>
           목록으로
         </Link>
       </div>
@@ -297,6 +297,7 @@ export default function MemberDetail({
                             <Link
                               href={`/admin/orders/${order.id}`}
                               className="font-medium text-blue-700 hover:underline"
+                            prefetch={false}
                             >
                               {order.orderNo}
                             </Link>

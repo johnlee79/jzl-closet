@@ -65,6 +65,7 @@ export default async function AdminDesignPage({
                       ? 'border-blue-700 font-semibold text-blue-700'
                       : 'border-transparent text-slate-600 hover:text-slate-900'
                   }`}
+                prefetch={false}
                 >
                   {item.label}
                 </Link>

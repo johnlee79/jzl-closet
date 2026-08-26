@@ -163,7 +163,7 @@ export default function SalesInfoForm({
         <h2 className="text-[18px] font-semibold text-slate-900">판매자 정보</h2>
         <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
           ★ 여기서는 고치지 않습니다.{' '}
-          <Link href="/admin/settings?tab=store" className="text-blue-700 underline">
+          <Link href="/admin/settings?tab=store" className="text-blue-700 underline" prefetch={false}>
             설정 &gt; 스토어 정보
           </Link>{' '}
           의 값을 그대로 가져다 씁니다. 같은 내용을 두 군데 적어 두면 한쪽만 고쳐져

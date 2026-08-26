@@ -100,6 +100,7 @@ export default async function AdminSettingsPage({
                       ? 'border-blue-700 font-semibold text-blue-700'
                       : 'border-transparent text-slate-600 hover:text-slate-900'
                   }`}
+                prefetch={false}
                 >
                   {item.label}
                 </Link>
@@ -236,7 +237,7 @@ export default async function AdminSettingsPage({
               </p>
               <p className="mt-3">
                 주문 내보내기(택배사 일괄등록 양식 포함)는{' '}
-                <Link href="/admin/orders" className="text-blue-700 underline">
+                <Link href="/admin/orders" className="text-blue-700 underline" prefetch={false}>
                   주문 관리
                 </Link>{' '}
                 화면에 있습니다. 필터를 걸어 둔 상태 그대로 받을 수 있습니다.

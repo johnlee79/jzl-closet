@@ -98,6 +98,7 @@ export default async function AdminReviewsPage({
                   ? 'border-blue-700 bg-blue-700 font-semibold text-white'
                   : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
               }`}
+            prefetch={false}
             >
               {number}
             </Link>

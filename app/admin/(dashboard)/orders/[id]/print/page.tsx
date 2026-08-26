@@ -27,7 +27,7 @@ export default async function OrderPrintPage({ params }: { params: { id: string 
     <div className="mx-auto w-full max-w-[800px]">
       <div className="mb-5 flex flex-wrap gap-2 print:hidden">
         <PrintButton />
-        <Link href={`/admin/orders/${order.id}`} className="admin-btn">
+        <Link href={`/admin/orders/${order.id}`} className="admin-btn" prefetch={false}>
           주문 상세로 돌아가기
         </Link>
       </div>

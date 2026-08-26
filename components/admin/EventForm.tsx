@@ -240,11 +240,11 @@ export default function EventForm({
 
       <p className="rounded-md bg-slate-50 px-4 py-3 text-[15px] leading-relaxed text-slate-700">
         이벤트 공지와 팝업은{' '}
-        <Link href="/admin/notices" className="text-blue-700 underline">
+        <Link href="/admin/notices" className="text-blue-700 underline" prefetch={false}>
           공지 관리
         </Link>{' '}
         ·{' '}
-        <Link href="/admin/popups" className="text-blue-700 underline">
+        <Link href="/admin/popups" className="text-blue-700 underline" prefetch={false}>
           팝업 관리
         </Link>{' '}
         에서 등록하세요. 같은 기능을 여기에 또 만들지 않았습니다.

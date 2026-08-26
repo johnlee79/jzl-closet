@@ -29,7 +29,7 @@ export default async function AdminOrderCustomersPage() {
             건은 금액에서 뺐습니다.
           </p>
         </div>
-        <Link href="/admin/orders" className="admin-btn">
+        <Link href="/admin/orders" className="admin-btn" prefetch={false}>
           주문 목록으로
         </Link>
       </div>
@@ -60,6 +60,7 @@ export default async function AdminOrderCustomersPage() {
                       <Link
                         href={`/admin/members/${row.userId}`}
                         className="text-blue-700 hover:underline"
+                      prefetch={false}
                       >
                         {row.name || '(이름 없음)'}
                       </Link>
