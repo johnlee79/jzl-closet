@@ -29,8 +29,19 @@ type Leaf = {
   /** 같은 화면을 상태로 나눠 쓰는 경우 (주문) — ?status= 값까지 맞아야 활성 */
   status?: string;
   /** 어떤 숫자를 뱃지로 붙일지 */
-  badge?: 'orders' | 'needsCheck' | 'unshipped' | 'inquiries';
+  badge?: 'pendingPayment' | 'needsCheck' | 'unshipped' | 'cancelRequested' | 'inquiries';
 };
+
+/**
+ * ** 빨간 뱃지로 낼 것들. (2026-08-26)
+ *   "돈이 오갔는지 모르는 주문" 과 "손님이 취소를 요청한 주문" 입니다.
+ *   둘 다 모르고 지나가면 손해나 분쟁으로 이어집니다.
+ *   나머지(입금대기 · 미출고 · 미답변 문의)는 노랑입니다. 밀린 일이지
+ *   사고는 아닙니다.
+ * * 한 곳에 모아 둡니다. 두 자리에서 따로 판단하면 접었을 때와 펼쳤을 때
+ *   색이 다른 일이 생깁니다.
+ */
+const DANGER_BADGES: Leaf['badge'][] = ['needsCheck', 'cancelRequested'];
 
 type Group = {
   key: string;
@@ -114,12 +125,39 @@ const MENU: Group[] = [
      *   과 같아야 합니다. 다르면 뱃지 숫자와 목록 건수가 어긋납니다.
      */
     items: [
-      { href: '/admin/orders', label: '주문 목록', exact: true, badge: 'orders' },
+      /*
+        ** '주문 목록' 에는 숫자를 붙이지 않습니다. (2026-08-26)
+          전에는 여기 노란 숫자가 붙어 있었는데, 그것이 입금대기 건수였습니다.
+          이름은 '주문 목록' 인데 숫자는 입금대기라, 보는 사람이 그 숫자가
+          무엇인지 알 수 없었습니다. 새 주문인지 취소 요청인지 짐작만 했습니다.
+          숫자는 아래 '입금대기' 로 옮겼습니다. 이름이 곧 그 숫자의 뜻입니다.
+      */
+      { href: '/admin/orders', label: '주문 목록', exact: true },
       {
         href: '/admin/orders?status=needs_check',
         label: '확인 필요',
         status: 'needs_check',
         badge: 'needsCheck',
+      },
+      /*
+        ** '취소요청' 을 '미출고' 바로 위에 둡니다. (2026-08-26)
+          순서가 곧 처리 순서입니다. 취소 요청이 들어온 주문을 모르고
+          보내 버리면 회수 배송비가 나가고 분쟁이 됩니다.
+          보내기 전에 반드시 먼저 보는 자리라 위에 둡니다.
+        ** 전에는 이 숫자를 볼 곳이 없었습니다. '주문 목록' 옆 노란 뱃지는
+          입금대기 건수라 취소 요청과 무관합니다.
+      */
+      {
+        href: '/admin/orders?status=cancel_requested',
+        label: '취소요청',
+        status: 'cancel_requested',
+        badge: 'cancelRequested',
+      },
+      {
+        href: '/admin/orders?status=pending_payment',
+        label: '입금대기',
+        status: 'pending_payment',
+        badge: 'pendingPayment',
       },
       {
         href: '/admin/orders?status=unshipped',
@@ -235,15 +273,18 @@ export default function AdminShell({
   pendingCount = 0,
   needsCheckCount = 0,
   unshippedCount = 0,
+  cancelRequestedCount = 0,
   pendingInquiryCount = 0,
 }: {
   children: React.ReactNode;
-  /** 결제대기 건수 — 주문 목록 옆에 뱃지로 붙습니다. */
+  /** 입금대기 건수 — '입금대기' 메뉴 옆에 뱃지로 붙습니다. (전에는 '주문 목록' 옆) */
   pendingCount?: number;
   /** 승인확인실패 + 검토필요 — 돈이 오갔는지 모르는 주문입니다. */
   needsCheckCount?: number;
   /** 결제완료 + 상품준비중 — 아직 안 보낸 주문입니다. */
   unshippedCount?: number;
+  /** 손님이 취소를 요청했고 아직 처리하지 않은 주문입니다. 보내면 안 됩니다. */
+  cancelRequestedCount?: number;
   /** 미답변 문의 건수 — 문의 관리 옆에 뱃지로 붙습니다. */
   pendingInquiryCount?: number;
 }) {
@@ -258,12 +299,14 @@ export default function AdminShell({
 
   const badgeOf = (kind?: Leaf['badge']): number => {
     switch (kind) {
-      case 'orders':
+      case 'pendingPayment':
         return pendingCount;
       case 'needsCheck':
         return needsCheckCount;
       case 'unshipped':
         return unshippedCount;
+      case 'cancelRequested':
+        return cancelRequestedCount;
       case 'inquiries':
         return pendingInquiryCount;
       default:
@@ -426,7 +469,8 @@ export default function AdminShell({
                   active={false}
                   tone={
                     (group.items ?? []).some(
-                      (item) => item.badge === 'needsCheck' && badgeOf(item.badge) > 0
+                      (item) =>
+                        DANGER_BADGES.includes(item.badge) && badgeOf(item.badge) > 0
                     )
                       ? 'danger'
                       : 'warn'
@@ -491,7 +535,7 @@ export default function AdminShell({
                         <Badge
                           count={count}
                           active={leafActive}
-                          tone={item.badge === 'needsCheck' ? 'danger' : 'warn'}
+                          tone={DANGER_BADGES.includes(item.badge) ? 'danger' : 'warn'}
                         />
                       </Link>
                     </li>

@@ -2581,9 +2581,27 @@ export async function countOrdersByStatus(
   return result;
 }
 
+/**
+ * ============================================================
+ * ** 사이드바 뱃지 숫자는 반드시 지금 값이어야 합니다 (2026-08-26)
+ * ============================================================
+ *
+ * ** getSupabaseAdminFresh() 를 씁니다. 캐시된 클라이언트가 아닙니다.
+ *   회원 목록에서 없는 사람 11명이 뜨던 것과 같은 뿌리입니다.
+ *   그때 원인은 Vercel 이 조회 결과를 따로 보관해 두었다가 다시 내주는
+ *   것이었고, 화면에 dynamic force-dynamic 과 fetchCache force-no-store 를
+ *   걸어도 막지 못했습니다. 조회를 보내는 쪽에서 no-store 로 보내야만
+ *   막혔습니다.
+ *
+ * * 뱃지는 특히 위험합니다. 사장님이 "오늘 할 일이 몇 건인지" 를 이 숫자로
+ *   판단합니다. 옛 숫자가 보이면 취소 요청을 못 보고 물건을 보냅니다.
+ *
+ * * 세는 기준은 바꾸지 않았습니다. 조회를 보내는 방법만 바꿨습니다.
+ */
+
 /** 사이드바 뱃지에 쓰는 입금대기 건수 */
 export async function countPendingPayment(): Promise<number> {
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseAdminFresh();
   if (!supabase) return 0;
   const { count, error } = await supabase
     .from(ORDERS)
@@ -2595,7 +2613,8 @@ export async function countPendingPayment(): Promise<number> {
 
 /** 여러 상태를 한 번에 세는 공통부 */
 async function countByStatuses(statuses: string[]): Promise<number> {
-  const supabase = getSupabaseAdmin();
+  // ** 위 countPendingPayment 의 설명과 같은 이유로 새로 묻습니다.
+  const supabase = getSupabaseAdminFresh();
   if (!supabase) return 0;
   const { count, error } = await supabase
     .from(ORDERS)
@@ -2616,6 +2635,21 @@ export async function countNeedsCheck(): Promise<number> {
 /** 아직 안 보낸 주문 수 — 결제완료 + 상품준비중 */
 export async function countUnshipped(): Promise<number> {
   return countByStatuses(UNSHIPPED_STATUSES);
+}
+
+/**
+ * 손님이 취소를 요청해 놓고 우리가 아직 처리하지 않은 주문 수.
+ *
+ * ** 이 숫자가 0 이 아니면 그 주문은 보내면 안 됩니다.
+ *   보내 놓고 취소 요청을 뒤늦게 보면 회수 배송비가 나가고 분쟁이 됩니다.
+ *   그래서 사이드바에서 '미출고' 보다 위에 둡니다.
+ *
+ * * 상태 하나만 봅니다. cancelled(취소완료) 는 이미 처리가 끝난 것이라
+ *   세지 않습니다. 취소 처리를 하면 이 숫자가 줄어듭니다.
+ * * 세는 방법은 '확인 필요' '미출고' 와 똑같습니다. 새로 만들지 않았습니다.
+ */
+export async function countCancelRequested(): Promise<number> {
+  return countByStatuses(['cancel_requested']);
 }
 
 /** 기간 내 매출 합계 — 취소·반품·결제실패는 빼고 셉니다. */
