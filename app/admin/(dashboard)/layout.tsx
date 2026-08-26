@@ -1,5 +1,4 @@
 import AdminShell from '@/components/admin/AdminShell';
-import AdminSessionKeeper from '@/components/admin/AdminSessionKeeper';
 import { countPendingInquiries } from '@/lib/inquiries';
 import {
   countCancelRequested,
@@ -79,11 +78,31 @@ export default async function AdminDashboardLayout({
       pendingInquiryCount={pendingInquiryCount}
     >
       {/*
-        ★ 관리자 로그인이 쓰는 동안 안 끊기게 조용히 이어 줍니다. (2026-08-26)
-          상품 등록 화면에 오래 머물다 [저장]을 누르면 로그아웃되던 문제입니다.
-          아무것도 그리지 않습니다. 자세한 내용은 그 파일의 설명을 보세요.
+        ============================================================
+        ** AdminSessionKeeper 를 여기서 뺐습니다 (2026-08-26)
+        ============================================================
+
+        ** 하는 일이 겹쳤습니다.
+          그것은 30분마다 /api/admin/session 을 불러 getUser() 를 시켰습니다.
+          지금은 사이드바(AdminShell)가 30초마다 /api/admin/badges 를 부르고,
+          그 안의 isAdmin() 이 똑같이 getUser() 를 부릅니다.
+          타이머가 두 개 돌 이유가 없습니다.
+
+        ** 세션 유지는 오히려 좋아집니다.
+          30분이 아니라 30초마다 확인하므로, 상품 등록 화면에 오래 머물다
+          [저장]을 눌러도 끊기지 않습니다. 그것이 원래 문제였습니다.
+
+        ** 만료가 없어진 것은 아닙니다.
+          탭을 뒤로 보내거나 창을 닫으면 호출이 멈춥니다. 오래 안 쓰면
+          여전히 끊깁니다. 공용 PC 를 생각한 원래 의도 그대로입니다.
+
+        * 30초마다 토큰이 바뀌지는 않습니다. Supabase 는 액세스 토큰이
+          만료됐을 때만 갱신합니다. 실제 갱신은 한 시간에 한 번입니다.
+
+        * 파일(components/admin/AdminSessionKeeper.tsx)과
+          주소(app/api/admin/session/route.ts)는 지우지 않고 남겨 두었습니다.
+          되돌릴 때 이 한 줄만 되살리면 됩니다.
       */}
-      <AdminSessionKeeper />
       {children}
     </AdminShell>
   );

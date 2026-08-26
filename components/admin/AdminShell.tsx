@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import ThemeToggle from '@/components/admin/ThemeToggle';
 import { adminSignOutAction } from '@/app/admin/login-actions';
 import ScrollToTop from '@/components/ScrollToTop';
@@ -297,22 +297,181 @@ export default function AdminShell({
   const [expanded, setExpanded] = useState<string[]>([]);
   const [restored, setRestored] = useState(false);
 
-  const badgeOf = (kind?: Leaf['badge']): number => {
-    switch (kind) {
-      case 'pendingPayment':
-        return pendingCount;
-      case 'needsCheck':
-        return needsCheckCount;
-      case 'unshipped':
-        return unshippedCount;
-      case 'cancelRequested':
-        return cancelRequestedCount;
-      case 'inquiries':
-        return pendingInquiryCount;
-      default:
-        return 0;
+  /*
+   * ============================================================
+   * ** 사이드바 숫자는 스스로 새로 가져옵니다 (2026-08-26)
+   * ============================================================
+   *
+   * ** 무엇이 문제였나
+   *   이 사이드바는 레이아웃에서 그려집니다. Next.js 는 화면을 옮길 때
+   *   **레이아웃을 다시 그리지 않습니다.** 바뀌는 것은 가운데 본문뿐입니다.
+   *   그래서 관리자 창을 한 번 연 뒤로는 F5 를 누르기 전까지 이 숫자가
+   *   처음 값에 얼어붙어 있었습니다.
+   *
+   *   손님이 취소 요청을 눌러도 관리자는 몰랐습니다. revalidatePath 는
+   *   "다음에 물어보면 새 걸 주겠다" 는 약속일 뿐이고, 서버가 이미 열려
+   *   있는 창에게 먼저 말을 걸 방법은 없습니다.
+   *
+   * ** 서버가 준 값을 처음 값으로 삼고, 그 뒤로는 30초마다 물어봅니다.
+   *   실시간이 아니어도 됩니다. 1분 안에만 뜨면 되는 숫자입니다.
+   *
+   * * 화면 뒤에 있으면 부르지 않습니다. 열어만 두고 다른 일을 할 때
+   *   요청이 나가면 낭비입니다. 다시 앞으로 오면 즉시 한 번 부릅니다.
+   *
+   * * 실패하면 이전 숫자를 그대로 둡니다. 0 으로 뭉개지 않습니다.
+   *   잠깐 인터넷이 끊겼다고 "할 일 없음" 으로 보이면 안 됩니다.
+   */
+  const [counts, setCounts] = useState<Record<string, number>>({
+    pendingPayment: pendingCount,
+    needsCheck: needsCheckCount,
+    unshipped: unshippedCount,
+    cancelRequested: cancelRequestedCount,
+    inquiries: pendingInquiryCount,
+  });
+
+  /** 방금 늘어난 뱃지 — 잠깐 깜빡입니다. */
+  const [flashing, setFlashing] = useState<Record<string, boolean>>({});
+  /** 늘어났는데 아직 그 메뉴를 안 눌러 본 것 — 점(●)이 남습니다. */
+  const [unseen, setUnseen] = useState<Record<string, boolean>>({});
+
+  /*
+   * * 서버가 새 값을 주면(F5·로고 누름 등) 그것을 따릅니다.
+   *   서버 쪽은 방금 구운 값이라 우리 것보다 확실합니다.
+   */
+  useEffect(() => {
+    setCounts({
+      pendingPayment: pendingCount,
+      needsCheck: needsCheckCount,
+      unshipped: unshippedCount,
+      cancelRequested: cancelRequestedCount,
+      inquiries: pendingInquiryCount,
+    });
+  }, [
+    pendingCount,
+    needsCheckCount,
+    unshippedCount,
+    cancelRequestedCount,
+    pendingInquiryCount,
+  ]);
+
+  /** 이 간격으로 물어봅니다. 이유는 위 설명에 있습니다. */
+  const EVERY_MS = 30 * 1000;
+
+  const pullCounts = useCallback(async () => {
+    // ** 화면 뒤에 있으면 아예 부르지 않습니다.
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+
+    try {
+      const response = await fetch('/api/admin/badges', { cache: 'no-store' });
+      if (!response.ok) {
+        /*
+         * * 조용히 넘어가지 않습니다. 401 이면 세션이 끊긴 것이고,
+         *   그 상태로 숫자만 멈춰 있으면 원인을 찾을 수 없습니다.
+         */
+        console.warn(`[admin] 사이드바 숫자를 가져오지 못했습니다: HTTP ${response.status}`);
+        return;
+      }
+      const next = (await response.json()) as Record<string, number>;
+
+      setCounts((prev) => {
+        const grown: string[] = [];
+        for (const key of Object.keys(next)) {
+          if (typeof next[key] !== 'number') continue;
+          if (next[key] > (prev[key] ?? 0)) grown.push(key);
+        }
+        if (grown.length > 0) {
+          /*
+           * * 늘어났을 때만 표시합니다. 줄어든 것은 우리가 처리해서
+           *   줄어든 것이라 놀랄 일이 아닙니다.
+           */
+          setFlashing((old) => {
+            const on = { ...old };
+            grown.forEach((key) => (on[key] = true));
+            return on;
+          });
+          setUnseen((old) => {
+            const on = { ...old };
+            grown.forEach((key) => (on[key] = true));
+            return on;
+          });
+          window.setTimeout(() => {
+            setFlashing((old) => {
+              const off = { ...old };
+              grown.forEach((key) => delete off[key]);
+              return off;
+            });
+          }, 1500);
+        }
+        return { ...prev, ...next };
+      });
+    } catch (error) {
+      // 네트워크가 잠깐 끊긴 경우입니다. 이전 숫자를 그대로 둡니다.
+      console.warn(
+        '[admin] 사이드바 숫자를 가져오는 중 오류:',
+        error instanceof Error ? error.message : String(error)
+      );
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // 처음 한 번. 이 요청이 관리자 세션도 함께 이어 줍니다.
+    void pullCounts();
+
+    const timer = window.setInterval(() => void pullCounts(), EVERY_MS);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void pullCounts();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [pullCounts, EVERY_MS]);
+
+  /*
+   * * 뱃지 종류 이름이 곧 counts 의 열쇠입니다.
+   *   /api/admin/badges 가 돌려주는 이름과 같아야 합니다.
+   *   다르면 숫자가 조용히 0 으로 보입니다.
+   */
+  const badgeOf = (kind?: Leaf['badge']): number => (kind ? (counts[kind] ?? 0) : 0);
+
+  /*
+   * ** 그 메뉴를 한 번 보면 점(●)을 지웁니다. (2026-08-26)
+   *   "새로 들어왔다" 는 표시는 확인하면 없어져야 합니다.
+   *   안 지우면 표시가 늘 켜져 있어 아무 뜻도 없어집니다.
+   *
+   * * 활성 판정은 아래 메뉴를 그릴 때와 같은 기준입니다.
+   *   기준이 갈라지면 "눌렀는데 점이 안 없어지는" 일이 생깁니다.
+   * * 그리는 도중에 상태를 바꾸지 않습니다. 화면을 옮긴 뒤에 정리합니다.
+   */
+  useEffect(() => {
+    const status = searchParams.get('status') ?? '';
+    const tab = searchParams.get('tab') ?? '';
+
+    const seen: string[] = [];
+    for (const group of MENU) {
+      for (const item of group.items ?? []) {
+        if (!item.badge) continue;
+        const base = basePath(item.href);
+        const active = item.status
+          ? pathname === base && status === item.status
+          : item.tab
+            ? pathname === base && tab === item.tab
+            : item.exact
+              ? pathname === base
+              : pathname === base || pathname.startsWith(`${base}/`);
+        if (active) seen.push(item.badge);
+      }
+    }
+    if (seen.length === 0) return;
+
+    setUnseen((prev) => {
+      if (!seen.some((key) => prev[key])) return prev;
+      const next = { ...prev };
+      seen.forEach((key) => delete next[key]);
+      return next;
+    });
+  }, [pathname, searchParams]);
 
   /** 이 그룹 안에 지금 보고 있는 화면이 있는지 */
   const groupActive = (group: Group): boolean => {
@@ -397,22 +556,54 @@ export default function AdminShell({
     count,
     active,
     tone = 'warn',
+    flash = false,
+    isNew = false,
   }: {
     count: number;
     active: boolean;
     tone?: 'warn' | 'danger';
+    /** 방금 늘어났는지 — 1.5초 동안 깜빡입니다. */
+    flash?: boolean;
+    /** 늘어난 뒤 아직 그 메뉴를 안 눌렀는지 — 점(●)이 남습니다. */
+    isNew?: boolean;
   }) =>
     count > 0 ? (
-      <span
-        className={`admin-badge ${
-          active
-            ? 'bg-white text-blue-700'
-            : tone === 'danger'
-              ? 'bg-red-100 text-red-700'
-              : 'bg-amber-100 text-amber-800'
-        }`}
-      >
-        {count}
+      <span className="flex shrink-0 items-center gap-1">
+        <span
+          className={`admin-badge ${
+            active
+              ? 'bg-white text-blue-700'
+              : tone === 'danger'
+                ? 'bg-red-100 text-red-700'
+                : 'bg-amber-100 text-amber-800'
+          } ${
+            /*
+             * ** 방금 늘어난 것만 잠깐 깜빡입니다. (2026-08-26)
+             *   숫자만 조용히 바뀌면 보고 있어도 모릅니다.
+             *   줄어들 때는 안 합니다. 처리해서 줄어든 것은 놀랄 일이 아닙니다.
+             * * 소리는 내지 않습니다.
+             */
+            flash ? 'animate-pulse ring-2 ring-offset-1 ring-red-400' : ''
+          }`}
+        >
+          {count}
+        </span>
+        {/*
+          ** 깜빡임은 그 순간에 보고 있어야 압니다. 자리를 비웠다 오면 못 봅니다.
+            그래서 아직 안 본 것에는 점을 남깁니다. 그 메뉴를 한 번 누르면 사라집니다.
+          * 색만으로 알리지 않습니다. 읽어 주는 글자를 함께 둡니다.
+        */}
+        {isNew ? (
+          <>
+            <span
+              aria-hidden="true"
+              className={`inline-block h-[6px] w-[6px] rounded-full ${
+                active ? 'bg-white' : 'bg-red-500'
+              }`}
+            />
+            <span className="sr-only">새로 들어온 건이 있습니다</span>
+          </>
+        ) : null}
       </span>
     ) : null;
 
@@ -536,6 +727,8 @@ export default function AdminShell({
                           count={count}
                           active={leafActive}
                           tone={DANGER_BADGES.includes(item.badge) ? 'danger' : 'warn'}
+                          flash={Boolean(item.badge && flashing[item.badge])}
+                          isNew={Boolean(item.badge && unseen[item.badge])}
                         />
                       </Link>
                     </li>
@@ -570,8 +763,29 @@ export default function AdminShell({
           ★ 누르면 대시보드로 갑니다. (2026-08-25)
             로고를 누르면 처음 화면으로 가는 것이 웹에서 굳어진 약속입니다.
             지금까지는 글자였을 뿐이라 눌러도 아무 일도 없었습니다.
+
+          ** router.refresh() 와 숫자 다시 가져오기를 함께 부릅니다. (2026-08-26)
+            router.refresh() 는 본문과 레이아웃을 서버에서 다시 굽고,
+            pullCounts() 는 사이드바 숫자를 곧바로 다시 가져옵니다.
+            둘 다 해야 "눌렀더니 전부 새로 그려졌다" 가 됩니다.
+            <Link> 만으로는 가운데 본문만 새로 그려지고 이 사이드바는
+            그대로입니다. Next.js 가 화면을 옮길 때 레이아웃을 다시 그리지
+            않기 때문입니다. 그리고 이미 대시보드에 있으면 같은 주소라
+            아무 일도 일어나지 않았습니다.
+
+            아래에 '대시보드' 메뉴가 따로 있으므로, 로고는
+            "처음으로 + 전부 새로 그리기" 라는 조금 다른 역할을 갖습니다.
+            F5 와 달리 화면이 하얗게 깜빡이지 않습니다.
         */}
-        <Link href="/admin" className="text-[17px] font-semibold hover:underline" prefetch={false}>
+        <Link
+          href="/admin"
+          className="text-[17px] font-semibold hover:underline"
+          prefetch={false}
+          onClick={() => {
+            router.refresh();
+            void pullCounts();
+          }}
+        >
           JZL CLOSET 관리자
         </Link>
         <div className="flex items-center gap-2">
@@ -591,7 +805,15 @@ export default function AdminShell({
         >
           <div className="mb-6 hidden items-start justify-between gap-2 lg:flex">
             {/* ★ 사이드바 로고도 같습니다. 두 곳이 다르게 동작하면 더 헷갈립니다. */}
-            <Link href="/admin" className="group" prefetch={false}>
+            <Link
+              href="/admin"
+              className="group"
+              prefetch={false}
+              onClick={() => {
+                router.refresh();
+                void pullCounts();
+              }}
+            >
               <p className="text-[17px] font-semibold text-slate-900 group-hover:underline">
                 JZL CLOSET
               </p>
