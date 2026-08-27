@@ -1344,11 +1344,14 @@ export default function CheckoutForm({
         >
           <div className="w-full max-w-[380px] border border-stone bg-paper p-6">
             <p className="text-[17px] leading-relaxed text-ink">
-              입금자명이{' '}
-              <strong className="font-semibold">{form.depositorName.trim()}</strong> 이(가) 맞습니까?
+              입금하실 분 이름이{' '}
+              <strong className="font-semibold">
+                &lsquo;{form.depositorName.trim()}&rsquo;
+              </strong>{' '}
+              이 맞습니까?
             </p>
             <p className="mt-3 text-[15px] leading-relaxed text-muted">
-              통장에 찍히는 이름과 달라야 하면 지금 고쳐 주세요.
+              통장에 찍히는 이름과 다르면 지금 고쳐 주세요.
             </p>
 
             <div className="mt-6 grid grid-cols-2 gap-2">
