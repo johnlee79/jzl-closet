@@ -118,7 +118,31 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
           <h3 className="mt-1.5 line-clamp-2 text-[18px] font-medium leading-snug text-ink">
             {product.name}
           </h3>
-          <p className="mt-1.5 line-clamp-2 text-[16px] leading-relaxed text-ink">
+          {/*
+            ============================================================
+            ** 설명 한 줄은 모바일에서 감춥니다 (2026-08-27)
+            ============================================================
+
+            ** 좁은 화면에 브랜드·상품명·설명·가격·할인율·적립까지 쌓이면
+              글이 너무 많아 정신없다는 의견이 있었습니다. PC 는 넓어서
+              문제가 없으므로 그대로 둡니다.
+
+            ** 글자를 지우는 것이 아니라 화면에서만 감춥니다.
+              HTML 에는 그대로 있어 검색엔진은 읽습니다. 그리고 이 설명은
+              상품 상세 화면에 눈에 보이게 나오고(products/[id]/page.tsx),
+              메타 설명과 구조화 데이터에도 들어갑니다. SEO 영향이 없습니다.
+
+            ** 조건부 렌더링으로 나누지 않았습니다. CSS 하나입니다.
+              화면 크기로 코드가 갈리면 "아이폰에서만 나는 문제" 를 쫓을 때
+              찾아야 할 자리가 늘어납니다.
+
+            * 기준 폭은 md(768px) 입니다. 이 프로젝트가 이미 쓰는 값입니다.
+              (md: 432곳 · 새 기준을 만들지 않았습니다)
+            * md:block 이 아니라 md:line-clamp-2 인 이유
+              line-clamp 는 display:-webkit-box 를 함께 겁니다. md:block 으로
+              덮으면 넓은 화면에서 두 줄 자르기가 풀려 설명이 길게 늘어납니다.
+          */}
+          <p className="mt-1.5 hidden text-[16px] leading-relaxed text-ink md:line-clamp-2">
             {product.summary}
           </p>
           {/*
