@@ -12,8 +12,11 @@ export default async function AdminNoticesPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1000px]">
-      <h1 className="text-[24px] font-semibold text-slate-900">공지 관리</h1>
-      <p className="mt-1 text-[15px] text-slate-600">전체 {notices.length}건</p>
+      <h1 className="text-[24px] font-semibold text-slate-900">공지 · 자주 묻는 질문</h1>
+      <p className="mt-1 text-[15px] leading-relaxed text-slate-600">
+        전체 {notices.length}건 · <strong>공지사항</strong>은 손님 공지 화면에,{' '}
+        <strong>자주 묻는 질문</strong>은 채팅 상담창에만 보입니다.
+      </p>
 
       {!configured ? (
         <div className="admin-card mt-5 border-amber-300 bg-amber-50 p-4 text-[16px] leading-relaxed text-amber-900">

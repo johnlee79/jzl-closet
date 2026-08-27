@@ -21,7 +21,9 @@ export async function generateStaticParams(): Promise<{ id: string }[]> {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const [notice, store] = await Promise.all([getNoticeById(params.id), getCachedStore()]);
-  if (!notice || !notice.isVisible) return { title: '공지사항을 찾을 수 없습니다' };
+  if (!notice || !notice.isVisible || notice.kind !== 'notice') {
+    return { title: '공지사항을 찾을 수 없습니다' };
+  }
 
   // 본문에서 태그를 걷어내 설명으로 씁니다.
   const description = notice.content
@@ -45,7 +47,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function NoticeDetailPage({ params }: PageProps) {
   const notice = await getNoticeById(params.id);
-  if (!notice || !notice.isVisible) notFound();
+  /*
+   * ** 자주 묻는 질문은 이 화면으로 안 옵니다. (2-C, 2026-08-27)
+   *   목록에도 사이트맵에도 없어서 찾아올 길이 없지만, 주소를 직접 쳐서
+   *   들어오면 답변이 '공지사항' 인 것처럼 그려집니다. 그 주소가 어디에
+   *   퍼지면 되돌릴 수 없으니 여기서 막습니다.
+   */
+  if (!notice || !notice.isVisible || notice.kind !== 'notice') notFound();
 
   // 조회수는 세는 데 실패해도 화면은 그대로 보여 줍니다.
   await increaseViewCount(notice.id, notice.viewCount);

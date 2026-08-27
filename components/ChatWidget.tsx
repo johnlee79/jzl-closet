@@ -8,8 +8,10 @@ import {
   CARD_CANCEL_NOTICE,
   CHAT_TREE,
   ROOT,
+  faqNode,
   optionsFor,
   type ChatOption,
+  type FaqItem,
 } from '@/lib/chat-menu';
 import { useMember } from '@/lib/member';
 
@@ -131,6 +133,12 @@ export default function ChatWidget() {
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [nodeId, setNodeId] = useState<string>(ROOT);
   const [typing, setTyping] = useState(false);
+  /*
+   * ** 자주 묻는 질문은 **누를 때 한 번만** 가져옵니다. (2-C)
+   *   모든 화면의 HTML 에 미리 실어 두면 채팅을 안 여는 손님까지
+   *   그 무게를 집니다. null = 아직 안 가져옴.
+   */
+  const [faqs, setFaqs] = useState<FaqItem[] | null>(null);
 
   const loggedIn = Boolean(member?.loggedIn);
   const seq = useRef(0);
@@ -208,6 +216,33 @@ export default function ChatWidget() {
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
+  /**
+   * 자주 묻는 질문을 한 번만 가져옵니다.
+   *
+   * ** 못 가져와도 채팅은 멈추지 않습니다. 빈 목록으로 넘어가서
+   *   지금까지처럼 안내 화면 갈래를 보여 줍니다. 빈 갈래는 안 뜹니다.
+   */
+  const loadFaqs = useCallback(async (): Promise<FaqItem[]> => {
+    if (faqs) return faqs;
+    try {
+      const res = await fetch('/api/faq');
+      const data = (await res.json()) as { items?: FaqItem[] };
+      const items = Array.isArray(data.items) ? data.items : [];
+      setFaqs(items);
+      return items;
+    } catch (error) {
+      /*
+       * ** 실패한 것은 기억하지 않습니다. (faqs 를 [] 로 두지 않습니다)
+       *   []도 '가져왔다' 로 쳐서, 잠깐 인터넷이 끊겼을 때 한 번 실패하면
+       *   창을 닫았다 열어도 영영 안 가져오게 됩니다.
+       *   이번에는 안내 화면 갈래를 보여 주고, 다음에 다시 눌렀을 때
+       *   한 번 더 시도합니다.
+       */
+      console.error('[chat] 자주 묻는 질문을 못 가져왔습니다:', error);
+      return [];
+    }
+  }, [faqs]);
+
   const choose = (option: ChatOption) => {
     if (typing) return;
 
@@ -215,7 +250,16 @@ export default function ChatWidget() {
     seq.current += 1;
     setBubbles((was) => [...was, { id: seq.current, side: 'me', text: option.label }]);
 
-    // ② 화면을 옮기는 것이면 창을 닫고 갑니다. 안 닫으면 새 화면을 덮습니다.
+    /*
+     * ② 자주 묻는 질문의 답 — 화면을 옮기지 않고 말풍선으로 답합니다.
+     *   카드 취소 안내와 같은 방식입니다. (사장님 지시)
+     */
+    if (option.answer) {
+      say(option.answer);
+      return;
+    }
+
+    // ③ 화면을 옮기는 것이면 창을 닫고 갑니다. 안 닫으면 새 화면을 덮습니다.
     if (option.href) {
       const href = option.href;
       const id = window.setTimeout(() => {
@@ -226,7 +270,7 @@ export default function ChatWidget() {
       return;
     }
 
-    // ③ 채팅 안에서 답하는 것 — 갈래는 그대로 두고 답만 답니다.
+    // ④ 채팅 안에서 답하는 것 — 갈래는 그대로 두고 답만 답니다.
     if (option.note) {
       if (option.note === 'cardCancel') say(CARD_CANCEL_NOTICE);
 
@@ -252,15 +296,36 @@ export default function ChatWidget() {
       return;
     }
 
-    // ④ 다음 갈래로 넘어갑니다.
+    // ⑤ 다음 갈래로 넘어갑니다.
     if (option.next) {
       const next = option.next;
       setNodeId(next);
+
+      /*
+       * ** 자주 묻는 질문만 먼저 가져와야 무슨 말을 걸지 정해집니다.
+       *   가져오는 동안에는 말풍선 뜨기 전의 점 세 개가 그대로 돕니다.
+       *   손님 눈에는 잠깐 뜸을 들이는 것으로 보입니다.
+       */
+      if (next === 'faq') {
+        setTyping(true);
+        void loadFaqs().then((items) => {
+          setTyping(false);
+          say(faqNode(items).ask);
+        });
+        return;
+      }
+
       say(CHAT_TREE[next].ask);
     }
   };
 
-  const node = CHAT_TREE[nodeId] ?? CHAT_TREE[ROOT];
+  /*
+   * ** 자주 묻는 질문 갈래는 관리자에 적은 것으로 갈아 끼웁니다.
+   *   답이 하나도 없으면 faqNode 가 원래 갈래를 그대로 돌려줍니다.
+   *   그래서 **빈 갈래가 뜨는 경우가 없습니다.**
+   */
+  const node =
+    nodeId === 'faq' ? faqNode(faqs ?? []) : (CHAT_TREE[nodeId] ?? CHAT_TREE[ROOT]);
   const options = optionsFor(node, loggedIn);
   const phoneDigits = store.phone.replace(/[^0-9]/g, '');
 
@@ -327,7 +392,14 @@ export default function ChatWidget() {
                     className={`flex ${bubble.side === 'me' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`chat-bubble max-w-[80%] px-4 py-3 text-[15px] leading-relaxed ${
+                      /*
+                        ** whitespace-pre-line — 답변의 줄바꿈을 살립니다.
+                          자주 묻는 질문 답변은 여러 줄로 오는 경우가 많은데,
+                          이게 없으면 전부 한 줄로 붙어 버립니다.
+                        ** break-words — 띄어쓰기 없이 긴 글자가 와도
+                          말풍선 밖으로 삐져나가지 않게 합니다.
+                      */
+                      className={`chat-bubble max-w-[80%] whitespace-pre-line break-words px-4 py-3 text-[15px] leading-relaxed ${
                         bubble.side === 'me'
                           ? 'bg-ink text-paper'
                           : 'border border-stone bg-paper text-ink'

@@ -192,8 +192,24 @@ export async function saveNoticeAction(
   id?: string
 ): Promise<ActionResult> {
   if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
-  if (!input.title.trim()) return { ok: false, error: '제목을 입력해 주세요.' };
-  if (!input.content.trim()) return { ok: false, error: '내용을 입력해 주세요.' };
+
+  const isFaq = input.kind === 'faq';
+
+  if (!input.title.trim()) {
+    return { ok: false, error: isFaq ? '질문을 입력해 주세요.' : '제목을 입력해 주세요.' };
+  }
+
+  /*
+   * ** 자주 묻는 질문은 답변이 비어 있어도 저장됩니다. (사장님 지시)
+   *   질문만 먼저 넣어 두고 답변은 나중에 쓰시기 때문입니다.
+   *   답변이 빈 동안에는 그 질문이 채팅에 아예 안 보입니다.
+   *   (lib/notices.ts 의 getVisibleFaqs)
+   * ** 공지는 지금까지대로 내용이 있어야 합니다. 빈 공지는 손님 공지
+   *   목록에 제목만 뜨고 눌러도 아무것도 없는 화면이 됩니다.
+   */
+  if (!isFaq && !input.content.trim()) {
+    return { ok: false, error: '내용을 입력해 주세요.' };
+  }
 
   try {
     if (id) await updateNotice(id, input);
