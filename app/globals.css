@@ -244,6 +244,67 @@
        (스크롤이 굴러가는 부분은 CSS 로 못 막습니다. 컴포넌트가 직접 물어봅니다)
      ============================================================ */
   /* ============================================================
+     채팅 말풍선 (components/ChatWidget.tsx)
+     ============================================================
+
+     ** 뜰 때 아주 짧게 아래에서 올라옵니다. 사람이 말하는 느낌입니다.
+       과하면 답답해서 180ms 만 씁니다.
+     ** 꼬리 대신 모서리 하나만 덜 둥글게 해서 좌우를 나눕니다.
+       왼쪽(우리) 은 왼쪽 아래가, 오른쪽(손님) 은 오른쪽 아래가 각집니다.
+       삼각 꼬리를 그리면 배경색이 두 벌 필요해 고칠 때 어긋납니다.
+  */
+  .chat-bubble {
+    border-radius: 14px;
+    animation: chat-in 180ms cubic-bezier(0.2, 0, 0.2, 1);
+  }
+
+  li.justify-start > .chat-bubble {
+    border-bottom-left-radius: 4px;
+  }
+
+  li.justify-end > .chat-bubble {
+    border-bottom-right-radius: 4px;
+  }
+
+  @keyframes chat-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* 말풍선이 뜨기 직전의 점 세 개 */
+  .chat-dot {
+    animation: chat-dot 1s ease-in-out infinite;
+  }
+
+  @keyframes chat-dot {
+    0%,
+    60%,
+    100% {
+      opacity: 0.25;
+    }
+    30% {
+      opacity: 1;
+    }
+  }
+
+  /* 움직임을 줄여 달라고 설정한 손님에게는 걸지 않습니다. */
+  @media (prefers-reduced-motion: reduce) {
+    .chat-bubble {
+      animation: none;
+    }
+    .chat-dot {
+      animation: none;
+      opacity: 0.6;
+    }
+  }
+
+  /* ============================================================
      채팅 상담 버튼 (components/ChatWidget.tsx)
      ============================================================
 
