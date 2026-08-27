@@ -24,3 +24,4 @@ next-env.d.ts
 
 # Claude Code 로컬 설정
 .claude/settings.local.json
+확인-*.md

@@ -321,6 +321,16 @@ function stringList(value: unknown, fallback: string[]): string[] {
 
 /* ── 스토어 정보 ──────────────────────────────────────────── */
 
+/**
+ * 시각 값을 다듬습니다. 9 = 09:00 · 12.5 = 12:30
+ * ** 0~24 를 벗어나면 기본값으로 돌립니다.
+ */
+function clock(value: unknown, fallback: number): number {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num < 0 || num > 24) return fallback;
+  return num;
+}
+
 export function normalizeStore(value: unknown): StoreSettings {
   if (!value || typeof value !== 'object') return DEFAULT_STORE;
   const raw = value as Record<string, unknown>;
@@ -337,6 +347,19 @@ export function normalizeStore(value: unknown): StoreSettings {
     kakao: optionalText(raw.kakao, DEFAULT_STORE.kakao),
     email: optionalText(raw.email, DEFAULT_STORE.email),
     hours: text(raw.hours, DEFAULT_STORE.hours),
+    /*
+     * ** 상담 시간 숫자. (2026-08-27)
+     * * 0~24 사이만 받습니다. 말도 안 되는 값이 들어오면 기본값으로 돌립니다.
+     *   잘못 넣으면 "지금 상담 가능합니다" 가 종일 떠 있거나 종일 안 뜹니다.
+     * * 소수를 받습니다. count() 는 정수로 만들어 버리므로 쓰지 않습니다.
+     */
+    weekdayOpen: clock(raw.weekdayOpen, DEFAULT_STORE.weekdayOpen),
+    weekdayClose: clock(raw.weekdayClose, DEFAULT_STORE.weekdayClose),
+    saturdayOpen: clock(raw.saturdayOpen, DEFAULT_STORE.saturdayOpen),
+    saturdayClose: clock(raw.saturdayClose, DEFAULT_STORE.saturdayClose),
+    lunchStart: clock(raw.lunchStart, DEFAULT_STORE.lunchStart),
+    lunchEnd: clock(raw.lunchEnd, DEFAULT_STORE.lunchEnd),
+    holidays: optionalText(raw.holidays, DEFAULT_STORE.holidays).trim(),
     business: {
       company: text(business.company, DEFAULT_STORE.business.company),
       ceo: text(business.ceo, DEFAULT_STORE.business.ceo),

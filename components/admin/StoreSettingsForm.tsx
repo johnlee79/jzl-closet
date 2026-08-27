@@ -7,6 +7,23 @@ import type { StoreSettings } from '@/lib/site-config';
 
 type Message = { tone: 'ok' | 'error'; text: string } | null;
 
+/*
+ * ** 상담 시간은 화면에서 '09:00' 로 고르고, 안에서는 9 로 저장합니다.
+ *   화면에 시계 칸을 쓰면 사장님이 숫자로 바꿔 적을 일이 없습니다.
+ *   12.5 = 12:30 입니다. (lib/business-hours.ts 와 같은 규칙)
+ */
+function toTimeInput(value: number): string {
+  const hour = Math.floor(value);
+  const minute = Math.round((value - hour) * 60);
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
+function fromTimeInput(text: string, fallback: number): number {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(text.trim());
+  if (!match) return fallback; // ** 칸을 비우면 원래 값을 지킵니다.
+  return Number(match[1]) + Number(match[2]) / 60;
+}
+
 /** 스토어 정보 — 푸터·법정 페이지·메타데이터에 바로 반영됩니다. */
 export default function StoreSettingsForm({ initial }: { initial: StoreSettings }) {
   const router = useRouter();
@@ -169,7 +186,7 @@ export default function StoreSettingsForm({ initial }: { initial: StoreSettings 
           </div>
           <div>
             <label className="admin-label" htmlFor="store-hours">
-              운영시간
+              운영시간 (푸터에 보이는 글)
             </label>
             <input
               id="store-hours"
@@ -178,7 +195,131 @@ export default function StoreSettingsForm({ initial }: { initial: StoreSettings 
               onChange={(event) => set('hours', event.target.value)}
               className="admin-input"
             />
+            <p className="mt-1 text-[14px] text-slate-500">
+              눈에 보이는 글자입니다. 아래 「상담 시간」 칸을 함께 고쳐 주세요.
+            </p>
           </div>
+        </div>
+      </section>
+
+      {/*
+        ** 상담 시간 — 채팅창이 '지금 상담 가능' 인지 판단하는 데 씁니다. (2026-08-27)
+          위의 「운영시간」 은 보여 주는 글자일 뿐이고, 실제 판단은 이 숫자로 합니다.
+          두 곳을 따로 둔 이유: 글자는 "평일 09:00 — 17:00 (점심 …)" 처럼 자유롭게
+          쓰고 싶은데, 판단은 정확한 숫자가 있어야 하기 때문입니다.
+          ★ 둘이 어긋나면 손님이 헷갈립니다. 바꿀 때 같이 바꿔 주세요.
+      */}
+      <section className="admin-card p-4 md:p-5">
+        <h2 className="text-[18px] font-semibold text-slate-900">상담 시간</h2>
+        <p className="mt-1 text-[15px] text-slate-500">
+          채팅 상담창이 「지금 상담 가능합니다」 를 띄울지 이 시간으로 판단합니다. 저장하면
+          손님 화면에 바로 반영됩니다. <strong>일요일은 자동으로 쉽니다.</strong>
+        </p>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div>
+            <label className="admin-label" htmlFor="hours-weekday-open">
+              평일 시작
+            </label>
+            <input
+              id="hours-weekday-open"
+              type="time"
+              value={toTimeInput(form.weekdayOpen)}
+              onChange={(event) =>
+                set('weekdayOpen', fromTimeInput(event.target.value, form.weekdayOpen))
+              }
+              className="admin-input"
+            />
+          </div>
+          <div>
+            <label className="admin-label" htmlFor="hours-weekday-close">
+              평일 끝
+            </label>
+            <input
+              id="hours-weekday-close"
+              type="time"
+              value={toTimeInput(form.weekdayClose)}
+              onChange={(event) =>
+                set('weekdayClose', fromTimeInput(event.target.value, form.weekdayClose))
+              }
+              className="admin-input"
+            />
+          </div>
+          <div>
+            <label className="admin-label" htmlFor="hours-saturday-open">
+              토요일 시작
+            </label>
+            <input
+              id="hours-saturday-open"
+              type="time"
+              value={toTimeInput(form.saturdayOpen)}
+              onChange={(event) =>
+                set('saturdayOpen', fromTimeInput(event.target.value, form.saturdayOpen))
+              }
+              className="admin-input"
+            />
+          </div>
+          <div>
+            <label className="admin-label" htmlFor="hours-saturday-close">
+              토요일 끝
+            </label>
+            <input
+              id="hours-saturday-close"
+              type="time"
+              value={toTimeInput(form.saturdayClose)}
+              onChange={(event) =>
+                set('saturdayClose', fromTimeInput(event.target.value, form.saturdayClose))
+              }
+              className="admin-input"
+            />
+          </div>
+          <div>
+            <label className="admin-label" htmlFor="hours-lunch-start">
+              점심 시작
+            </label>
+            <input
+              id="hours-lunch-start"
+              type="time"
+              value={toTimeInput(form.lunchStart)}
+              onChange={(event) =>
+                set('lunchStart', fromTimeInput(event.target.value, form.lunchStart))
+              }
+              className="admin-input"
+            />
+          </div>
+          <div>
+            <label className="admin-label" htmlFor="hours-lunch-end">
+              점심 끝
+            </label>
+            <input
+              id="hours-lunch-end"
+              type="time"
+              value={toTimeInput(form.lunchEnd)}
+              onChange={(event) =>
+                set('lunchEnd', fromTimeInput(event.target.value, form.lunchEnd))
+              }
+              className="admin-input"
+            />
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <label className="admin-label" htmlFor="hours-holidays">
+            쉬는 날
+          </label>
+          <input
+            id="hours-holidays"
+            type="text"
+            value={form.holidays}
+            onChange={(event) => set('holidays', event.target.value)}
+            placeholder="2026-09-16, 2026-10-03"
+            className="admin-input"
+          />
+          <p className="mt-1 text-[14px] text-slate-500">
+            공휴일·임시휴무를 <strong>2026-09-16</strong> 모양으로 쉼표(,) 로 나눠 적어
+            주세요. 그 날은 채팅에 「오늘은 쉽니다」 가 뜹니다. 모양이 다른 것은 그냥
+            넘어갑니다.
+          </p>
         </div>
       </section>
 

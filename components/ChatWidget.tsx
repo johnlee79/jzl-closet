@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSite } from '@/components/SiteProvider';
+import { businessNow } from '@/lib/business-hours';
 import {
   CARD_CANCEL_NOTICE,
   CHAT_TREE,
@@ -40,6 +41,13 @@ import { useMember } from '@/lib/member';
  *   레이아웃이 이미 한 번 읽어 실어 둔 값이라 조회가 늘지 않습니다.
  *   손님 화면의 정적 생성에 영향이 없습니다.
  *
+ * ** 지금 상담이 되는 시간인지 브라우저에서 그때그때 판단합니다. (2-B)
+ *   서버에서 판단하면 화면을 구울 때의 시각이 박혀서, 새벽에 구운 화면이
+ *   온종일 "오늘 상담은 끝났습니다" 를 보여 줍니다.
+ *   ** 그리는 도중에는 판단하지 않습니다. 열었을 때·눌렀을 때만 봅니다.
+ *     그리는 도중에 보면 서버가 그린 글자와 브라우저가 그린 글자가 달라
+ *     경고가 납니다.
+ *
  * * 이번(2-A)에는 화면만 바꿉니다. 링크와 이동은 1차 그대로입니다.
  * ================================================================
  */
@@ -53,6 +61,10 @@ type Bubble = {
   text: string;
   /** 전화·오픈채팅처럼 말풍선 안에 링크가 들어가는 경우 */
   extra?: 'phone' | 'kakao';
+  /** 말풍선 아래에 작게 붙는 한 줄 (상담 가능 여부 등) */
+  sub?: string;
+  /** 지금 전화가 연결되는 시간인가. 아니면 번호만 글자로 보여 줍니다. */
+  canCall?: boolean;
 };
 
 function ChatIcon() {
@@ -132,12 +144,12 @@ export default function ChatWidget() {
   };
 
   /** 잠깐 뜸을 들였다가 우리 말풍선을 답니다. */
-  const say = useCallback((text: string, extra?: Bubble['extra']) => {
+  const say = useCallback((text: string, rest?: Omit<Bubble, 'id' | 'side' | 'text'>) => {
     setTyping(true);
     const id = window.setTimeout(() => {
       setTyping(false);
       seq.current += 1;
-      setBubbles((was) => [...was, { id: seq.current, side: 'them', text, extra }]);
+      setBubbles((was) => [...was, { id: seq.current, side: 'them', text, ...rest }]);
     }, TYPING_MS);
     timers.current.push(id);
   }, []);
@@ -157,7 +169,12 @@ export default function ChatWidget() {
     const hello = loggedIn && member?.name
       ? `${member.name}님, 안녕하세요. 무엇을 도와드릴까요?`
       : '안녕하세요, 무엇을 도와드릴까요?';
-    say(hello);
+    /*
+     * ** 첫 인사 아래에 지금 상담이 되는지 한 줄로 붙입니다.
+     *   말풍선을 하나 더 띄우지 않습니다. 인사만 보고 눌렀다가 "아무도 안
+     *   받네" 가 되는 것을 막으면서, 대화가 길어 보이지도 않게 합니다.
+     */
+    say(hello, { sub: businessNow(store).message });
     return clearTimers;
     // ** 열릴 때 한 번만입니다. 로그인 상태가 도중에 바뀌어도 대화를 안 끊습니다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -212,9 +229,26 @@ export default function ChatWidget() {
     // ③ 채팅 안에서 답하는 것 — 갈래는 그대로 두고 답만 답니다.
     if (option.note) {
       if (option.note === 'cardCancel') say(CARD_CANCEL_NOTICE);
-      if (option.note === 'hours') say(store.hours);
-      if (option.note === 'phone') say('고객센터로 연락 주세요.', 'phone');
-      if (option.note === 'kakao') say('오픈채팅으로 연결해 드릴게요.', 'kakao');
+
+      // ** 누르는 그 순간에 다시 봅니다. 창을 오래 열어 두었어도 맞습니다.
+      const now = businessNow(store);
+
+      if (option.note === 'hours') say(store.hours, { sub: now.message });
+
+      if (option.note === 'phone') {
+        /*
+         * ** 상담 시간이 아니면 번호를 눌러도 안 걸리게 합니다. (사장님 지시)
+         *   번호는 그대로 보여 줍니다. 가려 두면 "번호도 안 알려 준다" 가
+         *   되고, 걸리게 두면 아무도 안 받는 전화를 걸게 됩니다.
+         */
+        say(
+          now.canCall ? '고객센터로 연락 주세요.' : '지금은 전화를 받기 어려운 시간입니다.',
+          { extra: 'phone', canCall: now.canCall, sub: now.canCall ? undefined : now.message }
+        );
+      }
+
+      // ** 오픈채팅은 시간과 상관없이 열어 둡니다. (사장님 지시)
+      if (option.note === 'kakao') say('오픈채팅으로 연결해 드릴게요.', { extra: 'kakao' });
       return;
     }
 
@@ -307,13 +341,18 @@ export default function ChatWidget() {
                             ** 휴대폰에서는 눌러서 바로 걸립니다.
                             ** PC 에서는 눌러도 아무 일이 없거나 낯선 앱이 뜹니다.
                               그래서 번호를 글자로 그대로 보여 줍니다.
+                            ** 상담 시간이 아니면 걸리지 않게 글자로만 둡니다.
                           */}
-                          <a
-                            href={`tel:${phoneDigits}`}
-                            className="mt-2 block text-[18px] underline underline-offset-4"
-                          >
-                            {store.phone}
-                          </a>
+                          {bubble.canCall ? (
+                            <a
+                              href={`tel:${phoneDigits}`}
+                              className="mt-2 block text-[18px] underline underline-offset-4"
+                            >
+                              {store.phone}
+                            </a>
+                          ) : (
+                            <span className="mt-2 block text-[18px]">{store.phone}</span>
+                          )}
                           <span className="mt-1 block text-[14px] leading-relaxed text-muted">
                             {store.hours}
                           </span>
@@ -329,6 +368,13 @@ export default function ChatWidget() {
                         >
                           카카오 오픈채팅 열기 ↗
                         </a>
+                      ) : null}
+
+                      {/* 말풍선 아래 한 줄 — 지금 상담이 되는지 */}
+                      {bubble.sub ? (
+                        <span className="mt-2 block text-[14px] leading-relaxed text-muted">
+                          {bubble.sub}
+                        </span>
                       ) : null}
                     </div>
                   </li>
