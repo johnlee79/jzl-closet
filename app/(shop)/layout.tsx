@@ -8,6 +8,7 @@ import PaymentReturnWatch from '@/components/PaymentReturnWatch';
 import PointPopup from '@/components/PointPopup';
 import PopupLayer from '@/components/PopupLayer';
 import ReferralCapture from '@/components/ReferralCapture';
+import ChatWidget from '@/components/ChatWidget';
 import ScrollToTop from '@/components/ScrollToTop';
 import SiteNotices from '@/components/SiteNotices';
 import { Suspense } from 'react';
@@ -172,6 +173,15 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
           <AnchorFlash />
           {/* 맨 위로 — 고객 화면 전체에 실립니다. 두 화면 높이만큼 내려가야 나타납니다. */}
           <ScrollToTop />
+
+          {/*
+            ** 채팅 상담 버튼. (2026-08-27)
+              여기(레이아웃)에 두면 화면을 옮겨도 열린 채로 남습니다.
+              브라우저에서 도는 컴포넌트라 관리자 사이드바 때와 달리
+              값이 굳는 문제가 없습니다. 서버에서 아무것도 읽지 않습니다.
+              전화·오픈채팅·운영시간은 위 SiteProvider 의 store 를 씁니다.
+          */}
+          <ChatWidget />
           {/* 팝업 — 노출 화면(메인만/전체) 판단은 컴포넌트가 주소를 보고 합니다. */}
           <PopupLayer popups={popups} />
           {/* 보유 포인트 안내. 공지 팝업이 떠 있으면 이번에는 뜨지 않습니다. */}
