@@ -274,7 +274,7 @@ export default function ProductReviews({
           {gallery.length > 0 ? (
             <div className="mt-10 border-b border-stone pb-10">
               <p className="text-[14px] tracking-[0.14em] text-muted">
-                후기 사진 · 영상 {gallery.length}
+                후기 사진 {gallery.length}
               </p>
               <ul className="mt-4 flex gap-2 overflow-x-auto pb-2 md:gap-3">
                 {gallery.map((media, index) => (

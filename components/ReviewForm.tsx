@@ -225,7 +225,7 @@ export default function ReviewForm({
       {/* ── 사진 ──────────────────────────────────────── */}
       <div className="mt-8">
         <span className="label-xs block">
-          사진·동영상 (선택, 최대 {MAX_REVIEW_ATTACHMENTS}개)
+          사진 (선택, 최대 {MAX_REVIEW_ATTACHMENTS}장)
         </span>
         <MemberPhotoPicker
           folder="reviews"

@@ -288,7 +288,7 @@ export default function AdminReviewForm({
 
       <div>
         <span className="admin-label">
-          사진·동영상 (최대 {MAX_REVIEW_ATTACHMENTS}개)
+          사진 (최대 {MAX_REVIEW_ATTACHMENTS}장)
         </span>
         <div className="flex flex-wrap items-center gap-3">
           <button

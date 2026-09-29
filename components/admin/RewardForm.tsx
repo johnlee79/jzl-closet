@@ -140,8 +140,8 @@ export default function RewardForm({
           />
           <RuleRow
             id="rule-photo"
-            label="사진·동영상 리뷰"
-            hint="사진이나 동영상이 하나라도 있으면 이쪽 금액을 지급합니다."
+            label="사진 리뷰"
+            hint="사진이 하나라도 있으면 이쪽 금액을 지급합니다."
             rule={points.reviewPhoto}
             onChange={(next) => setPoints((prev) => ({ ...prev, reviewPhoto: next }))}
           />
