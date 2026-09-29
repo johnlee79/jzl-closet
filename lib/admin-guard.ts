@@ -87,8 +87,17 @@ export const isAdmin = cache(async (): Promise<boolean> => {
  *
  * ★ 로그가 폭주하지 않습니다. isAdmin() 이 cache() 로 감싸져 있어
  *   한 요청에 실제로는 한 번만 돕니다. 그리고 이 문을 부르는 곳은
- *   app/admin/** 과 app/api/admin|upload/** 뿐입니다. 손님 경로에서는
- *   한 곳도 부르지 않습니다.
+ *   app/admin/** 과 app/api/admin|upload/** 뿐입니다.
+ *
+ * ★★ (2026-09-29 바로잡음) 전에는 여기에 「손님 경로에서는 한 곳도 부르지
+ *   않습니다」라고 적혀 있었습니다. 사실이 아니었습니다. 리뷰 쓰기
+ *   (ReviewForm)와 1:1 문의(InquiryForm)가 사진을 올리려고 /api/upload 를
+ *   불렀고, 그 문이 여기였습니다. 손님은 사진을 한 장도 올리지 못했고,
+ *   로그에는 아래 (나) 「관리자 아닌 계정이 관리자 기능을 불렀습니다」가
+ *   찍혀 세션 사고처럼 보였습니다.
+ *   지금은 /api/upload 가 ?folder=reviews|inquiries 요청을 손님 길로 따로
+ *   보내고, 그 길에서는 이 문을 부르지 않습니다. 그래서 이제 (나) 가 찍히면
+ *   정말로 관리자 기능을 손님 세션이 부른 것입니다.
  */
 async function isAdminBySupabase(): Promise<boolean> {
   const supabase = createAdminAuthClient();

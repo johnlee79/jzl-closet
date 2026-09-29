@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { submitInquiryAction } from '@/app/(shop)/inquiry/actions';
+import MemberPhotoPicker from '@/components/MemberPhotoPicker';
 import { formatPhone } from '@/lib/format';
 import { INQUIRY_CATEGORIES, MAX_ATTACHMENTS } from '@/lib/inquiry-status';
-import { ACCEPT_IMAGE, deleteImages, uploadImages } from '@/lib/upload-client';
 
 /** 회원이 고를 수 있는 본인 주문 (서버가 넘겨 줍니다) */
 export type OrderOption = { id: string; label: string };
@@ -31,7 +31,6 @@ export default function InquiryForm({
   defaultOrderId = '',
 }: InquiryFormProps) {
   const [pending, startTransition] = useTransition();
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     category: product ? 'product' : 'order',
@@ -48,44 +47,12 @@ export default function InquiryForm({
   });
 
   const [attachments, setAttachments] = useState<string[]>([]);
-  const [uploading, setUploading] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [done, setDone] = useState<{ inquiryNo: string; isMember: boolean } | null>(null);
 
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setError('');
-  };
-
-  /* ── 이미지 첨부 ────────────────────────────────────── */
-  const handleFiles = async (fileList: FileList | null) => {
-    const files = Array.from(fileList ?? []);
-    if (files.length === 0) return;
-
-    const room = MAX_ATTACHMENTS - attachments.length;
-    if (room <= 0) {
-      setError(`이미지는 최대 ${MAX_ATTACHMENTS}장까지 올릴 수 있습니다.`);
-      return;
-    }
-
-    setError('');
-    setUploading(0);
-    try {
-      const uploaded = await uploadImages(files.slice(0, room), 'inquiries', setUploading);
-      setAttachments((prev) => [...prev, ...uploaded.map((item) => item.url)]);
-    } catch (uploadError) {
-      setError(
-        uploadError instanceof Error ? uploadError.message : '이미지를 올리지 못했습니다.'
-      );
-    } finally {
-      setUploading(null);
-      if (fileRef.current) fileRef.current.value = '';
-    }
-  };
-
-  const removeAttachment = (url: string) => {
-    setAttachments((prev) => prev.filter((item) => item !== url));
-    void deleteImages([url]);
   };
 
   /* ── 저장 ───────────────────────────────────────────── */
@@ -262,50 +229,30 @@ export default function InquiryForm({
         <span className="label-xs block">
           이미지 첨부 (선택, 최대 {MAX_ATTACHMENTS}장)
         </span>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading !== null || attachments.length >= MAX_ATTACHMENTS}
-            className="btn-secondary min-h-[44px] px-5 py-0 text-[15px] disabled:opacity-40"
-          >
-            {uploading !== null ? `올리는 중 ${uploading}%` : '이미지 선택'}
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept={ACCEPT_IMAGE}
-            multiple
-            onChange={(event) => void handleFiles(event.target.files)}
-            className="hidden"
+        {member ? (
+          <MemberPhotoPicker
+            folder="inquiries"
+            max={MAX_ATTACHMENTS}
+            value={attachments}
+            onChange={setAttachments}
+            buttonLabel="이미지 선택"
+            unit="장"
           />
-          <span className="text-[14px] text-muted">
-            {attachments.length}/{MAX_ATTACHMENTS}장
-          </span>
-        </div>
-
-        {attachments.length > 0 ? (
-          <ul className="mt-4 flex flex-wrap gap-3">
-            {attachments.map((url) => (
-              <li key={url} className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={url}
-                  alt=""
-                  className="h-[96px] w-[96px] border border-stone object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeAttachment(url)}
-                  aria-label="첨부 이미지 삭제"
-                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center bg-black/60 text-[15px] leading-none text-white"
-                >
-                  ×
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        ) : (
+          /*
+           * ★ 비회원은 사진을 올릴 수 없습니다. 누구나 저장소에 파일을 쌓을 수
+           *   있게 되기 때문입니다. 누르면 실패하는 버튼 대신 처음부터 알립니다.
+           */
+          <p className="mt-3 text-[15px] leading-relaxed text-muted">
+            이미지 첨부는 로그인한 회원만 할 수 있습니다.{' '}
+            <Link
+              href="/login?next=%2Finquiry%2Fnew"
+              className="text-ink underline underline-offset-4"
+            >
+              로그인하기
+            </Link>
+          </p>
+        )}
       </div>
 
       {/* ── 작성자 ────────────────────────────────────── */}

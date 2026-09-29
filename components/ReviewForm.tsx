@@ -1,12 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
+import MemberPhotoPicker from '@/components/MemberPhotoPicker';
 import StarRating from '@/components/StarRating';
 import { submitReviewAction } from '@/app/(shop)/mypage/review-actions';
 import { formatPrice } from '@/lib/product-utils';
 import { MAX_REVIEW_ATTACHMENTS, MAX_REVIEW_LENGTH } from '@/lib/site-config';
-import { ACCEPT_IMAGE, deleteImages, uploadImages } from '@/lib/upload-client';
 
 /** 별점 고르기 — 1~5 별을 눌러 정합니다. */
 function StarPicker({
@@ -72,13 +72,11 @@ export default function ReviewForm({
   pointText: { text: number; photo: number };
 }) {
   const [pending, startTransition] = useTransition();
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const [rating, setRating] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
   const [content, setContent] = useState('');
   const [attachments, setAttachments] = useState<string[]>([]);
-  const [uploading, setUploading] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [done, setDone] = useState<{ earned: number } | null>(null);
 
@@ -86,36 +84,6 @@ export default function ReviewForm({
     setSelected((prev) =>
       prev.includes(tag) ? prev.filter((item) => item !== tag) : [...prev, tag]
     );
-
-  const handleFiles = async (fileList: FileList | null) => {
-    const files = Array.from(fileList ?? []);
-    if (files.length === 0) return;
-
-    const room = MAX_REVIEW_ATTACHMENTS - attachments.length;
-    if (room <= 0) {
-      setError(`사진은 최대 ${MAX_REVIEW_ATTACHMENTS}장까지 올릴 수 있습니다.`);
-      return;
-    }
-
-    setError('');
-    setUploading(0);
-    try {
-      const uploaded = await uploadImages(files.slice(0, room), 'reviews', setUploading);
-      setAttachments((prev) => [...prev, ...uploaded.map((item) => item.url)]);
-    } catch (uploadError) {
-      setError(
-        uploadError instanceof Error ? uploadError.message : '사진을 올리지 못했습니다.'
-      );
-    } finally {
-      setUploading(null);
-      if (fileRef.current) fileRef.current.value = '';
-    }
-  };
-
-  const removeAttachment = (url: string) => {
-    setAttachments((prev) => prev.filter((item) => item !== url));
-    void deleteImages([url]);
-  };
 
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -259,50 +227,14 @@ export default function ReviewForm({
         <span className="label-xs block">
           사진·동영상 (선택, 최대 {MAX_REVIEW_ATTACHMENTS}개)
         </span>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading !== null || attachments.length >= MAX_REVIEW_ATTACHMENTS}
-            className="btn-secondary min-h-[44px] px-5 py-0 text-[15px] disabled:opacity-40"
-          >
-            {uploading !== null ? `올리는 중 ${uploading}%` : '사진 선택'}
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept={ACCEPT_IMAGE}
-            multiple
-            onChange={(event) => void handleFiles(event.target.files)}
-            className="hidden"
-          />
-          <span className="text-[14px] text-muted">
-            {attachments.length}/{MAX_REVIEW_ATTACHMENTS}개
-          </span>
-        </div>
-
-        {attachments.length > 0 ? (
-          <ul className="mt-4 flex flex-wrap gap-3">
-            {attachments.map((url) => (
-              <li key={url} className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={url}
-                  alt=""
-                  className="h-[96px] w-[96px] border border-stone object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeAttachment(url)}
-                  aria-label="사진 삭제"
-                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center bg-black/60 text-[15px] leading-none text-white"
-                >
-                  ×
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        <MemberPhotoPicker
+          folder="reviews"
+          max={MAX_REVIEW_ATTACHMENTS}
+          value={attachments}
+          onChange={setAttachments}
+          buttonLabel="사진 선택"
+          unit="장"
+        />
       </div>
 
       {expected > 0 ? (
