@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import DetailEditor from '@/components/admin/DetailEditor';
 import ImageUploader from '@/components/admin/ImageUploader';
+import NewyorktrdReviewImporter from '@/components/admin/NewyorktrdReviewImporter';
 import SellstarResync from '@/components/admin/SellstarResync';
 import OptionEditor from '@/components/admin/OptionEditor';
 import {
@@ -327,6 +328,24 @@ export default function ProductForm({
                   sellstarSyncedAt: new Date().toISOString(),
                 }));
               }}
+            />
+          </div>
+        ) : null}
+
+        {/*
+          ★ 뉴욕트렌딕에서 가져온 상품은 "후기 가져오기" 버튼을 띄웁니다.
+            상품 가져오기 때 함께 가져오지 못했거나, 나중에 추가로 받고 싶을 때 씁니다.
+            productId 는 저장된 상품만 있어 editingId 가 있을 때만 보여 줍니다.
+        */}
+        {product?.id &&
+        form.source === 'newyorktrd' &&
+        form.sourceProductNo &&
+        form.sourceProductNo > 0 ? (
+          <div className="mb-5">
+            <NewyorktrdReviewImporter
+              productId={product.id}
+              productSlug={form.slug}
+              productNo={form.sourceProductNo}
             />
           </div>
         ) : null}

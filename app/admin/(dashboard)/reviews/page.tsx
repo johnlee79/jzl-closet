@@ -18,6 +18,8 @@ type SearchParams = {
   photo?: string;
   visible?: string;
   sponsored?: string;
+  /** native · newyorktrd · imported — 뉴욕트렌딕 리뷰를 거를 때 씁니다. */
+  source?: string;
   /** 답글 여부 — 사이드바 '리뷰 관리' 뱃지가 이 조건으로 들어옵니다. ('no') */
   replied?: string;
   q?: string;
@@ -40,6 +42,7 @@ export default async function AdminReviewsPage({
           photo: searchParams.photo,
           visible: searchParams.visible,
           sponsored: searchParams.sponsored,
+          source: searchParams.source,
           replied: searchParams.replied,
           search: searchParams.q,
           limit: PAGE_SIZE,

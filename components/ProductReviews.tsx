@@ -118,10 +118,17 @@ export default function ProductReviews({
   /** 확대해서 볼 미디어의 위치. -1 이면 닫힘 */
   const [zoom, setZoom] = useState(-1);
 
-  /** 사진·영상이 붙은 후기의 미디어만 모읍니다. */
+  /**
+   * 사진·영상이 붙은 후기의 미디어만 모읍니다.
+   *
+   * ★ 표시광고법 — 외부에서 가져온 후기(source != null)의 사진은 이 상단 갤러리에
+   *   섞지 않습니다. 섞으면 "우리 손님의 사진" 처럼 보여 기만 광고로 읽힙니다.
+   *   아래 목록에는 그대로 배지와 함께 보여 줍니다. (사장님 지시, 2026-10-05)
+   */
   const gallery = useMemo<Media[]>(() => {
     const list: Media[] = [];
     for (const review of reviews) {
+      if (review.source) continue;
       // 줄바꿈을 공백으로 바꿔 두 줄 안에 깔끔히 들어가게 합니다.
       const excerpt = review.content.replace(/\s+/g, ' ').trim();
       for (const url of review.attachments) {
@@ -422,6 +429,16 @@ export default function ProductReviews({
                     <span className="text-[14px] text-muted">
                       {formatDate(review.writtenAt ?? review.createdAt)}
                     </span>
+                    {/*
+                      ★ 표시광고법 — 외부 쇼핑몰(뉴욕트렌딕)에서 가져온 후기는 "우리 손님 후기"
+                        처럼 보이면 기만 광고가 됩니다. 글마다 눈에 띄는 배지를 꼭 붙입니다.
+                        은은하게 흐리거나 작게 만들지 마세요 (사장님 지시, 2026-10-05).
+                    */}
+                    {review.source === 'newyorktrd' ? (
+                      <span className="inline-flex items-center gap-1 bg-amber-100 px-2 py-0.5 text-[13px] font-medium text-amber-900">
+                        뉴욕트렌딕 구매 후기
+                      </span>
+                    ) : null}
                   </div>
 
                   {review.tags.length > 0 ? (

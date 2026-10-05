@@ -54,6 +54,14 @@ export type Review = {
   writtenAt: string | null;
   /** 실제 등록 시각. 감사 기록이라 바뀌지 않습니다. */
   createdAt: string | null;
+  /**
+   * 어디서 가져온 리뷰인가. 'newyorktrd' · 'sellstar' · null(우리 손님).
+   * ★ null 이 아니면 손님 화면에 반드시 ‘뉴욕트렌딕 구매 후기’ 처럼 출처 배지를 띄웁니다.
+   *   평균 별점(ReviewSummary)·상품 목록 평균(getRatingsByProduct)에는 안 섞입니다.
+   */
+  source: 'newyorktrd' | 'sellstar' | null;
+  sourceReviewId: string | null;
+  sourceUrl: string | null;
 };
 
 type ReviewRow = {
@@ -74,6 +82,10 @@ type ReviewRow = {
   helpful_count: number | null;
   /** 3-B 에서 추가한 컬럼. 아직 없을 수 있어 선택 항목으로 둡니다. */
   written_at?: string | null;
+  /** schema-newyorktrd-reviews.sql 미실행 환경에서는 비어 있을 수 있어 선택 항목입니다. */
+  source?: string | null;
+  source_review_id?: string | null;
+  source_url?: string | null;
   created_at: string | null;
 };
 
@@ -113,6 +125,10 @@ function rowToReview(row: ReviewRow): Review {
     helpfulCount: row.helpful_count ?? 0,
     writtenAt: row.written_at ?? row.created_at,
     createdAt: row.created_at,
+    source:
+      row.source === 'newyorktrd' || row.source === 'sellstar' ? row.source : null,
+    sourceReviewId: row.source_review_id ?? null,
+    sourceUrl: row.source_url ?? null,
   };
 }
 
@@ -147,12 +163,24 @@ export function emptySummary(): ReviewSummary {
 export function summarize(reviews: Review[]): ReviewSummary {
   if (reviews.length === 0) return emptySummary();
 
+  /*
+   * ★ 표시광고법상 반드시 지킬 것 — 외부에서 가져온 후기(source != null)는 평균 별점·개수·
+   *   별점 분포에서 빼야 합니다. 손님 화면의 상품 카드 "★4.8 (12)" 숫자는 **우리 손님 후기
+   *   만으로** 만들어야 "우리 손님 중 4.8 점" 이라는 신호가 됩니다. 섞으면 기만 광고입니다.
+   *   (newyorktrd-import-v2.md 와 사장님 지시, 2026-10-05)
+   *
+   * ★ photoCount·topTags 는 "후기 사진이 있는지" "손님이 어떤 긍정 태그를 많이 뽑았는지" 를
+   *   가늠하는 참고치라, 둘 다 우리 손님 후기만으로 셉니다. 섞을 이유가 없습니다.
+   */
+  const native = reviews.filter((review) => !review.source);
+  if (native.length === 0) return emptySummary();
+
   const distribution: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
   const tagCounts = new Map<string, number>();
   let total = 0;
   let photoCount = 0;
 
-  for (const review of reviews) {
+  for (const review of native) {
     const rating = Math.min(5, Math.max(1, review.rating));
     distribution[rating] += 1;
     total += rating;
@@ -168,9 +196,9 @@ export function summarize(reviews: Review[]): ReviewSummary {
     .slice(0, 3);
 
   return {
-    count: reviews.length,
+    count: native.length,
     // 소수 첫째 자리까지
-    average: Math.round((total / reviews.length) * 10) / 10,
+    average: Math.round((total / native.length) * 10) / 10,
     distribution,
     topTags,
     photoCount,
@@ -230,15 +258,32 @@ export async function getRatingsByProduct(): Promise<
   const supabase = getSupabaseAdmin();
   if (!supabase) return result;
 
-  const { data, error } = await supabase
+  /*
+   * ★ 표시광고법 — 외부에서 가져온 리뷰(source != null)는 상품 목록·카드의 "★4.8(12)" 에
+   *   섞으면 안 됩니다. .is('source', null) 로 우리 손님 리뷰만 집계합니다.
+   *   schema-newyorktrd-reviews.sql 미실행 환경에서는 source 컬럼이 없어 이 쿼리가
+   *   실패할 수 있어, 실패 시 아래 catch 에서 예전 쿼리(출처 구분 없음)로 재시도합니다.
+   */
+  let data: { product_id: string; rating: number }[] | null = null;
+  const first = await supabase
     .from(TABLE)
     .select('product_id, rating')
-    .eq('is_visible', true);
+    .eq('is_visible', true)
+    .is('source', null);
 
-  if (error || !data) return result;
+  if (first.error) {
+    const retry = await supabase
+      .from(TABLE)
+      .select('product_id, rating')
+      .eq('is_visible', true);
+    if (retry.error || !retry.data) return result;
+    data = retry.data as { product_id: string; rating: number }[];
+  } else {
+    data = (first.data as { product_id: string; rating: number }[]) ?? [];
+  }
 
   const sums = new Map<string, { total: number; count: number }>();
-  for (const row of data as { product_id: string; rating: number }[]) {
+  for (const row of data) {
     const current = sums.get(row.product_id) ?? { total: 0, count: 0 };
     current.total += row.rating;
     current.count += 1;
@@ -328,6 +373,13 @@ export type ReviewFilter = {
   visible?: string;
   sponsored?: string;
   /**
+   * 출처로 걸러보기 (2026-10-05 뉴욕트렌딕 후기 가져오기)
+   *   'native'      우리 손님 후기만
+   *   'newyorktrd'  뉴욕트렌딕에서 가져온 후기만
+   *   'imported'    외부에서 가져온 후기 전부 (뉴욕+셀스타)
+   */
+  source?: string;
+  /**
    * ** 답글을 달았는지로 거르기 (2026-08-26)
    *   'no'  답글이 아직 없는 것만  ← 사이드바 '리뷰 관리' 뱃지가 세는 것과 같은 조건
    *   'yes' 답글을 단 것만
@@ -373,6 +425,16 @@ export async function getReviews(
       const value = filter.sponsored === 'true';
       countQuery = countQuery.eq('is_sponsored', value);
       listQuery = listQuery.eq('is_sponsored', value);
+    }
+    if (filter.source === 'native') {
+      countQuery = countQuery.is('source', null);
+      listQuery = listQuery.is('source', null);
+    } else if (filter.source === 'newyorktrd') {
+      countQuery = countQuery.eq('source', 'newyorktrd');
+      listQuery = listQuery.eq('source', 'newyorktrd');
+    } else if (filter.source === 'imported') {
+      countQuery = countQuery.not('source', 'is', null);
+      listQuery = listQuery.not('source', 'is', null);
     }
 
     /*
@@ -458,16 +520,28 @@ export async function countUnrepliedReviews(): Promise<number> {
    * * 저장된 답을 쓰지 않는 클라이언트로 읽습니다.
    *   사이드바 뱃지는 지금 값이어야 합니다.
    *   까닭은 lib/supabase/server.ts 의 getSupabaseAdminFresh 설명에 있습니다.
+   *
+   * ★ 외부에서 가져온 리뷰(source != null)는 세지 않습니다.
+   *   "답글을 아직 안 단 리뷰" 로 뱃지가 쓰이는데, 뉴욕트렌딕 쪽 후기에 답글을 다는 건
+   *   운영 흐름이 아닙니다. 그걸 뱃지에 섞으면 숫자가 꺾이지 않고 쌓이기만 합니다.
+   *   source 컬럼이 아직 없는 환경(schema 미실행)에서는 아래 재시도가 전체를 셉니다.
    */
   const supabase = getSupabaseAdminFresh();
   if (!supabase) return 0;
 
-  const { count, error } = await supabase
+  const first = await supabase
+    .from(TABLE)
+    .select('id', { count: 'exact', head: true })
+    .is('admin_reply', null)
+    .is('source', null);
+  if (!first.error) return first.count ?? 0;
+
+  const retry = await supabase
     .from(TABLE)
     .select('id', { count: 'exact', head: true })
     .is('admin_reply', null);
-  if (error) return 0;
-  return count ?? 0;
+  if (retry.error) return 0;
+  return retry.count ?? 0;
 }
 
 export async function countReviewsToday(): Promise<{ today: number; lowRating: number }> {
@@ -587,6 +661,83 @@ export async function deleteReview(id: string): Promise<void> {
 }
 
 /* ------------------------------------------------------------------
+ * 외부 쇼핑몰에서 가져온 후기 저장 (뉴욕트렌딕 등)
+ *
+ * ★ 반드시 지킬 것 (newyorktrd-import-v2 · 사장님 지시 2026-10-05)
+ *   · user_id · order_id 는 반드시 null → 포인트 지급 로직이 자동으로 건너뜁니다.
+ *   · source 를 꼭 채웁니다 → 손님 화면이 "뉴욕트렌딕 구매 후기" 배지를 띄우고
+ *     평균 별점·목록 집계에서 자동 제외됩니다.
+ *   · source + source_review_id 가 유일 인덱스로 묶여 같은 후기를 두 번 저장할 수 없습니다.
+ * ------------------------------------------------------------------ */
+
+export type ImportedReviewInput = {
+  productId: string;
+  productSlug: string;
+  writerName: string;
+  rating: number;
+  content: string;
+  /** 이미 R2 로 복사된 사진 URL 목록 */
+  attachments: string[];
+  writtenAt: string;
+  source: 'newyorktrd' | 'sellstar';
+  sourceReviewId: string;
+  sourceUrl: string;
+};
+
+/** 같은 외부 리뷰가 이미 저장되어 있나? (중복 방지) */
+export async function hasImportedReview(
+  source: 'newyorktrd' | 'sellstar',
+  sourceReviewId: string
+): Promise<boolean> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return false;
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('id')
+    .eq('source', source)
+    .eq('source_review_id', sourceReviewId)
+    .limit(1);
+  // source 컬럼이 아직 없는 환경이면 중복 체크를 못 합니다. 조용히 "없다" 로.
+  if (error) return false;
+  return (data ?? []).length > 0;
+}
+
+/**
+ * 외부 리뷰 한 건을 저장합니다.
+ * ★ 유일 인덱스 (reviews_source_dedup) 와 부딪히면 DuplicateReviewError 로 바뀝니다.
+ */
+export async function createImportedReview(input: ImportedReviewInput): Promise<Review> {
+  const supabase = requireSupabaseAdmin();
+  const { data, error } = await supabase
+    .from(TABLE)
+    .insert({
+      product_id: input.productId,
+      product_slug: input.productSlug,
+      user_id: null,
+      order_id: null,
+      writer_name: input.writerName.trim() || '뉴욕트렌딕 손님',
+      rating: Math.min(5, Math.max(1, Math.trunc(input.rating))),
+      tags: [],
+      content: input.content.trim(),
+      attachments: input.attachments,
+      is_sponsored: false,
+      is_visible: true,
+      written_at: input.writtenAt || new Date().toISOString(),
+      source: input.source,
+      source_review_id: input.sourceReviewId,
+      source_url: input.sourceUrl,
+    })
+    .select('*')
+    .single();
+  if (error) {
+    if (isMissingTable(error.code)) throw missingTableError();
+    if (error.code === UNIQUE_VIOLATION) throw new DuplicateReviewError();
+    throw new Error(`외부 리뷰를 저장하지 못했습니다: ${error.message}`);
+  }
+  return rowToReview(data as ReviewRow);
+}
+
+/* ------------------------------------------------------------------
  * 통계용
  * ------------------------------------------------------------------ */
 
@@ -604,15 +755,27 @@ export async function getReviewStats(): Promise<
   const supabase = getSupabaseAdminFresh();
   if (!supabase) return [];
 
-  const { data, error } = await supabase
+  // ★ 외부에서 가져온 후기는 "우리 손님 평균" 통계에 안 섞습니다 (평균/목록 섹션과 같은 규칙).
+  //   source 컬럼이 아직 없는 환경이면 재시도로 전체를 집계합니다.
+  let data: { product_slug: string; rating: number }[] | null = null;
+  const first = await supabase
     .from(TABLE)
     .select('product_slug, rating')
-    .eq('is_visible', true);
-
-  if (error || !data) return [];
+    .eq('is_visible', true)
+    .is('source', null);
+  if (first.error) {
+    const retry = await supabase
+      .from(TABLE)
+      .select('product_slug, rating')
+      .eq('is_visible', true);
+    if (retry.error || !retry.data) return [];
+    data = retry.data as { product_slug: string; rating: number }[];
+  } else {
+    data = (first.data as { product_slug: string; rating: number }[]) ?? [];
+  }
 
   const sums = new Map<string, { total: number; count: number }>();
-  for (const row of data as { product_slug: string; rating: number }[]) {
+  for (const row of data) {
     const current = sums.get(row.product_slug) ?? { total: 0, count: 0 };
     current.total += row.rating;
     current.count += 1;

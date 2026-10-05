@@ -105,6 +105,14 @@ export default function SellstarImporter({
   const [freeShipping, setFreeShipping] = useState(false);
   const [useOwnShipping, setUseOwnShipping] = useState(false);
   const [shippingNote, setShippingNote] = useState('');
+  /** 뉴욕트렌딕 상품을 가져올 때 그 상품의 후기도 같이 받을지 (기본 켜짐) */
+  const [importReviews, setImportReviews] = useState(true);
+  /** 상품 저장 뒤 후기 가져오기 진행 상황 */
+  const [reviewProgress, setReviewProgress] = useState<{
+    done: number;
+    totalPages: number;
+    summary: { imported: number; skipped: number; failed: number } | null;
+  } | null>(null);
 
   const [galleryRows, setGalleryRows] = useState<Row[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
@@ -538,6 +546,65 @@ export default function SellstarImporter({
       if (!result.ok) {
         setMessage({ tone: 'error', text: result.error });
         return;
+      }
+
+      /*
+        ★ 뉴욕트렌딕 상품 + 후기도 함께 가져오기 체크 시, 저장된 상품번호로 리뷰를
+          페이지별로 끌어옵니다. 실패해도 상품 등록 자체는 성공 상태이므로 흐름을 막지 않습니다.
+      */
+      if (source === 'newyorktrd' && importReviews && sourceProductNo > 0) {
+        setReviewProgress({ done: 0, totalPages: 5, summary: null });
+        let totalPages = 5;
+        let imported = 0;
+        let skipped = 0;
+        let failed = 0;
+        for (let page = 1; page <= totalPages; page += 1) {
+          try {
+            // eslint-disable-next-line no-await-in-loop
+            const response = await fetch('/api/admin/import/newyorktrd-reviews', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                productId: result.data.id,
+                productSlug: result.data.slug,
+                productNo: sourceProductNo,
+                page,
+              }),
+            });
+            // eslint-disable-next-line no-await-in-loop
+            const payloadJson = (await response.json()) as {
+              totalPages?: number;
+              found?: number;
+              summary?: { imported: number; skipped: number; failed: number };
+            };
+            if (response.ok) {
+              if (payloadJson.totalPages && payloadJson.totalPages < totalPages) {
+                totalPages = payloadJson.totalPages;
+              }
+              if (payloadJson.summary) {
+                imported += payloadJson.summary.imported;
+                skipped += payloadJson.summary.skipped;
+                failed += payloadJson.summary.failed;
+              }
+              setReviewProgress({
+                done: page,
+                totalPages,
+                summary: { imported, skipped, failed },
+              });
+              if ((payloadJson.found ?? 0) === 0) break;
+            } else {
+              // 리뷰 가져오기 실패는 등록을 막지 않습니다. 수 숫자만 기록합니다.
+              failed += 1;
+              setReviewProgress({
+                done: page,
+                totalPages,
+                summary: { imported, skipped, failed },
+              });
+            }
+          } catch {
+            failed += 1;
+          }
+        }
       }
 
       router.push(`/admin/products/${result.data.id}`);
@@ -1126,6 +1193,35 @@ export default function SellstarImporter({
               이미지를 우리 저장소로 옮긴 뒤 <strong>임시저장(노출 꺼짐)</strong> 상태로
               등록합니다. 확인하신 뒤 상품 편집 화면에서 판매중으로 바꿔 주세요.
             </p>
+
+            {/* ★ 뉴욕트렌딕 상품일 때만 "후기도 함께 가져오기" 체크를 보여 줍니다. */}
+            {source === 'newyorktrd' ? (
+              <label className="mt-3 flex items-start gap-2 text-[16px] text-slate-800">
+                <input
+                  type="checkbox"
+                  checked={importReviews}
+                  onChange={(event) => setImportReviews(event.target.checked)}
+                  className="mt-0.5 h-4 w-4"
+                />
+                <span>
+                  후기도 함께 가져오기 (뉴욕트렌딕)
+                  <span className="mt-1 block text-[14px] leading-relaxed text-slate-500">
+                    최대 25건까지 받습니다. 손님 화면에 「뉴욕트렌딕 구매 후기」 배지로
+                    구분해 보여 주고, 평균 별점·리뷰 개수에는 섞지 않습니다. 사진은 R2 로
+                    복사하고 영상은 가져오지 않습니다.
+                  </span>
+                </span>
+              </label>
+            ) : null}
+
+            {reviewProgress ? (
+              <p className="mt-3 rounded bg-amber-50 px-3 py-2 text-[14px] text-amber-900">
+                리뷰 가져오기 — {reviewProgress.done}/{reviewProgress.totalPages} 페이지
+                {reviewProgress.summary
+                  ? ` · 새로 ${reviewProgress.summary.imported}건, 이미 있던 것 ${reviewProgress.summary.skipped}건, 실패 ${reviewProgress.summary.failed}건`
+                  : ''}
+              </p>
+            ) : null}
 
             {busy ? (
               <div className="mt-3">

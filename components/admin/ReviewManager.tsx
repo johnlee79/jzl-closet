@@ -223,6 +223,21 @@ export default function ReviewManager({
             </select>
           </div>
 
+          <div>
+            <label className="admin-label" htmlFor="filter-source">출처</label>
+            <select
+              id="filter-source"
+              value={params.get('source') ?? ''}
+              onChange={(event) => select('source', event.target.value)}
+              className="admin-input w-[150px]"
+            >
+              <option value="">전체</option>
+              <option value="native">우리 손님</option>
+              <option value="newyorktrd">뉴욕트렌딕</option>
+              <option value="imported">외부에서 가져옴</option>
+            </select>
+          </div>
+
           {params.toString() ? (
             <Link href={pathname} className="admin-btn" prefetch={false}>
               초기화
@@ -269,7 +284,11 @@ export default function ReviewManager({
                           체험단
                         </span>
                       ) : null}
-                      {review.userId ? null : (
+                      {review.source === 'newyorktrd' ? (
+                        <span className="admin-badge bg-amber-100 text-amber-800">
+                          뉴욕트렌딕
+                        </span>
+                      ) : review.userId ? null : (
                         <span className="admin-badge bg-slate-100 text-slate-600">
                           직접 등록
                         </span>
