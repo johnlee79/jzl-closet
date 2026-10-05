@@ -118,7 +118,12 @@ function scan(tables) {
   let checked = 0;
 
   for (const file of files) {
-    const src = fs.readFileSync(file, 'utf8');
+    // ★ 윈도우 체크아웃은 CRLF 로 들어옵니다. 그대로 두면 아래의 \n\n (빈 줄) 찾기가
+    //   한 번도 안 걸려서 ".from(...) 쿼리 범위" 가 다음 .from() 까지 통째로 늘어납니다.
+    //   그러면 옆 함수의 .eq(...) 가 전부 이 테이블 조건으로 오해되어 가짜 "컬럼 없음"
+    //   경고가 뜹니다. (실제로 brands 조회 뒤의 applyFilter 조건을 brands 로 보던 사고)
+    //   그래서 읽자마자 LF 로 통일합니다. 아래 모든 \n 검사가 함께 안전해집니다.
+    const src = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
 
     // const TABLE = 'products' 같은 상수를 풀어 둡니다.
     const consts = {};
@@ -171,7 +176,12 @@ function scan(tables) {
       }
 
       // .insert({ col: … }) · .update({ col: … })
-      for (const w of chunk.matchAll(/\.(?:insert|update|upsert)\(\s*\{([\s\S]*?)\n\s*\}/g)) {
+      //
+      // ★ 한 줄짜리 .update({ x: y }) 뒤에 멀티라인 return { … } 가 오면 non-greedy
+      //   매칭이 둘을 통째로 묶어 "쓰려는 컬럼" 에 리턴값 필드까지 섞어 넣습니다.
+      //   그래서 블록식 (여는 { 바로 다음 줄바꿈이 있는) 객체만 봅니다. 한 줄짜리
+      //   .update 는 보통 변수를 그대로 넘기지, 인라인 객체는 넣지 않습니다.
+      for (const w of chunk.matchAll(/\.(?:insert|update|upsert)\(\s*\{\s*\n([\s\S]*?)\n\s*\}\s*\)/g)) {
         for (const line of w[1].split('\n')) {
           const k = line.match(/^\s*([a-z][a-z0-9_]*)\s*:/);
           if (k) hit(k[1], 'write');

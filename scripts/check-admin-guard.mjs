@@ -100,6 +100,13 @@ for (const file of ROUTE_FILES) {
 
   // 로그인 입구는 예외입니다. (위와 같은 이유)
   if (file.replace(/\\/g, '/').endsWith('api/admin/login/route.ts')) continue;
+  // ★ 세션 유지 라우트도 예외입니다.
+  //   관리자 비밀번호로 들어온 경우에는 Supabase 세션이 없고, 그때는 그냥 204 를
+  //   돌려줍니다. isAdmin 을 걸면 "로그인 안 함" 으로 거절되어, 관리자 화면에서
+  //   토큰 자동 갱신이 통째로 안 됩니다 (한 시간 넘게 머물다 저장하면 로그아웃되는
+  //   사고가 그렇게 생겼었습니다). 라우트 안쪽에서 Supabase.getUser() 한 번만 부르고
+  //   끝이라 민감한 자원 노출도 없습니다.
+  if (file.replace(/\\/g, '/').endsWith('api/admin/session/route.ts')) continue;
 
   if (!text.includes("from '@/lib/admin-guard'")) {
     problems.push(`${file} — admin-guard 를 가져오지 않습니다`);
