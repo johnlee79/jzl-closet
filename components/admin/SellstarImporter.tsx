@@ -1315,8 +1315,9 @@ export default function SellstarImporter({
                   후기도 함께 가져오기 (최대 25건)
                   <span className="mt-1 block text-[13px] leading-relaxed text-slate-500">
                     아래에서 눈으로 확인하고 체크한 것만 저장합니다. 사진은 한 장씩 뺄 수
-                    있습니다. 손님 화면에 「뉴욕트렌딕 구매 후기」 배지로 구분해 보여 주고,
-                    평균 별점·리뷰 개수에는 섞지 않습니다. 영상은 가져오지 않습니다.
+                    있습니다. 손님 화면에서는 작성자 이름 옆에 작은 ◇ 아이콘으로 제휴 매장
+                    후기임을 표시하고 평균 별점·리뷰 개수에는 섞지 않습니다. 영상은
+                    가져오지 않습니다.
                   </span>
                 </span>
               </label>

@@ -16,7 +16,7 @@ import { NewyorktrdError, newyorktrdUrl } from '@/lib/newyorktrd';
  *
  * ★ 반드시 지킬 것 (표시광고법)
  *   · 저장할 때 source='newyorktrd' 를 꼭 넣습니다. 손님 화면이 이 값을 보고
- *     "뉴욕트렌딕 구매 후기" 배지를 띄웁니다.
+ *     작성자 이름 옆에 작은 ◇ 아이콘(제휴 매장 후기 표시)을 띄웁니다.
  *   · user_id 는 null 로 둡니다. 포인트 지급 로직 (points.ts) 이 null 이면
  *     지급하지 않도록 만들어져 있어, 적립이 자연히 막힙니다.
  *   · 동영상은 가져오지 않습니다 (<video>·<source> 태그 전부 무시).

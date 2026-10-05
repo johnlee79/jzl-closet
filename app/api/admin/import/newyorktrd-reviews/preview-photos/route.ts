@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { NextResponse, type NextRequest } from 'next/server';
 import { isAdmin } from '@/lib/admin-guard';
 import {
@@ -47,6 +49,63 @@ function photoKey(url: string): string {
   const basename = url.split('/').pop() ?? '';
   const stripped = basename.replace(/\.[a-z0-9]+$/i, '');
   return stripped.slice(0, 32) || Date.now().toString(36);
+}
+
+/**
+ * 진단용 — 배포된 함수 안의 Chromium 파일이 실제로 들어갔는지 확인합니다.
+ *   관리자 로그인된 상태에서 /api/admin/import/newyorktrd-reviews/preview-photos
+ *   에 GET 하면 됩니다. 바이너리를 실행하지는 않습니다 — 파일 유무만 봅니다.
+ *   next.config 의 outputFileTracingIncludes 가 맞게 걸렸는지 바로 보입니다.
+ */
+export async function GET() {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: '관리자 로그인이 필요합니다.' }, { status: 401 });
+  }
+
+  const env = {
+    VERCEL: process.env.VERCEL ?? null,
+    AWS_LAMBDA_FUNCTION_NAME: process.env.AWS_LAMBDA_FUNCTION_NAME ?? null,
+    cwd: process.cwd(),
+  };
+
+  // @sparticuz/chromium — 설치 여부 · bin 경로 · bin 폴더 안의 파일 목록
+  let sparticuz: Record<string, unknown>;
+  try {
+    // 모듈이 require 가능한지만 확인 (실제 바이너리 실행은 안 합니다).
+    await import('@sparticuz/chromium');
+    const pkgPath = path.dirname(require.resolve('@sparticuz/chromium/package.json'));
+    const binPath = path.join(pkgPath, 'bin');
+    const binExists = fs.existsSync(binPath);
+    sparticuz = {
+      moduleLoaded: true,
+      pkgPath,
+      binPath,
+      binExists,
+      binContents: binExists ? fs.readdirSync(binPath).slice(0, 20) : null,
+    };
+  } catch (error) {
+    sparticuz = {
+      moduleLoaded: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+
+  // puppeteer-core 설치 여부
+  let puppeteer: Record<string, unknown>;
+  try {
+    const pkgPath = path.dirname(require.resolve('puppeteer-core/package.json'));
+    puppeteer = { pkgPath, loaded: true };
+  } catch (error) {
+    puppeteer = {
+      loaded: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+
+  return NextResponse.json(
+    { env, sparticuz, puppeteer },
+    { headers: { 'Cache-Control': 'no-store' } }
+  );
 }
 
 export async function POST(request: NextRequest) {

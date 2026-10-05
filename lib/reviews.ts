@@ -56,8 +56,8 @@ export type Review = {
   createdAt: string | null;
   /**
    * 어디서 가져온 리뷰인가. 'newyorktrd' · 'sellstar' · null(우리 손님).
-   * ★ null 이 아니면 손님 화면에 반드시 ‘뉴욕트렌딕 구매 후기’ 처럼 출처 배지를 띄웁니다.
-   *   평균 별점(ReviewSummary)·상품 목록 평균(getRatingsByProduct)에는 안 섞입니다.
+   * ★ null 이 아니면 손님 화면에 반드시 ◇ 아이콘(제휴 매장 후기 표시)이 작성자 이름 옆에
+   *   뜹니다. 평균 별점(ReviewSummary)·상품 목록 평균(getRatingsByProduct)에는 안 섞입니다.
    */
   source: 'newyorktrd' | 'sellstar' | null;
   sourceReviewId: string | null;
@@ -665,7 +665,7 @@ export async function deleteReview(id: string): Promise<void> {
  *
  * ★ 반드시 지킬 것 (newyorktrd-import-v2 · 사장님 지시 2026-10-05)
  *   · user_id · order_id 는 반드시 null → 포인트 지급 로직이 자동으로 건너뜁니다.
- *   · source 를 꼭 채웁니다 → 손님 화면이 "뉴욕트렌딕 구매 후기" 배지를 띄우고
+ *   · source 를 꼭 채웁니다 → 손님 화면이 작성자 이름 옆에 ◇ 아이콘을 띄우고
  *     평균 별점·목록 집계에서 자동 제외됩니다.
  *   · source + source_review_id 가 유일 인덱스로 묶여 같은 후기를 두 번 저장할 수 없습니다.
  * ------------------------------------------------------------------ */

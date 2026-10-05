@@ -26,8 +26,8 @@ import { slugify } from '@/lib/product-utils';
  *
  * ★ 표시광고법
  *   저장되는 리뷰는 source='newyorktrd' · user_id=null · order_id=null · is_sponsored=false.
- *   손님 화면이 source != null 을 보고 「뉴욕트렌딕 구매 후기」 배지를 띄우고 평균 별점·
- *   개수에서 자동 제외합니다. 포인트 지급 흐름(points.ts)에도 안 들어갑니다.
+ *   손님 화면이 source != null 을 보고 작성자 이름 옆에 ◇ 아이콘(제휴 매장 후기 표시) 을
+ *   띄우고 평균 별점·개수에서 자동 제외합니다. 포인트 지급 흐름(points.ts)에도 안 들어갑니다.
  */
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
