@@ -184,7 +184,17 @@ export default async function ProductDetailPage({ params }: PageProps) {
       '@type': 'Brand',
       name: brandName,
     },
-    // 후기가 있으면 검색 결과에 별점이 함께 나옵니다.
+    /*
+     * 후기가 있으면 검색 결과에 별점이 함께 나옵니다.
+     *
+     * ★ 구글 Review Snippet 규정 — "다른 사이트의 리뷰를 모아 집계로 넣지 말 것".
+     *   reviewSummary 는 lib/reviews.ts 의 summarize() 결과로, source != null (뉴욕·셀스타
+     *   등 외부 쇼핑몰에서 가져온 후기)을 전부 걸러 **우리 손님 후기만** 담고 있습니다.
+     *   그래서 여기 ratingValue · reviewCount 에 외부 후기가 섞이지 않습니다.
+     *
+     * ★ 개별 Review JSON-LD 는 일부러 넣지 않습니다. 넣으면 외부 후기까지 색인되기 쉽고,
+     *   구글이 "모아온 리뷰" 로 보고 노출을 막습니다. aggregateRating 하나로 끝냅니다.
+     */
     ...(reviewSummary.count > 0
       ? {
           aggregateRating: {

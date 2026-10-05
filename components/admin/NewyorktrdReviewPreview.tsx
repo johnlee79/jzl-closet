@@ -4,6 +4,31 @@ import { useMemo, useState } from 'react';
 import StarRating from '@/components/StarRating';
 import { formatDate } from '@/lib/format';
 
+/** 손님 화면과 똑같은 ◇ 아이콘. 작게 — 큰 배지는 더 이상 쓰지 않습니다. */
+const PARTNER_REVIEW_NOTICE =
+  '제휴 매장에서 구매한 고객님의 후기입니다 (뉴욕트렌딕)';
+function PartnerReviewMark() {
+  return (
+    <span
+      className="inline-flex h-4 w-4 items-center justify-center text-slate-500"
+      title={PARTNER_REVIEW_NOTICE}
+      aria-label={PARTNER_REVIEW_NOTICE}
+    >
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 10 10"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        aria-hidden="true"
+      >
+        <path d="M5 0.6 L9.4 5 L5 9.4 L0.6 5 Z" />
+      </svg>
+    </span>
+  );
+}
+
 /**
  * 뉴욕트렌딕 리뷰 미리보기 — 운영자가 눈으로 보고 체크해서 저장.
  *
@@ -166,6 +191,10 @@ export default function NewyorktrdReviewPreview({
 
   return (
     <div className="flex flex-col gap-3">
+      <p className="flex items-center gap-2 text-[13px] text-slate-500">
+        <PartnerReviewMark />
+        <span>표시는 제휴 매장에서 구매한 고객님의 후기입니다 — 손님 화면에도 같은 표시가 나갑니다</span>
+      </p>
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-slate-50 px-3 py-2 text-[14px] text-slate-700">
         <span>
           새 후기 <strong>{selectableCount}건</strong> 중{' '}
@@ -241,9 +270,7 @@ export default function NewyorktrdReviewPreview({
                     <span className="text-[13px] text-slate-500">
                       {formatDate(review.writtenAt)}
                     </span>
-                    <span className="inline-flex items-center bg-amber-100 px-2 py-0.5 text-[12px] font-medium text-amber-900">
-                      뉴욕트렌딕 구매 후기
-                    </span>
+                    <PartnerReviewMark />
                     {disabled ? (
                       <span className="inline-flex items-center bg-slate-200 px-2 py-0.5 text-[12px] text-slate-700">
                         가져옴

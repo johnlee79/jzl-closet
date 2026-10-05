@@ -684,6 +684,39 @@ export type ImportedReviewInput = {
   sourceUrl: string;
 };
 
+/**
+ * 특정 상품의 특정 출처(뉴욕트렌딕 등) 리뷰 전부를 돌려줍니다.
+ * ★ 사진 다시 받기 (refetch-photos) 라우트가 이걸로 "뭘 다시 받을지" 를 셉니다.
+ */
+export async function getImportedReviewsForProduct(
+  productId: string,
+  source: 'newyorktrd' | 'sellstar'
+): Promise<Review[]> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('*')
+    .eq('product_id', productId)
+    .eq('source', source);
+  if (error || !data) return [];
+  return (data as ReviewRow[]).map(rowToReview);
+}
+
+/** 외부 리뷰의 사진 목록을 통째로 바꿉니다 (다시 받기용). */
+export async function updateImportedReviewAttachments(
+  reviewId: string,
+  attachments: string[]
+): Promise<void> {
+  const supabase = requireSupabaseAdmin();
+  const result = await supabase
+    .from(TABLE)
+    .update({ attachments })
+    .eq('id', reviewId)
+    .select('id');
+  assertWritten(result, '리뷰 사진을 다시 저장하지 못했습니다');
+}
+
 /** 같은 외부 리뷰가 이미 저장되어 있나? (중복 방지) */
 export async function hasImportedReview(
   source: 'newyorktrd' | 'sellstar',

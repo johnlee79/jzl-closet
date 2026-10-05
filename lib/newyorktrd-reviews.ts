@@ -204,27 +204,55 @@ export function parseReviewDetail(
 
   // ─ 본문 영역 ─
   // <div class="content "> ... <div class="fr-view fr-view-article">본문HTML</div> ... </div>
+  // ★ 사진이 fr-view 바깥(별도 첨부 영역)에 들어 있을 수도 있어 두 번 봅니다.
   const bodyMatch = /class="fr-view[^"]*"[^>]*>([\s\S]*?)<\/div>/.exec(html);
   const bodyHtml = bodyMatch ? bodyMatch[1] : '';
 
+  // 본문 아래 ~ 추천(vote) 블록 전까지의 범위도 함께 봅니다 (첨부 사진이 분리된 경우 대비).
+  const contentStart = html.indexOf('class="content');
+  const contentEnd = html.indexOf('class="vote', contentStart);
+  const contentArea =
+    contentStart >= 0 ? html.slice(contentStart, contentEnd > 0 ? contentEnd : contentStart + 20000) : '';
+
   // ─ 사진 ─
   // 사용자 업로드 사진은 <img ...> 로 들어옵니다. 동영상(<video>, <source>) 은 전부 거릅니다.
+  // ★ cafe24 는 지연 로딩 때 ec-data-src 속성에 실제 URL 을 넣어 둡니다. 둘 다 봅니다.
+  // ★ 현재(2026-10) 뉴욕트렌딕은 사진 후기를 Alpha Review 외부 위젯(JS)에 저장하고 있어
+  //   서버 HTML 에는 손님 사진이 보이지 않습니다. 이 자리는 "들어오면 받는" 안전망입니다.
   const photos: string[] = [];
-  const imgRegex = /<img\b[^>]+>/gi;
-  let imgTag: RegExpExecArray | null;
-  while ((imgTag = imgRegex.exec(bodyHtml)) !== null) {
-    const src = /\bsrc=["']([^"']+)["']/i.exec(imgTag[0])?.[1];
-    if (!src) continue;
-    const abs = toAbsoluteUrl(src);
-    // 시스템 아이콘·이모지 등 제외 (리뷰 본문 안에 들어오는 경우가 있음)
-    if (!abs) continue;
-    if (/img\.echosting\.cafe24\.com/i.test(abs)) continue;
-    if (/morenvyimg/i.test(abs)) continue;
-    if (abs.startsWith('data:')) continue;
-    // 리뷰 사진은 /web/upload/... 또는 /web/product/... 로 옵니다. 둘 다 받습니다.
-    if (!/\/web\//.test(abs)) continue;
-    photos.push(toBigImage(abs));
-  }
+  const seenPhotos = new Set<string>();
+  const scanImgs = (chunk: string) => {
+    const imgRegex = /<img\b[^>]+>/gi;
+    let imgTag: RegExpExecArray | null;
+    while ((imgTag = imgRegex.exec(chunk)) !== null) {
+      const ecSrc = /ec-data-src=["']([^"']+)["']/i.exec(imgTag[0])?.[1];
+      const plainSrc = /\bsrc=["']([^"']+)["']/i.exec(imgTag[0])?.[1];
+      const raw = (ecSrc || plainSrc || '').trim();
+      if (!raw) continue;
+      const abs = toAbsoluteUrl(raw);
+      if (!abs) continue;
+      // 시스템 아이콘·이모지 제외
+      if (/img\.echosting\.cafe24\.com/i.test(abs)) continue;
+      if (/morenvyimg/i.test(abs)) continue;
+      if (/\/0_img\//i.test(abs)) continue;
+      if (/facebook\.com\/tr/i.test(abs)) continue;
+      if (abs.startsWith('data:')) continue;
+      // 글 안에서 상품 썸네일(/web/product/) 가 끌어와지는 경우는 손님 사진이 아니라 제외합니다.
+      if (/\/web\/product\//i.test(abs)) continue;
+      // 손님 업로드 사진이 올 수 있는 자리 — 셋 다 받습니다.
+      //   newyorktrd.co.kr/web/upload/...  theplanet.hgodo.com/...  review-media.alphwidget.com/...
+      const okHost =
+        /newyorktrd\.co\.kr\/web\/upload\//i.test(abs) ||
+        /theplanet\.hgodo\.com\//i.test(abs) ||
+        /review-media\.alphwidget\.com\//i.test(abs);
+      if (!okHost) continue;
+      if (seenPhotos.has(abs)) continue;
+      seenPhotos.add(abs);
+      photos.push(toBigImage(abs));
+    }
+  };
+  scanImgs(bodyHtml);
+  scanImgs(contentArea);
 
   // ─ 본문 글 (이미지·동영상 태그 제거) ─
   const cleanedBody = bodyHtml

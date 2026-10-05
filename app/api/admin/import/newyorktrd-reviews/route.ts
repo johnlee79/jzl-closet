@@ -38,7 +38,11 @@ const WEBP_QUALITY = 82;
 const PHOTO_FETCH_TIMEOUT = 15000;
 const PHOTO_MAX_BYTES = 15 * 1024 * 1024;
 
-const ALLOWED_PHOTO_HOSTS = new Set(['newyorktrd.co.kr', 'theplanet.hgodo.com']);
+const ALLOWED_PHOTO_HOSTS = new Set([
+  'newyorktrd.co.kr',
+  'theplanet.hgodo.com',
+  'review-media.alphwidget.com',
+]);
 
 type SelectionInput = {
   reviewId: string;
@@ -57,7 +61,13 @@ type Payload = {
 };
 
 type ReviewOutcome =
-  | { ok: true; reviewId: string; attachments: number }
+  | {
+      ok: true;
+      reviewId: string;
+      attachments: number;
+      /** 사진 복사 실패 — 조용히 넘어가지 않고 사용자에게 보여 줍니다. */
+      photoFailures: { url: string; reason: string }[];
+    }
   | { ok: false; reviewId: string; reason: string }
   | { skipped: true; reviewId: string; reason: string };
 
@@ -76,19 +86,31 @@ function isAllowedPhotoUrl(url: string): boolean {
   }
 }
 
-async function copyPhotoToR2(sourceUrl: string, slug: string): Promise<string | null> {
+type PhotoCopyResult = { url: string } | { error: string };
+
+/**
+ * 사진 하나를 R2 로 복사합니다. 실패하면 왜 실패했는지 문자열을 돌려줍니다.
+ * ★ 예전엔 조용히 null 을 돌려 사용자가 왜 사진이 비는지 알 수 없었습니다 (사장님 지시, 2026-10-05).
+ */
+async function copyPhotoToR2(sourceUrl: string, slug: string): Promise<PhotoCopyResult> {
   if (!isAllowedPhotoUrl(sourceUrl)) {
-    console.warn('[import/newyorktrd-reviews] 허용되지 않은 사진 호스트:', sourceUrl);
-    return null;
+    const reason = `허용되지 않은 호스트: ${sourceUrl.split('/')[2] ?? '(알 수 없음)'}`;
+    console.warn('[import/newyorktrd-reviews]', reason, sourceUrl);
+    return { error: reason };
   }
   try {
     const response = await fetch(sourceUrl, {
       cache: 'no-store',
       signal: AbortSignal.timeout(PHOTO_FETCH_TIMEOUT),
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      return { error: `내려받기 실패 (HTTP ${response.status})` };
+    }
     const buffer = Buffer.from(await response.arrayBuffer());
-    if (buffer.byteLength === 0 || buffer.byteLength > PHOTO_MAX_BYTES) return null;
+    if (buffer.byteLength === 0) return { error: '빈 파일' };
+    if (buffer.byteLength > PHOTO_MAX_BYTES) {
+      return { error: `용량 초과 (${Math.round(buffer.byteLength / 1024 / 1024)}MB)` };
+    }
     const converted = await sharp(buffer)
       .rotate()
       .resize({ width: MAX_WIDTH, withoutEnlargement: true })
@@ -105,10 +127,11 @@ async function copyPhotoToR2(sourceUrl: string, slug: string): Promise<string | 
         CacheControl: 'public, max-age=31536000, immutable',
       })
     );
-    return toPublicUrl(key);
+    return { url: toPublicUrl(key) };
   } catch (error) {
-    console.warn('[import/newyorktrd-reviews] 사진 복사 실패:', sourceUrl, error);
-    return null;
+    const reason = error instanceof Error ? error.message : '알 수 없는 오류';
+    console.warn('[import/newyorktrd-reviews] 사진 복사 실패:', sourceUrl, reason);
+    return { error: reason };
   }
 }
 
@@ -163,10 +186,12 @@ export async function POST(request: NextRequest) {
     }
 
     const attachments: string[] = [];
+    const photoFailures: { url: string; reason: string }[] = [];
     for (const photo of photos) {
       // eslint-disable-next-line no-await-in-loop
-      const url = await copyPhotoToR2(photo, productSlug);
-      if (url) attachments.push(url);
+      const result = await copyPhotoToR2(photo, productSlug);
+      if ('url' in result) attachments.push(result.url);
+      else photoFailures.push({ url: photo, reason: result.error });
     }
 
     try {
@@ -183,7 +208,12 @@ export async function POST(request: NextRequest) {
         sourceReviewId: reviewId,
         sourceUrl,
       });
-      outcomes.push({ ok: true, reviewId, attachments: attachments.length });
+      outcomes.push({
+        ok: true,
+        reviewId,
+        attachments: attachments.length,
+        photoFailures,
+      });
     } catch (error) {
       if (error instanceof DuplicateReviewError) {
         outcomes.push({ skipped: true, reviewId, reason: '이미 가져온 후기' });

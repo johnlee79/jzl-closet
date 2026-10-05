@@ -100,6 +100,37 @@ function PlayMark() {
 }
 
 /**
+ * 제휴 매장 (뉴욕트렌딕) 후기 표시 — 작은 ◇ 아이콘.
+ *
+ * ★ 표시광고법 — 외부에서 가져온 후기임을 손님이 알 수 있어야 합니다.
+ *   목록 맨 위의 범례와 각 아이콘의 title 두 자리로 안내합니다.
+ *   아이콘은 이모지가 아닌 SVG — 사이트 규칙입니다 (브라우저·OS 간 모양 차이 방지).
+ */
+const PARTNER_REVIEW_NOTICE =
+  '제휴 매장에서 구매한 고객님의 후기입니다 (뉴욕트렌딕)';
+function PartnerReviewMark() {
+  return (
+    <span
+      className="inline-flex h-4 w-4 items-center justify-center text-muted"
+      title={PARTNER_REVIEW_NOTICE}
+      aria-label={PARTNER_REVIEW_NOTICE}
+    >
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 10 10"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        aria-hidden="true"
+      >
+        <path d="M5 0.6 L9.4 5 L5 9.4 L0.6 5 Z" />
+      </svg>
+    </span>
+  );
+}
+
+/**
  * 상품 상세의 리뷰 영역.
  *
  * ★ is_sponsored 인 리뷰에는 반드시 표시 문구를 붙입니다.
@@ -404,6 +435,17 @@ export default function ProductReviews({
             </div>
           </div>
 
+          {/*
+            ★ 범례 — 제휴 매장 후기가 섞여 있을 때만 띄웁니다. 표시광고법상 손님이
+              이게 뭘 뜻하는지 알 수 있어야 합니다.
+          */}
+          {reviews.some((review) => review.source === 'newyorktrd') ? (
+            <p className="mt-4 flex items-center gap-2 text-[14px] leading-relaxed text-muted">
+              <PartnerReviewMark />
+              <span>표시는 제휴 매장에서 구매한 고객님의 후기입니다</span>
+            </p>
+          ) : null}
+
           {/* ── 목록 ─────────────────────────────────── */}
           {visible.length === 0 ? (
             <p className="py-14 text-[17px] leading-relaxed text-ink">
@@ -430,14 +472,13 @@ export default function ProductReviews({
                       {formatDate(review.writtenAt ?? review.createdAt)}
                     </span>
                     {/*
-                      ★ 표시광고법 — 외부 쇼핑몰(뉴욕트렌딕)에서 가져온 후기는 "우리 손님 후기"
-                        처럼 보이면 기만 광고가 됩니다. 글마다 눈에 띄는 배지를 꼭 붙입니다.
-                        은은하게 흐리거나 작게 만들지 마세요 (사장님 지시, 2026-10-05).
+                      ★ 표시광고법 — 외부(뉴욕트렌딕)에서 가져온 후기는 작은 ◇ 아이콘으로
+                        구분합니다. 아이콘 자체가 "제휴 매장" 표시이고, 목록 맨 위의 범례와
+                        각 아이콘의 title 로 손님이 뭘 뜻하는지 알 수 있어야 합니다.
+                        (사장님 지시, 2026-10-05 — 큰 배지 대신 아이콘)
                     */}
                     {review.source === 'newyorktrd' ? (
-                      <span className="inline-flex items-center gap-1 bg-amber-100 px-2 py-0.5 text-[13px] font-medium text-amber-900">
-                        뉴욕트렌딕 구매 후기
-                      </span>
+                      <PartnerReviewMark />
                     ) : null}
                   </div>
 

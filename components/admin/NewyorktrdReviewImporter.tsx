@@ -36,6 +36,14 @@ export default function NewyorktrdReviewImporter({
     skipped: number;
     failed: number;
     details: string[];
+    photoFailures: string[];
+  } | null>(null);
+  const [refetching, setRefetching] = useState(false);
+  const [refetchSummary, setRefetchSummary] = useState<{
+    examined: number;
+    updated: number;
+    keptEmpty: number;
+    failed: number;
   } | null>(null);
 
   const loadPreview = async () => {
@@ -124,7 +132,12 @@ export default function NewyorktrdReviewImporter({
         skipped?: number;
         failed?: number;
         outcomes?: Array<
-          | { ok: true; reviewId: string; attachments: number }
+          | {
+              ok: true;
+              reviewId: string;
+              attachments: number;
+              photoFailures: { url: string; reason: string }[];
+            }
           | { ok: false; reviewId: string; reason: string }
           | { skipped: true; reviewId: string; reason: string }
         >;
@@ -139,11 +152,20 @@ export default function NewyorktrdReviewImporter({
             'ok' in outcome && !outcome.ok
         )
         .map((outcome) => `#${outcome.reviewId} — ${outcome.reason}`);
+      const photoFailures: string[] = [];
+      for (const outcome of payload.outcomes ?? []) {
+        if ('ok' in outcome && outcome.ok && Array.isArray(outcome.photoFailures)) {
+          for (const failure of outcome.photoFailures) {
+            photoFailures.push(`#${outcome.reviewId} — ${failure.reason}`);
+          }
+        }
+      }
       setSummary({
         imported: payload.imported ?? 0,
         skipped: payload.skipped ?? 0,
         failed: payload.failed ?? 0,
         details,
+        photoFailures,
       });
       setReviews(null);
       setSelections([]);
@@ -154,6 +176,55 @@ export default function NewyorktrdReviewImporter({
       );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const refetchPhotos = async () => {
+    if (refetching) return;
+    if (
+      !window.confirm(
+        '이미 가져온 뉴욕트렌딕 후기들의 사진을 다시 받아 올까요?\n\n' +
+          '• 사진이 있는 리뷰만 교체합니다 (0 장이면 기존 사진 그대로 둠)\n' +
+          '• R2 에 새 사진이 올라갑니다'
+      )
+    )
+      return;
+    setRefetching(true);
+    setRefetchSummary(null);
+    setError(null);
+    try {
+      const response = await fetch(
+        '/api/admin/import/newyorktrd-reviews/refetch-photos',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId, productSlug, productNo }),
+        }
+      );
+      const data = (await response.json()) as {
+        error?: string;
+        examined?: number;
+        updated?: number;
+        keptEmpty?: number;
+        failed?: number;
+      };
+      if (!response.ok) {
+        setError(data.error ?? '사진을 다시 받지 못했습니다.');
+        return;
+      }
+      setRefetchSummary({
+        examined: data.examined ?? 0,
+        updated: data.updated ?? 0,
+        keptEmpty: data.keptEmpty ?? 0,
+        failed: data.failed ?? 0,
+      });
+      router.refresh();
+    } catch (fetchError) {
+      setError(
+        fetchError instanceof Error ? fetchError.message : '사진을 다시 받지 못했습니다.'
+      );
+    } finally {
+      setRefetching(false);
     }
   };
 
@@ -168,18 +239,34 @@ export default function NewyorktrdReviewImporter({
             상품 {productNo} 번의 최근 후기를 받아 미리 보여 드립니다 (최대 25건). 눈으로
             확인한 뒤 체크한 것만 저장합니다. 사진은 한 장씩 뺄 수 있습니다. 영상은
             가져오지 않습니다.
+            <br />
+            <span className="text-[13px] text-amber-800">
+              ★ 뉴욕트렌딕은 손님 사진 후기를 외부 위젯(Alpha Review)에 두어, 현재
+              서버 HTML 로는 사진이 들어오지 않을 수 있습니다. 사진이 나중에 올라오면
+              「사진 다시 받기」 로 보충할 수 있습니다.
+            </span>
           </p>
         </div>
-        {!reviews ? (
+        <div className="flex shrink-0 flex-col gap-2">
+          {!reviews ? (
+            <button
+              type="button"
+              onClick={() => void loadPreview()}
+              disabled={loading || saving || refetching}
+              className="admin-btn-primary"
+            >
+              {loading ? '불러오는 중…' : '미리 보기'}
+            </button>
+          ) : null}
           <button
             type="button"
-            onClick={() => void loadPreview()}
-            disabled={loading || saving}
-            className="admin-btn-primary shrink-0"
+            onClick={() => void refetchPhotos()}
+            disabled={loading || saving || refetching}
+            className="admin-btn"
           >
-            {loading ? '불러오는 중…' : '미리 보기'}
+            {refetching ? '사진 받는 중…' : '사진 다시 받기'}
           </button>
-        ) : null}
+        </div>
       </div>
 
       {error ? (
@@ -223,20 +310,36 @@ export default function NewyorktrdReviewImporter({
       ) : null}
 
       {summary && !reviews ? (
-        <p className="mt-3 rounded bg-white px-3 py-2 text-[14px] text-amber-900">
-          새로 가져온 후기 <strong>{summary.imported}건</strong>, 이미 있던 것{' '}
-          <strong>{summary.skipped}건</strong>, 실패 <strong>{summary.failed}건</strong>.
+        <div className="mt-3 rounded bg-white px-3 py-2 text-[14px] text-amber-900">
+          <p>
+            새로 가져온 후기 <strong>{summary.imported}건</strong>, 이미 있던 것{' '}
+            <strong>{summary.skipped}건</strong>, 실패{' '}
+            <strong>{summary.failed}건</strong>.
+          </p>
           {summary.failed > 0 ? (
-            <>
-              <br />
-              <span className="text-amber-800">
-                실패: {summary.details.slice(0, 3).join(' / ')}
-                {summary.details.length > 3
-                  ? ` 외 ${summary.details.length - 3}건`
-                  : ''}
-              </span>
-            </>
+            <p className="mt-1 text-amber-800">
+              저장 실패: {summary.details.slice(0, 3).join(' / ')}
+              {summary.details.length > 3 ? ` 외 ${summary.details.length - 3}건` : ''}
+            </p>
           ) : null}
+          {summary.photoFailures.length > 0 ? (
+            <p className="mt-1 text-amber-800">
+              사진 복사 실패 {summary.photoFailures.length}장:{' '}
+              {summary.photoFailures.slice(0, 3).join(' / ')}
+              {summary.photoFailures.length > 3
+                ? ` 외 ${summary.photoFailures.length - 3}장`
+                : ''}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {refetchSummary ? (
+        <p className="mt-3 rounded bg-white px-3 py-2 text-[14px] text-amber-900">
+          사진 다시 받기 — 확인 <strong>{refetchSummary.examined}건</strong> · 새 사진으로
+          교체 <strong>{refetchSummary.updated}건</strong> · 사진 없어 그대로 둠{' '}
+          <strong>{refetchSummary.keptEmpty}건</strong> · 실패{' '}
+          <strong>{refetchSummary.failed}건</strong>
         </p>
       ) : null}
     </div>
