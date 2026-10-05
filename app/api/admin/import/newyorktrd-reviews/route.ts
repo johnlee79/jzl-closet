@@ -2,12 +2,6 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { NextResponse, type NextRequest } from 'next/server';
 import sharp from 'sharp';
 import { isAdmin } from '@/lib/admin-guard';
-import { NewyorktrdError } from '@/lib/newyorktrd';
-import {
-  fetchReviewDetail,
-  fetchReviewIdsPage,
-  type ReviewDetail,
-} from '@/lib/newyorktrd-reviews';
 import { requireR2, toPublicUrl } from '@/lib/r2';
 import {
   createImportedReview,
@@ -17,21 +11,23 @@ import {
 import { slugify } from '@/lib/product-utils';
 
 /**
- * 뉴욕트렌딕 리뷰 가져오기 — 한 번에 한 페이지씩.
+ * 뉴욕트렌딕 리뷰 저장 — 미리보기에서 운영자가 고른 것만 받아 저장.
  *
- * ★ 왜 페이지 단위로 자르나
- *   한 상품에 최대 25건, 사진 포함이면 각 건마다 서버 요청·sharp 변환·R2 업로드가 붙어
- *   한 번에 다 처리하면 Vercel 60초 함수 제한을 넘을 수 있습니다. 화면이 1→2→3→4→5
- *   페이지를 돌리고 매번 진행률을 보여 줍니다.
+ * ★ 서버에 들어오는 모양
+ *   { productId, productSlug, selections: [{ ...리뷰 전체, photos: [선택한 사진 URL] }] }
+ *   사진은 운영자가 체크 해제한 것은 미리 뺀 상태로 옵니다. 서버는 그대로 R2 에 올리고 저장.
  *
- * ★ 중복 방지
- *   같은 source + source_review_id 는 유일 인덱스로 막혀 있고, 저장 전에도 한 번 더
- *   조회해 "이미 가져온 후기" 로 건너뜁니다. 그래서 다시 눌러도 새 후기만 들어옵니다.
+ * ★ 안전장치
+ *   · 서버에서 다시 hasImportedReview 로 중복 체크 (DB 유니크 인덱스가 최종 가드)
+ *   · 사진 URL 은 newyorktrd.co.kr 또는 theplanet.hgodo.com 쪽만 받습니다
+ *     — 다른 도메인으로 바꿔치면 R2 가 외부 자원 저장 수단이 되어 버립니다
+ *   · 리뷰 글·별점·작성자명·날짜는 미리보기 때 서버가 파싱한 그대로 왔다고 믿습니다.
+ *     운영자(관리자)가 손대지 못하는 입력이라, 상품 가져오기 payload 와 같은 신뢰 수준입니다.
  *
  * ★ 표시광고법
- *   저장되는 리뷰는 source='newyorktrd' · user_id=null · order_id=null · is_sponsored=false
- *   입니다. 손님 화면은 source != null 을 보고 「뉴욕트렌딕 구매 후기」 배지를 띄웁니다.
- *   포인트는 지급되지 않습니다 (user_id 가 null 이라 points.ts 흐름에 들어가지 않습니다).
+ *   저장되는 리뷰는 source='newyorktrd' · user_id=null · order_id=null · is_sponsored=false.
+ *   손님 화면이 source != null 을 보고 「뉴욕트렌딕 구매 후기」 배지를 띄우고 평균 별점·
+ *   개수에서 자동 제외합니다. 포인트 지급 흐름(points.ts)에도 안 들어갑니다.
  */
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,11 +38,22 @@ const WEBP_QUALITY = 82;
 const PHOTO_FETCH_TIMEOUT = 15000;
 const PHOTO_MAX_BYTES = 15 * 1024 * 1024;
 
+const ALLOWED_PHOTO_HOSTS = new Set(['newyorktrd.co.kr', 'theplanet.hgodo.com']);
+
+type SelectionInput = {
+  reviewId: string;
+  sourceUrl: string;
+  writerName: string;
+  rating: number;
+  content: string;
+  photos: string[];
+  writtenAt: string;
+};
+
 type Payload = {
   productId: string;
   productSlug: string;
-  productNo: number;
-  page: number;
+  selections: SelectionInput[];
 };
 
 type ReviewOutcome =
@@ -60,8 +67,20 @@ function keyFor(slug: string): string {
   return `reviews/${safe}/${Date.now()}-${random}.webp`;
 }
 
-/** 사진 하나를 받아 WebP 로 변환·R2 업로드. 실패하면 null. */
+function isAllowedPhotoUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return ALLOWED_PHOTO_HOSTS.has(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
 async function copyPhotoToR2(sourceUrl: string, slug: string): Promise<string | null> {
+  if (!isAllowedPhotoUrl(sourceUrl)) {
+    console.warn('[import/newyorktrd-reviews] 허용되지 않은 사진 호스트:', sourceUrl);
+    return null;
+  }
   try {
     const response = await fetch(sourceUrl, {
       cache: 'no-store',
@@ -70,13 +89,11 @@ async function copyPhotoToR2(sourceUrl: string, slug: string): Promise<string | 
     if (!response.ok) return null;
     const buffer = Buffer.from(await response.arrayBuffer());
     if (buffer.byteLength === 0 || buffer.byteLength > PHOTO_MAX_BYTES) return null;
-
     const converted = await sharp(buffer)
       .rotate()
       .resize({ width: MAX_WIDTH, withoutEnlargement: true })
       .webp({ quality: WEBP_QUALITY })
       .toBuffer();
-
     const r2 = requireR2();
     const key = keyFor(slug);
     await r2.client.send(
@@ -109,106 +126,84 @@ export async function POST(request: NextRequest) {
 
   const productId = typeof payload.productId === 'string' ? payload.productId : '';
   const productSlug = typeof payload.productSlug === 'string' ? payload.productSlug : '';
-  const productNo = Number(payload.productNo ?? 0);
-  const page = Math.max(1, Math.min(5, Number(payload.page ?? 1)));
-
-  if (!productId || !productSlug || !productNo) {
+  const selections = Array.isArray(payload.selections) ? payload.selections : [];
+  if (!productId || !productSlug) {
     return NextResponse.json(
-      { error: 'productId · productSlug · productNo 가 필요합니다.' },
+      { error: 'productId · productSlug 가 필요합니다.' },
       { status: 400 }
     );
   }
+  if (selections.length === 0) {
+    return NextResponse.json(
+      { imported: 0, skipped: 0, failed: 0, outcomes: [] },
+      { headers: { 'Cache-Control': 'no-store' } }
+    );
+  }
 
-  try {
-    const { ids, totalPages } = await fetchReviewIdsPage(productNo, page);
+  const outcomes: ReviewOutcome[] = [];
 
-    const outcomes: ReviewOutcome[] = [];
+  for (const selection of selections) {
+    const reviewId = String(selection.reviewId ?? '').trim();
+    if (!reviewId) continue;
 
-    for (const reviewId of ids) {
+    // 유효성 검사
+    const rating = Math.min(5, Math.max(1, Math.trunc(Number(selection.rating) || 5)));
+    const content = String(selection.content ?? '').trim();
+    const writerName = String(selection.writerName ?? '').trim();
+    const writtenAt = String(selection.writtenAt ?? new Date().toISOString());
+    const sourceUrl = String(selection.sourceUrl ?? '').trim();
+    const photos = Array.isArray(selection.photos)
+      ? selection.photos.filter((photo): photo is string => typeof photo === 'string')
+      : [];
+
+    // eslint-disable-next-line no-await-in-loop
+    if (await hasImportedReview('newyorktrd', reviewId)) {
+      outcomes.push({ skipped: true, reviewId, reason: '이미 가져온 후기' });
+      continue;
+    }
+
+    const attachments: string[] = [];
+    for (const photo of photos) {
       // eslint-disable-next-line no-await-in-loop
-      if (await hasImportedReview('newyorktrd', reviewId)) {
-        outcomes.push({ skipped: true, reviewId, reason: '이미 가져온 후기' });
-        continue;
-      }
+      const url = await copyPhotoToR2(photo, productSlug);
+      if (url) attachments.push(url);
+    }
 
-      let detail: ReviewDetail;
-      try {
-        // eslint-disable-next-line no-await-in-loop
-        detail = await fetchReviewDetail(reviewId, productNo);
-      } catch (error) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await createImportedReview({
+        productId,
+        productSlug,
+        writerName,
+        rating,
+        content,
+        attachments,
+        writtenAt,
+        source: 'newyorktrd',
+        sourceReviewId: reviewId,
+        sourceUrl,
+      });
+      outcomes.push({ ok: true, reviewId, attachments: attachments.length });
+    } catch (error) {
+      if (error instanceof DuplicateReviewError) {
+        outcomes.push({ skipped: true, reviewId, reason: '이미 가져온 후기' });
+      } else {
         outcomes.push({
           ok: false,
           reviewId,
-          reason: error instanceof Error ? error.message : '내려받기 실패',
+          reason: error instanceof Error ? error.message : '저장 실패',
         });
-        continue;
-      }
-
-      if ('skipped' in detail && detail.skipped) {
-        outcomes.push({ skipped: true, reviewId, reason: detail.reason });
-        continue;
-      }
-      // 타입 가드 — 'skipped' 가 아닌 가지는 전체 리뷰입니다.
-      const review = detail as Exclude<ReviewDetail, { skipped: true }>;
-
-      // 사진을 R2 로 — 하나씩, 실패하면 건너뜁니다.
-      const attachments: string[] = [];
-      for (const photo of review.photos) {
-        // eslint-disable-next-line no-await-in-loop
-        const url = await copyPhotoToR2(photo, productSlug);
-        if (url) attachments.push(url);
-      }
-
-      try {
-        // eslint-disable-next-line no-await-in-loop
-        await createImportedReview({
-          productId,
-          productSlug,
-          writerName: review.writerName,
-          rating: review.rating,
-          content: review.content,
-          attachments,
-          writtenAt: review.writtenAt,
-          source: 'newyorktrd',
-          sourceReviewId: reviewId,
-          sourceUrl: review.sourceUrl,
-        });
-        outcomes.push({ ok: true, reviewId, attachments: attachments.length });
-      } catch (error) {
-        if (error instanceof DuplicateReviewError) {
-          outcomes.push({ skipped: true, reviewId, reason: '이미 가져온 후기' });
-        } else {
-          outcomes.push({
-            ok: false,
-            reviewId,
-            reason: error instanceof Error ? error.message : '저장 실패',
-          });
-        }
       }
     }
-
-    return NextResponse.json(
-      {
-        page,
-        totalPages,
-        found: ids.length,
-        outcomes,
-        summary: {
-          imported: outcomes.filter((o) => 'ok' in o && o.ok).length,
-          skipped: outcomes.filter((o) => 'skipped' in o && o.skipped).length,
-          failed: outcomes.filter((o) => 'ok' in o && !o.ok).length,
-        },
-      },
-      { headers: { 'Cache-Control': 'no-store' } }
-    );
-  } catch (error) {
-    const message =
-      error instanceof NewyorktrdError
-        ? error.message
-        : error instanceof Error
-          ? error.message
-          : '리뷰를 가져오지 못했습니다.';
-    console.error('[import/newyorktrd-reviews]', productNo, page, message);
-    return NextResponse.json({ error: message }, { status: 502 });
   }
+
+  return NextResponse.json(
+    {
+      outcomes,
+      imported: outcomes.filter((o) => 'ok' in o && o.ok).length,
+      skipped: outcomes.filter((o) => 'skipped' in o && o.skipped).length,
+      failed: outcomes.filter((o) => 'ok' in o && !o.ok).length,
+    },
+    { headers: { 'Cache-Control': 'no-store' } }
+  );
 }

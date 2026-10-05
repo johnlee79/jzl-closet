@@ -4,6 +4,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useRef, useState, useTransition } from 'react';
 import BulkImageUpload from '@/components/admin/BulkImageUpload';
+import NewyorktrdReviewPreview, {
+  type PreviewReview,
+  type ReviewSelection,
+} from '@/components/admin/NewyorktrdReviewPreview';
 import RichTextEditor from '@/components/admin/RichTextEditor';
 import {
   ManufacturerField,
@@ -107,11 +111,16 @@ export default function SellstarImporter({
   const [shippingNote, setShippingNote] = useState('');
   /** 뉴욕트렌딕 상품을 가져올 때 그 상품의 후기도 같이 받을지 (기본 켜짐) */
   const [importReviews, setImportReviews] = useState(true);
-  /** 상품 저장 뒤 후기 가져오기 진행 상황 */
-  const [reviewProgress, setReviewProgress] = useState<{
-    done: number;
-    totalPages: number;
-    summary: { imported: number; skipped: number; failed: number } | null;
+  /** 리뷰 미리보기 — 상품 '불러오기' 뒤 자동으로 받아 둡니다 */
+  const [reviewPreview, setReviewPreview] = useState<PreviewReview[] | null>(null);
+  const [reviewPreviewLoading, setReviewPreviewLoading] = useState(false);
+  const [reviewPreviewError, setReviewPreviewError] = useState<string | null>(null);
+  const [reviewSelections, setReviewSelections] = useState<ReviewSelection[]>([]);
+  /** 상품 저장 뒤 후기 저장 결과 */
+  const [reviewSaveSummary, setReviewSaveSummary] = useState<{
+    imported: number;
+    skipped: number;
+    failed: number;
   } | null>(null);
 
   const [galleryRows, setGalleryRows] = useState<Row[]>([]);
@@ -308,7 +317,55 @@ export default function SellstarImporter({
       }
       setLoaded(true);
       setMessage({ tone: 'ok', text: `불러왔습니다. 확인 후 아래에서 등록해 주세요.` });
+
+      // ★ 뉴욕트렌딕 상품이면 리뷰 미리보기도 함께 받아 둡니다. 상품을 등록하기 전에
+      //   운영자가 눈으로 보고 체크할 수 있도록 이미지 편집기 아래에 노출합니다.
+      if (product.source === 'newyorktrd' && product.sourceProductNo > 0) {
+        void loadReviewPreview(product.sourceProductNo);
+      } else {
+        setReviewPreview(null);
+        setReviewSelections([]);
+      }
     });
+  };
+
+  const loadReviewPreview = async (productNo: number) => {
+    setReviewPreviewLoading(true);
+    setReviewPreviewError(null);
+    setReviewPreview(null);
+    setReviewSelections([]);
+    try {
+      const response = await fetch('/api/admin/import/newyorktrd-reviews/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productNo }),
+      });
+      const data = (await response.json()) as {
+        error?: string;
+        reviews?: PreviewReview[];
+      };
+      if (!response.ok) {
+        setReviewPreviewError(data.error ?? '리뷰 미리보기를 가져오지 못했습니다.');
+        return;
+      }
+      const list = data.reviews ?? [];
+      setReviewPreview(list);
+      // 기본 — 전부 체크 (사진까지)
+      setReviewSelections(
+        list
+          .filter((review) => !review.alreadyImported)
+          .map((review) => ({
+            reviewId: review.reviewId,
+            photos: [...review.photos],
+          }))
+      );
+    } catch (error) {
+      setReviewPreviewError(
+        error instanceof Error ? error.message : '리뷰 미리보기를 가져오지 못했습니다.'
+      );
+    } finally {
+      setReviewPreviewLoading(false);
+    }
   };
 
   /** 설정의 공통 블록 → 편집 줄 */
@@ -549,61 +606,56 @@ export default function SellstarImporter({
       }
 
       /*
-        ★ 뉴욕트렌딕 상품 + 후기도 함께 가져오기 체크 시, 저장된 상품번호로 리뷰를
-          페이지별로 끌어옵니다. 실패해도 상품 등록 자체는 성공 상태이므로 흐름을 막지 않습니다.
+        ★ 뉴욕트렌딕 상품 + 후기도 함께 가져오기 체크 + 선택한 리뷰가 있으면,
+          체크한 것만 저장합니다. 체크 상태는 미리보기 컴포넌트가 reviewSelections 로
+          올려 준 값입니다. 사진은 체크 해제된 것은 selections.photos 에서 미리 빠져 있습니다.
       */
-      if (source === 'newyorktrd' && importReviews && sourceProductNo > 0) {
-        setReviewProgress({ done: 0, totalPages: 5, summary: null });
-        let totalPages = 5;
-        let imported = 0;
-        let skipped = 0;
-        let failed = 0;
-        for (let page = 1; page <= totalPages; page += 1) {
-          try {
-            // eslint-disable-next-line no-await-in-loop
-            const response = await fetch('/api/admin/import/newyorktrd-reviews', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                productId: result.data.id,
-                productSlug: result.data.slug,
-                productNo: sourceProductNo,
-                page,
-              }),
+      if (
+        source === 'newyorktrd' &&
+        importReviews &&
+        reviewPreview &&
+        reviewSelections.length > 0
+      ) {
+        const byId = new Map(reviewPreview.map((review) => [review.reviewId, review]));
+        const body = {
+          productId: result.data.id,
+          productSlug: result.data.slug,
+          selections: reviewSelections
+            .map((selection) => {
+              const review = byId.get(selection.reviewId);
+              if (!review) return null;
+              return {
+                reviewId: review.reviewId,
+                sourceUrl: review.sourceUrl,
+                writerName: review.writerName,
+                rating: review.rating,
+                content: review.content,
+                photos: selection.photos,
+                writtenAt: review.writtenAt,
+              };
+            })
+            .filter(Boolean),
+        };
+        try {
+          const response = await fetch('/api/admin/import/newyorktrd-reviews', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          const data = (await response.json()) as {
+            imported?: number;
+            skipped?: number;
+            failed?: number;
+          };
+          if (response.ok) {
+            setReviewSaveSummary({
+              imported: data.imported ?? 0,
+              skipped: data.skipped ?? 0,
+              failed: data.failed ?? 0,
             });
-            // eslint-disable-next-line no-await-in-loop
-            const payloadJson = (await response.json()) as {
-              totalPages?: number;
-              found?: number;
-              summary?: { imported: number; skipped: number; failed: number };
-            };
-            if (response.ok) {
-              if (payloadJson.totalPages && payloadJson.totalPages < totalPages) {
-                totalPages = payloadJson.totalPages;
-              }
-              if (payloadJson.summary) {
-                imported += payloadJson.summary.imported;
-                skipped += payloadJson.summary.skipped;
-                failed += payloadJson.summary.failed;
-              }
-              setReviewProgress({
-                done: page,
-                totalPages,
-                summary: { imported, skipped, failed },
-              });
-              if ((payloadJson.found ?? 0) === 0) break;
-            } else {
-              // 리뷰 가져오기 실패는 등록을 막지 않습니다. 수 숫자만 기록합니다.
-              failed += 1;
-              setReviewProgress({
-                done: page,
-                totalPages,
-                summary: { imported, skipped, failed },
-              });
-            }
-          } catch {
-            failed += 1;
           }
+        } catch {
+          // 리뷰 저장 실패는 상품 등록 흐름을 막지 않습니다. 사용자에게 요약만 비웁니다.
         }
       }
 
@@ -1186,17 +1238,13 @@ export default function SellstarImporter({
             </div>
           </section>
 
-          {/* ── 등록 ──────────────────────────────────── */}
-          <section className="admin-card p-4 md:p-5">
-            <h2 className="text-[18px] font-semibold text-slate-900">등록</h2>
-            <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
-              이미지를 우리 저장소로 옮긴 뒤 <strong>임시저장(노출 꺼짐)</strong> 상태로
-              등록합니다. 확인하신 뒤 상품 편집 화면에서 판매중으로 바꿔 주세요.
-            </p>
-
-            {/* ★ 뉴욕트렌딕 상품일 때만 "후기도 함께 가져오기" 체크를 보여 줍니다. */}
-            {source === 'newyorktrd' ? (
-              <label className="mt-3 flex items-start gap-2 text-[16px] text-slate-800">
+          {/* ── 뉴욕트렌딕 후기 미리보기 ─────────────────── */}
+          {source === 'newyorktrd' ? (
+            <section className="admin-card p-4 md:p-5">
+              <h2 className="text-[18px] font-semibold text-slate-900">
+                뉴욕트렌딕 후기 미리보기
+              </h2>
+              <label className="mt-2 flex items-start gap-2 text-[15px] text-slate-800">
                 <input
                   type="checkbox"
                   checked={importReviews}
@@ -1204,22 +1252,51 @@ export default function SellstarImporter({
                   className="mt-0.5 h-4 w-4"
                 />
                 <span>
-                  후기도 함께 가져오기 (뉴욕트렌딕)
-                  <span className="mt-1 block text-[14px] leading-relaxed text-slate-500">
-                    최대 25건까지 받습니다. 손님 화면에 「뉴욕트렌딕 구매 후기」 배지로
-                    구분해 보여 주고, 평균 별점·리뷰 개수에는 섞지 않습니다. 사진은 R2 로
-                    복사하고 영상은 가져오지 않습니다.
+                  후기도 함께 가져오기 (최대 25건)
+                  <span className="mt-1 block text-[13px] leading-relaxed text-slate-500">
+                    아래에서 눈으로 확인하고 체크한 것만 저장합니다. 사진은 한 장씩 뺄 수
+                    있습니다. 손님 화면에 「뉴욕트렌딕 구매 후기」 배지로 구분해 보여 주고,
+                    평균 별점·리뷰 개수에는 섞지 않습니다. 영상은 가져오지 않습니다.
                   </span>
                 </span>
               </label>
-            ) : null}
 
-            {reviewProgress ? (
+              {importReviews ? (
+                <div className="mt-4">
+                  {reviewPreviewLoading ? (
+                    <p className="text-[14px] text-slate-500">
+                      리뷰를 받는 중입니다. 10~20초 걸릴 수 있습니다…
+                    </p>
+                  ) : reviewPreviewError ? (
+                    <p className="rounded bg-red-50 px-3 py-2 text-[14px] text-red-800">
+                      {reviewPreviewError}
+                    </p>
+                  ) : reviewPreview ? (
+                    <NewyorktrdReviewPreview
+                      reviews={reviewPreview}
+                      onSelectionsChange={setReviewSelections}
+                    />
+                  ) : null}
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
+          {/* ── 등록 ──────────────────────────────────── */}
+          <section className="admin-card p-4 md:p-5">
+            <h2 className="text-[18px] font-semibold text-slate-900">등록</h2>
+            <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
+              이미지를 우리 저장소로 옮긴 뒤 <strong>임시저장(노출 꺼짐)</strong> 상태로
+              등록합니다. 확인하신 뒤 상품 편집 화면에서 판매중으로 바꿔 주세요.
+              {source === 'newyorktrd' && importReviews && reviewSelections.length > 0 ? (
+                <> 후기 <strong>{reviewSelections.length}건</strong> 도 함께 저장합니다.</>
+              ) : null}
+            </p>
+
+            {reviewSaveSummary ? (
               <p className="mt-3 rounded bg-amber-50 px-3 py-2 text-[14px] text-amber-900">
-                리뷰 가져오기 — {reviewProgress.done}/{reviewProgress.totalPages} 페이지
-                {reviewProgress.summary
-                  ? ` · 새로 ${reviewProgress.summary.imported}건, 이미 있던 것 ${reviewProgress.summary.skipped}건, 실패 ${reviewProgress.summary.failed}건`
-                  : ''}
+                리뷰 — 새로 {reviewSaveSummary.imported}건, 이미 있던 것{' '}
+                {reviewSaveSummary.skipped}건, 실패 {reviewSaveSummary.failed}건
               </p>
             ) : null}
 
