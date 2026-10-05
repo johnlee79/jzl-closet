@@ -40,11 +40,14 @@ type ProductFormProps = {
 
 function emptyInput(): ProductInput {
   return {
-    // 손으로 등록하는 상품은 셀스타와 연결되지 않습니다.
+    // 손으로 등록하는 상품은 셀스타·뉴욕트렌딕과 연결되지 않습니다.
     sellstarId: 0,
     sellstarSyncedAt: null,
     sellstarPrice: 0,
     sellstarSalePrice: 0,
+    source: null,
+    sourceProductNo: null,
+    sourceUrl: null,
     slug: '',
     name: '',
     brandSlug: null,

@@ -104,6 +104,15 @@ export type Product = {
   /** 가져올 당시의 셀스타 정가·판매가 — 마진을 견주어 볼 때 씁니다. */
   sellstarPrice: number;
   sellstarSalePrice: number;
+  /**
+   * 범용 출처 — 'sellstar' · 'newyorktrd' · null.
+   * ★ sellstarId 와 중복되는 자리처럼 보이지만, 뉴욕트렌딕이 추가되면서 "어느 쇼핑몰에서
+   *   가져왔는가" 를 함께 저장해야 해서 새로 뒀습니다. sellstarId 는 기존 코드가
+   *   그대로 쓰고, 뉴욕트렌딕은 source + sourceProductNo 로 저장합니다.
+   */
+  source: 'sellstar' | 'newyorktrd' | null;
+  sourceProductNo: number | null;
+  sourceUrl: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 };
@@ -143,6 +152,10 @@ export type ProductRow = {
   sellstar_synced_at?: string | null;
   sellstar_price?: number | null;
   sellstar_sale_price?: number | null;
+  /** schema-newyorktrd.sql 미실행 환경에서는 비어 있을 수 있어 선택 항목입니다. */
+  source?: string | null;
+  source_product_no?: number | null;
+  source_url?: string | null;
   created_at: string | null;
   updated_at: string | null;
 };

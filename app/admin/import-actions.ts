@@ -50,6 +50,14 @@ export async function fetchSellstarAction(
 /* ── 등록 ─────────────────────────────────────────────────── */
 
 export type ImportPayload = {
+  /**
+   * 어느 쇼핑몰에서 가져왔는가.
+   * ★ 셀스타 호환을 위해 'sellstar' 는 sellstarId 자리도 함께 채웁니다.
+   *   뉴욕트렌딕은 sellstarId=0, source='newyorktrd' 로만 저장됩니다.
+   */
+  source: 'sellstar' | 'newyorktrd';
+  sourceProductNo: number;
+  sourceUrl: string;
   sellstarId: number;
   sellstarPrice: number;
   sellstarSalePrice: number;
@@ -141,6 +149,10 @@ export async function importProductAction(
       sellstarSyncedAt: new Date().toISOString(),
       sellstarPrice: payload.sellstarPrice,
       sellstarSalePrice: payload.sellstarSalePrice,
+      // ★ 범용 출처 — 뉴욕트렌딕·셀스타 둘 다 여기 저장합니다.
+      source: payload.source,
+      sourceProductNo: payload.sourceProductNo || null,
+      sourceUrl: payload.sourceUrl || null,
     };
 
     const saved = await createProduct(input);

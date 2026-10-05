@@ -191,6 +191,10 @@ export function rowToProduct(row: ProductRow): Product {
     sellstarSyncedAt: row.sellstar_synced_at ?? null,
     sellstarPrice: row.sellstar_price ?? 0,
     sellstarSalePrice: row.sellstar_sale_price ?? 0,
+    source:
+      row.source === 'sellstar' || row.source === 'newyorktrd' ? row.source : null,
+    sourceProductNo: row.source_product_no ?? null,
+    sourceUrl: row.source_url ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -236,6 +240,15 @@ export function productToRow(input: ProductInput): Omit<ProductRow, 'id' | 'crea
           sellstar_synced_at: input.sellstarSyncedAt ?? new Date().toISOString(),
           sellstar_price: input.sellstarPrice,
           sellstar_sale_price: input.sellstarSalePrice,
+        }
+      : {}),
+    // ★ 범용 출처 — 뉴욕트렌딕·셀스타 둘 다 여기 저장합니다 (schema-newyorktrd.sql).
+    //   schema 미실행 환경에서는 아래 saveWithoutCost 와 같은 요령으로 재시도합니다.
+    ...(input.source
+      ? {
+          source: input.source,
+          source_product_no: input.sourceProductNo ?? null,
+          source_url: input.sourceUrl ?? null,
         }
       : {}),
   };
@@ -650,6 +663,19 @@ function withoutCost(row: Record<string, unknown>): Record<string, unknown> {
   return copy;
 }
 
+/**
+ * source · source_product_no · source_url 세 칸을 뺀 사본.
+ * schema-newyorktrd.sql 미실행 환경에서 PostgREST 가 "그런 칸 없다" 로 막으면
+ * 이 세 칸만 빼고 다시 저장합니다. 원산지 보존 로직과 같은 생각입니다.
+ */
+function withoutSource(row: Record<string, unknown>): Record<string, unknown> {
+  const copy = { ...row };
+  delete copy.source;
+  delete copy.source_product_no;
+  delete copy.source_url;
+  return copy;
+}
+
 export async function createProduct(input: ProductInput): Promise<Product> {
   const supabase = requireSupabaseAdmin();
   const row = productToRow(input);
@@ -657,10 +683,14 @@ export async function createProduct(input: ProductInput): Promise<Product> {
   let result = await supabase.from(TABLE).insert(row).select('*').single();
   if (result.error && isMissingColumn(result.error)) {
     console.warn(
-      '[products] cost_price 칸이 아직 없습니다. 원가를 빼고 저장합니다. ' +
-        '정리SQL/11-원가-칸-추가.sql 을 실행해 주세요.'
+      '[products] cost_price 또는 source 칸이 아직 없습니다. 그 칸만 빼고 다시 저장합니다. ' +
+        '정리SQL/11-원가-칸-추가.sql · supabase/schema-newyorktrd.sql 을 실행해 주세요.'
     );
-    result = await supabase.from(TABLE).insert(withoutCost(row)).select('*').single();
+    result = await supabase
+      .from(TABLE)
+      .insert(withoutSource(withoutCost(row)))
+      .select('*')
+      .single();
   }
   if (result.error) throw new Error(`상품 저장에 실패했습니다: ${result.error.message}`);
   return rowToProduct(result.data as ProductRow);
@@ -673,10 +703,15 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Pr
   let result = await supabase.from(TABLE).update(row).eq('id', id).select('*').single();
   if (result.error && isMissingColumn(result.error)) {
     console.warn(
-      '[products] cost_price 칸이 아직 없습니다. 원가를 빼고 저장합니다. ' +
-        '정리SQL/11-원가-칸-추가.sql 을 실행해 주세요.'
+      '[products] cost_price 또는 source 칸이 아직 없습니다. 그 칸만 빼고 다시 저장합니다. ' +
+        '정리SQL/11-원가-칸-추가.sql · supabase/schema-newyorktrd.sql 을 실행해 주세요.'
     );
-    result = await supabase.from(TABLE).update(withoutCost(row)).eq('id', id).select('*').single();
+    result = await supabase
+      .from(TABLE)
+      .update(withoutSource(withoutCost(row)))
+      .eq('id', id)
+      .select('*')
+      .single();
   }
   if (result.error) throw new Error(`상품 수정에 실패했습니다: ${result.error.message}`);
   return rowToProduct(result.data as ProductRow);
@@ -789,14 +824,17 @@ export async function duplicateProduct(id: string): Promise<Product> {
   }
 
   const input: ProductInput = {
-    // ★ 사본에는 셀스타 연결을 물려주지 않습니다.
-    //   같은 셀스타 번호가 두 상품에 붙으면 "다시 불러오기" 가 어느 쪽인지 알 수 없습니다.
+    // ★ 사본에는 셀스타·뉴욕트렌딕 연결을 물려주지 않습니다.
+    //   같은 상품번호가 두 상품에 붙으면 "다시 불러오기" 가 어느 쪽인지 알 수 없습니다.
     sellstarId: 0,
     sellstarSyncedAt: null,
     // ** 사본에는 원가도 그대로 물려줍니다. 같은 물건이라 원가가 같습니다. (2026-08-27)
     costPrice: original.costPrice,
     sellstarPrice: 0,
     sellstarSalePrice: 0,
+    source: null,
+    sourceProductNo: null,
+    sourceUrl: null,
     slug,
     name: `${original.name} (사본)`,
     brandSlug: original.brandSlug,
@@ -888,6 +926,32 @@ export async function getProductBySellstarId(
     .maybeSingle();
 
   // sellstar_id 컬럼이 아직 없으면(schema-3d.sql 미실행) 조용히 넘어갑니다.
+  if (error || !data) return null;
+  return rowToProduct(data as ProductRow);
+}
+
+/**
+ * 범용 출처+상품번호로 이미 가져온 상품을 찾습니다.
+ * ★ schema-newyorktrd.sql 이 아직 안 돌았으면 source 컬럼이 없어 조용히 null 을 돌려줍니다.
+ *   그러면 가져오기 화면이 "이미 등록된 상품" 경고를 못 띄울 뿐, 저장 자체는 됩니다.
+ */
+export async function getProductBySource(
+  source: 'sellstar' | 'newyorktrd',
+  productNo: number
+): Promise<Product | null> {
+  if (!source || !productNo || productNo <= 0) return null;
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('*')
+    .eq('source', source)
+    .eq('source_product_no', productNo)
+    .limit(1)
+    .maybeSingle();
+
   if (error || !data) return null;
   return rowToProduct(data as ProductRow);
 }

@@ -12,10 +12,10 @@ import {
   brandOrigin,
 } from '@/components/admin/ProductInfoFields';
 import {
-  fetchSellstarAction,
   importProductAction,
   type ImportPayload,
 } from '@/app/admin/import-actions';
+import { matchBrand } from '@/lib/brand-match';
 import { formatPrice, slugify } from '@/lib/product-utils';
 import { splitOriginAndManufacturer } from '@/lib/origin';
 import { fillTemplate, type ImportSettings } from '@/lib/site-config';
@@ -24,10 +24,10 @@ import type { Category } from '@/lib/categories';
 import type { DetailBlock, UploadedImage } from '@/lib/types';
 
 /**
- * 셀스타 상품 가져오기.
+ * 상품 가져오기 — 셀스타 · 뉴욕트렌딕 공용.
  *
  * 흐름
- *   1) 주소·번호를 넣고 불러오기 → 셀스타 응답을 화면에 채웁니다
+ *   1) 주소·번호를 넣고 불러오기 → 응답을 화면에 채웁니다 (주소로 어느 쪽인지 자동 판단)
  *   2) 상세 구성에서 쓸 이미지만 남기고, 사이사이에 글·이미지를 끼웁니다
  *   3) [가져오기 시작] 을 누르면 이미지를 R2 로 복사하고 임시저장으로 등록합니다
  *
@@ -80,9 +80,13 @@ export default function SellstarImporter({
   const [message, setMessage] = useState<Message>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [existing, setExisting] = useState<{ slug: string; name: string } | null>(null);
+  const [brandNotice, setBrandNotice] = useState<string | null>(null);
 
   /* ── 불러온 상품 ─────────────────────────────────────── */
   const [loaded, setLoaded] = useState(false);
+  const [source, setSource] = useState<'sellstar' | 'newyorktrd'>('sellstar');
+  const [sourceProductNo, setSourceProductNo] = useState(0);
+  const [sourceUrl, setSourceUrl] = useState('');
   const [sellstarId, setSellstarId] = useState(0);
   const [sellstarPrice, setSellstarPrice] = useState(0);
   const [sellstarSalePrice, setSellstarSalePrice] = useState(0);
@@ -106,7 +110,7 @@ export default function SellstarImporter({
   const [rows, setRows] = useState<Row[]>([]);
   const [groups, setGroups] = useState<{ name: string; values: string[] }[]>([]);
   const [variants, setVariants] = useState<
-    { key: string; label: string; stock: number | null; soldOut: boolean }[]
+    { key: string; label: string; stock: number | null; soldOut: boolean; extraPrice: number }[]
   >([]);
 
   /* ── 진행 상태 ───────────────────────────────────────── */
@@ -142,6 +146,7 @@ export default function SellstarImporter({
     setMessage(null);
     setWarnings([]);
     setExisting(null);
+    setBrandNotice(null);
     setFailed([]);
 
     startTransition(async () => {
@@ -150,7 +155,7 @@ export default function SellstarImporter({
         { cache: 'no-store' }
       );
       const payload = (await response.json()) as {
-        product?: Awaited<ReturnType<typeof fetchSellstarAction>>;
+        product?: unknown;
         error?: string;
         existing?: { slug: string; name: string } | null;
       };
@@ -160,21 +165,38 @@ export default function SellstarImporter({
         return;
       }
 
-      // 라우트가 돌려주는 형태에 맞춰 읽습니다.
+      // 라우트가 돌려주는 공통 모양 — 셀스타·뉴욕트렌딕 둘 다 이 자리에 맞춰 변환되어 옵니다.
       const raw = payload as unknown as {
         product: {
+          source: 'sellstar' | 'newyorktrd';
+          sourceProductNo: number;
+          sourceUrl: string;
           sellstarId: number;
           name: string;
           price: number;
           salePrice: number;
+          brandName: string;
           gallery: { url: string; width: number; height: number }[];
           blocks: (
             | { kind: 'image'; url: string; reseller: boolean; gif: boolean }
             | { kind: 'text'; body: string }
           )[];
           optionGroups: { name: string; values: string[] }[];
-          variants: { key: string; label: string; stock: number | null; soldOut: boolean }[];
-          shipping: { baseFee: number; extraJeju: number; returnFee: number; exchangeFee: number; courier: string; avgDeliveryDays: number } | null;
+          variants: {
+            key: string;
+            label: string;
+            stock: number | null;
+            soldOut: boolean;
+            extraPrice: number;
+          }[];
+          shipping: {
+            baseFee: number;
+            extraJeju: number;
+            returnFee: number;
+            exchangeFee: number;
+            courier: string;
+            avgDeliveryDays: number;
+          } | null;
           warnings: string[];
         };
         existing: { slug: string; name: string } | null;
@@ -182,19 +204,44 @@ export default function SellstarImporter({
 
       const product = raw.product;
 
+      setSource(product.source);
+      setSourceProductNo(product.sourceProductNo);
+      setSourceUrl(product.sourceUrl);
       setSellstarId(product.sellstarId);
       setSellstarPrice(product.price);
       setSellstarSalePrice(product.salePrice);
       setName(product.name);
       setSlug(slugify(product.name));
       setSummary('');
-      // ★ 셀스타 판매가를 기본값으로 두되, 최종 결정은 운영자가 합니다.
+      // ★ 뉴욕트렌딕·셀스타 판매가를 기본값으로 두되, 최종 결정은 운영자가 합니다.
       setPrice(product.salePrice);
       setOriginalPrice(product.price);
       setGroups(product.optionGroups);
       setVariants(product.variants);
       setWarnings(product.warnings);
       setExisting(raw.existing);
+
+      /* ── 브랜드 자동 매칭 (뉴욕트렌딕만 이름이 함께 옵니다) ─ */
+      if (product.brandName) {
+        const match = matchBrand(allBrands, product.brandName);
+        if (match.kind === 'matched') {
+          chooseBrand(match.slug);
+          setBrandNotice(null);
+        } else if (match.kind === 'unsupported') {
+          // 임의로 새 브랜드를 만들지 않습니다. 안내만 띄우고 비워둡니다.
+          chooseBrand('');
+          setBrandNotice(
+            `뉴욕트렌딕 쪽 브랜드 "${match.sourceName}" 는 우리 목록에 없습니다. ` +
+              '취급하지 않는 브랜드일 수 있습니다. 브랜드 칸에서 직접 골라 주시거나, ' +
+              '관리자 > 브랜드 관리에서 먼저 등록해 주세요.'
+          );
+        } else {
+          chooseBrand('');
+          setBrandNotice(null);
+        }
+      } else {
+        setBrandNotice(null);
+      }
 
       setGalleryRows(
         product.gallery.map((image) => ({
@@ -234,16 +281,23 @@ export default function SellstarImporter({
         : [];
 
       setRows([...head, ...body, ...tail]);
-      setShippingNote(
-        product.shipping
-          ? `배송비 ${formatPrice(product.shipping.baseFee)}원 · 제주 ${formatPrice(
-              product.shipping.extraJeju
-            )}원 · 반품 ${formatPrice(product.shipping.returnFee)}원 · 교환 ${formatPrice(
-              product.shipping.exchangeFee
-            )}원 · ${product.shipping.courier} · 평균 ${product.shipping.avgDeliveryDays}일`
-          : '배송 정보를 가져오지 못했습니다.'
-      );
-      setFreeShipping((product.shipping?.baseFee ?? 0) === 0);
+      if (product.source === 'newyorktrd') {
+        // ★ 뉴욕트렌딕은 배송 안내를 함께 돌려주지 않습니다.
+        //   우리 공통 배송 설정이 적용된다는 사실만 알려주고 무료배송 체크는 꺼 둡니다.
+        setShippingNote('뉴욕트렌딕에서는 배송 안내를 가져오지 않습니다. 공통 배송 설정이 적용됩니다.');
+        setFreeShipping(false);
+      } else {
+        setShippingNote(
+          product.shipping
+            ? `배송비 ${formatPrice(product.shipping.baseFee)}원 · 제주 ${formatPrice(
+                product.shipping.extraJeju
+              )}원 · 반품 ${formatPrice(product.shipping.returnFee)}원 · 교환 ${formatPrice(
+                product.shipping.exchangeFee
+              )}원 · ${product.shipping.courier} · 평균 ${product.shipping.avgDeliveryDays}일`
+            : '배송 정보를 가져오지 못했습니다.'
+        );
+        setFreeShipping((product.shipping?.baseFee ?? 0) === 0);
+      }
       setLoaded(true);
       setMessage({ tone: 'ok', text: `불러왔습니다. 확인 후 아래에서 등록해 주세요.` });
     });
@@ -450,6 +504,9 @@ export default function SellstarImporter({
       const placed = splitOriginAndManufacturer({ origin, manufacturer });
 
       const payload: ImportPayload = {
+        source,
+        sourceProductNo,
+        sourceUrl,
         sellstarId,
         sellstarPrice,
         sellstarSalePrice,
@@ -468,7 +525,9 @@ export default function SellstarImporter({
         optionGroups: groups,
         optionCombinations: variants.map((variant) => ({
           key: variant.key,
-          extraPrice: 0,
+          // ★ 뉴욕트렌딕 쪽 옵션 라벨에 (+N원) 이 있으면 그 금액을 그대로 넣습니다.
+          //   셀스타는 extraPrice 가 0 입니다.
+          extraPrice: variant.extraPrice || 0,
           stock: variant.stock,
           isActive: !variant.soldOut,
         })),
@@ -500,9 +559,15 @@ export default function SellstarImporter({
     <div className="flex flex-col gap-5">
       {/* ── 주소 입력 ─────────────────────────────────── */}
       <section className="admin-card p-4 md:p-5">
-        <h2 className="text-[18px] font-semibold text-slate-900">셀스타 상품 주소</h2>
+        <h2 className="text-[18px] font-semibold text-slate-900">상품 주소</h2>
         <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
-          전체 주소(https://sellstar.kr/marquenco/product/188)와 번호(188) 둘 다 됩니다.
+          셀스타·뉴욕트렌딕 주소 모두 받습니다. 주소를 보고 자동으로 구분합니다.
+          <br />
+          <span className="text-slate-400">
+            예) https://sellstar.kr/marquenco/product/188 · https://newyorktrd.co.kr/product/detail.html?product_no=26
+            · 번호만 쓰면 셀스타입니다. 뉴욕트렌딕 번호만 쓸 때는 <strong>「nyt 26」</strong>
+            또는 <strong>「뉴욕 26」</strong> 처럼 앞에 표시해 주세요.
+          </span>
         </p>
 
         <div className="mt-3 flex flex-wrap gap-2">
@@ -516,7 +581,7 @@ export default function SellstarImporter({
                 load();
               }
             }}
-            placeholder="https://sellstar.kr/marquenco/product/188"
+            placeholder="주소 또는 번호"
             className={`${inputClass} md:max-w-[520px]`}
           />
           <button
@@ -553,12 +618,32 @@ export default function SellstarImporter({
           </p>
         ) : null}
 
+        {brandNotice ? (
+          <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-[15px] leading-relaxed text-amber-900">
+            ★ {brandNotice}
+          </p>
+        ) : null}
+
         {warnings.length > 0 ? (
           <ul className="mt-3 flex flex-col gap-1 rounded-md bg-amber-50 px-3 py-2 text-[15px] text-amber-900">
             {warnings.map((warning) => (
               <li key={warning}>· {warning}</li>
             ))}
           </ul>
+        ) : null}
+
+        {loaded && sourceUrl ? (
+          <p className="mt-3 text-[14px] text-slate-500">
+            원본 ·{' '}
+            <a
+              href={sourceUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="underline"
+            >
+              {source === 'newyorktrd' ? '뉴욕트렌딕' : '셀스타'} 상품번호 {sourceProductNo}
+            </a>
+          </p>
         ) : null}
       </section>
 
@@ -587,9 +672,10 @@ export default function SellstarImporter({
                 <SummaryField id="im-summary" value={summary} onChange={setSummary} />
               </div>
 
-              {/* 셀스타 가격은 참고용입니다. */}
+              {/* 원본 가격은 참고용입니다. */}
               <div className="md:col-span-2 rounded-md bg-slate-50 px-3 py-2 text-[15px] text-slate-700">
-                셀스타 정가 <strong>{formatPrice(sellstarPrice)}원</strong> · 판매가{' '}
+                {source === 'newyorktrd' ? '뉴욕트렌딕' : '셀스타'} 정가{' '}
+                <strong>{formatPrice(sellstarPrice)}원</strong> · 판매가{' '}
                 <strong>{formatPrice(sellstarSalePrice)}원</strong>
                 <span className="ml-2 text-slate-500">(참고용)</span>
               </div>
@@ -621,7 +707,7 @@ export default function SellstarImporter({
                     </button>
                   ))}
                   <span className="self-center text-[14px] text-slate-500">
-                    셀스타 판매가 기준 · 100원 단위
+                    원본 판매가 기준 · 100원 단위
                   </span>
                 </div>
               </div>
@@ -747,13 +833,20 @@ export default function SellstarImporter({
               <p className="mt-1 text-[15px] text-slate-500">
                 {groups.map((group) => `${group.name}(${group.values.length})`).join(' · ')} —
                 조합 {variants.length}개. 재고와 품절은 여기서 고칠 수 있습니다.
+                {variants.some((variant) => variant.extraPrice > 0) ? (
+                  <>
+                    {' '}· <strong>추가금</strong>이 붙은 조합이 섞여 있습니다. 판매가 위에
+                    더해집니다.
+                  </>
+                ) : null}
               </p>
 
               <div className="mt-3 overflow-x-auto">
-                <table className="w-full min-w-[420px] border-collapse text-[16px]">
+                <table className="w-full min-w-[520px] border-collapse text-[16px]">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50 text-left text-[15px] text-slate-600">
                       <th scope="col" className="px-3 py-2 font-medium">조합</th>
+                      <th scope="col" className="px-3 py-2 text-right font-medium">추가금</th>
                       <th scope="col" className="px-3 py-2 text-right font-medium">재고</th>
                       <th scope="col" className="px-3 py-2 font-medium">품절</th>
                     </tr>
@@ -762,6 +855,9 @@ export default function SellstarImporter({
                     {variants.map((variant, index) => (
                       <tr key={variant.key} className="border-b border-slate-100 last:border-b-0">
                         <td className="px-3 py-2 text-slate-900">{variant.key}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-slate-700">
+                          {variant.extraPrice > 0 ? `+${formatPrice(variant.extraPrice)}원` : '—'}
+                        </td>
                         <td className="px-3 py-2 text-right">
                           <input
                             type="number"
@@ -812,7 +908,7 @@ export default function SellstarImporter({
           <section className="admin-card p-4 md:p-5">
             <h2 className="text-[18px] font-semibold text-slate-900">배송 · 반품</h2>
             <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[15px] leading-relaxed text-slate-700">
-              셀스타 값 — {shippingNote}
+              {source === 'newyorktrd' ? '참고' : '셀스타 값'} — {shippingNote}
             </p>
 
             <label className="mt-3 flex items-start gap-2 text-[16px] text-slate-800">
@@ -825,7 +921,7 @@ export default function SellstarImporter({
               <span>
                 우리 공통 배송·판매정보 설정을 씁니다 (권장)
                 <span className="mt-1 block text-[14px] leading-relaxed text-slate-500">
-                  설정 &gt; 판매정보 · 배송·반품 값이 전 상품에 함께 적용됩니다. 셀스타
+                  설정 &gt; 판매정보 · 배송·반품 값이 전 상품에 함께 적용됩니다. 원본
                   값과 다르면 우리 설정이 우선입니다.
                 </span>
               </span>
@@ -941,7 +1037,7 @@ export default function SellstarImporter({
                         {index + 1}. {row.kind === 'image' ? '이미지' : '글'}
                         {row.kind === 'image' && row.reseller ? (
                           <span className="admin-badge bg-amber-100 text-amber-800">
-                            리셀러 브랜드 이미지
+                            {source === 'newyorktrd' ? '뉴욕트렌딕 배너' : '리셀러 브랜드 이미지'}
                           </span>
                         ) : null}
                         {row.kind === 'image' && row.local ? (
