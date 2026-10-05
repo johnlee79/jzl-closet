@@ -5,36 +5,25 @@ const nextConfig = {
   experimental: {
     /*
      * ============================================================
-     * ★ 뉴욕트렌딕 사진 미리보기용 — Vercel 에 Chromium 바이너리를 함께 올립니다
+     * ★ 뉴욕트렌딕 사진 미리보기용 — chromium-min + 원격 바이너리
      * ============================================================
      *
-     * ★★ 세 가지가 다 있어야 Vercel 함수 안에 brotli 바이너리가 들어갑니다.
-     *   하나라도 빠지면 런타임에
-     *     The input directory "...@sparticuz/chromium/bin" does not exist.
-     *   가 뜹니다. 실제 그 사고를 겪고 아래 조합으로 맞췄습니다 (2026-10-05).
+     * ★★ 처음엔 @sparticuz/chromium 로 70MB brotli 바이너리를 함수에 묶으려 했는데,
+     *   outputFileTracingIncludes·serverComponentsExternalPackages 를 다 걸어도
+     *   bin/ 폴더가 끝까지 함수 안에 안 들어왔습니다. require.resolve 가 **숫자**를
+     *   돌려주는 걸로 보아 webpack 이 네이티브 패키지를 번들에 녹여 버린 것으로
+     *   보입니다. 두 번 실패하면 그만 붙잡고 @sparticuz/chromium-min 으로 가라는
+     *   사장님 지시대로 전환했습니다 (2026-10-05).
      *
-     * ① serverComponentsExternalPackages — webpack 이 @sparticuz/chromium 과
-     *    puppeteer-core 를 번들에 녹이지 않고 require() 로만 두게 합니다. 네이티브
-     *    바이너리를 가진 패키지는 번들링을 피해야 합니다.
+     * ★ chromium-min 은 패키지 자체가 ~1MB 라 번들링 걱정이 없고, 실행 바이너리는
+     *   런타임에 원격 URL (GitHub release) 에서 /tmp 로 받아 씁니다. 콜드 스타트
+     *   때 한 번 받고 재사용. lib/newyorktrd-browser.ts 의 CHROMIUM_PACK_URL 참고.
      *
-     * ② outputFileTracingIncludes — Next 의 파일 추적기가 "이 라우트의 함수에는
-     *    이 파일들도 함께 올려" 라고 알리는 설정입니다. 경로 글롭을 지정해
-     *    /bin 아래의 brotli 파일까지 끌어 올립니다.
-     *    키는 **라우트 경로** 형태 (/api/...) — app/ 접두어나 /route 는 붙이지
-     *    않습니다. 전에는 'app/.../route' 로 적었다가 전혀 매치가 안 돼
-     *    bin 폴더가 통째로 빠졌습니다.
-     *
-     * ③ bin/** 를 직접 지정 — @sparticuz/chromium/** 로는 네이티브 바이너리가
-     *    자동 포함되지 않습니다. bin/ 하위 brotli 파일을 명시해야 합니다.
-     *
-     * 참고: Vercel 공식 Chromium 템플릿도 같은 세 줄을 씁니다.
+     * ★ serverComponentsExternalPackages — chromium-min 과 puppeteer-core 는 그래도
+     *   webpack 가 번들에 녹이면 모듈 ID 가 숫자로 바뀌어 dynamic import 가 깨질 수
+     *   있어 외부 패키지로 그대로 둡니다.
      */
-    serverComponentsExternalPackages: ['@sparticuz/chromium', 'puppeteer-core'],
-    outputFileTracingIncludes: {
-      '/api/admin/import/newyorktrd-reviews/preview-photos': [
-        './node_modules/@sparticuz/chromium/bin/**',
-      ],
-    },
+    serverComponentsExternalPackages: ['@sparticuz/chromium-min', 'puppeteer-core'],
     /**
      * ============================================================
      * ★★★ 브라우저가 옛 화면을 다시 그리지 못하게 합니다 — 되돌리지 마세요

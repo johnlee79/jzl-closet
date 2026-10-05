@@ -70,17 +70,34 @@ function isReviewPhotoUrl(url: string): boolean {
  * 브라우저 띄우기 (환경별)
  * ------------------------------------------------------------------ */
 
+/**
+ * Vercel 함수에 Chromium 바이너리(brotli ~70MB)를 번들링하려 했는데 번들링 설정이
+ * 끝까지 안 먹어서 bin/ 폴더가 매번 함수에서 사라졌습니다 (outputFileTracingIncludes·
+ * serverComponentsExternalPackages 다 걸어도 webpack 이 숫자 모듈 ID 로 바꿔
+ * require.resolve 가 깨짐). 그래서 @sparticuz/chromium-min 으로 바꿨습니다 — 패키지
+ * 자체는 ~1MB 로 작고, 실행 바이너리는 **런타임에 원격 URL** 에서 받아 /tmp 로 풀어
+ * 씁니다. 번들 걱정 끝. (2026-10-05)
+ *
+ * ★ Vercel 공식 가이드와 같은 방식입니다. 콜드 스타트 때 한 번 받고 (/tmp 는 함수
+ *   인스턴스가 살아 있는 동안 유지됨) 그 뒤 요청은 캐시된 바이너리를 재사용합니다.
+ * ★ URL 은 CHROMIUM_PACK_URL 환경변수로 덮어쓸 수 있습니다. GitHub release 가 느리거나
+ *   막히면 저희 R2 로 올려서 거기 가리키게 하세요.
+ */
+const DEFAULT_CHROMIUM_URL =
+  'https://github.com/Sparticuz/chromium/releases/download/v143.0.4/chromium-v143.0.4-pack.x64.tar';
+
 async function launchBrowser(): Promise<Browser> {
   const puppeteer = await import('puppeteer-core');
 
-  // Vercel · AWS Lambda 환경 — @sparticuz/chromium 이 준비한 바이너리를 씁니다.
+  // Vercel · AWS Lambda 환경 — chromium-min + 원격 바이너리
   if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-    const chromiumModule = await import('@sparticuz/chromium');
+    const chromiumModule = await import('@sparticuz/chromium-min');
     const chromium = chromiumModule.default;
+    const url = process.env.CHROMIUM_PACK_URL ?? DEFAULT_CHROMIUM_URL;
     const options: LaunchOptions = {
       args: chromium.args,
       defaultViewport: { width: 1280, height: 2000 },
-      executablePath: await chromium.executablePath(),
+      executablePath: await chromium.executablePath(url),
       headless: true,
     };
     return puppeteer.launch(options);

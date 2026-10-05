@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1109.0",
-    "@sparticuz/chromium": "143.0.4",
+    "@sparticuz/chromium-min": "143.0.4",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
     "iconv-lite": "^0.7.3",

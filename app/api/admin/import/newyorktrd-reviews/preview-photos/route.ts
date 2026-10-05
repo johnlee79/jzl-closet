@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 import { NextResponse, type NextRequest } from 'next/server';
 import { isAdmin } from '@/lib/admin-guard';
 import {
@@ -52,10 +51,15 @@ function photoKey(url: string): string {
 }
 
 /**
- * 진단용 — 배포된 함수 안의 Chromium 파일이 실제로 들어갔는지 확인합니다.
+ * 진단용 — chromium-min 과 puppeteer-core 가 실행 준비됐는지 확인합니다.
  *   관리자 로그인된 상태에서 /api/admin/import/newyorktrd-reviews/preview-photos
- *   에 GET 하면 됩니다. 바이너리를 실행하지는 않습니다 — 파일 유무만 봅니다.
- *   next.config 의 outputFileTracingIncludes 가 맞게 걸렸는지 바로 보입니다.
+ *   에 GET 하면 됩니다.
+ *
+ * ★ require.resolve 는 쓰지 않습니다. webpack 이 외부 패키지 처리를 깜빡하면
+ *   require.resolve 반환값이 숫자(모듈 ID)로 바뀌어 거짓 음성이 뜨기 때문에,
+ *   dynamic import 를 하고 모듈 자체의 함수를 호출해 실제 동작 상태를 봅니다.
+ * ★ chromium.executablePath(url) 은 /tmp 에 바이너리를 풀어 그 경로를 돌려 줍니다.
+ *   이 호출이 성공하면 사진 받기도 성공할 가능성이 높습니다 (실행 자체는 안 합니다).
  */
 export async function GET() {
   if (!(await isAdmin())) {
@@ -66,35 +70,43 @@ export async function GET() {
     VERCEL: process.env.VERCEL ?? null,
     AWS_LAMBDA_FUNCTION_NAME: process.env.AWS_LAMBDA_FUNCTION_NAME ?? null,
     cwd: process.cwd(),
+    chromiumPackUrl: process.env.CHROMIUM_PACK_URL ?? null,
   };
 
-  // @sparticuz/chromium — 설치 여부 · bin 경로 · bin 폴더 안의 파일 목록
-  let sparticuz: Record<string, unknown>;
+  // chromium-min — dynamic import 하고 실제로 executablePath 를 호출해 봅니다.
+  let chromium: Record<string, unknown>;
   try {
-    // 모듈이 require 가능한지만 확인 (실제 바이너리 실행은 안 합니다).
-    await import('@sparticuz/chromium');
-    const pkgPath = path.dirname(require.resolve('@sparticuz/chromium/package.json'));
-    const binPath = path.join(pkgPath, 'bin');
-    const binExists = fs.existsSync(binPath);
-    sparticuz = {
+    const chromiumModule = await import('@sparticuz/chromium-min');
+    const chromiumDefault = chromiumModule.default;
+    const url =
+      process.env.CHROMIUM_PACK_URL ??
+      'https://github.com/Sparticuz/chromium/releases/download/v143.0.4/chromium-v143.0.4-pack.x64.tar';
+    const started = Date.now();
+    const executablePath = await chromiumDefault.executablePath(url);
+    const elapsedMs = Date.now() - started;
+    chromium = {
       moduleLoaded: true,
-      pkgPath,
-      binPath,
-      binExists,
-      binContents: binExists ? fs.readdirSync(binPath).slice(0, 20) : null,
+      remoteUrl: url,
+      executablePath,
+      // /tmp 아래 실제로 바이너리 파일이 있는지도 확인
+      binaryExists: fs.existsSync(executablePath),
+      elapsedMs,
     };
   } catch (error) {
-    sparticuz = {
+    chromium = {
       moduleLoaded: false,
       error: error instanceof Error ? error.message : String(error),
     };
   }
 
-  // puppeteer-core 설치 여부
+  // puppeteer-core — dynamic import 로 실제 로드 여부만 확인
   let puppeteer: Record<string, unknown>;
   try {
-    const pkgPath = path.dirname(require.resolve('puppeteer-core/package.json'));
-    puppeteer = { pkgPath, loaded: true };
+    const mod = await import('puppeteer-core');
+    puppeteer = {
+      loaded: true,
+      hasLaunch: typeof mod.launch === 'function',
+    };
   } catch (error) {
     puppeteer = {
       loaded: false,
@@ -103,7 +115,7 @@ export async function GET() {
   }
 
   return NextResponse.json(
-    { env, sparticuz, puppeteer },
+    { env, chromium, puppeteer },
     { headers: { 'Cache-Control': 'no-store' } }
   );
 }
