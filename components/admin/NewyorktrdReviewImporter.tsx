@@ -10,11 +10,14 @@ import NewyorktrdReviewPreview, {
 /**
  * 뉴욕트렌딕 후기 가져오기 — 상품 수정 화면용.
  *
- * ★ 2단계: 미리보기 → 저장
- *   1) 「미리 보기」 — /preview 라우트로 파싱만 받아 운영자에게 보여 줍니다. DB·R2 는 안 건드립니다.
+ * ★ 2 단계: 미리보기 → 저장
+ *   1) 「미리 보기」 — /preview (글 후기, 빠름) + 선택적으로 /preview-photos (사진, 느림)
+ *      를 받아 운영자에게 보여 줍니다. DB·R2 는 안 건드립니다.
  *   2) 체크한 후기·사진만 /newyorktrd-reviews (저장) 로 보냅니다.
  *
- * ★ 표시광고법 — 미리보기 컴포넌트가 저점 체크 해제를 안내합니다.
+ * ★ 사진까지 받기 체크를 켜면 Vercel 에서 헤드리스 Chrome 을 띄워 알파 리뷰 위젯이
+ *   그린 사진을 긁어 옵니다. 상품 1건당 15~30초가 걸리고 메모리를 많이 써, 두 명이
+ *   동시에 누르면 뒤 사람은 409(바쁨) 로 돌려받습니다.
  */
 export default function NewyorktrdReviewImporter({
   productId,
@@ -27,7 +30,9 @@ export default function NewyorktrdReviewImporter({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [photoLoading, setPhotoLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [withPhotos, setWithPhotos] = useState(false);
   const [reviews, setReviews] = useState<PreviewReview[] | null>(null);
   const [selections, setSelections] = useState<ReviewSelection[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -38,16 +43,17 @@ export default function NewyorktrdReviewImporter({
     details: string[];
     photoFailures: string[];
   } | null>(null);
-  const [refetching, setRefetching] = useState(false);
-  const [refetchSummary, setRefetchSummary] = useState<{
-    examined: number;
-    updated: number;
-    keptEmpty: number;
-    failed: number;
-  } | null>(null);
+
+  const defaultSelection = (list: PreviewReview[]): ReviewSelection[] =>
+    list
+      .filter((review) => !review.alreadyImported)
+      .map((review) => ({
+        reviewId: review.reviewId,
+        photos: [...review.photos],
+      }));
 
   const loadPreview = async () => {
-    if (loading || saving) return;
+    if (loading || saving || photoLoading) return;
     setLoading(true);
     setError(null);
     setReviews(null);
@@ -67,17 +73,39 @@ export default function NewyorktrdReviewImporter({
         setError(payload.error ?? '미리보기를 가져오지 못했습니다.');
         return;
       }
-      const list = payload.reviews ?? [];
+      let list: PreviewReview[] = (payload.reviews ?? []).map((review) => ({
+        ...review,
+        kind: 'text',
+      }));
+
+      // ★ 사진까지 받기 — 느립니다. 체크했을 때만 호출합니다.
+      if (withPhotos) {
+        setPhotoLoading(true);
+        try {
+          const photoResponse = await fetch(
+            '/api/admin/import/newyorktrd-reviews/preview-photos',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ productNo, productId }),
+            }
+          );
+          const photoPayload = (await photoResponse.json()) as {
+            error?: string;
+            reviews?: PreviewReview[];
+          };
+          if (!photoResponse.ok) {
+            setError(photoPayload.error ?? '사진 미리보기를 가져오지 못했습니다.');
+          } else {
+            list = [...list, ...(photoPayload.reviews ?? [])];
+          }
+        } finally {
+          setPhotoLoading(false);
+        }
+      }
+
       setReviews(list);
-      // 초기 선택 — 이미 가져온 것 제외하고 모든 사진 포함
-      setSelections(
-        list
-          .filter((review) => !review.alreadyImported)
-          .map((review) => ({
-            reviewId: review.reviewId,
-            photos: [...review.photos],
-          }))
-      );
+      setSelections(defaultSelection(list));
     } catch (fetchError) {
       setError(
         fetchError instanceof Error
@@ -99,7 +127,6 @@ export default function NewyorktrdReviewImporter({
     setError(null);
 
     try {
-      // 선택 안에서 글·별점·날짜 등은 미리보기에서 받아 둔 값을 그대로 다시 보냅니다.
       const byId = new Map(reviews.map((review) => [review.reviewId, review]));
       const body = {
         productId,
@@ -179,54 +206,7 @@ export default function NewyorktrdReviewImporter({
     }
   };
 
-  const refetchPhotos = async () => {
-    if (refetching) return;
-    if (
-      !window.confirm(
-        '이미 가져온 뉴욕트렌딕 후기들의 사진을 다시 받아 올까요?\n\n' +
-          '• 사진이 있는 리뷰만 교체합니다 (0 장이면 기존 사진 그대로 둠)\n' +
-          '• R2 에 새 사진이 올라갑니다'
-      )
-    )
-      return;
-    setRefetching(true);
-    setRefetchSummary(null);
-    setError(null);
-    try {
-      const response = await fetch(
-        '/api/admin/import/newyorktrd-reviews/refetch-photos',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ productId, productSlug, productNo }),
-        }
-      );
-      const data = (await response.json()) as {
-        error?: string;
-        examined?: number;
-        updated?: number;
-        keptEmpty?: number;
-        failed?: number;
-      };
-      if (!response.ok) {
-        setError(data.error ?? '사진을 다시 받지 못했습니다.');
-        return;
-      }
-      setRefetchSummary({
-        examined: data.examined ?? 0,
-        updated: data.updated ?? 0,
-        keptEmpty: data.keptEmpty ?? 0,
-        failed: data.failed ?? 0,
-      });
-      router.refresh();
-    } catch (fetchError) {
-      setError(
-        fetchError instanceof Error ? fetchError.message : '사진을 다시 받지 못했습니다.'
-      );
-    } finally {
-      setRefetching(false);
-    }
-  };
+  const busy = loading || photoLoading || saving;
 
   return (
     <div className="rounded-md border border-amber-200 bg-amber-50 p-4">
@@ -236,37 +216,42 @@ export default function NewyorktrdReviewImporter({
             뉴욕트렌딕 후기 가져오기
           </h3>
           <p className="mt-1 text-[14px] leading-relaxed text-amber-900">
-            상품 {productNo} 번의 최근 후기를 받아 미리 보여 드립니다 (최대 25건). 눈으로
-            확인한 뒤 체크한 것만 저장합니다. 사진은 한 장씩 뺄 수 있습니다. 영상은
-            가져오지 않습니다.
-            <br />
-            <span className="text-[13px] text-amber-800">
-              ★ 뉴욕트렌딕은 손님 사진 후기를 외부 위젯(Alpha Review)에 두어, 현재
-              서버 HTML 로는 사진이 들어오지 않을 수 있습니다. 사진이 나중에 올라오면
-              「사진 다시 받기」 로 보충할 수 있습니다.
-            </span>
+            상품 {productNo} 번의 최근 후기를 미리 보여 드립니다 (글 리뷰 최대 25건).
+            체크한 것만 저장합니다. 사진은 한 장씩 뺄 수 있습니다. 영상은 가져오지
+            않습니다.
           </p>
+          <label className="mt-3 flex items-start gap-2 text-[14px] text-amber-900">
+            <input
+              type="checkbox"
+              checked={withPhotos}
+              onChange={(event) => setWithPhotos(event.target.checked)}
+              disabled={busy}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>
+              사진까지 받기 (느림 · 15~30초)
+              <span className="mt-1 block text-[13px] leading-relaxed text-amber-800">
+                뉴욕트렌딕 알파 리뷰 위젯이 사진을 Shadow DOM 안에서 그려서, 글 후기
+                따로·사진 따로 받습니다. 사진은 「글 없음 · 사진만」 뱃지가 붙어 미리
+                보기에 섞여 나오고, 체크한 것만 저장됩니다.
+              </span>
+            </span>
+          </label>
         </div>
-        <div className="flex shrink-0 flex-col gap-2">
-          {!reviews ? (
-            <button
-              type="button"
-              onClick={() => void loadPreview()}
-              disabled={loading || saving || refetching}
-              className="admin-btn-primary"
-            >
-              {loading ? '불러오는 중…' : '미리 보기'}
-            </button>
-          ) : null}
+        {!reviews ? (
           <button
             type="button"
-            onClick={() => void refetchPhotos()}
-            disabled={loading || saving || refetching}
-            className="admin-btn"
+            onClick={() => void loadPreview()}
+            disabled={busy}
+            className="admin-btn-primary shrink-0"
           >
-            {refetching ? '사진 받는 중…' : '사진 다시 받기'}
+            {loading && !photoLoading
+              ? '글 받는 중…'
+              : photoLoading
+                ? '사진 받는 중… (느림)'
+                : '미리 보기'}
           </button>
-        </div>
+        ) : null}
       </div>
 
       {error ? (
@@ -289,9 +274,7 @@ export default function NewyorktrdReviewImporter({
               disabled={saving || selections.length === 0}
               className="admin-btn-primary"
             >
-              {saving
-                ? '저장 중…'
-                : `선택한 ${selections.length}건 저장`}
+              {saving ? '저장 중…' : `선택한 ${selections.length}건 저장`}
             </button>
             <button
               type="button"
@@ -332,15 +315,6 @@ export default function NewyorktrdReviewImporter({
             </p>
           ) : null}
         </div>
-      ) : null}
-
-      {refetchSummary ? (
-        <p className="mt-3 rounded bg-white px-3 py-2 text-[14px] text-amber-900">
-          사진 다시 받기 — 확인 <strong>{refetchSummary.examined}건</strong> · 새 사진으로
-          교체 <strong>{refetchSummary.updated}건</strong> · 사진 없어 그대로 둠{' '}
-          <strong>{refetchSummary.keptEmpty}건</strong> · 실패{' '}
-          <strong>{refetchSummary.failed}건</strong>
-        </p>
       ) : null}
     </div>
   );

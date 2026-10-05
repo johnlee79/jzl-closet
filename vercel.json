@@ -10,5 +10,11 @@
       "path": "/api/cron/card-sweep",
       "schedule": "*/10 * * * *"
     }
-  ]
+  ],
+  "functions": {
+    "app/api/admin/import/newyorktrd-reviews/preview-photos/route.ts": {
+      "memory": 2048,
+      "maxDuration": 120
+    }
+  }
 }

@@ -109,8 +109,14 @@ export default function SellstarImporter({
   const [freeShipping, setFreeShipping] = useState(false);
   const [useOwnShipping, setUseOwnShipping] = useState(false);
   const [shippingNote, setShippingNote] = useState('');
-  /** 뉴욕트렌딕 상품을 가져올 때 그 상품의 후기도 같이 받을지 (기본 켜짐) */
+  /** 뉴욕트렌딕 상품을 가져올 때 그 상품의 글 후기도 같이 받을지 (기본 켜짐) */
   const [importReviews, setImportReviews] = useState(true);
+  /**
+   * 사진까지 함께 받을지 (기본 **꺼짐**). 사진은 헤드리스 Chrome 으로 긁어 와
+   * 상품당 15~30초가 더 걸립니다. 필요할 때만 켭니다 (사장님 지시, 2026-10-05).
+   */
+  const [importPhotos, setImportPhotos] = useState(false);
+  const [photoLoading, setPhotoLoading] = useState(false);
   /** 리뷰 미리보기 — 상품 '불러오기' 뒤 자동으로 받아 둡니다 */
   const [reviewPreview, setReviewPreview] = useState<PreviewReview[] | null>(null);
   const [reviewPreviewLoading, setReviewPreviewLoading] = useState(false);
@@ -348,9 +354,11 @@ export default function SellstarImporter({
         setReviewPreviewError(data.error ?? '리뷰 미리보기를 가져오지 못했습니다.');
         return;
       }
-      const list = data.reviews ?? [];
+      const list: PreviewReview[] = (data.reviews ?? []).map((review) => ({
+        ...review,
+        kind: 'text',
+      }));
       setReviewPreview(list);
-      // 기본 — 전부 체크 (사진까지)
       setReviewSelections(
         list
           .filter((review) => !review.alreadyImported)
@@ -365,6 +373,58 @@ export default function SellstarImporter({
       );
     } finally {
       setReviewPreviewLoading(false);
+    }
+  };
+
+  /**
+   * 사진까지 받기 — 헤드리스로 상품 페이지를 열어 알파 리뷰 위젯이 그린 손님 사진을
+   * 긁고, 「글 없음 · 사진만」 항목으로 리뷰 미리보기 목록 끝에 더합니다.
+   * 느립니다 (15~30초). 사장님이 체크했을 때만 돌아갑니다.
+   */
+  const loadPhotoPreview = async (productNo: number) => {
+    if (photoLoading) return;
+    setPhotoLoading(true);
+    setReviewPreviewError(null);
+    try {
+      const response = await fetch(
+        '/api/admin/import/newyorktrd-reviews/preview-photos',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productNo }),
+        }
+      );
+      const data = (await response.json()) as {
+        error?: string;
+        reviews?: PreviewReview[];
+      };
+      if (!response.ok) {
+        setReviewPreviewError(data.error ?? '사진 미리보기를 가져오지 못했습니다.');
+        return;
+      }
+      const photoReviews = data.reviews ?? [];
+      setReviewPreview((prev) => {
+        const existing = prev ?? [];
+        // 사진만 리뷰 식별자가 겹치면 더하지 않습니다.
+        const existingIds = new Set(existing.map((review) => review.reviewId));
+        const added = photoReviews.filter(
+          (review) => !existingIds.has(review.reviewId)
+        );
+        return [...existing, ...added];
+      });
+      setReviewSelections((prev) => {
+        const existingIds = new Set(prev.map((selection) => selection.reviewId));
+        const added = photoReviews
+          .filter((review) => !review.alreadyImported && !existingIds.has(review.reviewId))
+          .map((review) => ({ reviewId: review.reviewId, photos: [...review.photos] }));
+        return [...prev, ...added];
+      });
+    } catch (error) {
+      setReviewPreviewError(
+        error instanceof Error ? error.message : '사진 미리보기를 가져오지 못했습니다.'
+      );
+    } finally {
+      setPhotoLoading(false);
     }
   };
 
@@ -1262,22 +1322,67 @@ export default function SellstarImporter({
               </label>
 
               {importReviews ? (
-                <div className="mt-4">
-                  {reviewPreviewLoading ? (
-                    <p className="text-[14px] text-slate-500">
-                      리뷰를 받는 중입니다. 10~20초 걸릴 수 있습니다…
-                    </p>
-                  ) : reviewPreviewError ? (
-                    <p className="rounded bg-red-50 px-3 py-2 text-[14px] text-red-800">
-                      {reviewPreviewError}
-                    </p>
-                  ) : reviewPreview ? (
-                    <NewyorktrdReviewPreview
-                      reviews={reviewPreview}
-                      onSelectionsChange={setReviewSelections}
+                <>
+                  {/*
+                    사진까지 받기 — 기본 꺼짐. 켜고 버튼을 눌러야 헤드리스 Chrome 이
+                    상품 페이지를 열어 알파 위젯이 그린 사진을 긁어 옵니다. 느리기 때문에
+                    "불러오기" 흐름에 자동으로 끼지 않고 사장님이 명시적으로 눌러야 돌아갑니다.
+                  */}
+                  <label className="mt-3 flex items-start gap-2 text-[14px] text-slate-800">
+                    <input
+                      type="checkbox"
+                      checked={importPhotos}
+                      onChange={(event) => setImportPhotos(event.target.checked)}
+                      className="mt-0.5 h-4 w-4"
                     />
+                    <span>
+                      사진까지 받기 (느림 · 15~30초)
+                      <span className="mt-1 block text-[13px] leading-relaxed text-slate-500">
+                        뉴욕트렌딕 알파 리뷰 위젯이 사진을 Shadow DOM 안에서 그려서,
+                        글 후기 따로·사진 따로 받습니다. 사진은 「글 없음 · 사진만」 뱃지로
+                        미리보기에 섞여 나오고, 체크한 것만 저장됩니다. 두 명이 동시에 눌러
+                        메모리가 넘치지 않도록 한 번에 한 명만 돌 수 있습니다.
+                      </span>
+                    </span>
+                  </label>
+
+                  {importPhotos && reviewPreview && sourceProductNo > 0 ? (
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        onClick={() => void loadPhotoPreview(sourceProductNo)}
+                        disabled={photoLoading}
+                        className="admin-btn"
+                      >
+                        {photoLoading ? '사진 받는 중… (느림)' : '사진 받기'}
+                      </button>
+                    </div>
                   ) : null}
-                </div>
+
+                  <div className="mt-4">
+                    {reviewPreviewLoading ? (
+                      <p className="text-[14px] text-slate-500">
+                        글 후기를 받는 중입니다. 10~20초 걸릴 수 있습니다…
+                      </p>
+                    ) : reviewPreviewError ? (
+                      <p className="rounded bg-red-50 px-3 py-2 text-[14px] text-red-800">
+                        {reviewPreviewError}
+                      </p>
+                    ) : reviewPreview ? (
+                      <>
+                        <NewyorktrdReviewPreview
+                          reviews={reviewPreview}
+                          onSelectionsChange={setReviewSelections}
+                        />
+                        {photoLoading ? (
+                          <p className="mt-3 text-[14px] text-slate-500">
+                            사진을 받는 중입니다. 20~30초 걸릴 수 있습니다…
+                          </p>
+                        ) : null}
+                      </>
+                    ) : null}
+                  </div>
+                </>
               ) : null}
             </section>
           ) : null}

@@ -53,6 +53,12 @@ export type PreviewReview = {
   photos: string[];
   writtenAt: string;
   alreadyImported: boolean;
+  /**
+   * 'text' — 보통 글 리뷰 (사진이 있을 수도 없을 수도).
+   * 'photo-only' — 사진 리뷰인데 글·작성자·날짜를 짝맞춤 못한 경우. 미리보기에
+   *   「글 없음 · 사진만」 뱃지로 표시해 사장님이 보고 고를 수 있게 합니다.
+   */
+  kind?: 'text' | 'photo-only';
 };
 
 export type ReviewSelection = {
@@ -276,7 +282,15 @@ export default function NewyorktrdReviewPreview({
                         가져옴
                       </span>
                     ) : null}
-                    {review.rating <= 3 ? (
+                    {review.kind === 'photo-only' ? (
+                      <span
+                        title="알파 리뷰 위젯이 사진-글 짝을 안 내놓아, 사진 단건으로 가져옵니다"
+                        className="inline-flex items-center bg-blue-50 px-2 py-0.5 text-[12px] text-blue-700"
+                      >
+                        글 없음 · 사진만
+                      </span>
+                    ) : null}
+                    {review.kind !== 'photo-only' && review.rating <= 3 ? (
                       <span
                         title="저점 후기 — 체크 해제 전에 사유를 확인해 주세요"
                         className="inline-flex items-center bg-red-50 px-2 py-0.5 text-[12px] text-red-700"

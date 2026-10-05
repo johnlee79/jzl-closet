@@ -3,6 +3,17 @@ const nextConfig = {
   reactStrictMode: true,
 
   experimental: {
+    /*
+     * ★ 뉴욕트렌딕 사진 미리보기 라우트만 Chromium 바이너리를 함께 번들링합니다.
+     *   @sparticuz/chromium 은 ~70MB 라 모든 함수에 넣으면 번들이 커지고 콜드 스타트가
+     *   느려집니다. 특정 라우트에만 묶어 다른 함수에는 영향이 없게 합니다.
+     *   (Next 14 는 experimental.outputFileTracingIncludes · Next 15 부터 최상위로 이동)
+     */
+    outputFileTracingIncludes: {
+      'app/api/admin/import/newyorktrd-reviews/preview-photos/route': [
+        './node_modules/@sparticuz/chromium/**',
+      ],
+    },
     /**
      * ============================================================
      * ★★★ 브라우저가 옛 화면을 다시 그리지 못하게 합니다 — 되돌리지 마세요
