@@ -22,8 +22,21 @@ import type { Browser, LaunchOptions } from 'puppeteer-core';
  *     로컬에서 돌리는 건 테스트용입니다. 배포본은 Vercel 쪽을 씁니다.
  */
 
-type ScrapeResult = {
+export type PhotoGroup = {
+  /**
+   * 같은 손님의 사진 묶음. 알파 위젯 리뷰 상세 팝업 하나 = 손님 한 명 = 한 그룹입니다.
+   * 짝 못 찾는 사진은 writerName 이 비어 있고 photos 가 1장짜리입니다.
+   */
+  writerName: string;
+  /** 알파가 보여 주는 상대 날짜 ("1주 전") 또는 절대 날짜 — 짝맞춤 참고용 */
+  dateText: string;
+  /** 리뷰 본문. 짝맞춤 참고용으로 글 처음 수십 자가 중요합니다. */
+  content: string;
   photos: string[];
+};
+
+type ScrapeResult = {
+  groups: PhotoGroup[];
   elapsedMs: number;
 };
 
@@ -120,13 +133,31 @@ async function launchBrowser(): Promise<Browser> {
  * ------------------------------------------------------------------ */
 
 /**
- * 상품 하나의 사진을 긁어 옵니다.
+ * 상품 하나의 사진 그룹을 긁어 옵니다.
  *
  * 흐름
- *   1) 뉴욕트렌딕 상품 상세 열기 (일반 User-Agent 그대로)
+ *   1) 뉴욕트렌딕 상품 상세 열기 (일반 방문자 User-Agent, Origin/Referer 꾸미지 않음)
  *   2) #prdReview 로 스크롤 → 알파 위젯이 느긋하게 로드
- *   3) 리뷰 영역 안쪽을 두세 번 더 스크롤해 더 많은 슬라이드가 뜨도록 유도
- *   4) 모든 Shadow DOM 을 재귀로 걸어 appfiles 경로의 사진 URL 수집
+ *   3) 리뷰 영역을 몇 번 왕복해 뒤쪽 사진까지 로드
+ *   4) **썸네일을 하나씩 클릭해 리뷰 상세 팝업을 열고**, 작성자·날짜·글·사진 묶음을 추출
+ *   5) 팝업을 DOM 에서 제거(단순 닫기가 때때로 안 먹어서) 하고 다음 썸네일로
+ *   6) 같은 손님의 사진 5~6장이 한 그룹으로 묶여 돌아옵니다
+ *
+ * ★ 알려진 한계
+ *   nuke 후에도 가끔 다음 썸네일 클릭에서 팝업이 열리지 않습니다. 사장님께 보고한 그대로
+ *   도저히 안 되는 몇 장은 그룹핑에서 빠지고, 그 사진은 preview-photos 라우트가
+ *   "글 없음 · 사진만" 단건 리뷰로 폴백해 보여 줍니다. 완벽한 짝맞춤이 아니라
+ *   "대부분 묶이고 몇 장은 단건" 이라는 상태입니다.
+ *
+ * ★ 조사 때 왜 팝업이 안 열렸는가 (사장님 질문에 대한 답)
+ *   · 썸네일 좌표가 뷰포트 밖(y=-11772)이었습니다 — 알파 위젯 자체로 스크롤을 안 해서.
+ *     이제는 widget.scrollIntoView 로 뷰포트 안쪽에 넣은 뒤 좌표를 잽니다.
+ *   · img.click() 은 알파의 핸들러를 못 깨웁니다 (핸들러가 상위 review-media-container 에
+ *     있거나 shadow DOM 바깥에 걸림). page.mouse.click(x, y) 로 실제 합성 클릭을 날리면
+ *     shadow DOM 경계를 넘어 핸들러에 도달합니다.
+ *   · 팝업이 닫히지 않는 문제 — Escape 와 .detail-popup-product__close 둘 다 가끔 안
+ *     먹어서 다음 썸네일 클릭이 팝업 오버레이에 가로막혔습니다. **DOM 에서 .remove()** 로
+ *     확실히 지워 피했습니다.
  */
 export async function scrapeNewyorktrdPhotos(productNo: number): Promise<ScrapeResult> {
   if (!productNo || productNo <= 0) {
@@ -153,20 +184,16 @@ export async function scrapeNewyorktrdPhotos(productNo: number): Promise<ScrapeR
     const url = `https://newyorktrd.co.kr/product/detail.html?product_no=${productNo}`;
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 45000 });
 
-    // #prdReview 로 스크롤해서 알파 위젯 로딩을 유도
+    // #prdReview 로 스크롤 → 알파 위젯 로드 유도
     await page.evaluate(async () => {
-      const total = document.body.scrollHeight;
-      for (let y = 0; y < total; y += 400) {
+      for (let y = 0; y < document.body.scrollHeight; y += 400) {
         window.scrollTo(0, y);
         await new Promise((r) => setTimeout(r, 60));
       }
       document.querySelector('#prdReview')?.scrollIntoView();
     });
-
-    // 알파 위젯이 자리를 잡을 때까지 기다립니다 (평균 8~10초)
     await new Promise((r) => setTimeout(r, 10000));
 
-    // 리뷰 영역을 몇 번 더 왕복해 뒤쪽 사진이 로드되게
     await page.evaluate(async () => {
       for (let i = 0; i < 3; i += 1) {
         document.querySelector('#prdReview')?.scrollIntoView({ block: 'end' });
@@ -176,34 +203,175 @@ export async function scrapeNewyorktrdPhotos(productNo: number): Promise<ScrapeR
       }
     });
 
-    // 모든 Shadow DOM 걸으면서 사진 URL 수집 — 영상·시스템 아이콘·상품 썸네일은 뺍니다
-    const urls = await page.evaluate(() => {
-      const out: string[] = [];
-      const walk = (root: Document | ShadowRoot | Element) => {
-        for (const img of Array.from(root.querySelectorAll('img'))) {
-          const src = img.currentSrc || img.src || '';
-          if (!src) continue;
-          // 아주 작은 아이콘(장식용)은 제외
-          if (img.naturalWidth > 0 && img.naturalWidth < 60) continue;
-          out.push(src);
-        }
-        for (const el of Array.from(root.querySelectorAll('*'))) {
-          const shadow = (el as Element & { shadowRoot: ShadowRoot | null }).shadowRoot;
-          if (shadow) walk(shadow);
-        }
-      };
-      walk(document);
-      return out;
-    });
+    const scrollToPhotoWidget = async () => {
+      await page.evaluate(() =>
+        document
+          .querySelector('.alpha_widget[data-code="8c143796"]')
+          ?.scrollIntoView({ block: 'center' })
+      );
+      await new Promise((r) => setTimeout(r, 800));
+    };
+    await scrollToPhotoWidget();
 
-    const unique = Array.from(new Set(urls)).filter(isReviewPhotoUrl);
-    return { photos: unique, elapsedMs: Date.now() - started };
+    /* 썸네일 하나하나 클릭해 그룹 뽑기 ----------------------------- */
+    const groups: PhotoGroup[] = [];
+    const seen = new Set<string>();
+    // 안전 상한 — 알파 포토리뷰 위젯 썸네일이 보통 20~40장. 그보다 많이 돌진 않습니다.
+    const MAX_CLICKS = 30;
+
+    for (let i = 0; i < MAX_CLICKS; i += 1) {
+      const thumb = await page.evaluate((seenList: string[]) => {
+        const walk = (root: Document | ShadowRoot | Element): { src: string; cx: number; cy: number } | null => {
+          for (const el of Array.from(root.querySelectorAll('*'))) {
+            if (el.tagName === 'IMG') {
+              const img = el as HTMLImageElement;
+              const src = img.currentSrc || img.src || '';
+              if (!/\/web\/upload\/appfiles\//i.test(src)) continue;
+              if (seenList.includes(src)) continue;
+              const rect = img.getBoundingClientRect();
+              if (rect.width < 40 || rect.height < 40) continue;
+              if (rect.top < 0 || rect.top > window.innerHeight) continue;
+              if (rect.left < 0 || rect.left > window.innerWidth) continue;
+              return { src, cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2 };
+            }
+            const shadow = (el as Element & { shadowRoot: ShadowRoot | null }).shadowRoot;
+            if (shadow) {
+              const f = walk(shadow);
+              if (f) return f;
+            }
+          }
+          return null;
+        };
+        return walk(document);
+      }, Array.from(seen));
+
+      if (!thumb) break;
+
+      await page.mouse.click(thumb.cx, thumb.cy);
+      // 팝업이 뜨고 안쪽 사진이 로드될 시간
+      await new Promise((r) => setTimeout(r, 3500));
+
+      const detail = await page.evaluate(() => {
+        const findDeep = (r: Document | ShadowRoot, tag: string): Element | null => {
+          for (const el of Array.from(r.querySelectorAll('*'))) {
+            if (el.tagName.toLowerCase() === tag) return el;
+            const shadow = (el as Element & { shadowRoot: ShadowRoot | null }).shadowRoot;
+            if (shadow) {
+              const f = findDeep(shadow, tag);
+              if (f) return f;
+            }
+          }
+          return null;
+        };
+        const popup = findDeep(document, 'review-detail-popup');
+        if (!popup || !(popup as Element & { shadowRoot: ShadowRoot | null }).shadowRoot) {
+          return null;
+        }
+        const shadowRoot = (popup as Element & { shadowRoot: ShadowRoot }).shadowRoot;
+
+        // 보이는 상태인지 확인
+        const style = (popup.ownerDocument?.defaultView ?? window).getComputedStyle(popup);
+        if (style.display === 'none' || style.visibility === 'hidden') return null;
+
+        // 전체 텍스트 (style/script 제외)
+        const parts: string[] = [];
+        const collect = (n: Node) => {
+          for (const c of Array.from(n.childNodes)) {
+            if (c.nodeType === 3) parts.push(c.textContent ?? '');
+            else if (c.nodeType === 1) {
+              const el = c as Element;
+              if (el.tagName === 'STYLE' || el.tagName === 'SCRIPT') continue;
+              const shadow = (el as Element & { shadowRoot: ShadowRoot | null }).shadowRoot;
+              if (shadow) collect(shadow);
+              collect(el);
+            }
+          }
+        };
+        collect(shadowRoot);
+        const fullText = parts.join(' ').replace(/\s+/g, ' ').trim();
+
+        // 작성자 "박**" 패턴 추출
+        const w = /([가-힣])(\*{2,})(?=님|\s|$)/.exec(fullText);
+        const writerName = w ? w[1] + w[2] : '';
+
+        // 날짜 — 상대 ("1주 전") 또는 절대 (2026.09.01)
+        const dateMatch =
+          /(\d+\s*(?:시간|일|주|달|개월|년)\s*전)|(\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2})/.exec(
+            fullText
+          );
+        const dateText = dateMatch ? dateMatch[0] : '';
+
+        // 글 본문 — 날짜 뒤부터 "도움돼요"/"댓글"/"신고" 전까지. 반복 "작성 N 전" 제거
+        let content = '';
+        if (dateText) {
+          const idx = fullText.indexOf(dateText);
+          let after = fullText.slice(idx + dateText.length);
+          after = after.replace(
+            /^(?:작성\s*)?(?:\d+\s*(?:시간|일|주|달|개월|년)\s*전\s*(?:작성)?\s*){0,5}/,
+            ''
+          );
+          const stopIdx = after.search(
+            /도움돼요|댓글|신고|이전\s*리뷰|다른\s*리뷰도|구매하기|장바구니/
+          );
+          content = (stopIdx > 0 ? after.slice(0, stopIdx) : after).replace(/\s+/g, ' ').trim();
+        }
+
+        // 사진들 — 팝업 전체의 appfiles / upload/review 사진
+        const imgs = new Set<string>();
+        const collectImgs = (r: Document | ShadowRoot | Element) => {
+          for (const img of Array.from(r.querySelectorAll('img'))) {
+            const src = (img as HTMLImageElement).currentSrc || (img as HTMLImageElement).src || '';
+            if (/\/web\/upload\/appfiles\//i.test(src) || /\/web\/upload\/review\//i.test(src)) {
+              imgs.add(src);
+            }
+          }
+          for (const el of Array.from(r.querySelectorAll('*'))) {
+            const shadow = (el as Element & { shadowRoot: ShadowRoot | null }).shadowRoot;
+            if (shadow) collectImgs(shadow);
+          }
+        };
+        collectImgs(shadowRoot);
+
+        return { writerName, dateText, content, photos: Array.from(imgs) };
+      });
+
+      if (detail && detail.photos.length > 0) {
+        for (const photo of detail.photos) seen.add(photo);
+        seen.add(thumb.src);
+        groups.push(detail);
+      } else {
+        // 팝업 못 열면 해당 썸네일만 seen 처리하고 다음으로
+        seen.add(thumb.src);
+      }
+
+      // 팝업을 DOM 에서 지웁니다 — close 버튼은 가끔 안 먹어 오버레이가 다음 클릭을 가로챕니다
+      await page.evaluate(() => {
+        const findDeep = (r: Document | ShadowRoot, tag: string): Element | null => {
+          for (const el of Array.from(r.querySelectorAll('*'))) {
+            if (el.tagName.toLowerCase() === tag) return el;
+            const shadow = (el as Element & { shadowRoot: ShadowRoot | null }).shadowRoot;
+            if (shadow) {
+              const f = findDeep(shadow, tag);
+              if (f) return f;
+            }
+          }
+          return null;
+        };
+        const popup = findDeep(document, 'review-detail-popup');
+        if (popup) popup.remove();
+      });
+
+      await new Promise((r) => setTimeout(r, 1200));
+      await scrollToPhotoWidget();
+    }
+
+    return { groups, elapsedMs: Date.now() - started };
   } finally {
     if (browser) {
       try {
         await browser.close();
       } catch {
-        // 닫기 실패는 조용히 — 다음 요청에서 뮤텍스가 풀립니다
+        // 닫기 실패는 조용히
       }
     }
     running = false;

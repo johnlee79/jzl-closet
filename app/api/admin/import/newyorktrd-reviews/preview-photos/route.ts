@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import { NextResponse, type NextRequest } from 'next/server';
 import { isAdmin } from '@/lib/admin-guard';
 import {
@@ -8,19 +7,19 @@ import {
 import { getImportedReviewsForProduct } from '@/lib/reviews';
 
 /**
- * 뉴욕트렌딕 상품 페이지를 헤드리스 Chrome 으로 열어 손님 사진을 긁고, 미리보기용으로
- * 돌려줍니다. **저장은 하지 않습니다** — 사장님이 미리보기 화면에서 체크한 뒤
- * /api/admin/import/newyorktrd-reviews (저장) 로 가야 저장됩니다.
+ * 뉴욕트렌딕 상품 페이지를 헤드리스 Chrome 으로 열어 손님 사진을 긁어 미리보기로 돌려줍니다.
+ * **저장은 하지 않습니다** — 사장님이 미리보기에서 체크한 뒤 /newyorktrd-reviews
+ * (저장) 로 가야 저장됩니다.
  *
- * ★ 응답 모양 — NewyorktrdReviewPreview 가 그대로 받을 수 있는 PreviewReview[] 입니다.
- *   사진은 "글 없음 · 사진만" 리뷰 하나씩 돌려줍니다 (알파 위젯이 사진-글 짝을 쉽게
- *   내놓지 않아, 지금 단계에서는 그룹핑 없이 사진 단건으로 보여 드립니다).
+ * ★ 그룹핑 (2026-10-05)
+ *   썸네일을 하나씩 클릭해 리뷰 상세 팝업을 열고 작성자·날짜·글·사진 세트를 뽑습니다.
+ *   같은 손님 사진 5~6장이 한 그룹으로 묶여 돌아옵니다.
+ *   가끔 팝업이 안 열리는 사진은 "글 없음 · 사진만" 단건 폴백으로 넣어 사장님이
+ *   미리보기에서 보고 고를 수 있게 합니다.
  *
- * ★ 중복 방지 — 저희 DB 에 이미 들어가 있는 뉴욕트렌딕 리뷰의 attachments 를 보고
- *   같은 사진 URL (R2 로 복사된 뒤의 URL 이 아니라 원본 URL) 을 체크한 적이 없어
- *   이 자리에서는 "이미 가져온" 처리를 못 합니다. 유일 인덱스가 reviewId 기반이라
- *   사진만 리뷰는 "photo-{url해시}" 같은 식별자를 쓰고, 저장 라우트가 중복이면
- *   건너뜁니다.
+ * ★ 짝맞춤 — 뽑은 그룹의 (작성자 첫 글자 + 글 처음 15자) 로 저희 DB 의 기존 글 리뷰와
+ *   비교합니다. 일치하면 그 리뷰의 source_review_id 를 돌려줘 저장 라우트가 **기존
+ *   리뷰에 사진을 붙이게** 합니다. 일치 안 하면 새 리뷰로 들어갑니다.
  */
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -36,6 +35,11 @@ export type PreviewPhotoReview = {
   writtenAt: string;
   alreadyImported: boolean;
   kind: 'photo-only';
+  /**
+   * 짝맞춤 결과 — 저희 DB 의 기존 뉴욕 글 리뷰와 매칭되면 그 source_review_id 가
+   * 들어옵니다. 저장 라우트가 이 값을 보고 **기존 리뷰에 사진을 붙입니다** (새로 만들지 않음).
+   */
+  attachToExistingReviewId?: string;
 };
 
 type Payload = {
@@ -50,74 +54,12 @@ function photoKey(url: string): string {
   return stripped.slice(0, 32) || Date.now().toString(36);
 }
 
-/**
- * 진단용 — chromium-min 과 puppeteer-core 가 실행 준비됐는지 확인합니다.
- *   관리자 로그인된 상태에서 /api/admin/import/newyorktrd-reviews/preview-photos
- *   에 GET 하면 됩니다.
- *
- * ★ require.resolve 는 쓰지 않습니다. webpack 이 외부 패키지 처리를 깜빡하면
- *   require.resolve 반환값이 숫자(모듈 ID)로 바뀌어 거짓 음성이 뜨기 때문에,
- *   dynamic import 를 하고 모듈 자체의 함수를 호출해 실제 동작 상태를 봅니다.
- * ★ chromium.executablePath(url) 은 /tmp 에 바이너리를 풀어 그 경로를 돌려 줍니다.
- *   이 호출이 성공하면 사진 받기도 성공할 가능성이 높습니다 (실행 자체는 안 합니다).
- */
-export async function GET() {
-  if (!(await isAdmin())) {
-    return NextResponse.json({ error: '관리자 로그인이 필요합니다.' }, { status: 401 });
-  }
-
-  const env = {
-    VERCEL: process.env.VERCEL ?? null,
-    AWS_LAMBDA_FUNCTION_NAME: process.env.AWS_LAMBDA_FUNCTION_NAME ?? null,
-    cwd: process.cwd(),
-    chromiumPackUrl: process.env.CHROMIUM_PACK_URL ?? null,
-  };
-
-  // chromium-min — dynamic import 하고 실제로 executablePath 를 호출해 봅니다.
-  let chromium: Record<string, unknown>;
-  try {
-    const chromiumModule = await import('@sparticuz/chromium-min');
-    const chromiumDefault = chromiumModule.default;
-    const url =
-      process.env.CHROMIUM_PACK_URL ??
-      'https://github.com/Sparticuz/chromium/releases/download/v143.0.4/chromium-v143.0.4-pack.x64.tar';
-    const started = Date.now();
-    const executablePath = await chromiumDefault.executablePath(url);
-    const elapsedMs = Date.now() - started;
-    chromium = {
-      moduleLoaded: true,
-      remoteUrl: url,
-      executablePath,
-      // /tmp 아래 실제로 바이너리 파일이 있는지도 확인
-      binaryExists: fs.existsSync(executablePath),
-      elapsedMs,
-    };
-  } catch (error) {
-    chromium = {
-      moduleLoaded: false,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
-
-  // puppeteer-core — dynamic import 로 실제 로드 여부만 확인
-  let puppeteer: Record<string, unknown>;
-  try {
-    const mod = await import('puppeteer-core');
-    puppeteer = {
-      loaded: true,
-      hasLaunch: typeof mod.launch === 'function',
-    };
-  } catch (error) {
-    puppeteer = {
-      loaded: false,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
-
-  return NextResponse.json(
-    { env, chromium, puppeteer },
-    { headers: { 'Cache-Control': 'no-store' } }
-  );
+/** 글자 두 개 정도만 비교해도 되게끔 공백·구두점 지우고 소문자화. */
+function foldForMatch(text: string): string {
+  return (text ?? '')
+    .toLowerCase()
+    .normalize('NFKC')
+    .replace(/[\s.,!?~^\-_()[\]{}'"‘’“”·…]/g, '');
 }
 
 export async function POST(request: NextRequest) {
@@ -138,37 +80,63 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { photos, elapsedMs } = await scrapeNewyorktrdPhotos(productNo);
+    const { groups, elapsedMs } = await scrapeNewyorktrdPhotos(productNo);
 
-    // 이미 가져온 뉴욕 리뷰의 reviewId 를 모아 둡니다 — 사진만 리뷰 식별자가 겹치면
-    // "가져옴" 으로 표시합니다. (사진 URL 자체가 바뀌면 중복 못 잡지만, 보통 바뀌지 않습니다)
-    const existingIds = new Set<string>();
-    if (productId) {
-      const existing = await getImportedReviewsForProduct(productId, 'newyorktrd');
-      for (const review of existing) {
-        if (review.sourceReviewId) existingIds.add(review.sourceReviewId);
-      }
+    // 저희 DB 의 뉴욕 글 리뷰 모아 둡니다 — 짝맞춤에 씀
+    const existingReviews = productId
+      ? await getImportedReviewsForProduct(productId, 'newyorktrd')
+      : [];
+    const existingByFingerprint = new Map<
+      string,
+      { sourceReviewId: string }
+    >();
+    for (const review of existingReviews) {
+      if (!review.sourceReviewId) continue;
+      // 지문: 작성자 첫 한글 + 글 앞 15자 (fold)
+      const firstChar = review.writerName.slice(0, 1);
+      const contentHead = foldForMatch(review.content).slice(0, 15);
+      if (!firstChar || contentHead.length < 5) continue;
+      const key = `${firstChar}|${contentHead}`;
+      existingByFingerprint.set(key, { sourceReviewId: review.sourceReviewId });
     }
 
-    const reviews: PreviewPhotoReview[] = photos.map((url) => {
-      const reviewId = `photo-${photoKey(url)}`;
-      return {
-        reviewId,
+    // 이미 어떤 식으로든 가져온 reviewId 전부 (중복 표시용)
+    const existingIds = new Set<string>();
+    for (const review of existingReviews) {
+      if (review.sourceReviewId) existingIds.add(review.sourceReviewId);
+    }
+
+    const reviews: PreviewPhotoReview[] = [];
+
+    for (const group of groups) {
+      // 묶음 식별자 — 사진 URL 첫 개의 해시 꼬리말
+      const groupKey = `photo-group-${photoKey(group.photos[0] ?? '')}`;
+      // 짝맞춤 — 작성자 첫 글자 + 글 앞 15자
+      const firstChar = group.writerName.slice(0, 1);
+      const contentHead = foldForMatch(group.content).slice(0, 15);
+      const matchKey =
+        firstChar && contentHead.length >= 5 ? `${firstChar}|${contentHead}` : '';
+      const match = matchKey ? existingByFingerprint.get(matchKey) : undefined;
+
+      reviews.push({
+        reviewId: match ? match.sourceReviewId : groupKey,
         sourceUrl: `https://newyorktrd.co.kr/product/detail.html?product_no=${productNo}`,
-        writerName: '뉴욕트렌딕 손님',
+        writerName: group.writerName || '뉴욕트렌딕 손님',
         rating: 5,
-        content: '',
-        photos: [url],
+        content: group.content,
+        photos: group.photos,
         writtenAt: new Date().toISOString(),
-        alreadyImported: existingIds.has(reviewId),
+        alreadyImported: existingIds.has(match?.sourceReviewId ?? groupKey),
         kind: 'photo-only',
-      };
-    });
+        attachToExistingReviewId: match?.sourceReviewId,
+      });
+    }
 
     return NextResponse.json(
       {
         reviews,
-        found: photos.length,
+        found: reviews.length,
+        totalPhotos: reviews.reduce((n, r) => n + r.photos.length, 0),
         elapsedMs,
       },
       { headers: { 'Cache-Control': 'no-store' } }

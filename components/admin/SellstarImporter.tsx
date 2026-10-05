@@ -692,6 +692,7 @@ export default function SellstarImporter({
                 content: review.content,
                 photos: selection.photos,
                 writtenAt: review.writtenAt,
+                attachToExistingReviewId: review.attachToExistingReviewId,
               };
             })
             .filter(Boolean),

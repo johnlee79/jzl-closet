@@ -55,10 +55,15 @@ export type PreviewReview = {
   alreadyImported: boolean;
   /**
    * 'text' — 보통 글 리뷰 (사진이 있을 수도 없을 수도).
-   * 'photo-only' — 사진 리뷰인데 글·작성자·날짜를 짝맞춤 못한 경우. 미리보기에
-   *   「글 없음 · 사진만」 뱃지로 표시해 사장님이 보고 고를 수 있게 합니다.
+   * 'photo-only' — 사진 그룹 (글 짝맞춤 실패) 또는 "같은 손님 사진 묶음" 입니다.
+   *   미리보기에 「글 없음 · 사진만」 뱃지로 표시해 사장님이 보고 고를 수 있게 합니다.
    */
   kind?: 'text' | 'photo-only';
+  /**
+   * 사진 그룹핑이 기존 글 리뷰와 짝맞춤에 성공했을 때 그 source_review_id.
+   * 저장 라우트가 이 값을 보고 **기존 리뷰에 사진만 붙입니다** (새로 안 만듦).
+   */
+  attachToExistingReviewId?: string;
 };
 
 export type ReviewSelection = {
@@ -282,12 +287,20 @@ export default function NewyorktrdReviewPreview({
                         가져옴
                       </span>
                     ) : null}
-                    {review.kind === 'photo-only' ? (
+                    {review.kind === 'photo-only' && !review.attachToExistingReviewId ? (
                       <span
-                        title="알파 리뷰 위젯이 사진-글 짝을 안 내놓아, 사진 단건으로 가져옵니다"
+                        title="알파 리뷰 위젯에서 받은 사진 묶음입니다 (글 짝맞춤 실패)"
                         className="inline-flex items-center bg-blue-50 px-2 py-0.5 text-[12px] text-blue-700"
                       >
                         글 없음 · 사진만
+                      </span>
+                    ) : null}
+                    {review.kind === 'photo-only' && review.attachToExistingReviewId ? (
+                      <span
+                        title="이미 가져온 글 후기에 사진만 덧붙입니다"
+                        className="inline-flex items-center bg-emerald-50 px-2 py-0.5 text-[12px] text-emerald-700"
+                      >
+                        기존 글 후기에 사진 추가
                       </span>
                     ) : null}
                     {review.kind !== 'photo-only' && review.rating <= 3 ? (
