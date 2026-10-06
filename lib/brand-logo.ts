@@ -28,6 +28,8 @@ export type BrandLogoReport = {
   scale: number;
   rawScale: number;
   clampedByCanvas: boolean;
+  /** 어느 변에 걸렸는지. null = 안 걸림. */
+  clampedBy: 'width' | 'height' | null;
   finalW: number;
   finalH: number;
   warnings: string[];

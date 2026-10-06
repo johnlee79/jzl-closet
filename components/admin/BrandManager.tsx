@@ -13,7 +13,7 @@ import {
 import { brandImage, type Brand } from '@/lib/brands';
 import { slugify } from '@/lib/product-utils';
 
-type Message = { tone: 'ok' | 'error'; text: string } | null;
+type Message = { tone: 'ok' | 'error' | 'warn'; text: string } | null;
 
 type Draft = {
   slug: string;
@@ -376,7 +376,7 @@ export default function BrandManager({
     .filter((item): item is Brand => Boolean(item));
 
   const run = (
-    action: () => Promise<{ ok: boolean; error?: string }>,
+    action: () => Promise<{ ok: boolean; error?: string; warning?: string }>,
     okText?: string
   ) => {
     setMessage(null);
@@ -387,7 +387,11 @@ export default function BrandManager({
         router.refresh();
         return;
       }
-      if (okText) setMessage({ tone: 'ok', text: okText });
+      if (result.warning) {
+        setMessage({ tone: 'warn', text: result.warning });
+      } else if (okText) {
+        setMessage({ tone: 'ok', text: okText });
+      }
       router.refresh();
     });
   };
@@ -464,7 +468,11 @@ export default function BrandManager({
         <p
           role="status"
           className={`mt-4 rounded-md px-3 py-2 text-[16px] ${
-            message.tone === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
+            message.tone === 'ok'
+              ? 'bg-green-50 text-green-800'
+              : message.tone === 'warn'
+                ? 'bg-amber-50 text-amber-900'
+                : 'bg-red-50 text-red-700'
           }`}
         >
           {message.text}

@@ -213,14 +213,14 @@ async function readCategories(): Promise<Category[] | null> {
 /**
  * 브랜드별 로고 미세 조정 배율을 허용 범위 안으로 잘라 냅니다.
  *
- * ★ 범위를 넓히지 마세요. 0.7~1.5 를 벗어날 정도로 조정해야 한다면
- *   그 로고 파일 자체가 균일화에 맞지 않는 것입니다. 파일을 바꾸는 편이 낫습니다.
+ * ★ 범위는 0.5~2.0 입니다 (사장님 지시 2026-10-06 — TOMMY HILFIGER 처럼 가로로 긴 로고용).
+ *   그래도 가로 상한(MAX_W_RATIO)에 걸리면 더 커지지 않습니다. UI 가 알려 줍니다.
  * ★ 숫자가 아닌 값이 들어오면 1 로 봅니다. 저장이 실패하는 것보다 낫습니다.
  */
 function clampLogoScale(value: number | undefined): number {
   const n = Number(value);
   if (!Number.isFinite(n)) return 1;
-  return Math.min(1.5, Math.max(0.7, n));
+  return Math.min(2.0, Math.max(0.5, n));
 }
 
 /** 아직 없는 컬럼을 골랐을 때 오는 코드 */

@@ -12,6 +12,7 @@ import {
   createCategory,
   deleteBrand,
   deleteCategory,
+  getBrands,
   getCategories,
   reorder,
   updateBrand,
@@ -19,6 +20,7 @@ import {
   type BrandInput,
   type CategoryInput,
 } from '@/lib/taxonomy';
+import { rebakeBrandLogo } from '@/lib/brand-logo-rebake';
 import { findCategory } from '@/lib/categories';
 
 /**
@@ -28,8 +30,12 @@ import { findCategory } from '@/lib/categories';
  *   그래서 수정 액션은 slug 를 "찾는 키" 로만 쓰고 값으로는 받지 않습니다.
  */
 
+/**
+ * ★ warning 은 "저장은 됐지만 반쯤 멈춘" 자리입니다. 흐름을 막지 않고 UI 에 노란 안내로
+ *   띄워 줍니다. 예) 배율은 저장됐지만 로고를 다시 굽지 못한 경우. (사장님 지시 2026-10-05)
+ */
 export type ActionResult<T = undefined> =
-  | { ok: true; data: T }
+  | { ok: true; data: T; warning?: string }
   | { ok: false; error: string };
 
 function fail(error: unknown, fallback: string): { ok: false; error: string } {
@@ -220,12 +226,58 @@ export async function saveBrandAction(
   if (!input.name.trim()) return { ok: false, error: '정식 표기(name)를 입력해 주세요.' };
 
   try {
+    let patched: BrandInput = input;
+    let warning: string | null = null;
+
     if (isNew) {
       const problem = checkSlug(input.slug);
       if (problem) return { ok: false, error: problem };
       await createBrand(input);
     } else {
-      const { slug, ...patch } = input;
+      /*
+       * ★ 로고 배율만 바꾸고 저장을 누르면 조용히 넘어가던 문제를 여기서 잡습니다.
+       *   (사장님 지시 2026-10-05: "어디서 막히든 조용히 넘어가지 말고")
+       *
+       *   logoScale 은 손님 화면에서 CSS 로 쓰이는 값이 아닙니다. 로고를 **구울 때만**
+       *   들어가는 숫자라서, 배율이 바뀌었는데 logoUrl 이 그대로면 손님 화면은 하나도
+       *   안 바뀝니다. 그래서 세 가지로 나누어 처리합니다.
+       *
+       *   ① 손으로 「이 배율로 다시 만들기」를 눌러서 이미 logoUrl 이 새 걸로 바뀐 경우
+       *      → 그냥 저장. (input.logoUrl !== oldBrand.logoUrl)
+       *   ② 배율만 바꾸고 저장을 눌렀는데 원본이 있는 경우
+       *      → 서버에서 알아서 다시 굽고 새 logoUrl 로 저장.
+       *   ③ 배율만 바꾸고 저장을 눌렀는데 원본이 없는 경우 (휴먼메이드·파타고니아 등)
+       *      → 배율은 저장하되, UI 에 노란 안내로 알립니다. "로고를 다시 올려 주세요."
+       */
+      const brands = await getBrands();
+      const oldBrand = brands.find((b) => b.slug === input.slug);
+      const nextScale = Number.isFinite(input.logoScale) ? Number(input.logoScale) : 1;
+      const scaleChanged =
+        oldBrand && Math.abs(oldBrand.logoScale - nextScale) > 0.001;
+      const logoUrlUnchanged = oldBrand && input.logoUrl === oldBrand.logoUrl;
+
+      if (oldBrand && scaleChanged && logoUrlUnchanged && input.logoUrl) {
+        if (input.logoOriginalUrl) {
+          try {
+            const { logoUrl } = await rebakeBrandLogo({
+              originalUrl: input.logoOriginalUrl,
+              slug: input.slug,
+              logoScale: nextScale,
+            });
+            patched = { ...input, logoUrl };
+          } catch (error) {
+            const reason =
+              error instanceof Error ? error.message : '알 수 없는 오류';
+            console.error('[admin/brand] 자동 다시 굽기 실패:', reason);
+            warning = `배율은 저장됐지만 로고를 다시 만들지 못했습니다 — ${reason}`;
+          }
+        } else {
+          warning =
+            '배율은 저장됐지만 로고를 다시 만들지 못했습니다 — 원본 파일이 없습니다. 로고를 다시 올려 주세요.';
+        }
+      }
+
+      const { slug, ...patch } = patched;
       void slug; // slug 는 바꾸지 않습니다
       await updateBrand(input.slug, patch);
     }
@@ -233,7 +285,9 @@ export async function saveBrandAction(
     revalidateAll();
     revalidatePath(`/brand/${input.slug}`);
     revalidatePath('/admin/brands');
-    return { ok: true, data: undefined };
+    return warning
+      ? { ok: true, data: undefined, warning }
+      : { ok: true, data: undefined };
   } catch (error) {
     return fail(error, '브랜드를 저장하지 못했습니다.');
   }

@@ -38,8 +38,8 @@ type Report = {
   warnings: string[];
 };
 
-const MIN = 0.7;
-const MAX = 1.5;
+const MIN = 0.5;
+const MAX = 2.0;
 
 /** 투명 배경을 눈으로 확인하기 위한 체크무늬 (SVG · 이미지 파일 없이) */
 const CHECKER =
@@ -239,6 +239,12 @@ export default function BrandLogoField({
           키우면 화질이 깨지기 때문입니다. 바꾼 뒤 [이 배율로 다시 만들기]를 누르고,
           위 미리보기를 확인한 다음 저장하세요.
         </p>
+        {value.logoUrl && !value.logoOriginalUrl ? (
+          <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-[14px] leading-relaxed text-amber-900">
+            ★ 이 브랜드는 <strong>원본이 보관돼 있지 않습니다.</strong> 배율을 바꿔도 로고
+            이미지는 바뀌지 않습니다. 배율을 적용하려면 로고를 한 번 더 올려 주세요.
+          </p>
+        ) : null}
       </div>
 
       {error ? (
