@@ -10,6 +10,7 @@ import {
 } from '@/app/admin/actions';
 import { brandLabel, type Brand } from '@/lib/brands';
 import { findCategory, findSubCategory, type Category } from '@/lib/categories';
+import { judgeMargin, marginToneClass } from '@/lib/margin';
 import { formatPrice } from '@/lib/product-utils';
 import type { Product } from '@/lib/types';
 
@@ -262,22 +263,22 @@ export default function ProductTable({
                     )}
                   </td>
 
-                  {/* 마진 = 판매가 − 원가. 원가가 판매가보다 크면 빨간색 (원가 오름 사고) */}
+                  {/* 마진 — judgeMargin 이 역마진·너무 높음·너무 낮음을 공통 기준으로 판정 */}
                   <td className="px-3 py-2.5 text-right tabular-nums">
-                    {costByProductId[product.id] != null && product.price > 0 ? (
-                      (() => {
-                        const margin = product.price - costByProductId[product.id];
-                        const rate = Math.round((margin / product.price) * 100);
-                        return (
-                          <span className={margin < 0 ? 'text-red-700 font-semibold' : 'text-slate-900'}>
-                            {margin.toLocaleString()}원
-                            <span className="ml-1 text-[12px] text-slate-500">({rate}%)</span>
-                          </span>
-                        );
-                      })()
-                    ) : (
-                      <span className="text-slate-400">—</span>
-                    )}
+                    {(() => {
+                      const judge = judgeMargin(product.price, costByProductId[product.id]);
+                      if (judge.kind === 'none')
+                        return <span className="text-slate-400">—</span>;
+                      return (
+                        <span className={marginToneClass(judge)} title={judge.kind !== 'ok' ? judge.reason : undefined}>
+                          {judge.margin.toLocaleString()}원
+                          <span className="ml-1 text-[12px] text-slate-500">({judge.rate}%)</span>
+                          {judge.kind !== 'ok' ? (
+                            <span className="ml-1 text-[11px] text-red-700">⚠</span>
+                          ) : null}
+                        </span>
+                      );
+                    })()}
                   </td>
 
                   <td className="px-3 py-2.5">

@@ -110,6 +110,7 @@ const MENU: Group[] = [
       { href: '/admin/products/new', label: '상품 등록' },
       { href: '/admin/products/import', label: '상품 가져오기' },
       { href: '/admin/products/cost-sheet', label: '원가 엑셀 올리기' },
+      { href: '/admin/products/cost-sheet/view', label: '단가표 보기' },
       { href: '/admin/categories', label: '분류 관리' },
       { href: '/admin/brands', label: '브랜드 관리' },
     ],

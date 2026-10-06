@@ -3,13 +3,18 @@
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { parseExcelFile, type ParsedWorkbook } from '@/lib/cost-sheet-parser';
-import type { ExcelProduct } from '@/lib/cost-sheet';
+import {
+  extractImagesFromXlsx,
+  resizeImageToWebp,
+  type ImageMap,
+} from '@/lib/cost-sheet-images';
 import {
   previewMatchesAction,
-  saveCostsAction,
+  uploadFullSheetAction,
   type Candidate,
   type PreviewRow,
 } from '@/app/admin/cost-sheet-actions';
+import ZoomImage from '@/components/admin/ZoomImage';
 import { formatPrice } from '@/lib/product-utils';
 
 /**
@@ -27,6 +32,20 @@ type SelectionState = {
   chosen: string | '' | null;
 };
 
+/** 알파 사진은 블록 어딘가에 꽂혀 있어 rowStart 와 정확히 안 맞을 수 있어요. 근접 매치. */
+function findImageForRow(
+  images: ImageMap,
+  sheet: string,
+  rowStart: number
+): { bytes: Uint8Array; mime: string } | null {
+  for (let delta = 0; delta <= 10; delta += 1) {
+    const key = `${sheet}:${rowStart + delta}`;
+    const img = images.get(key);
+    if (img) return { bytes: img.bytes, mime: img.mime };
+  }
+  return null;
+}
+
 export default function CostSheetMatcher() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -34,6 +53,9 @@ export default function CostSheetMatcher() {
   const [workbook, setWorkbook] = useState<ParsedWorkbook | null>(null);
   const [previewRows, setPreviewRows] = useState<PreviewRow[]>([]);
   const [selections, setSelections] = useState<Record<string, SelectionState>>({});
+  const [imageMap, setImageMap] = useState<ImageMap>(new Map());
+  /** 브라우저 blob URL — 사장님이 미리보기에서 바로 사진을 봅니다. 저장 후 revoke */
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [savedSummary, setSavedSummary] = useState<string | null>(null);
@@ -45,15 +67,46 @@ export default function CostSheetMatcher() {
     setWorkbook(null);
     setPreviewRows([]);
     setSelections({});
+    setImageMap(new Map());
+    // 이전 blob URL revoke
+    for (const url of Object.values(previewUrls)) URL.revokeObjectURL(url);
+    setPreviewUrls({});
     setError(null);
     setSavedSummary(null);
     if (!f) return;
     setNotice('엑셀을 브라우저에서 읽는 중입니다. 55MB 파일은 15~30초 걸립니다…');
     try {
-      const parsed = await parseExcelFile(f);
+      // 엑셀 데이터와 이미지를 **같은 ArrayBuffer** 로 두 번 파싱해도 되지만, 메모리 안
+      // 쓰려고 File 을 그대로 넘깁니다 (내부에서 arrayBuffer 는 재사용 안 됨).
+      const [parsed, images] = await Promise.all([
+        parseExcelFile(f),
+        extractImagesFromXlsx(f).catch((e) => {
+          console.warn('[cost-sheet] 이미지 추출 실패, 사진 없이 계속:', e);
+          return new Map();
+        }),
+      ]);
       setWorkbook(parsed);
+      setImageMap(images as ImageMap);
+
+      // 상품 "rowStart" 와 알파 셀 anchor row 를 짝 짓습니다. 셀 anchor row 는 0-indexed
+      // 라 상품 rowStart (sheet_to_json 의 0-indexed) 와 바로 비교할 수 있습니다. 다만 알파
+      // 사진은 보통 상품 블록 어딘가에 꽂혀 있어 정확히 rowStart 와 안 맞을 수 있습니다.
+      // 그래서 "같은 시트에서 rowStart 이상·rowStart+8 이하 범위의 첫 사진" 을 선택합니다.
+      const urls: Record<string, string> = {};
+      for (const sheet of parsed.sheets) {
+        for (const product of sheet.products) {
+          const match = findImageForRow(images as ImageMap, product.sheet, product.rowStart);
+          if (!match) continue;
+          const bufferCopy = new Uint8Array(match.bytes.length);
+          bufferCopy.set(match.bytes);
+          const blob = new Blob([bufferCopy.buffer], { type: match.mime });
+          urls[keyFor(product.sheet, product.rowStart)] = URL.createObjectURL(blob);
+        }
+      }
+      setPreviewUrls(urls);
+
       setNotice(
-        `${parsed.sheets.length}개 시트에서 ${parsed.totalProducts}개 상품을 읽었습니다. ` +
+        `${parsed.sheets.length}개 시트에서 ${parsed.totalProducts}개 상품 · 사진 ${Object.keys(urls).length}장을 읽었습니다. ` +
           '매칭 후보를 불러옵니다…'
       );
       // 서버로 글자만 보내 매칭 미리보기 받기
@@ -105,21 +158,35 @@ export default function CostSheetMatcher() {
     [previewRows, selections]
   );
 
+  /** 상품 하나의 사진을 300px WebP 로 줄여 /api/upload 로 올리고 URL 을 돌려줍니다. */
+  const uploadOneImage = async (
+    sheet: string,
+    rowStart: number
+  ): Promise<string | null> => {
+    const match = findImageForRow(imageMap, sheet, rowStart);
+    if (!match) return null;
+    try {
+      const resized = await resizeImageToWebp(match.bytes, match.mime, 300);
+      const form = new FormData();
+      form.append('files', resized, `${sheet}-${rowStart}.webp`);
+      form.append('slug', 'cost-sheet');
+      const response = await fetch('/api/upload', { method: 'POST', body: form });
+      if (!response.ok) return null;
+      const payload = (await response.json()) as {
+        images?: { url: string }[];
+      };
+      return payload.images?.[0]?.url ?? null;
+    } catch (uploadError) {
+      console.warn('[cost-sheet] image upload failed', sheet, rowStart, uploadError);
+      return null;
+    }
+  };
+
   const save = () => {
     const rows = previewRows
       .filter((r) => {
         const chosen = selections[r.excel.key]?.chosen;
         return chosen !== undefined && chosen !== null; // '' (해당없음) 도 저장 대상에 포함 (기억 저장)
-      })
-      .map((r) => {
-        const chosen = selections[r.excel.key]!.chosen!;
-        return {
-          normalizedName: r.excel.normalizedName,
-          excelName: r.excel.name,
-          excelSkus: r.excel.nameSkus,
-          costPrice: r.excel.costPrice,
-          productId: chosen === '' ? null : chosen,
-        };
       });
 
     if (rows.length === 0) {
@@ -129,15 +196,40 @@ export default function CostSheetMatcher() {
     setError(null);
     setSavedSummary(null);
     startTransition(async () => {
-      const result = await saveCostsAction(rows);
+      // 1) 사진 올리기 — 선택한 짝이 있는 행만. 사진 없는 행은 건너뜀.
+      setNotice(`사진 ${rows.length}장을 R2 로 올리는 중입니다…`);
+      const uploadedImageUrls: Record<string, string | null> = {};
+      for (const r of rows) {
+        // eslint-disable-next-line no-await-in-loop
+        const url = await uploadOneImage(r.excel.sheet, r.excel.rowStart);
+        uploadedImageUrls[r.excel.key] = url;
+      }
+      setNotice(null);
+
+      // 2) 서버에 통째로 저장
+      const payload = rows.map((r) => {
+        const chosen = selections[r.excel.key]!.chosen!;
+        return {
+          normalizedName: r.excel.normalizedName,
+          rawName: r.excel.name,
+          skus: r.excel.nameSkus,
+          costPrice: r.excel.costPrice,
+          imageUrl: uploadedImageUrls[r.excel.key] ?? null,
+          sheetName: r.excel.sheet,
+          rowStart: r.excel.rowStart,
+          productId: chosen === '' ? null : chosen,
+        };
+      });
+
+      const result = await uploadFullSheetAction(payload);
       if (!result.ok) {
         setError(result.error);
         return;
       }
-      const { saved, remembered, skipped } = result.data;
+      const { archived, saved, costs, remembered } = result.data;
       setSavedSummary(
-        `원가 ${saved}건 저장 · 짝 ${remembered}건 기억 · 건너뜀 ${skipped}건. ` +
-          '다음 달 같은 엑셀을 올리면 짝은 자동으로 맞아 들어옵니다.'
+        `단가표 ${saved}건 저장 · 옛 단가표 ${archived}건 기록으로 넘김 · 원가 ${costs}건 저장 · 짝 ${remembered}건 기억. ` +
+          '단가표 보기 메뉴로 확인하실 수 있습니다.'
       );
       router.refresh();
     });
@@ -226,9 +318,25 @@ export default function CostSheetMatcher() {
                 row={row}
                 chosen={selections[row.excel.key]?.chosen ?? null}
                 onChoose={(id) => choose(row.excel.key, id)}
+                excelImageUrl={previewUrls[row.excel.key] ?? null}
               />
             ))}
           </ul>
+
+          {/* ★ 아래쪽 저장 버튼 — 다 고른 뒤 다시 위로 올라가지 않아도 되게 (사장님 지시 2026-10-06) */}
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-4">
+            <p className="text-[14px] text-slate-500">
+              {chosenCount} / {previewRows.length} 고름
+            </p>
+            <button
+              type="button"
+              onClick={save}
+              disabled={pending || chosenCount === 0}
+              className="admin-btn-primary"
+            >
+              {pending ? '저장 중…' : '선택한 짝 저장'}
+            </button>
+          </div>
         </section>
       ) : null}
     </div>
@@ -243,16 +351,29 @@ function RowItem({
   row,
   chosen,
   onChoose,
+  excelImageUrl,
 }: {
   row: PreviewRow;
   chosen: string | '' | null;
   onChoose: (id: string | '' | null) => void;
+  excelImageUrl: string | null;
 }) {
   return (
     <li className="rounded-md border border-slate-200 bg-white p-3">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[300px_1fr]">
         {/* 왼쪽 — 엑셀 상품 */}
-        <div className="flex flex-col gap-1 border-r border-slate-100 pr-4">
+        <div className="flex flex-col gap-2 border-r border-slate-100 pr-4">
+          {excelImageUrl ? (
+            <ZoomImage
+              src={excelImageUrl}
+              alt={row.excel.name}
+              className="h-32 w-32 shrink-0 rounded border border-slate-200 bg-slate-50 cursor-zoom-in"
+            />
+          ) : (
+            <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded border border-dashed border-slate-200 bg-slate-50 text-[12px] text-slate-400">
+              사진 없음
+            </div>
+          )}
           <p className="text-[12px] text-slate-500">
             {row.excel.sheet} · r{row.excel.rowStart}
           </p>
@@ -332,12 +453,12 @@ function CandidateItem({
       }`}
     >
       <input type="radio" checked={checked} onChange={onCheck} className="h-4 w-4" />
-      <div className="h-14 w-14 shrink-0 overflow-hidden rounded border border-slate-200 bg-slate-50">
-        {c.thumbnail ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={c.thumbnail} alt="" className="h-full w-full object-cover" />
-        ) : null}
-      </div>
+      {/* 작게 보이면 구분이 안 돼 눌러서 크게 — ZoomImage 가 전체화면 확대 */}
+      <ZoomImage
+        src={c.thumbnail}
+        alt={c.name}
+        className="h-14 w-14 shrink-0 overflow-hidden rounded border border-slate-200 bg-slate-50 cursor-zoom-in"
+      />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[14px] text-slate-900">{c.name}</p>
         <p className="mt-0.5 text-[12px] text-slate-500">

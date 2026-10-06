@@ -214,6 +214,188 @@ export async function rememberMatch(input: {
  * 브랜드 줄임말
  * ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------
+ * 저장된 단가표 — cost_sheet_entries
+ *
+ * ★ 새 엑셀을 올리면 current 를 바꿔 끼우고 옛것은 is_current=false 로 기록 남김.
+ *   service_role 전용 RLS. 손님 유출 금지.
+ * ------------------------------------------------------------------ */
+
+export type CostSheetEntry = {
+  id: string;
+  source: string;
+  sheetDate: string | null;
+  uploadedAt: string;
+  isCurrent: boolean;
+  normalizedName: string;
+  rawName: string;
+  skus: string[];
+  costPrice: number | null;
+  imageUrl: string | null;
+  matchedProductId: string | null;
+  sheetName: string | null;
+  rowStart: number | null;
+};
+
+type CostSheetEntryRow = {
+  id: string;
+  source: string;
+  sheet_date: string | null;
+  uploaded_at: string;
+  is_current: boolean;
+  normalized_name: string;
+  raw_name: string;
+  skus: string[];
+  cost_price: number | null;
+  image_url: string | null;
+  matched_product_id: string | null;
+  sheet_name: string | null;
+  row_start: number | null;
+};
+
+function toEntry(row: CostSheetEntryRow): CostSheetEntry {
+  return {
+    id: row.id,
+    source: row.source,
+    sheetDate: row.sheet_date,
+    uploadedAt: row.uploaded_at,
+    isCurrent: row.is_current,
+    normalizedName: row.normalized_name,
+    rawName: row.raw_name,
+    skus: row.skus ?? [],
+    costPrice: row.cost_price,
+    imageUrl: row.image_url,
+    matchedProductId: row.matched_product_id,
+    sheetName: row.sheet_name,
+    rowStart: row.row_start,
+  };
+}
+
+/** 지금 쓰이는 단가표의 모든 행 */
+export async function getCurrentCostSheet(source = 'newyorktrd'): Promise<CostSheetEntry[]> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('cost_sheet_entries')
+    .select('*')
+    .eq('source', source)
+    .eq('is_current', true)
+    .order('sheet_name', { ascending: true })
+    .order('row_start', { ascending: true });
+  if (error || !data) return [];
+  return (data as CostSheetEntryRow[]).map(toEntry);
+}
+
+/** 상품 하나에 짝지어진 단가표 행 (가장 최근 current) */
+export async function getCostSheetEntryByProduct(
+  productId: string,
+  source = 'newyorktrd'
+): Promise<CostSheetEntry | null> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('cost_sheet_entries')
+    .select('*')
+    .eq('source', source)
+    .eq('is_current', true)
+    .eq('matched_product_id', productId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return toEntry(data as CostSheetEntryRow);
+}
+
+export type UploadSheetInput = {
+  source?: string;
+  sheetDate: string | null;
+  uploadedBy?: string | null;
+  entries: {
+    normalizedName: string;
+    rawName: string;
+    skus: string[];
+    costPrice: number | null;
+    imageUrl: string | null;
+    sheetName: string | null;
+    rowStart: number | null;
+  }[];
+  /** 사람이 짝지은 정보 — normalized_name → matched_product_id */
+  matchedByName: Record<string, string | null>;
+};
+
+/**
+ * 새 단가표를 통째로 저장합니다. 기존 current 는 is_current=false 로 기록으로 밀고,
+ * 새 행들을 is_current=true 로 insert.
+ */
+export async function uploadCostSheet(input: UploadSheetInput): Promise<{
+  savedEntries: number;
+  archivedEntries: number;
+}> {
+  const supabase = requireSupabaseAdmin();
+  const source = input.source ?? 'newyorktrd';
+  const now = new Date().toISOString();
+
+  // 1) 기존 current → 기록으로 (unique index 가 current 만 걸려 있어 중복 걱정 없음)
+  const { count: archivedCount, error: archiveError } = await supabase
+    .from('cost_sheet_entries')
+    .update({ is_current: false, updated_at: now }, { count: 'exact' })
+    .eq('source', source)
+    .eq('is_current', true);
+  if (archiveError) throw new Error(`옛 단가표 기록 처리 실패: ${archiveError.message}`);
+
+  // 2) 새 행 insert
+  const rows = input.entries.map((e) => ({
+    source,
+    sheet_date: input.sheetDate,
+    uploaded_at: now,
+    uploaded_by: input.uploadedBy ?? null,
+    is_current: true,
+    normalized_name: e.normalizedName,
+    raw_name: e.rawName,
+    skus: e.skus,
+    cost_price: e.costPrice,
+    image_url: e.imageUrl,
+    matched_product_id: input.matchedByName[e.normalizedName] ?? null,
+    sheet_name: e.sheetName,
+    row_start: e.rowStart,
+    updated_at: now,
+  }));
+
+  if (rows.length > 0) {
+    const { error: insertError } = await supabase.from('cost_sheet_entries').insert(rows);
+    if (insertError) throw new Error(`단가표 저장 실패: ${insertError.message}`);
+  }
+
+  return { savedEntries: rows.length, archivedEntries: archivedCount ?? 0 };
+}
+
+/** 짝 바꾸기 / 짝 풀기 — matched_product_id 만 바꿉니다 */
+export async function setCostSheetEntryMatch(
+  entryId: string,
+  productId: string | null
+): Promise<void> {
+  const supabase = requireSupabaseAdmin();
+  const { error } = await supabase
+    .from('cost_sheet_entries')
+    .update({ matched_product_id: productId, updated_at: new Date().toISOString() })
+    .eq('id', entryId);
+  if (error) throw new Error(`짝 변경 실패: ${error.message}`);
+}
+
+/** 상품 쪽에서 "짝 풀기" — 원가 테이블의 레코드도 함께 삭제 */
+export async function unmatchCostFromProduct(
+  productId: string,
+  source = 'newyorktrd'
+): Promise<void> {
+  const supabase = requireSupabaseAdmin();
+  // cost_sheet_entries 의 matched_product_id 비움
+  await supabase
+    .from('cost_sheet_entries')
+    .update({ matched_product_id: null, updated_at: new Date().toISOString() })
+    .eq('source', source)
+    .eq('matched_product_id', productId);
+  // product_costs 에서 삭제
+  await supabase.from('product_costs').delete().eq('product_id', productId).eq('source', source);
+}
+
 export async function getBrandAliases(): Promise<
   { alias: string; brandSlug: string | null }[]
 > {
