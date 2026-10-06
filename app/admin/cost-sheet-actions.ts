@@ -10,6 +10,7 @@ import {
 } from '@/lib/cost-sheet';
 import { getProducts } from '@/lib/products';
 import {
+  applyCostSheetEntryToProduct,
   getBrandAliases,
   getCurrentCostSheet,
   getRememberedMatches,
@@ -415,6 +416,62 @@ export async function getPickerEntriesAction(
 }
 
 /**
+ * 상품을 아직 등록하기 전인데 **단가표 짝만 미리 골라두는** 흐름 (상품 가져오기 화면용).
+ * productId 가 없으므로 brandSlug 로만 필터링해 후보를 돌려줍니다. 저장은 안 합니다.
+ */
+export async function getPickerEntriesByBrandAction(
+  brandSlug: string | null,
+  query: string
+): Promise<ActionResult<{ entries: PickerEntry[] }>> {
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  try {
+    const [aliases, allEntries] = await Promise.all([
+      getBrandAliases(),
+      getCurrentCostSheet(),
+    ]);
+
+    const brandAliases = brandSlug ? aliases.filter((a) => a.brandSlug === brandSlug) : [];
+    const filtered: CostSheetEntry[] = brandAliases.length
+      ? allEntries.filter((entry) => {
+          const match = matchBrandAlias(entry.rawName, brandAliases);
+          return match.brandSlug === brandSlug;
+        })
+      : allEntries;
+
+    const q = query.trim().toLowerCase();
+    const scored = filtered
+      .map((entry) => ({
+        entry,
+        score: q
+          ? similarity(entry.rawName, q) + (entry.rawName.toLowerCase().includes(q) ? 0.3 : 0)
+          : 0,
+      }))
+      .filter((item) => (q ? item.score > 0.1 : true))
+      .sort((a, b) => {
+        if (q) return b.score - a.score;
+        return a.entry.rawName.localeCompare(b.entry.rawName);
+      })
+      .slice(0, 50);
+
+    const entries: PickerEntry[] = scored.map(({ entry }) => ({
+      entryId: entry.id,
+      rawName: entry.rawName,
+      costPrice: entry.costPrice,
+      imageUrl: entry.imageUrl,
+      skus: entry.skus,
+      sheetName: entry.sheetName,
+      matchedProductId: entry.matchedProductId,
+    }));
+
+    return { ok: true, data: { entries } };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '단가표 조회 실패';
+    console.error('[cost-sheet] getPickerEntriesByBrand:', message);
+    return { ok: false, error: message };
+  }
+}
+
+/**
  * 상품 쪽에서 "단가표 상품 하나를 골라 짝지음" — 원가도 바로 저장.
  */
 export async function pickCostForProductAction(
@@ -422,36 +479,12 @@ export async function pickCostForProductAction(
   entryId: string
 ): Promise<ActionResult<{ costPrice: number | null }>> {
   if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
-
   try {
-    const entries = await getCurrentCostSheet();
-    const entry = entries.find((e) => e.id === entryId);
-    if (!entry) return { ok: false, error: '단가표 행을 찾지 못했습니다.' };
-
-    // 짝 지음
-    await setCostSheetEntryMatch(entryId, productId);
-    // 매칭 기억
-    await rememberMatch({
-      normalizedName: entry.normalizedName,
-      productId,
-      excelSkus: entry.skus,
-      matchedBy: 'admin',
-    });
-    // 원가 저장
-    if (entry.costPrice && entry.costPrice > 0) {
-      await upsertProductCost({
-        productId,
-        costPrice: entry.costPrice,
-        source: 'newyorktrd',
-        sheetDate: entry.sheetDate,
-        uploadedBy: 'admin',
-      });
-    }
-
+    const result = await applyCostSheetEntryToProduct(productId, entryId, 'admin');
     revalidatePath('/admin/products');
     revalidatePath(`/admin/products/${productId}`);
     revalidatePath('/admin/products/cost-sheet/view');
-    return { ok: true, data: { costPrice: entry.costPrice } };
+    return { ok: true, data: result };
   } catch (error) {
     const message = error instanceof Error ? error.message : '짝 지음 실패';
     return { ok: false, error: message };

@@ -78,6 +78,12 @@ export type ImportPayload = {
   optionGroups: OptionGroup[];
   optionCombinations: OptionCombination[];
   freeShipping: boolean;
+  /**
+   * 가져오는 상품에 바로 짝지을 **단가표 엔트리 id** (뉴욕트렌딕 가져오기 화면에서
+   * 사장님이 미리 고른 것). 상품 저장 뒤 원가도 함께 저장됩니다. (사장님 지시 2026-10-06)
+   * 실패해도 상품 등록은 그대로 성공 — 콘솔에만 남깁니다.
+   */
+  costSheetEntryId?: string | null;
 };
 
 /** slug 가 겹치면 뒤에 번호를 붙입니다. */
@@ -156,6 +162,17 @@ export async function importProductAction(
     };
 
     const saved = await createProduct(input);
+
+    // ★ 사장님이 가져오기 화면에서 미리 고른 단가표 엔트리를 상품 저장 뒤에 적용.
+    //   실패해도 상품 등록은 그대로 성공으로 둡니다 (로그만).
+    if (payload.costSheetEntryId) {
+      try {
+        const { applyCostSheetEntryToProduct } = await import('@/lib/product-costs');
+        await applyCostSheetEntryToProduct(saved.id, payload.costSheetEntryId, 'admin');
+      } catch (costError) {
+        console.error('[admin/import] 단가표 적용 실패:', costError);
+      }
+    }
 
     revalidatePath('/admin/products');
     revalidatePath('/admin/products/import');

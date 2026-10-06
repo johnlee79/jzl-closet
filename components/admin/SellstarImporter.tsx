@@ -4,6 +4,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useRef, useState, useTransition } from 'react';
 import BulkImageUpload from '@/components/admin/BulkImageUpload';
+import PendingCostPicker, {
+  type PendingCostSelection,
+} from '@/components/admin/PendingCostPicker';
 import NewyorktrdReviewPreview, {
   type PreviewReview,
   type ReviewSelection,
@@ -112,6 +115,11 @@ export default function SellstarImporter({
   /** 뉴욕트렌딕 상품을 가져올 때 그 상품의 글 후기도 같이 받을지 (기본 켜짐) */
   const [importReviews, setImportReviews] = useState(true);
   /**
+   * 사장님이 가져오기 화면에서 미리 고른 **단가표 엔트리** (뉴욕 상품용).
+   * 상품 등록 때 payload.costSheetEntryId 로 함께 보내 서버에서 원가 짝 지음.
+   */
+  const [pendingCost, setPendingCost] = useState<PendingCostSelection | null>(null);
+  /**
    * 사진까지 함께 받을지 (기본 **꺼짐**). 사진은 헤드리스 Chrome 으로 긁어 와
    * 상품당 15~30초가 더 걸립니다. 필요할 때만 켭니다 (사장님 지시, 2026-10-05).
    */
@@ -171,6 +179,7 @@ export default function SellstarImporter({
     setExisting(null);
     setBrandNotice(null);
     setFailed([]);
+    setPendingCost(null); // 새 상품을 불러오면 보류 원가도 비웁니다
 
     startTransition(async () => {
       const response = await fetch(
@@ -657,6 +666,8 @@ export default function SellstarImporter({
           isActive: !variant.soldOut,
         })),
         freeShipping,
+        // ★ 사장님이 가져오기 화면에서 미리 고른 단가표 엔트리 — 상품 저장 뒤 서버에서 원가 적용
+        costSheetEntryId: pendingCost?.entryId ?? null,
       };
 
       const result = await importProductAction(payload);
@@ -1005,6 +1016,27 @@ export default function SellstarImporter({
               />
             </div>
           </section>
+
+          {/* ── 단가표에서 원가 찾기 (뉴욕트렌딕만, 아직 등록 전) ───────────── */}
+          {source === 'newyorktrd' ? (
+            <section className="admin-card p-4 md:p-5">
+              <h2 className="text-[18px] font-semibold text-slate-900">
+                단가표에서 원가 찾기
+              </h2>
+              <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
+                지금 쓰이는 뉴욕트렌딕 단가표 중에서 이 상품의 원가를 미리 짝지어 두면,
+                아래 「등록」 버튼을 누를 때 **원가도 함께 저장**됩니다.
+              </p>
+              <div className="mt-3">
+                <PendingCostPicker
+                  brandSlug={brandSlug || null}
+                  productName={name}
+                  value={pendingCost}
+                  onChange={setPendingCost}
+                />
+              </div>
+            </section>
+          ) : null}
 
           {/* ── 옵션 · 재고 ───────────────────────────── */}
           {groups.length > 0 ? (
@@ -1397,6 +1429,15 @@ export default function SellstarImporter({
               등록합니다. 확인하신 뒤 상품 편집 화면에서 판매중으로 바꿔 주세요.
               {source === 'newyorktrd' && importReviews && reviewSelections.length > 0 ? (
                 <> 후기 <strong>{reviewSelections.length}건</strong> 도 함께 저장합니다.</>
+              ) : null}
+              {pendingCost ? (
+                <>
+                  {' '}단가표 <strong>{pendingCost.rawName}</strong>
+                  {pendingCost.costPrice != null ? (
+                    <> · <strong>{formatPrice(pendingCost.costPrice)}원</strong></>
+                  ) : null}
+                  {' '}이 함께 저장됩니다.
+                </>
               ) : null}
             </p>
 

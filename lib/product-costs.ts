@@ -367,6 +367,47 @@ export async function uploadCostSheet(input: UploadSheetInput): Promise<{
   return { savedEntries: rows.length, archivedEntries: archivedCount ?? 0 };
 }
 
+/**
+ * 단가표 엔트리를 상품에 적용 — 짝 지음 + 매칭 기억 + 원가 저장을 한 번에.
+ *
+ * ★ 상품 가져오기 흐름(SellstarImporter)과 상품 수정 picker 양쪽에서 씁니다.
+ *   서버 액션끼리 서로 못 부르는 걸 피하려고 lib 쪽에 함께 둡니다.
+ */
+export async function applyCostSheetEntryToProduct(
+  productId: string,
+  entryId: string,
+  uploadedBy: string | null
+): Promise<{ costPrice: number | null }> {
+  const supabase = requireSupabaseAdmin();
+  // entry 조회
+  const { data, error } = await supabase
+    .from('cost_sheet_entries')
+    .select('*')
+    .eq('id', entryId)
+    .maybeSingle();
+  if (error) throw new Error(`단가표 행 조회 실패: ${error.message}`);
+  if (!data) throw new Error('단가표 행을 찾지 못했습니다.');
+  const entry = toEntry(data as CostSheetEntryRow);
+
+  await setCostSheetEntryMatch(entryId, productId);
+  await rememberMatch({
+    normalizedName: entry.normalizedName,
+    productId,
+    excelSkus: entry.skus,
+    matchedBy: uploadedBy,
+  });
+  if (entry.costPrice && entry.costPrice > 0) {
+    await upsertProductCost({
+      productId,
+      costPrice: entry.costPrice,
+      source: 'newyorktrd',
+      sheetDate: entry.sheetDate,
+      uploadedBy,
+    });
+  }
+  return { costPrice: entry.costPrice };
+}
+
 /** 짝 바꾸기 / 짝 풀기 — matched_product_id 만 바꿉니다 */
 export async function setCostSheetEntryMatch(
   entryId: string,
