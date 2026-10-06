@@ -195,6 +195,7 @@ export function rowToProduct(row: ProductRow): Product {
       row.source === 'sellstar' || row.source === 'newyorktrd' ? row.source : null,
     sourceProductNo: row.source_product_no ?? null,
     sourceUrl: row.source_url ?? null,
+    sku: row.sku ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -251,6 +252,9 @@ export function productToRow(input: ProductInput): Omit<ProductRow, 'id' | 'crea
           source_url: input.sourceUrl ?? null,
         }
       : {}),
+    // ★ 품번 — schema-cost-sheet.sql 미실행 환경에서는 PostgREST 가 거부합니다.
+    //   그 때는 아래 withoutSource 와 같은 요령으로 빼고 다시 저장할 수 있게 두었습니다.
+    ...(input.sku !== undefined && input.sku !== null ? { sku: input.sku } : {}),
   };
 }
 
@@ -835,6 +839,7 @@ export async function duplicateProduct(id: string): Promise<Product> {
     source: null,
     sourceProductNo: null,
     sourceUrl: null,
+    sku: null, // 사본에는 품번 복사 금지 (유일한 열쇠인데 겹치면 안 됨)
     slug,
     name: `${original.name} (사본)`,
     brandSlug: original.brandSlug,

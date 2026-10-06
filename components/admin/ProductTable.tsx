@@ -24,6 +24,12 @@ type ProductTableProps = {
   clearHref?: string;
   /** 조건을 지웠을 때 나올 상품 수 */
   totalAll?: number;
+  /**
+   * 상품별 원가 (product_costs 테이블에서 가져옴).
+   * ★ 손님 유출 금지라 service_role 로만 읽습니다. 이 컴포넌트는 관리자 전용
+   *   화면에서만 쓰이므로 숫자가 노출돼도 괜찮습니다. (손님 쪽 코드는 import 안 함)
+   */
+  costByProductId?: Record<string, number>;
 };
 
 function categoryLabel(categories: Category[], product: Product): string {
@@ -41,6 +47,7 @@ export default function ProductTable({
   hasFilter = false,
   clearHref = '/admin/products',
   totalAll = 0,
+  costByProductId = {},
 }: ProductTableProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -164,6 +171,17 @@ export default function ProductTable({
               <th scope="col" className="px-3 py-2.5 font-medium">
                 가격
               </th>
+              {/*
+                ★ 원가·마진 — 뉴욕트렌딕 단가표에서 들여온 값입니다. 손님 유출 금지라
+                   products 테이블이 아니라 product_costs 전용 테이블에서 읽습니다.
+                   「카드 수수료 제외 전」 마진입니다.
+              */}
+              <th scope="col" className="px-3 py-2.5 font-medium" title="단가표 원가 (부가세 포함)">
+                원가
+              </th>
+              <th scope="col" className="px-3 py-2.5 font-medium" title="판매가 − 원가. 카드 수수료 제외 전">
+                마진
+              </th>
               <th scope="col" className="px-3 py-2.5 font-medium">
                 진열순서
               </th>
@@ -233,6 +251,33 @@ export default function ProductTable({
                       }}
                       className="admin-input w-[110px] px-2 py-1.5 tabular-nums"
                     />
+                  </td>
+
+                  {/* 원가 — 뉴욕 단가표에서 자동으로 들어온 숫자. 여기선 읽기 전용. */}
+                  <td className="px-3 py-2.5 text-right tabular-nums text-slate-700">
+                    {costByProductId[product.id] != null ? (
+                      `${costByProductId[product.id].toLocaleString()}원`
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
+
+                  {/* 마진 = 판매가 − 원가. 원가가 판매가보다 크면 빨간색 (원가 오름 사고) */}
+                  <td className="px-3 py-2.5 text-right tabular-nums">
+                    {costByProductId[product.id] != null && product.price > 0 ? (
+                      (() => {
+                        const margin = product.price - costByProductId[product.id];
+                        const rate = Math.round((margin / product.price) * 100);
+                        return (
+                          <span className={margin < 0 ? 'text-red-700 font-semibold' : 'text-slate-900'}>
+                            {margin.toLocaleString()}원
+                            <span className="ml-1 text-[12px] text-slate-500">({rate}%)</span>
+                          </span>
+                        );
+                      })()
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
                   </td>
 
                   <td className="px-3 py-2.5">

@@ -49,6 +49,7 @@ function emptyInput(): ProductInput {
     source: null,
     sourceProductNo: null,
     sourceUrl: null,
+    sku: null,
     slug: '',
     name: '',
     brandSlug: null,

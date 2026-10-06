@@ -25,3 +25,7 @@ next-env.d.ts
 # Claude Code 로컬 설정
 .claude/settings.local.json
 확인-*.md
+
+# 뉴욕트렌딕 단가표 샘플 — 55MB, 이미지 296장 들어있음. 커밋 금지 (사장님 지시, 2026-10-06)
+상품정보*.xlsx
+상품정보*.xls

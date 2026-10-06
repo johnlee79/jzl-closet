@@ -5,6 +5,7 @@ import ProductFilters from '@/components/admin/ProductFilters';
 import CostCsvUploader from '@/components/admin/CostCsvUploader';
 import { filterableCategories } from '@/lib/categories';
 import { getProductsWithCount } from '@/lib/products';
+import { getProductCostsByIds } from '@/lib/product-costs';
 import { isSupabaseConfigured } from '@/lib/supabase/server';
 import { getBrands, getCategories } from '@/lib/taxonomy';
 import type { ProductFilter } from '@/lib/types';
@@ -52,6 +53,18 @@ export default async function AdminProductsPage({
     getCategories(),
     getBrands(),
   ]);
+
+  // 원가 테이블(product_costs) — 손님 유출 금지라 products 와 분리된 자리에서 읽습니다.
+  // 이 쿼리는 service_role 로 돌아 손님 anon 키로는 애초에 안 보입니다.
+  const costs = configured
+    ? await getProductCostsByIds(products.map((p) => p.id))
+    : new Map();
+  // ProductTable 에 넘길 Map (productId → cost 숫자). 숫자만 넘겨 손님용 레이어로 번지는 걸 막습니다.
+  const costByProductId: Record<string, number> = {};
+  for (const p of products) {
+    const c = costs.get(p.id);
+    if (c) costByProductId[p.id] = c.costPrice;
+  }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const categories = filterableCategories(allCategories);
@@ -129,6 +142,7 @@ export default async function AdminProductsPage({
           hasFilter={hasFilter}
           clearHref={clearHref}
           totalAll={totalAll}
+          costByProductId={costByProductId}
         />
       </div>
 

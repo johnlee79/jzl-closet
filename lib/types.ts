@@ -113,6 +113,12 @@ export type Product = {
   source: 'sellstar' | 'newyorktrd' | null;
   sourceProductNo: number | null;
   sourceUrl: string | null;
+  /**
+   * 상품 품번 (SKU). 뉴욕트렌딕 단가표 매칭의 열쇠입니다.
+   * schema-cost-sheet.sql 로 추가된 칸입니다. 미실행 환경에서는 비어 있습니다.
+   * ★ ProductInput 호환을 위해 선택 항목으로 둡니다.
+   */
+  sku?: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 };
@@ -132,6 +138,8 @@ export type ProductRow = {
   original_price: number | null;
   /** 매입 원가. 아직 칸이 없는 환경도 있어 선택 항목입니다. (2026-08-27) */
   cost_price?: number | null;
+  /** 뉴욕트렌딕 단가표용 상품 품번. schema-cost-sheet.sql 로 추가 (2026-10-06) */
+  sku?: string | null;
   summary: string | null;
   origin: string | null;
   manufacturer: string | null;
