@@ -120,6 +120,15 @@ export default function SellstarImporter({
    */
   const [pendingCost, setPendingCost] = useState<PendingCostSelection | null>(null);
   /**
+   * 상품은 저장됐는데 원가 짝 짓기만 실패한 경우 — 사장님께 노란 안내로 노출.
+   * 자동 리다이렉트는 멈추고, 사장님이 "상품 수정에서 다시 고르기" 링크를 누르거나
+   * 안내를 닫은 뒤 가도록 합니다.
+   */
+  const [costSaveWarning, setCostSaveWarning] = useState<{
+    productId: string;
+    reason: string;
+  } | null>(null);
+  /**
    * 사진까지 함께 받을지 (기본 **꺼짐**). 사진은 헤드리스 Chrome 으로 긁어 와
    * 상품당 15~30초가 더 걸립니다. 필요할 때만 켭니다 (사장님 지시, 2026-10-05).
    */
@@ -729,6 +738,16 @@ export default function SellstarImporter({
         } catch {
           // 리뷰 저장 실패는 상품 등록 흐름을 막지 않습니다. 사용자에게 요약만 비웁니다.
         }
+      }
+
+      // ★ 원가 짝지음에 실패했으면 자동 이동 멈추고 노란 안내로 알립니다 (사장님 지시 2026-10-06).
+      //   콘솔 로그만 남기지 말고 사장님이 바로 보고 상품 수정에서 다시 고를 수 있게.
+      if (result.data.costWarning) {
+        setCostSaveWarning({
+          productId: result.data.id,
+          reason: result.data.costWarning,
+        });
+        return;
       }
 
       router.push(`/admin/products/${result.data.id}`);
@@ -1446,6 +1465,36 @@ export default function SellstarImporter({
                 리뷰 — 새로 {reviewSaveSummary.imported}건, 이미 있던 것{' '}
                 {reviewSaveSummary.skipped}건, 실패 {reviewSaveSummary.failed}건
               </p>
+            ) : null}
+
+            {/*
+              ★ 원가 저장 실패 안내 — 상품은 저장됐지만 단가표 짝지음에 실패했을 때.
+                흐름은 안 막고 사장님이 상품 수정 화면으로 바로 가서 다시 고를 수 있게 링크 노출.
+                (사장님 지시 2026-10-06)
+            */}
+            {costSaveWarning ? (
+              <div className="mt-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-[14px] text-amber-900">
+                <p className="font-medium">
+                  상품은 등록됐지만 원가를 넣지 못했습니다 — 상품 수정에서 다시 골라 주세요.
+                </p>
+                <p className="mt-1 text-[13px] text-amber-800">사유: {costSaveWarning.reason}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Link
+                    href={`/admin/products/${costSaveWarning.productId}`}
+                    className="admin-btn-primary min-h-0 px-3 py-1.5 text-[13px]"
+                    prefetch={false}
+                  >
+                    상품 수정에서 다시 고르기 →
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setCostSaveWarning(null)}
+                    className="admin-btn min-h-0 px-3 py-1.5 text-[13px]"
+                  >
+                    알겠습니다
+                  </button>
+                </div>
+              </div>
             ) : null}
 
             {busy ? (

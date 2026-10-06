@@ -101,7 +101,18 @@ async function uniqueSlug(base: string): Promise<string> {
 
 export async function importProductAction(
   payload: ImportPayload
-): Promise<ActionResult<{ id: string; slug: string }>> {
+): Promise<
+  ActionResult<{
+    id: string;
+    slug: string;
+    /**
+     * 상품은 저장됐지만 **원가 짝지음에 실패**했을 때 사장님에게 보여줄 사유.
+     * null 이면 원가도 깨끗이 들어갔다는 뜻. (사장님 지시 2026-10-06 — 조용히 넘기지 말고
+     * 화면에도 알리기)
+     */
+    costWarning: string | null;
+  }>
+> {
   if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   if (!payload.name.trim()) return { ok: false, error: '상품명을 입력해 주세요.' };
@@ -164,19 +175,23 @@ export async function importProductAction(
     const saved = await createProduct(input);
 
     // ★ 사장님이 가져오기 화면에서 미리 고른 단가표 엔트리를 상품 저장 뒤에 적용.
-    //   실패해도 상품 등록은 그대로 성공으로 둡니다 (로그만).
+    //   실패해도 상품 등록은 그대로 성공으로 둡니다. 다만 콘솔에만 숨기지 말고
+    //   사유를 응답에 담아 화면에서도 노란 안내로 뜨게 합니다 (사장님 지시 2026-10-06).
+    let costWarning: string | null = null;
     if (payload.costSheetEntryId) {
       try {
         const { applyCostSheetEntryToProduct } = await import('@/lib/product-costs');
         await applyCostSheetEntryToProduct(saved.id, payload.costSheetEntryId, 'admin');
       } catch (costError) {
-        console.error('[admin/import] 단가표 적용 실패:', costError);
+        const reason = costError instanceof Error ? costError.message : String(costError);
+        console.error('[admin/import] 단가표 적용 실패:', reason);
+        costWarning = reason;
       }
     }
 
     revalidatePath('/admin/products');
     revalidatePath('/admin/products/import');
-    return { ok: true, data: { id: saved.id, slug: saved.slug } };
+    return { ok: true, data: { id: saved.id, slug: saved.slug, costWarning } };
   } catch (error) {
     return fail(error, '상품을 등록하지 못했습니다.');
   }
