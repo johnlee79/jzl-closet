@@ -143,10 +143,11 @@ export default function ProductList({
                 >
                   {/*
                     ★ 로고 칩과 높이를 맞춥니다.
-                      브랜드 줄은 로고(36px 상자)와 글자가 섞이는 유일한 줄입니다.
-                      여기만 글자 높이 그대로 두면 ALL 칩만 14px 낮아져 줄이 어긋납니다.
+                      브랜드 줄은 로고(48px 상자)와 글자가 섞이는 유일한 줄입니다.
+                      여기만 글자 높이 그대로 두면 ALL 칩만 낮아져 줄이 어긋납니다.
+                      (sm 상자가 36→48 로 커진 뒤 — 사장님 지시 2026-10-06)
                   */}
-                  <span className={`inline-flex h-[36px] items-center ${CHIP_TEXT}`}>ALL</span>
+                  <span className={`inline-flex h-[48px] items-center ${CHIP_TEXT}`}>ALL</span>
                 </button>
               </li>
               {brandChips.map((item) => (

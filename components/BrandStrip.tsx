@@ -42,9 +42,12 @@ export default function BrandStrip({
 
   /** 격자든 가로든 칸 안의 모양은 같습니다. 한 곳에서 그립니다. */
   const mark = (brand: Brand) => (
+    // ★ h-12 (48px) — BrandMark sm 상자(h-[48px])와 맞춥니다.
+    //   예전 h-11 은 36px 로고 시절에 글자/로고 섞인 줄을 가지런히 하려 둔 값입니다.
+    //   사장님 지시 2026-10-06 로고를 30~40% 키우면서 함께 올렸습니다.
     <Link
       href={`/brand/${brand.slug}`}
-      className="group inline-flex h-11 items-center break-keep text-ink transition-colors duration-200 hover:text-wine"
+      className="group inline-flex h-12 items-center break-keep text-ink transition-colors duration-200 hover:text-wine"
     >
       <BrandMark brand={brand} className="underline-offset-[6px] group-hover:underline" />
     </Link>
