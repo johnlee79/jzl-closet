@@ -6,7 +6,7 @@ import {
   fetchReviewIdsPage,
   type ReviewDetail,
 } from '@/lib/newyorktrd-reviews';
-import { hasImportedReview } from '@/lib/reviews';
+import { getImportedReviewLocations } from '@/lib/reviews';
 
 /**
  * 뉴욕트렌딕 리뷰 미리보기 — DB 는 건드리지 않고 파싱만 해서 돌려줍니다.
@@ -33,10 +33,25 @@ export type ParsedReview = {
   photos: string[];
   writtenAt: string;
   alreadyImported: boolean;
+  /**
+   * 「가져옴」 이 실제로 어디에 있나 (2026-11-03).
+   *   here        — 이 상품에 붙어 손님 화면에 보임
+   *   here-hidden — 이 상품에 붙었지만 숨김
+   *   other       — 다른 상품에 붙음 (같은 뉴욕 상품을 두 번 등록한 경우 등)
+   *   orphan      — 지워진 상품에 붙음 (상품을 지워도 후기는 남습니다)
+   * 'new' 면 alreadyImported=false.
+   */
+  importStatus: ImportStatus;
+  /** other 일 때 붙어 있는 상품 slug */
+  importedProductSlug?: string;
 };
+
+export type ImportStatus = 'new' | 'here' | 'here-hidden' | 'other' | 'orphan';
 
 type Payload = {
   productNo: number;
+  /** 지금 보고 있는 상품. 없으면 here/other 를 못 가려 전부 'here' 로 봅니다. */
+  productId?: string;
 };
 
 export async function POST(request: NextRequest) {
@@ -52,6 +67,7 @@ export async function POST(request: NextRequest) {
   }
 
   const productNo = Number(payload.productNo ?? 0);
+  const productId = typeof payload.productId === 'string' ? payload.productId : '';
   if (!productNo) {
     return NextResponse.json({ error: '상품번호가 필요합니다.' }, { status: 400 });
   }
@@ -70,6 +86,9 @@ export async function POST(request: NextRequest) {
       for (const id of ids) if (!reviewIds.includes(id)) reviewIds.push(id);
       if (ids.length === 0) break;
     }
+
+    // 이미 가져온 후기가 어디에 붙어 있는지 한 번에 조회 (DB 가 기준 — 화면 표시만 남는 일이 없게).
+    const locations = await getImportedReviewLocations('newyorktrd', reviewIds);
 
     // 각 리뷰 상세를 받고, 다른 상품 쪽이면 건너뜁니다.
     const reviews: ParsedReview[] = [];
@@ -92,8 +111,13 @@ export async function POST(request: NextRequest) {
         continue;
       }
       const review = detail as Exclude<ReviewDetail, { skipped: true }>;
-      // eslint-disable-next-line no-await-in-loop
-      const alreadyImported = await hasImportedReview('newyorktrd', reviewId);
+      const location = locations.get(reviewId);
+      let importStatus: ImportStatus = 'new';
+      if (location) {
+        if (!location.productExists) importStatus = 'orphan';
+        else if (productId && location.productId !== productId) importStatus = 'other';
+        else importStatus = location.isVisible ? 'here' : 'here-hidden';
+      }
       reviews.push({
         reviewId: review.reviewId,
         sourceUrl: review.sourceUrl,
@@ -102,7 +126,9 @@ export async function POST(request: NextRequest) {
         content: review.content,
         photos: review.photos,
         writtenAt: review.writtenAt,
-        alreadyImported,
+        alreadyImported: Boolean(location),
+        importStatus,
+        importedProductSlug: importStatus === 'other' ? location?.productSlug : undefined,
       });
     }
 

@@ -1,4 +1,5 @@
 import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { revalidatePath } from 'next/cache';
 import { NextResponse, type NextRequest } from 'next/server';
 import sharp from 'sharp';
 import { isAdmin } from '@/lib/admin-guard';
@@ -6,10 +7,13 @@ import { requireR2, toPublicUrl } from '@/lib/r2';
 import {
   createImportedReview,
   DuplicateReviewError,
+  getImportedReviewLocations,
   getImportedReviewsForProduct,
   hasImportedReview,
+  reimportImportedReview,
   updateImportedReviewAttachments,
 } from '@/lib/reviews';
+import { getProductById } from '@/lib/products';
 import { slugify } from '@/lib/product-utils';
 
 /**
@@ -61,6 +65,11 @@ type SelectionInput = {
    * 미리 알려 줍니다. (2026-10-05)
    */
   attachToExistingReviewId?: string;
+  /**
+   * 「다시 가져오기」 — 이미 DB 에 있는 후기 (다른 상품·지워진 상품·숨김) 를
+   * 이 상품으로 옮기고 글·사진을 새로 덮어씁니다 (2026-11-03).
+   */
+  reimport?: boolean;
 };
 
 type Payload = {
@@ -76,6 +85,8 @@ type ReviewOutcome =
       attachments: number;
       /** 사진 복사 실패 — 조용히 넘어가지 않고 사용자에게 보여 줍니다. */
       photoFailures: { url: string; reason: string }[];
+      /** 다시 가져오기로 덮어쓴 경우 true */
+      reimported?: boolean;
     }
   | { ok: false; reviewId: string; reason: string }
   | { skipped: true; reviewId: string; reason: string };
@@ -157,7 +168,7 @@ export async function POST(request: NextRequest) {
   }
 
   const productId = typeof payload.productId === 'string' ? payload.productId : '';
-  const productSlug = typeof payload.productSlug === 'string' ? payload.productSlug : '';
+  let productSlug = typeof payload.productSlug === 'string' ? payload.productSlug : '';
   const selections = Array.isArray(payload.selections) ? payload.selections : [];
   if (!productId || !productSlug) {
     return NextResponse.json(
@@ -165,6 +176,14 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
+  // ★ slug 는 DB 기준으로 씁니다. 상품 수정 화면의 slug 칸은 저장 전이라 다를 수 있습니다.
+  //   손님 화면 다시 굽기(revalidatePath)도 이 slug 로 해야 맞는 페이지가 새로 그려집니다.
+  const product = await getProductById(productId);
+  if (!product) {
+    return NextResponse.json({ error: '상품을 찾지 못했습니다.' }, { status: 404 });
+  }
+  productSlug = product.slug;
+
   if (selections.length === 0) {
     return NextResponse.json(
       { imported: 0, skipped: 0, failed: 0, outcomes: [] },
@@ -193,6 +212,15 @@ export async function POST(request: NextRequest) {
       }
     }
   }
+
+  // 다시 가져오기 대상은 지금 어디 붙어 있는지 미리 조회 (옛 상품 페이지도 다시 굽기 위해).
+  const reimportIds = selections
+    .filter((s) => s.reimport && !s.attachToExistingReviewId)
+    .map((s) => String(s.reviewId ?? '').trim());
+  const reimportLocations = reimportIds.length
+    ? await getImportedReviewLocations('newyorktrd', reimportIds)
+    : new Map();
+  const slugsToRevalidate = new Set<string>([productSlug]);
 
   for (const selection of selections) {
     const reviewId = String(selection.reviewId ?? '').trim();
@@ -249,7 +277,51 @@ export async function POST(request: NextRequest) {
       continue;
     }
 
-    /* ── 2) 새 리뷰 저장 (기존 흐름) ─────────────────────── */
+    /* ── 2) 다시 가져오기: 기존 행을 이 상품으로 옮기고 덮어씀 ── */
+    if (selection.reimport) {
+      const location = reimportLocations.get(reviewId);
+      if (location) {
+        if (location.productSlug) slugsToRevalidate.add(location.productSlug);
+        const attachments: string[] = [];
+        const photoFailures: { url: string; reason: string }[] = [];
+        for (const photo of photos) {
+          // eslint-disable-next-line no-await-in-loop
+          const result = await copyPhotoToR2(photo, productSlug);
+          if ('url' in result) attachments.push(result.url);
+          else photoFailures.push({ url: photo, reason: result.error });
+        }
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          await reimportImportedReview(location.id, {
+            productId,
+            productSlug,
+            writerName,
+            rating,
+            content,
+            attachments,
+            writtenAt,
+            sourceUrl,
+          });
+          outcomes.push({
+            ok: true,
+            reviewId,
+            attachments: attachments.length,
+            photoFailures,
+            reimported: true,
+          });
+        } catch (error) {
+          outcomes.push({
+            ok: false,
+            reviewId,
+            reason: error instanceof Error ? error.message : '다시 가져오기 실패',
+          });
+        }
+        continue;
+      }
+      // DB 에서 사라졌으면 아래 새 저장 흐름으로 떨어집니다.
+    }
+
+    /* ── 3) 새 리뷰 저장 (기존 흐름) ─────────────────────── */
     // eslint-disable-next-line no-await-in-loop
     if (await hasImportedReview('newyorktrd', reviewId)) {
       outcomes.push({ skipped: true, reviewId, reason: '이미 가져온 후기' });
@@ -298,10 +370,19 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // ★ 손님 상품 페이지를 곧바로 다시 굽습니다. 예전엔 이게 없어 30초 캐시가 끝날 때까지
+  //   (그리고 Supabase 조회 캐시까지) 옛 화면이 나갔습니다. (2026-11-03)
+  if (outcomes.some((o) => 'ok' in o && o.ok)) {
+    for (const slug of Array.from(slugsToRevalidate)) revalidatePath(`/products/${slug}`);
+    revalidatePath(`/admin/products/${productId}`);
+    revalidatePath('/admin/reviews');
+  }
+
   return NextResponse.json(
     {
       outcomes,
-      imported: outcomes.filter((o) => 'ok' in o && o.ok).length,
+      imported: outcomes.filter((o) => 'ok' in o && o.ok && !o.reimported).length,
+      reimported: outcomes.filter((o) => 'ok' in o && o.ok && o.reimported).length,
       skipped: outcomes.filter((o) => 'skipped' in o && o.skipped).length,
       failed: outcomes.filter((o) => 'ok' in o && !o.ok).length,
     },

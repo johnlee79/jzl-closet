@@ -736,6 +736,96 @@ export async function hasImportedReview(
 }
 
 /**
+ * 이미 가져온 외부 후기가 **어느 상품에 붙어 있는지** 한 번에 알려 줍니다.
+ *
+ * ★ 왜 필요한가 (2026-11-03)
+ *   중복 방지 유일 인덱스는 (source, source_review_id) — 상품과 상관없이 전역입니다.
+ *   그래서 hasImportedReview 만 보면 「가져옴」 인데, 실제로는
+ *     · 지워진 상품에 붙어 있거나 (reviews.product_id 에 FK 가 없어 상품을 지워도 후기는 남음)
+ *     · 같은 뉴욕트렌딕 상품을 두 번 등록해 다른 쪽 상품에 붙어 있거나
+ *     · 숨김 상태여서
+ *   손님 화면에는 안 보이는 일이 생깁니다. 미리보기가 이걸 구분해 보여 주려고 씁니다.
+ */
+export type ImportedReviewLocation = {
+  id: string;
+  productId: string;
+  productSlug: string;
+  isVisible: boolean;
+  /** 붙어 있는 상품이 아직 products 테이블에 있나 */
+  productExists: boolean;
+};
+
+export async function getImportedReviewLocations(
+  source: 'newyorktrd' | 'sellstar',
+  sourceReviewIds: string[]
+): Promise<Map<string, ImportedReviewLocation>> {
+  const result = new Map<string, ImportedReviewLocation>();
+  const ids = Array.from(new Set(sourceReviewIds.filter(Boolean)));
+  if (ids.length === 0) return result;
+  // 관리자 판단용이라 저장된 답을 쓰지 않는 클라이언트로 읽습니다.
+  const supabase = getSupabaseAdminFresh();
+  if (!supabase) return result;
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('id, product_id, product_slug, is_visible, source_review_id')
+    .eq('source', source)
+    .in('source_review_id', ids);
+  if (error || !data) return result;
+
+  const rows = data as {
+    id: string;
+    product_id: string;
+    product_slug: string;
+    is_visible: boolean | null;
+    source_review_id: string;
+  }[];
+  const productIds = Array.from(new Set(rows.map((row) => row.product_id)));
+  const existing = new Set<string>();
+  if (productIds.length > 0) {
+    const products = await supabase.from('products').select('id').in('id', productIds);
+    for (const product of (products.data ?? []) as { id: string }[]) existing.add(product.id);
+  }
+  for (const row of rows) {
+    result.set(row.source_review_id, {
+      id: row.id,
+      productId: row.product_id,
+      productSlug: row.product_slug,
+      isVisible: row.is_visible !== false,
+      productExists: existing.has(row.product_id),
+    });
+  }
+  return result;
+}
+
+/**
+ * 이미 있는 외부 후기를 **다시 가져오기** — 같은 행을 이 상품으로 옮기고 글·사진을 새로 덮어씁니다.
+ * ★ 새 행을 만들지 않습니다 (유일 인덱스와 부딪히지 않게, 관리자 답글도 그대로 남게).
+ * ★ is_visible 을 true 로 돌립니다 — 관리자가 직접 「다시 가져오기」 를 누른 경우만 오는 길입니다.
+ */
+export async function reimportImportedReview(
+  existingId: string,
+  input: Omit<ImportedReviewInput, 'source' | 'sourceReviewId'>
+): Promise<void> {
+  const supabase = requireSupabaseAdmin();
+  const result = await supabase
+    .from(TABLE)
+    .update({
+      product_id: input.productId,
+      product_slug: input.productSlug,
+      writer_name: input.writerName.trim() || '뉴욕트렌딕 손님',
+      rating: Math.min(5, Math.max(1, Math.trunc(input.rating))),
+      content: input.content.trim(),
+      attachments: input.attachments,
+      written_at: input.writtenAt || new Date().toISOString(),
+      source_url: input.sourceUrl,
+      is_visible: true,
+    })
+    .eq('id', existingId)
+    .select('id');
+  assertWritten(result, '후기를 다시 가져오지 못했습니다');
+}
+
+/**
  * 외부 리뷰 한 건을 저장합니다.
  * ★ 유일 인덱스 (reviews_source_dedup) 와 부딪히면 DuplicateReviewError 로 바뀝니다.
  */

@@ -23,6 +23,11 @@ import {
   type ImportPayload,
 } from '@/app/admin/import-actions';
 import { matchBrand } from '@/lib/brand-match';
+import {
+  saveNewyorktrdReviews,
+  type ReviewSaveItem,
+  type ReviewSaveSummary,
+} from '@/lib/newyorktrd-review-save';
 import { formatPrice, slugify } from '@/lib/product-utils';
 import { splitOriginAndManufacturer } from '@/lib/origin';
 import { fillTemplate, type ImportSettings } from '@/lib/site-config';
@@ -140,11 +145,9 @@ export default function SellstarImporter({
   const [reviewPreviewError, setReviewPreviewError] = useState<string | null>(null);
   const [reviewSelections, setReviewSelections] = useState<ReviewSelection[]>([]);
   /** 상품 저장 뒤 후기 저장 결과 */
-  const [reviewSaveSummary, setReviewSaveSummary] = useState<{
-    imported: number;
-    skipped: number;
-    failed: number;
-  } | null>(null);
+  const [reviewSaveSummary, setReviewSaveSummary] = useState<ReviewSaveSummary | null>(null);
+  /** 후기 일부가 저장 안 됐을 때 — 자동 이동을 멈추고 결과를 보여 준 뒤 이 상품으로 갈 수 있게 */
+  const [reviewSaveProductId, setReviewSaveProductId] = useState<string | null>(null);
 
   const [galleryRows, setGalleryRows] = useState<Row[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
@@ -685,6 +688,7 @@ export default function SellstarImporter({
         return;
       }
 
+      let stopForReviews = false;
       /*
         ★ 뉴욕트렌딕 상품 + 후기도 함께 가져오기 체크 + 선택한 리뷰가 있으면,
           체크한 것만 저장합니다. 체크 상태는 미리보기 컴포넌트가 reviewSelections 로
@@ -697,46 +701,32 @@ export default function SellstarImporter({
         reviewSelections.length > 0
       ) {
         const byId = new Map(reviewPreview.map((review) => [review.reviewId, review]));
-        const body = {
-          productId: result.data.id,
-          productSlug: result.data.slug,
-          selections: reviewSelections
-            .map((selection) => {
-              const review = byId.get(selection.reviewId);
-              if (!review) return null;
-              return {
-                reviewId: review.reviewId,
-                sourceUrl: review.sourceUrl,
-                writerName: review.writerName,
-                rating: review.rating,
-                content: review.content,
-                photos: selection.photos,
-                writtenAt: review.writtenAt,
-                attachToExistingReviewId: review.attachToExistingReviewId,
-              };
-            })
-            .filter(Boolean),
-        };
-        try {
-          const response = await fetch('/api/admin/import/newyorktrd-reviews', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
+        const items: ReviewSaveItem[] = [];
+        for (const selection of reviewSelections) {
+          const review = byId.get(selection.reviewId);
+          if (!review) continue;
+          items.push({
+            reviewId: review.reviewId,
+            sourceUrl: review.sourceUrl,
+            writerName: review.writerName,
+            rating: review.rating,
+            content: review.content,
+            photos: selection.photos,
+            writtenAt: review.writtenAt,
+            attachToExistingReviewId: review.attachToExistingReviewId,
           });
-          const data = (await response.json()) as {
-            imported?: number;
-            skipped?: number;
-            failed?: number;
-          };
-          if (response.ok) {
-            setReviewSaveSummary({
-              imported: data.imported ?? 0,
-              skipped: data.skipped ?? 0,
-              failed: data.failed ?? 0,
-            });
-          }
-        } catch {
-          // 리뷰 저장 실패는 상품 등록 흐름을 막지 않습니다. 사용자에게 요약만 비웁니다.
+        }
+        // ★ 예전엔 실패를 조용히 삼키고 바로 상품 화면으로 넘어가 몇 건이 빠졌는지 몰랐습니다.
+        //   이제 5건씩 나눠 저장하고, 한 건이라도 실패하면 이동을 멈추고 결과를 보여 줍니다.
+        const reviewResult = await saveNewyorktrdReviews(
+          result.data.id,
+          result.data.slug,
+          items
+        );
+        setReviewSaveSummary(reviewResult);
+        if (reviewResult.failed > 0) {
+          setReviewSaveProductId(result.data.id);
+          stopForReviews = true;
         }
       }
 
@@ -749,6 +739,7 @@ export default function SellstarImporter({
         });
         return;
       }
+      if (stopForReviews) return;
 
       router.push(`/admin/products/${result.data.id}`);
     } catch (error) {
@@ -1461,10 +1452,38 @@ export default function SellstarImporter({
             </p>
 
             {reviewSaveSummary ? (
-              <p className="mt-3 rounded bg-amber-50 px-3 py-2 text-[14px] text-amber-900">
-                리뷰 — 새로 {reviewSaveSummary.imported}건, 이미 있던 것{' '}
-                {reviewSaveSummary.skipped}건, 실패 {reviewSaveSummary.failed}건
-              </p>
+              <div
+                role="status"
+                className={`mt-3 rounded px-3 py-2 text-[14px] ${
+                  reviewSaveSummary.failed > 0
+                    ? 'bg-red-50 text-red-900'
+                    : 'bg-amber-50 text-amber-900'
+                }`}
+              >
+                <p>
+                  {reviewSaveSummary.failed > 0 ? '상품은 저장됐고 후기는 일부만 저장됐습니다 — ' : '리뷰 — '}
+                  새로 {reviewSaveSummary.imported}건, 이미 있던 것{' '}
+                  {reviewSaveSummary.skipped}건, 실패 {reviewSaveSummary.failed}건
+                </p>
+                {reviewSaveSummary.failures.length > 0 ? (
+                  <ul className="mt-1 list-disc pl-5 text-[13px]">
+                    {reviewSaveSummary.failures.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                ) : null}
+                {reviewSaveProductId ? (
+                  <p className="mt-2 text-[13px]">
+                    상품 수정 화면의 「뉴욕트렌딕 후기 가져오기」 에서 빠진 것만 다시 담을 수 있습니다.{' '}
+                    <Link
+                      href={`/admin/products/${reviewSaveProductId}`}
+                      className="underline"
+                    >
+                      상품 수정 화면으로 가기
+                    </Link>
+                  </p>
+                ) : null}
+              </div>
             ) : null}
 
             {/*

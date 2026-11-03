@@ -6,6 +6,11 @@ import NewyorktrdReviewPreview, {
   type PreviewReview,
   type ReviewSelection,
 } from '@/components/admin/NewyorktrdReviewPreview';
+import {
+  saveNewyorktrdReviews,
+  type ReviewSaveItem,
+  type ReviewSaveSummary,
+} from '@/lib/newyorktrd-review-save';
 
 /**
  * 뉴욕트렌딕 후기 가져오기 — 상품 수정 화면용.
@@ -36,13 +41,8 @@ export default function NewyorktrdReviewImporter({
   const [reviews, setReviews] = useState<PreviewReview[] | null>(null);
   const [selections, setSelections] = useState<ReviewSelection[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [summary, setSummary] = useState<{
-    imported: number;
-    skipped: number;
-    failed: number;
-    details: string[];
-    photoFailures: string[];
-  } | null>(null);
+  const [summary, setSummary] = useState<ReviewSaveSummary | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
 
   const defaultSelection = (list: PreviewReview[]): ReviewSelection[] =>
     list
@@ -63,7 +63,7 @@ export default function NewyorktrdReviewImporter({
       const response = await fetch('/api/admin/import/newyorktrd-reviews/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productNo }),
+        body: JSON.stringify({ productNo, productId }),
       });
       const payload = (await response.json()) as {
         error?: string;
@@ -125,76 +125,33 @@ export default function NewyorktrdReviewImporter({
     }
     setSaving(true);
     setError(null);
+    setProgress({ done: 0, total: selections.length });
 
     try {
       const byId = new Map(reviews.map((review) => [review.reviewId, review]));
-      const body = {
-        productId,
-        productSlug,
-        selections: selections
-          .map((selection) => {
-            const review = byId.get(selection.reviewId);
-            if (!review) return null;
-            return {
-              reviewId: review.reviewId,
-              sourceUrl: review.sourceUrl,
-              writerName: review.writerName,
-              rating: review.rating,
-              content: review.content,
-              photos: selection.photos,
-              writtenAt: review.writtenAt,
-              attachToExistingReviewId: review.attachToExistingReviewId,
-            };
-          })
-          .filter(Boolean),
-      };
+      const items: ReviewSaveItem[] = [];
+      for (const selection of selections) {
+        const review = byId.get(selection.reviewId);
+        if (!review) continue;
+        items.push({
+          reviewId: review.reviewId,
+          sourceUrl: review.sourceUrl,
+          writerName: review.writerName,
+          rating: review.rating,
+          content: review.content,
+          photos: selection.photos,
+          writtenAt: review.writtenAt,
+          attachToExistingReviewId: review.attachToExistingReviewId,
+          reimport: selection.reimport,
+        });
+      }
 
-      const response = await fetch('/api/admin/import/newyorktrd-reviews', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const payload = (await response.json()) as {
-        error?: string;
-        imported?: number;
-        skipped?: number;
-        failed?: number;
-        outcomes?: Array<
-          | {
-              ok: true;
-              reviewId: string;
-              attachments: number;
-              photoFailures: { url: string; reason: string }[];
-            }
-          | { ok: false; reviewId: string; reason: string }
-          | { skipped: true; reviewId: string; reason: string }
-        >;
-      };
-      if (!response.ok) {
-        setError(payload.error ?? '저장에 실패했습니다.');
-        return;
-      }
-      const details = (payload.outcomes ?? [])
-        .filter(
-          (outcome): outcome is { ok: false; reviewId: string; reason: string } =>
-            'ok' in outcome && !outcome.ok
-        )
-        .map((outcome) => `#${outcome.reviewId} — ${outcome.reason}`);
-      const photoFailures: string[] = [];
-      for (const outcome of payload.outcomes ?? []) {
-        if ('ok' in outcome && outcome.ok && Array.isArray(outcome.photoFailures)) {
-          for (const failure of outcome.photoFailures) {
-            photoFailures.push(`#${outcome.reviewId} — ${failure.reason}`);
-          }
-        }
-      }
-      setSummary({
-        imported: payload.imported ?? 0,
-        skipped: payload.skipped ?? 0,
-        failed: payload.failed ?? 0,
-        details,
-        photoFailures,
-      });
+      // ★ 5건씩 나눠 보냅니다 — 하나가 시간 초과여도 나머지 결과는 정확히 셉니다.
+      const result = await saveNewyorktrdReviews(productId, productSlug, items, (done, total) =>
+        setProgress({ done, total })
+      );
+      setSummary(result);
+      // ★ 미리보기는 저장이 끝난 뒤에만 닫습니다. 「가져옴」 표시는 다시 열 때 DB 에서 새로 읽습니다.
       setReviews(null);
       setSelections([]);
       router.refresh();
@@ -204,6 +161,7 @@ export default function NewyorktrdReviewImporter({
       );
     } finally {
       setSaving(false);
+      setProgress(null);
     }
   };
 
@@ -266,6 +224,7 @@ export default function NewyorktrdReviewImporter({
           <NewyorktrdReviewPreview
             reviews={reviews}
             onSelectionsChange={setSelections}
+            allowReimport
           />
 
           <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-slate-200 pt-3">
@@ -275,7 +234,11 @@ export default function NewyorktrdReviewImporter({
               disabled={saving || selections.length === 0}
               className="admin-btn-primary"
             >
-              {saving ? '저장 중…' : `선택한 ${selections.length}건 저장`}
+              {saving
+                ? progress
+                  ? `저장 중… ${progress.done}/${progress.total}`
+                  : '저장 중…'
+                : `선택한 ${selections.length}건 저장`}
             </button>
             <button
               type="button"
@@ -294,26 +257,57 @@ export default function NewyorktrdReviewImporter({
       ) : null}
 
       {summary && !reviews ? (
-        <div className="mt-3 rounded bg-white px-3 py-2 text-[14px] text-amber-900">
+        <div
+          role="status"
+          className={`mt-3 rounded px-3 py-2 text-[14px] ${
+            summary.failed > 0 ? 'bg-red-50 text-red-900' : 'bg-white text-amber-900'
+          }`}
+        >
           <p>
-            새로 가져온 후기 <strong>{summary.imported}건</strong>, 이미 있던 것{' '}
-            <strong>{summary.skipped}건</strong>, 실패{' '}
+            {summary.failed > 0 ? '일부만 저장됐습니다 — ' : '저장했습니다 — '}
+            새로 가져옴 <strong>{summary.imported}건</strong>
+            {summary.reimported > 0 ? (
+              <>
+                , 다시 가져옴 <strong>{summary.reimported}건</strong>
+              </>
+            ) : null}
+            , 이미 있던 것 <strong>{summary.skipped}건</strong>, 실패{' '}
             <strong>{summary.failed}건</strong>.
           </p>
-          {summary.failed > 0 ? (
-            <p className="mt-1 text-amber-800">
-              저장 실패: {summary.details.slice(0, 3).join(' / ')}
-              {summary.details.length > 3 ? ` 외 ${summary.details.length - 3}건` : ''}
-            </p>
+          {summary.imported + summary.reimported > 0 ? (
+            <p className="mt-1 text-[13px]">손님 상품 페이지도 바로 새로 그렸습니다.</p>
+          ) : null}
+          {summary.failures.length > 0 ? (
+            <details className="mt-1" open>
+              <summary className="cursor-pointer">실패 {summary.failures.length}건 사유</summary>
+              <ul className="mt-1 list-disc pl-5 text-[13px]">
+                {summary.failures.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
+          {summary.skips.length > 0 ? (
+            <details className="mt-1">
+              <summary className="cursor-pointer">건너뜀 {summary.skips.length}건 사유</summary>
+              <ul className="mt-1 list-disc pl-5 text-[13px]">
+                {summary.skips.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </details>
           ) : null}
           {summary.photoFailures.length > 0 ? (
-            <p className="mt-1 text-amber-800">
-              사진 복사 실패 {summary.photoFailures.length}장:{' '}
-              {summary.photoFailures.slice(0, 3).join(' / ')}
-              {summary.photoFailures.length > 3
-                ? ` 외 ${summary.photoFailures.length - 3}장`
-                : ''}
-            </p>
+            <details className="mt-1">
+              <summary className="cursor-pointer">
+                사진 복사 실패 {summary.photoFailures.length}장
+              </summary>
+              <ul className="mt-1 list-disc pl-5 text-[13px]">
+                {summary.photoFailures.map((line, index) => (
+                  <li key={`${line}-${index}`}>{line}</li>
+                ))}
+              </ul>
+            </details>
           ) : null}
         </div>
       ) : null}

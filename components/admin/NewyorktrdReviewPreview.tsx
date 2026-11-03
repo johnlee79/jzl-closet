@@ -42,6 +42,12 @@ function PartnerReviewMark() {
  *
  * ★ 이미 가져온 후기 (alreadyImported) 는 흐리게·체크 못 하게 (「가져옴」 배지).
  *   다시 눌러도 새 후기만 담깁니다.
+ *
+ * ★ 「가져옴」 을 네 갈래로 나눠 보여 줍니다 (2026-11-03)
+ *   이 상품에 노출 / 숨김 / 다른 상품에 붙음 / 지워진 상품에 붙음.
+ *   예전엔 전부 「가져옴」 하나라, 지워진 상품에 붙은 후기가 손님 화면에 안 보이는데도
+ *   운영자는 저장이 된 줄로만 알았습니다.
+ *   allowReimport 를 켜면 「다시 가져오기」 로 그 후기를 체크할 수 있게 풀어 줍니다.
  */
 
 export type PreviewReview = {
@@ -53,6 +59,10 @@ export type PreviewReview = {
   photos: string[];
   writtenAt: string;
   alreadyImported: boolean;
+  /** 미리보기 라우트가 알려 주는 「가져옴」 의 실제 위치. 없으면 예전처럼 「가져옴」 하나로. */
+  importStatus?: 'new' | 'here' | 'here-hidden' | 'other' | 'orphan';
+  /** importStatus='other' 일 때 붙어 있는 상품 slug */
+  importedProductSlug?: string;
   /**
    * 'text' — 보통 글 리뷰 (사진이 있을 수도 없을 수도).
    * 'photo-only' — 사진 그룹 (글 짝맞춤 실패) 또는 "같은 손님 사진 묶음" 입니다.
@@ -70,7 +80,42 @@ export type ReviewSelection = {
   reviewId: string;
   /** 체크된 사진 URL 들만 */
   photos: string[];
+  /** 이미 있는 후기를 다시 가져오기 (이 상품으로 옮기고 덮어씀) */
+  reimport?: boolean;
 };
+
+const IMPORT_BADGE: Record<string, { label: string; className: string; title: string }> = {
+  here: {
+    label: '가져옴',
+    className: 'bg-slate-200 text-slate-700',
+    title: '이 상품에 붙어 손님 화면에 보입니다',
+  },
+  'here-hidden': {
+    label: '가져옴 · 숨김',
+    className: 'bg-amber-100 text-amber-800',
+    title: '이 상품에 붙어 있지만 숨김 상태라 손님 화면에 안 보입니다',
+  },
+  other: {
+    label: '다른 상품에 붙음',
+    className: 'bg-red-100 text-red-800',
+    title: '다른 상품에 붙어 있어 이 상품 화면에는 안 보입니다',
+  },
+  orphan: {
+    label: '지워진 상품에 붙음',
+    className: 'bg-red-100 text-red-800',
+    title: '지워진 상품에 붙어 있어 손님 화면 어디에도 안 보입니다',
+  },
+};
+
+/** 손님 화면에 이 상품 후기로 안 보이는 「가져옴」 — 다시 가져오기를 권할 대상 */
+function isMisplaced(review: PreviewReview): boolean {
+  return (
+    review.alreadyImported &&
+    (review.importStatus === 'other' ||
+      review.importStatus === 'orphan' ||
+      review.importStatus === 'here-hidden')
+  );
+}
 
 type SelectionState = {
   checked: boolean;
@@ -81,11 +126,22 @@ type SelectionState = {
 export default function NewyorktrdReviewPreview({
   reviews,
   onSelectionsChange,
+  allowReimport = false,
 }: {
   reviews: PreviewReview[];
   /** 체크 상태가 바뀔 때마다 부모가 받아 둡니다. 저장은 부모가 터뜨립니다. */
   onSelectionsChange?: (selections: ReviewSelection[]) => void;
+  /** 「다시 가져오기」 버튼을 보여 줄지 (상품 수정 화면에서만 켭니다) */
+  allowReimport?: boolean;
 }) {
+  /** 「다시 가져오기」 를 누른 후기 — 이것들은 「가져옴」 이어도 체크할 수 있습니다. */
+  const [reimportIds, setReimportIds] = useState<Set<string>>(() => new Set());
+  const canReimport = (review: PreviewReview) =>
+    allowReimport && review.alreadyImported && review.kind !== 'photo-only';
+  /** 지금 체크할 수 있나 — 새 후기이거나, 다시 가져오기를 켠 후기 */
+  const isSelectable = (review: PreviewReview, ids: Set<string> = reimportIds) =>
+    !review.alreadyImported || ids.has(review.reviewId);
+
   // 상태 초기값 — 이미 가져온 것은 체크 꺼짐, 나머지는 전부 체크 켜짐.
   const [state, setState] = useState<Record<string, SelectionState>>(() => {
     const init: Record<string, SelectionState> = {};
@@ -101,17 +157,41 @@ export default function NewyorktrdReviewPreview({
   const [lowRatingNoticed, setLowRatingNoticed] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const emit = (next: Record<string, SelectionState>) => {
+  const emit = (next: Record<string, SelectionState>, ids: Set<string> = reimportIds) => {
     if (!onSelectionsChange) return;
     const selections: ReviewSelection[] = reviews
-      .filter((review) => !review.alreadyImported && next[review.reviewId]?.checked)
+      .filter((review) => isSelectable(review, ids) && next[review.reviewId]?.checked)
       .map((review) => ({
         reviewId: review.reviewId,
         photos: review.photos.filter(
           (_, index) => next[review.reviewId]?.photoChecked[index]
         ),
+        ...(review.alreadyImported ? { reimport: true } : {}),
       }));
     onSelectionsChange(selections);
+  };
+
+  /** 다시 가져오기 켜기/끄기. 켜면 그 후기와 사진을 전부 체크합니다. */
+  const setReimport = (targets: PreviewReview[], on: boolean) => {
+    const ids = new Set(reimportIds);
+    for (const review of targets) {
+      if (!canReimport(review)) continue;
+      if (on) ids.add(review.reviewId);
+      else ids.delete(review.reviewId);
+    }
+    setReimportIds(ids);
+    setState((prev) => {
+      const next = { ...prev };
+      for (const review of targets) {
+        if (!canReimport(review)) continue;
+        next[review.reviewId] = {
+          checked: on,
+          photoChecked: review.photos.map(() => on),
+        };
+      }
+      emit(next, ids);
+      return next;
+    });
   };
 
   const maybeWarnLowRating = (review: PreviewReview) => {
@@ -125,7 +205,7 @@ export default function NewyorktrdReviewPreview({
   };
 
   const toggleReview = (review: PreviewReview, nextChecked: boolean) => {
-    if (review.alreadyImported) return;
+    if (!isSelectable(review)) return;
     if (!nextChecked) maybeWarnLowRating(review);
     setState((prev) => {
       const next = {
@@ -156,7 +236,7 @@ export default function NewyorktrdReviewPreview({
     // 저점(3점 이하) 리뷰가 끼어 있는데 전부 해제라면 안내를 띄웁니다.
     if (!value && !lowRatingNoticed) {
       const hasLow = reviews.some(
-        (review) => !review.alreadyImported && review.rating <= 3 && state[review.reviewId]?.checked
+        (review) => isSelectable(review) && review.rating <= 3 && state[review.reviewId]?.checked
       );
       if (hasLow) {
         setLowRatingNoticed(true);
@@ -169,7 +249,7 @@ export default function NewyorktrdReviewPreview({
     setState((prev) => {
       const next: Record<string, SelectionState> = { ...prev };
       for (const review of reviews) {
-        if (review.alreadyImported) continue;
+        if (!isSelectable(review)) continue;
         next[review.reviewId] = {
           checked: value,
           photoChecked: review.photos.map(() => value),
@@ -187,9 +267,15 @@ export default function NewyorktrdReviewPreview({
   const checkedCount = useMemo(
     () =>
       reviews.filter(
-        (review) => !review.alreadyImported && state[review.reviewId]?.checked
+        (review) =>
+          (!review.alreadyImported || reimportIds.has(review.reviewId)) &&
+          state[review.reviewId]?.checked
       ).length,
-    [reviews, state]
+    [reviews, state, reimportIds]
+  );
+  const misplaced = useMemo(
+    () => reviews.filter((review) => isMisplaced(review) && review.kind !== 'photo-only'),
+    [reviews]
   );
 
   if (reviews.length === 0) {
@@ -234,6 +320,24 @@ export default function NewyorktrdReviewPreview({
         </div>
       </div>
 
+      {misplaced.length > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-red-50 px-3 py-2 text-[14px] leading-relaxed text-red-800">
+          <span>
+            「가져옴」 중 <strong>{misplaced.length}건</strong>은 이 상품 손님 화면에 안 보입니다
+            (지워진 상품·다른 상품에 붙었거나 숨김).
+          </span>
+          {allowReimport ? (
+            <button
+              type="button"
+              onClick={() => setReimport(misplaced, true)}
+              className="admin-btn min-h-0 px-2 py-1 text-[13px]"
+            >
+              {misplaced.length}건 모두 다시 가져오기
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       {notice ? (
         <p
           role="status"
@@ -254,7 +358,11 @@ export default function NewyorktrdReviewPreview({
         {reviews.map((review) => {
           const sel = state[review.reviewId];
           const checked = sel?.checked ?? false;
-          const disabled = review.alreadyImported;
+          const reimporting = reimportIds.has(review.reviewId);
+          const disabled = review.alreadyImported && !reimporting;
+          const badge = review.alreadyImported
+            ? IMPORT_BADGE[review.importStatus ?? 'here'] ?? IMPORT_BADGE.here
+            : null;
           return (
             <li
               key={review.reviewId}
@@ -282,9 +390,20 @@ export default function NewyorktrdReviewPreview({
                       {formatDate(review.writtenAt)}
                     </span>
                     <PartnerReviewMark />
-                    {disabled ? (
-                      <span className="inline-flex items-center bg-slate-200 px-2 py-0.5 text-[12px] text-slate-700">
-                        가져옴
+                    {badge ? (
+                      <span
+                        title={badge.title}
+                        className={`inline-flex items-center px-2 py-0.5 text-[12px] ${badge.className}`}
+                      >
+                        {badge.label}
+                        {review.importStatus === 'other' && review.importedProductSlug
+                          ? ` (${review.importedProductSlug})`
+                          : ''}
+                      </span>
+                    ) : null}
+                    {reimporting ? (
+                      <span className="inline-flex items-center bg-emerald-50 px-2 py-0.5 text-[12px] text-emerald-700">
+                        다시 가져올 예정 — 이 상품으로 옮기고 다시 보이게 합니다
                       </span>
                     ) : null}
                     {review.kind === 'photo-only' && !review.attachToExistingReviewId ? (
@@ -352,6 +471,18 @@ export default function NewyorktrdReviewPreview({
                       );
                     })}
                   </ul>
+                </div>
+              ) : null}
+
+              {canReimport(review) ? (
+                <div className="mt-2 pl-7">
+                  <button
+                    type="button"
+                    onClick={() => setReimport([review], !reimporting)}
+                    className="admin-btn min-h-0 px-2 py-1 text-[13px]"
+                  >
+                    {reimporting ? '다시 가져오기 취소' : '다시 가져오기'}
+                  </button>
                 </div>
               ) : null}
 
