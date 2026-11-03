@@ -3,6 +3,7 @@ import 'server-only';
 import { createHash } from 'node:crypto';
 import { unstable_cache } from 'next/cache';
 import { assertWritten } from '@/lib/db-write';
+import { normalizeTrackingNo } from '@/lib/couriers';
 import { maskName } from '@/lib/mask-name';
 import { kstToday } from '@/lib/orders';
 import { changePoints } from '@/lib/points';
@@ -1037,12 +1038,15 @@ export async function markShipped(
   trackingNo: string
 ): Promise<void> {
   const supabase = requireSupabaseAdmin();
+  // ★ 하이픈·공백을 빼고 숫자만 저장합니다 (2026-11-03, 주문 송장과 같은 규칙).
+  const normalized = normalizeTrackingNo(courier.trim(), trackingNo);
+  if (!normalized.ok) throw new Error(normalized.error);
   assertWritten(
     await supabase
       .from(ACHIEVEMENTS)
       .update({
         courier: courier.trim(),
-        tracking_no: trackingNo.trim(),
+        tracking_no: normalized.value,
         status: 'shipped',
         shipped_at: new Date().toISOString(),
       })

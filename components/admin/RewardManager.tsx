@@ -143,7 +143,7 @@ function ShippingForm({
           type="text"
           value={trackingNo}
           onChange={(event) => setTrackingNo(event.target.value)}
-          placeholder="송장번호"
+          placeholder="송장번호 (하이픈 넣어도 됩니다)"
           aria-label="송장번호"
           className="admin-input"
         />

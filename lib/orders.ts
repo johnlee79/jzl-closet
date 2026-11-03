@@ -2,6 +2,7 @@ import 'server-only';
 import { kstDaysAgo as kstDaysAgoPure, kstToday as kstTodayPure } from '@/lib/admin-range';
 import { revalidatePath } from 'next/cache';
 import { assertWritten } from '@/lib/db-write';
+import { normalizeTrackingNo } from '@/lib/couriers';
 import { sendOrderMail, sendShippingMail } from '@/lib/mail';
 
 import {
@@ -1858,9 +1859,13 @@ export async function bulkUpdateStatus(
 export async function setTracking(
   id: string,
   courier: string,
-  trackingNo: string
+  rawTrackingNo: string
 ): Promise<Order> {
   const supabase = requireSupabaseAdmin();
+  // ★ 하이픈·공백을 빼고 숫자만 저장합니다 (2026-11-03). 주문 상세·일괄 등록 모두 여기를 지납니다.
+  const normalized = normalizeTrackingNo(courier, rawTrackingNo);
+  if (!normalized.ok) throw new Error(normalized.error);
+  const trackingNo = normalized.value;
   const before = await getOrderById(id);
   if (!before) throw new Error('주문을 찾을 수 없습니다.');
 

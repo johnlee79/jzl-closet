@@ -81,6 +81,34 @@ export const COURIERS: Courier[] = [
   },
 ];
 
+/**
+ * 송장번호 정리 — 하이픈·공백을 빼고 숫자만 남깁니다. (2026-11-03)
+ *
+ * ★ 하이픈을 넣어 쳐도 되게 하려는 것입니다. 「6000-1454-6394」 와 「600014546394」 가
+ *   다른 송장으로 저장되면 같은 송장 비교 · 배송 조회 · 엑셀 내려받기가 어긋납니다.
+ * ★ 숫자·하이픈·공백 말고 다른 글자(영문 등) 가 섞이면 조용히 지우지 않고 오류로 돌려줍니다.
+ *   목록의 택배사는 모두 숫자 송장이라, 글자가 섞였다면 잘못 붙여 넣은 것일 가능성이 큽니다.
+ * ★ '직접 전달 · 방문 수령' 은 송장이 없어 메모처럼 적으므로 그대로 둡니다(앞뒤 공백만).
+ */
+export function normalizeTrackingNo(
+  courier: string | null | undefined,
+  raw: string
+): { ok: true; value: string } | { ok: false; error: string } {
+  const text = (raw ?? '').trim();
+  if (courier === 'direct') return { ok: true, value: text };
+  // 숫자 · 공백 · 하이픈(-, 유니코드 대시 U+2010~2015, 빼기 기호 U+2212) 만 허용
+  if (/[^0-9\s\-‐-―−]/.test(text)) {
+    return { ok: false, error: '송장번호에는 숫자만 넣어 주세요. (하이픈·띄어쓰기는 괜찮습니다)' };
+  }
+  return { ok: true, value: text.replace(/\D/g, '') };
+}
+
+/** 화면 비교용 — 오류 없이 숫자만 (direct 는 그대로). */
+export function trackingNoForCompare(courier: string | null | undefined, raw: string): string {
+  const result = normalizeTrackingNo(courier, raw);
+  return result.ok ? result.value : (raw ?? '').trim();
+}
+
 export function findCourier(code: string | null | undefined): Courier | undefined {
   if (!code) return undefined;
   return COURIERS.find((courier) => courier.code === code);

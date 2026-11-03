@@ -18,7 +18,7 @@ import {
 } from '@/app/admin/order-actions';
 import CopyValue from '@/components/admin/CopyValue';
 import type { PaymentLog } from '@/lib/payment-logs';
-import { COURIERS, courierName, trackingUrl } from '@/lib/couriers';
+import { COURIERS, courierName, trackingNoForCompare, trackingUrl } from '@/lib/couriers';
 import {
   ORDER_STATUSES,
   ORDER_STATUS_META,
@@ -87,8 +87,11 @@ export default function OrderDetail({
    * ★ 저장된 값(order.*) 과 칸의 값을 비교합니다. 저장에 성공하면 router.refresh()
    *   로 order 가 새 값이 되므로 저절로 풀립니다.
    */
+  // ★ 숫자만 비교합니다 — 「6000-1454-6394」 로 쳐서 저장하면 DB 에는 「600014546394」 가 들어가므로
+  //   글자 그대로 비교하면 저장한 뒤에도 계속 「저장 안 함」 으로 남습니다.
   const trackingDirty =
-    trackingNo.trim() !== order.trackingNo.trim() ||
+    trackingNoForCompare(courier, trackingNo) !==
+      trackingNoForCompare(order.courier, order.trackingNo) ||
     (Boolean(trackingNo.trim()) && courier !== order.courier);
   const trackingSectionRef = useRef<HTMLElement | null>(null);
   const dirtyRef = useRef(false);
@@ -1036,7 +1039,7 @@ export default function OrderDetail({
                 type="text"
                 value={trackingNo}
                 onChange={(event) => setTrackingNo(event.target.value)}
-                placeholder="숫자만 입력"
+                placeholder="하이픈 넣어도 됩니다"
                 className="admin-input tabular-nums"
               />
             </div>

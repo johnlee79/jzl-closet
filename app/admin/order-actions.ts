@@ -1,5 +1,6 @@
 'use server';
 
+import { trackingNoForCompare } from '@/lib/couriers';
 import { revalidatePath } from 'next/cache';
 import { isAdmin } from '@/lib/admin-guard';
 import { canEditAddress, isOrderStatus } from '@/lib/order-status';
@@ -167,7 +168,8 @@ export async function previewBulkTrackingAction(
         ...matched,
         status: 'already',
         message:
-          order.trackingNo === row.trackingNo
+          trackingNoForCompare(order.courier, order.trackingNo) ===
+          trackingNoForCompare(row.courierCode, row.trackingNo)
             ? '같은 송장이 이미 등록되어 있습니다.'
             : `이미 등록된 송장이 있습니다: ${order.trackingNo}`,
       };
