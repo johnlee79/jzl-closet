@@ -4,31 +4,6 @@ import { useMemo, useState } from 'react';
 import StarRating from '@/components/StarRating';
 import { formatDate } from '@/lib/format';
 
-/** 손님 화면과 똑같은 ◇ 아이콘. 작게 — 큰 배지는 더 이상 쓰지 않습니다. */
-const PARTNER_REVIEW_NOTICE =
-  '제휴 매장에서 구매한 고객님의 후기입니다 (뉴욕트렌딕)';
-function PartnerReviewMark() {
-  return (
-    <span
-      className="inline-flex h-4 w-4 items-center justify-center text-slate-500"
-      title={PARTNER_REVIEW_NOTICE}
-      aria-label={PARTNER_REVIEW_NOTICE}
-    >
-      <svg
-        width="10"
-        height="10"
-        viewBox="0 0 10 10"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        aria-hidden="true"
-      >
-        <path d="M5 0.6 L9.4 5 L5 9.4 L0.6 5 Z" />
-      </svg>
-    </span>
-  );
-}
-
 /**
  * 뉴욕트렌딕 리뷰 미리보기 — 운영자가 눈으로 보고 체크해서 저장.
  *
@@ -48,6 +23,10 @@ function PartnerReviewMark() {
  *   예전엔 전부 「가져옴」 하나라, 지워진 상품에 붙은 후기가 손님 화면에 안 보이는데도
  *   운영자는 저장이 된 줄로만 알았습니다.
  *   allowReimport 를 켜면 「다시 가져오기」 로 그 후기를 체크할 수 있게 풀어 줍니다.
+ *
+ * ★ 「중복」 (2026-11-03) — 같은 작성자·같은 날짜·같은 글(이모지·공백·문장부호 무시) 이
+ *   이 상품에 이미 있거나 이번 목록 앞쪽에 있으면 체크 해제 + 체크 못 하게.
+ *   다시 가져오기로도 풀 수 없습니다. 저장 라우트가 한 번 더 거릅니다.
  */
 
 export type PreviewReview = {
@@ -60,9 +39,11 @@ export type PreviewReview = {
   writtenAt: string;
   alreadyImported: boolean;
   /** 미리보기 라우트가 알려 주는 「가져옴」 의 실제 위치. 없으면 예전처럼 「가져옴」 하나로. */
-  importStatus?: 'new' | 'here' | 'here-hidden' | 'other' | 'orphan';
+  importStatus?: 'new' | 'here' | 'here-hidden' | 'other' | 'orphan' | 'duplicate';
   /** importStatus='other' 일 때 붙어 있는 상품 slug */
   importedProductSlug?: string;
+  /** importStatus='duplicate' 일 때 — 무엇과 겹치는지 */
+  duplicateOf?: string;
   /**
    * 'text' — 보통 글 리뷰 (사진이 있을 수도 없을 수도).
    * 'photo-only' — 사진 그룹 (글 짝맞춤 실패) 또는 "같은 손님 사진 묶음" 입니다.
@@ -82,6 +63,11 @@ export type ReviewSelection = {
   photos: string[];
   /** 이미 있는 후기를 다시 가져오기 (이 상품으로 옮기고 덮어씀) */
   reimport?: boolean;
+};
+
+const DUPLICATE_BADGE = {
+  label: '중복',
+  className: 'bg-violet-100 text-violet-800',
 };
 
 const IMPORT_BADGE: Record<string, { label: string; className: string; title: string }> = {
@@ -136,19 +122,24 @@ export default function NewyorktrdReviewPreview({
 }) {
   /** 「다시 가져오기」 를 누른 후기 — 이것들은 「가져옴」 이어도 체크할 수 있습니다. */
   const [reimportIds, setReimportIds] = useState<Set<string>>(() => new Set());
+  const isDuplicate = (review: PreviewReview) => review.importStatus === 'duplicate';
   const canReimport = (review: PreviewReview) =>
-    allowReimport && review.alreadyImported && review.kind !== 'photo-only';
-  /** 지금 체크할 수 있나 — 새 후기이거나, 다시 가져오기를 켠 후기 */
+    allowReimport &&
+    review.alreadyImported &&
+    review.kind !== 'photo-only' &&
+    !isDuplicate(review);
+  /** 지금 체크할 수 있나 — 중복이 아니고, 새 후기이거나 다시 가져오기를 켠 후기 */
   const isSelectable = (review: PreviewReview, ids: Set<string> = reimportIds) =>
-    !review.alreadyImported || ids.has(review.reviewId);
+    !isDuplicate(review) && (!review.alreadyImported || ids.has(review.reviewId));
 
-  // 상태 초기값 — 이미 가져온 것은 체크 꺼짐, 나머지는 전부 체크 켜짐.
+  // 상태 초기값 — 이미 가져온 것·중복은 체크 꺼짐, 나머지는 전부 체크 켜짐.
   const [state, setState] = useState<Record<string, SelectionState>>(() => {
     const init: Record<string, SelectionState> = {};
     for (const review of reviews) {
+      const on = !review.alreadyImported && !isDuplicate(review);
       init[review.reviewId] = {
-        checked: !review.alreadyImported,
-        photoChecked: review.photos.map(() => !review.alreadyImported),
+        checked: on,
+        photoChecked: review.photos.map(() => on),
       };
     }
     return init;
@@ -260,14 +251,29 @@ export default function NewyorktrdReviewPreview({
     });
   };
 
+  const duplicateCount = useMemo(
+    () => reviews.filter((review) => review.importStatus === 'duplicate').length,
+    [reviews]
+  );
   const selectableCount = useMemo(
-    () => reviews.filter((review) => !review.alreadyImported).length,
+    () =>
+      reviews.filter(
+        (review) => !review.alreadyImported && review.importStatus !== 'duplicate'
+      ).length,
+    [reviews]
+  );
+  const importedCount = useMemo(
+    () =>
+      reviews.filter(
+        (review) => review.alreadyImported && review.importStatus !== 'duplicate'
+      ).length,
     [reviews]
   );
   const checkedCount = useMemo(
     () =>
       reviews.filter(
         (review) =>
+          review.importStatus !== 'duplicate' &&
           (!review.alreadyImported || reimportIds.has(review.reviewId)) &&
           state[review.reviewId]?.checked
       ).length,
@@ -288,17 +294,18 @@ export default function NewyorktrdReviewPreview({
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="flex items-center gap-2 text-[13px] text-slate-500">
-        <PartnerReviewMark />
-        <span>표시는 제휴 매장에서 구매한 고객님의 후기입니다 — 손님 화면에도 같은 표시가 나갑니다</span>
-      </p>
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-slate-50 px-3 py-2 text-[14px] text-slate-700">
         <span>
           새 후기 <strong>{selectableCount}건</strong> 중{' '}
           <strong className="text-slate-900">{checkedCount}건</strong> 선택
-          {selectableCount < reviews.length ? (
+          {importedCount > 0 ? (
             <>
-              {' '}· 이미 가져온 후기 {reviews.length - selectableCount}건 (「가져옴」)
+              {' '}· 이미 가져온 후기 {importedCount}건 (「가져옴」)
+            </>
+          ) : null}
+          {duplicateCount > 0 ? (
+            <>
+              {' '}· <strong className="text-violet-800">중복 {duplicateCount}건</strong> (체크 불가)
             </>
           ) : null}
         </span>
@@ -359,10 +366,16 @@ export default function NewyorktrdReviewPreview({
           const sel = state[review.reviewId];
           const checked = sel?.checked ?? false;
           const reimporting = reimportIds.has(review.reviewId);
-          const disabled = review.alreadyImported && !reimporting;
-          const badge = review.alreadyImported
-            ? IMPORT_BADGE[review.importStatus ?? 'here'] ?? IMPORT_BADGE.here
-            : null;
+          const duplicate = review.importStatus === 'duplicate';
+          const disabled = duplicate || (review.alreadyImported && !reimporting);
+          const badge = duplicate
+            ? {
+                ...DUPLICATE_BADGE,
+                title: `${review.duplicateOf ?? '같은 작성자·날짜·글'} — 저장하지 않습니다`,
+              }
+            : review.alreadyImported
+              ? IMPORT_BADGE[review.importStatus ?? 'here'] ?? IMPORT_BADGE.here
+              : null;
           return (
             <li
               key={review.reviewId}
@@ -389,7 +402,6 @@ export default function NewyorktrdReviewPreview({
                     <span className="text-[13px] text-slate-500">
                       {formatDate(review.writtenAt)}
                     </span>
-                    <PartnerReviewMark />
                     {badge ? (
                       <span
                         title={badge.title}
@@ -399,6 +411,7 @@ export default function NewyorktrdReviewPreview({
                         {review.importStatus === 'other' && review.importedProductSlug
                           ? ` (${review.importedProductSlug})`
                           : ''}
+                        {duplicate && review.duplicateOf ? ` — ${review.duplicateOf}` : ''}
                       </span>
                     ) : null}
                     {reimporting ? (

@@ -382,7 +382,8 @@ export default function SellstarImporter({
       setReviewPreview(list);
       setReviewSelections(
         list
-          .filter((review) => !review.alreadyImported)
+          // ★ 중복(이번 목록 안에서 같은 글) 은 처음부터 뺍니다.
+          .filter((review) => !review.alreadyImported && review.importStatus !== 'duplicate')
           .map((review) => ({
             reviewId: review.reviewId,
             photos: [...review.photos],
@@ -1378,9 +1379,7 @@ export default function SellstarImporter({
                   후기도 함께 가져오기 (최대 25건)
                   <span className="mt-1 block text-[13px] leading-relaxed text-slate-500">
                     아래에서 눈으로 확인하고 체크한 것만 저장합니다. 사진은 한 장씩 뺄 수
-                    있습니다. 손님 화면에서는 작성자 이름 옆에 작은 ◇ 아이콘으로 제휴 매장
-                    후기임을 표시하고 평균 별점·리뷰 개수에는 섞지 않습니다. 영상은
-                    가져오지 않습니다.
+                    있습니다. 영상은 가져오지 않습니다.
                   </span>
                 </span>
               </label>
@@ -1483,7 +1482,11 @@ export default function SellstarImporter({
                 <p>
                   {reviewSaveSummary.failed > 0 ? '상품은 저장됐고 후기는 일부만 저장됐습니다 — ' : '리뷰 — '}
                   새로 {reviewSaveSummary.imported}건, 이미 있던 것{' '}
-                  {reviewSaveSummary.skipped}건, 실패 {reviewSaveSummary.failed}건
+                  {reviewSaveSummary.skipped}건
+                  {reviewSaveSummary.duplicates > 0
+                    ? `, 중복이라 건너뜀 ${reviewSaveSummary.duplicates}건`
+                    : ''}
+                  , 실패 {reviewSaveSummary.failed}건
                 </p>
                 {reviewSaveSummary.failures.length > 0 ? (
                   <ul className="mt-1 list-disc pl-5 text-[13px]">

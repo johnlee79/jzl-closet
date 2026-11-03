@@ -46,7 +46,8 @@ export default function NewyorktrdReviewImporter({
 
   const defaultSelection = (list: PreviewReview[]): ReviewSelection[] =>
     list
-      .filter((review) => !review.alreadyImported)
+      // ★ 중복은 처음부터 빼 둡니다 — 체크박스를 안 건드리고 저장해도 안 나가게.
+      .filter((review) => !review.alreadyImported && review.importStatus !== 'duplicate')
       .map((review) => ({
         reviewId: review.reviewId,
         photos: [...review.photos],
@@ -271,7 +272,13 @@ export default function NewyorktrdReviewImporter({
                 , 다시 가져옴 <strong>{summary.reimported}건</strong>
               </>
             ) : null}
-            , 이미 있던 것 <strong>{summary.skipped}건</strong>, 실패{' '}
+            , 이미 있던 것 <strong>{summary.skipped}건</strong>
+            {summary.duplicates > 0 ? (
+              <>
+                , 중복이라 건너뜀 <strong>{summary.duplicates}건</strong>
+              </>
+            ) : null}
+            , 실패{' '}
             <strong>{summary.failed}건</strong>.
           </p>
           {summary.imported + summary.reimported > 0 ? (

@@ -2,6 +2,7 @@ import 'server-only';
 import { assertWritten, countWritten } from '@/lib/db-write';
 
 import { maskName } from '@/lib/mask-name';
+import { reviewDedupKey } from '@/lib/review-dedup';
 import {
   getSupabaseAdmin,
   getSupabaseAdminFresh,
@@ -56,8 +57,8 @@ export type Review = {
   createdAt: string | null;
   /**
    * 어디서 가져온 리뷰인가. 'newyorktrd' · 'sellstar' · null(우리 손님).
-   * ★ null 이 아니면 손님 화면에 반드시 ◇ 아이콘(제휴 매장 후기 표시)이 작성자 이름 옆에
-   *   뜹니다. 평균 별점(ReviewSummary)·상품 목록 평균(getRatingsByProduct)에는 안 섞입니다.
+   * ★ 손님 화면에서는 우리 후기와 구분 없이 보여 주고 평균·개수에도 합칩니다 (2026-11-03).
+   *   검색엔진용 JSON-LD 별점(summarizeOwn)과 관리자 후기 관리의 출처 필터에서만 구분합니다.
    */
   source: 'newyorktrd' | 'sellstar' | null;
   sourceReviewId: string | null;
@@ -160,27 +161,31 @@ export function emptySummary(): ReviewSummary {
   };
 }
 
+/**
+ * 손님 화면에 보이는 후기 요약 — 우리 손님 후기와 외부(뉴욕트렌딕 등) 후기를 **구분 없이** 합칩니다.
+ * 탭 숫자 · 상단 별점 · 평균/분포 · 사진 후기 수가 모두 이 값입니다. (사장님 지시, 2026-11-03)
+ *
+ * ★ 검색엔진용 JSON-LD 별점만은 summarizeOwn() 으로 우리 손님 후기만 씁니다.
+ *   구글 Review Snippet 규정상 다른 사이트에서 모아온 후기를 집계에 넣으면 안 됩니다.
+ */
 export function summarize(reviews: Review[]): ReviewSummary {
-  if (reviews.length === 0) return emptySummary();
+  return summarizeList(reviews);
+}
 
-  /*
-   * ★ 표시광고법상 반드시 지킬 것 — 외부에서 가져온 후기(source != null)는 평균 별점·개수·
-   *   별점 분포에서 빼야 합니다. 손님 화면의 상품 카드 "★4.8 (12)" 숫자는 **우리 손님 후기
-   *   만으로** 만들어야 "우리 손님 중 4.8 점" 이라는 신호가 됩니다. 섞으면 기만 광고입니다.
-   *   (newyorktrd-import-v2.md 와 사장님 지시, 2026-10-05)
-   *
-   * ★ photoCount·topTags 는 "후기 사진이 있는지" "손님이 어떤 긍정 태그를 많이 뽑았는지" 를
-   *   가늠하는 참고치라, 둘 다 우리 손님 후기만으로 셉니다. 섞을 이유가 없습니다.
-   */
-  const native = reviews.filter((review) => !review.source);
-  if (native.length === 0) return emptySummary();
+/** 우리 손님 후기(source = null)만의 요약 — 검색엔진용 JSON-LD 전용. */
+export function summarizeOwn(reviews: Review[]): ReviewSummary {
+  return summarizeList(reviews.filter((review) => !review.source));
+}
+
+function summarizeList(list: Review[]): ReviewSummary {
+  if (list.length === 0) return emptySummary();
 
   const distribution: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
   const tagCounts = new Map<string, number>();
   let total = 0;
   let photoCount = 0;
 
-  for (const review of native) {
+  for (const review of list) {
     const rating = Math.min(5, Math.max(1, review.rating));
     distribution[rating] += 1;
     total += rating;
@@ -196,9 +201,9 @@ export function summarize(reviews: Review[]): ReviewSummary {
     .slice(0, 3);
 
   return {
-    count: native.length,
+    count: list.length,
     // 소수 첫째 자리까지
-    average: Math.round((total / native.length) * 10) / 10,
+    average: Math.round((total / list.length) * 10) / 10,
     distribution,
     topTags,
     photoCount,
@@ -259,28 +264,15 @@ export async function getRatingsByProduct(): Promise<
   if (!supabase) return result;
 
   /*
-   * ★ 표시광고법 — 외부에서 가져온 리뷰(source != null)는 상품 목록·카드의 "★4.8(12)" 에
-   *   섞으면 안 됩니다. .is('source', null) 로 우리 손님 리뷰만 집계합니다.
-   *   schema-newyorktrd-reviews.sql 미실행 환경에서는 source 컬럼이 없어 이 쿼리가
-   *   실패할 수 있어, 실패 시 아래 catch 에서 예전 쿼리(출처 구분 없음)로 재시도합니다.
+   * ★ 손님 화면 기준이라 우리 후기·외부 후기를 구분 없이 합칩니다 (2026-11-03, summarize 와 같음).
+   *   지금은 상품 목록 카드가 별점을 띄우지 않아 이 함수를 부르는 곳이 없습니다.
    */
-  let data: { product_id: string; rating: number }[] | null = null;
-  const first = await supabase
+  const { data: rows, error } = await supabase
     .from(TABLE)
     .select('product_id, rating')
-    .eq('is_visible', true)
-    .is('source', null);
-
-  if (first.error) {
-    const retry = await supabase
-      .from(TABLE)
-      .select('product_id, rating')
-      .eq('is_visible', true);
-    if (retry.error || !retry.data) return result;
-    data = retry.data as { product_id: string; rating: number }[];
-  } else {
-    data = (first.data as { product_id: string; rating: number }[]) ?? [];
-  }
+    .eq('is_visible', true);
+  if (error || !rows) return result;
+  const data = rows as { product_id: string; rating: number }[];
 
   const sums = new Map<string, { total: number; count: number }>();
   for (const row of data) {
@@ -715,8 +707,8 @@ export async function deleteReview(id: string): Promise<void> {
  *
  * ★ 반드시 지킬 것 (newyorktrd-import-v2 · 사장님 지시 2026-10-05)
  *   · user_id · order_id 는 반드시 null → 포인트 지급 로직이 자동으로 건너뜁니다.
- *   · source 를 꼭 채웁니다 → 손님 화면이 작성자 이름 옆에 ◇ 아이콘을 띄우고
- *     평균 별점·목록 집계에서 자동 제외됩니다.
+ *   · source 를 꼭 채웁니다 → 검색엔진용 JSON-LD 별점(summarizeOwn)에서 빠지고
+ *     관리자 출처 필터가 이 값을 씁니다. (손님 화면은 구분 없이 합침, 2026-11-03)
  *   · source + source_review_id 가 유일 인덱스로 묶여 같은 후기를 두 번 저장할 수 없습니다.
  * ------------------------------------------------------------------ */
 
@@ -783,6 +775,53 @@ export async function hasImportedReview(
   // source 컬럼이 아직 없는 환경이면 중복 체크를 못 합니다. 조용히 "없다" 로.
   if (error) return false;
   return (data ?? []).length > 0;
+}
+
+/**
+ * 한 상품에 이미 저장된 후기의 중복 판정 키 (lib/review-dedup.ts 기준).
+ *
+ * ★ 우리 손님 후기·외부 후기·숨김 후기를 모두 봅니다. 숨겨 둔 후기와 같은 글을 다시 넣어도 중복입니다.
+ * ★ 저장 라우트가 묶음(5건)마다 부르므로, 앞 묶음에서 막 저장한 후기도 다음 묶음에서 걸립니다.
+ * ★ 원본(작성자 이름 가리기 전) 이름으로 비교합니다. 뉴욕트렌딕 후기는 이미 "김****" 로 저장돼 있습니다.
+ */
+export type ReviewDedupEntry = {
+  id: string;
+  source: string | null;
+  sourceReviewId: string | null;
+};
+
+export async function getReviewDedupIndex(
+  productId: string
+): Promise<Map<string, ReviewDedupEntry>> {
+  const index = new Map<string, ReviewDedupEntry>();
+  const supabase = getSupabaseAdminFresh() ?? getSupabaseAdmin();
+  if (!supabase || !productId) return index;
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('id, writer_name, written_at, created_at, content, source, source_review_id')
+    .eq('product_id', productId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(`중복 확인용 후기를 읽지 못했습니다: ${error.message}`);
+  for (const row of (data ?? []) as {
+    id: string;
+    writer_name: string;
+    written_at: string | null;
+    created_at: string | null;
+    content: string;
+    source: string | null;
+    source_review_id: string | null;
+  }[]) {
+    const key = reviewDedupKey({
+      writerName: row.writer_name,
+      writtenAt: row.written_at ?? row.created_at,
+      content: row.content,
+    });
+    // 먼저 들어간 것이 기준 — 이미 중복이 들어가 있으면 첫 줄만 남깁니다.
+    if (key && !index.has(key)) {
+      index.set(key, { id: row.id, source: row.source, sourceReviewId: row.source_review_id });
+    }
+  }
+  return index;
 }
 
 /**

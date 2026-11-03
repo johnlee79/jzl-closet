@@ -8,11 +8,13 @@ import {
   createImportedReview,
   DuplicateReviewError,
   getImportedReviewLocations,
+  getReviewDedupIndex,
   getImportedReviewsForProduct,
   hasImportedReview,
   reimportImportedReview,
   updateImportedReviewAttachments,
 } from '@/lib/reviews';
+import { reviewDedupKey } from '@/lib/review-dedup';
 import { getProductById } from '@/lib/products';
 import { slugify } from '@/lib/product-utils';
 
@@ -32,8 +34,8 @@ import { slugify } from '@/lib/product-utils';
  *
  * ★ 표시광고법
  *   저장되는 리뷰는 source='newyorktrd' · user_id=null · order_id=null · is_sponsored=false.
- *   손님 화면이 source != null 을 보고 작성자 이름 옆에 ◇ 아이콘(제휴 매장 후기 표시) 을
- *   띄우고 평균 별점·개수에서 자동 제외합니다. 포인트 지급 흐름(points.ts)에도 안 들어갑니다.
+ *   손님 화면에서는 우리 후기와 구분 없이 보이고 평균·개수에도 합칩니다 (2026-11-03).
+ *   검색엔진용 JSON-LD 별점(summarizeOwn) 에서만 빠집니다. 포인트 지급 흐름(points.ts)에도 안 들어갑니다.
  */
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -89,7 +91,8 @@ type ReviewOutcome =
       reimported?: boolean;
     }
   | { ok: false; reviewId: string; reason: string }
-  | { skipped: true; reviewId: string; reason: string };
+  /** duplicate — 같은 작성자·날짜·글이 이미 있어 건너뜀 (lib/review-dedup.ts) */
+  | { skipped: true; reviewId: string; reason: string; duplicate?: boolean };
 
 function keyFor(slug: string): string {
   const safe = slugify(slug) || 'imported';
@@ -222,6 +225,33 @@ export async function POST(request: NextRequest) {
     : new Map();
   const slugsToRevalidate = new Set<string>([productSlug]);
 
+  /*
+   * ★ 중복 거르기 (2026-11-03) — 미리보기에서 막아도, 체크해서 보내면(옛 화면·직접 호출)
+   *   여기서 한 번 더 거릅니다. 같은 상품 + 같은 작성자 + 같은 날짜 + 같은 글.
+   *   묶음(5건)마다 DB 에서 새로 읽으므로 앞 묶음에서 저장한 것도 걸립니다.
+   *   이번 요청 안에서 저장한 것은 아래에서 바로 더해 둡니다.
+   */
+  const dedup = await getReviewDedupIndex(productId);
+  const duplicateOf = (key: string | null, reviewId: string) => {
+    if (!key) return null;
+    const hit = dedup.get(key);
+    if (!hit) return null;
+    if (hit.source === 'newyorktrd' && hit.sourceReviewId === reviewId) return null; // 자기 자신
+    return hit;
+  };
+  const skipDuplicate = (reviewId: string, hit: { sourceReviewId: string | null }) => {
+    const what = hit.sourceReviewId ? `#${hit.sourceReviewId}` : '우리 손님 후기';
+    console.log(
+      `[import/newyorktrd-reviews] 중복이라 건너뜀 product=${productId} #${reviewId} = ${what}`
+    );
+    outcomes.push({
+      skipped: true,
+      duplicate: true,
+      reviewId,
+      reason: `중복이라 건너뜀 — 이미 저장된 ${what} 와 같은 글`,
+    });
+  };
+
   for (const selection of selections) {
     const reviewId = String(selection.reviewId ?? '').trim();
     if (!reviewId) continue;
@@ -235,6 +265,7 @@ export async function POST(request: NextRequest) {
       ? selection.photos.filter((photo): photo is string => typeof photo === 'string')
       : [];
     const attachTo = selection.attachToExistingReviewId;
+    const dedupKey = reviewDedupKey({ writerName, writtenAt, content });
 
     /* ── 1) 짝맞춤 모드: 기존 리뷰에 사진만 덧붙임 ─────────── */
     if (attachTo) {
@@ -281,6 +312,11 @@ export async function POST(request: NextRequest) {
     if (selection.reimport) {
       const location = reimportLocations.get(reviewId);
       if (location) {
+        const hit = duplicateOf(dedupKey, reviewId);
+        if (hit && hit.id !== location.id) {
+          skipDuplicate(reviewId, hit);
+          continue;
+        }
         if (location.productSlug) slugsToRevalidate.add(location.productSlug);
         const attachments: string[] = [];
         const photoFailures: { url: string; reason: string }[] = [];
@@ -302,6 +338,9 @@ export async function POST(request: NextRequest) {
             writtenAt,
             sourceUrl,
           });
+          if (dedupKey) {
+            dedup.set(dedupKey, { id: location.id, source: 'newyorktrd', sourceReviewId: reviewId });
+          }
           outcomes.push({
             ok: true,
             reviewId,
@@ -327,6 +366,13 @@ export async function POST(request: NextRequest) {
       outcomes.push({ skipped: true, reviewId, reason: '이미 가져온 후기' });
       continue;
     }
+    {
+      const hit = duplicateOf(dedupKey, reviewId);
+      if (hit) {
+        skipDuplicate(reviewId, hit);
+        continue;
+      }
+    }
 
     const attachments: string[] = [];
     const photoFailures: { url: string; reason: string }[] = [];
@@ -339,7 +385,7 @@ export async function POST(request: NextRequest) {
 
     try {
       // eslint-disable-next-line no-await-in-loop
-      await createImportedReview({
+      const created = await createImportedReview({
         productId,
         productSlug,
         writerName,
@@ -351,6 +397,9 @@ export async function POST(request: NextRequest) {
         sourceReviewId: reviewId,
         sourceUrl,
       });
+      if (dedupKey) {
+        dedup.set(dedupKey, { id: created.id, source: 'newyorktrd', sourceReviewId: reviewId });
+      }
       outcomes.push({
         ok: true,
         reviewId,
@@ -383,7 +432,8 @@ export async function POST(request: NextRequest) {
       outcomes,
       imported: outcomes.filter((o) => 'ok' in o && o.ok && !o.reimported).length,
       reimported: outcomes.filter((o) => 'ok' in o && o.ok && o.reimported).length,
-      skipped: outcomes.filter((o) => 'skipped' in o && o.skipped).length,
+      skipped: outcomes.filter((o) => 'skipped' in o && o.skipped && !o.duplicate).length,
+      duplicates: outcomes.filter((o) => 'skipped' in o && o.duplicate).length,
       failed: outcomes.filter((o) => 'ok' in o && !o.ok).length,
     },
     { headers: { 'Cache-Control': 'no-store' } }

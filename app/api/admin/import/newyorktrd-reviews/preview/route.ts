@@ -6,7 +6,8 @@ import {
   fetchReviewIdsPage,
   type ReviewDetail,
 } from '@/lib/newyorktrd-reviews';
-import { getImportedReviewLocations } from '@/lib/reviews';
+import { getImportedReviewLocations, getReviewDedupIndex } from '@/lib/reviews';
+import { reviewDedupKey } from '@/lib/review-dedup';
 
 /**
  * 뉴욕트렌딕 리뷰 미리보기 — DB 는 건드리지 않고 파싱만 해서 돌려줍니다.
@@ -44,9 +45,16 @@ export type ParsedReview = {
   importStatus: ImportStatus;
   /** other 일 때 붙어 있는 상품 slug */
   importedProductSlug?: string;
+  /** duplicate 일 때 — 무엇과 겹치는지 (화면 안내용) */
+  duplicateOf?: string;
 };
 
-export type ImportStatus = 'new' | 'here' | 'here-hidden' | 'other' | 'orphan';
+/**
+ * duplicate — 같은 작성자·같은 날짜·같은 글(이모지·공백·문장부호 무시) 이
+ *   이 상품에 이미 저장돼 있거나, 이번 목록 앞쪽에 이미 있음 (2026-11-03, lib/review-dedup.ts).
+ *   체크할 수 없습니다. 저장 라우트도 한 번 더 거릅니다.
+ */
+export type ImportStatus = 'new' | 'here' | 'here-hidden' | 'other' | 'orphan' | 'duplicate';
 
 type Payload = {
   productNo: number;
@@ -130,6 +138,51 @@ export async function POST(request: NextRequest) {
         importStatus,
         importedProductSlug: importStatus === 'other' ? location?.productSlug : undefined,
       });
+    }
+
+    /*
+     * ── 중복 표시 (2026-11-03) ──────────────────────────────
+     * 뉴욕트렌딕에 같은 글이 번호만 다르게 두 번 올라와 있으면 번호로는 못 거릅니다.
+     * 이 상품에 이미 저장된 후기(우리 후기·외부·숨김 전부) 와 겹치거나,
+     * 이번 목록 앞쪽과 겹치면 'duplicate' 로 바꿉니다. 이미 이 상품에 있는 본인(here) 은 그대로.
+     * 상품 가져오기 화면(아직 상품이 없음, productId 없음) 에서도 목록 안 중복은 거릅니다.
+     */
+    {
+      const saved = productId ? await getReviewDedupIndex(productId) : new Map();
+      const seenInBatch = new Map<string, string>();
+      for (const review of reviews) {
+        const key = reviewDedupKey(review);
+        if (!key) continue;
+        const hit = saved.get(key);
+        const isSelf = hit?.source === 'newyorktrd' && hit.sourceReviewId === review.reviewId;
+        if (review.importStatus === 'here' || review.importStatus === 'here-hidden') {
+          // 이미 이 상품에 저장된 후기. 먼저 저장된 다른 후기와 같은 글이면 그것도 「중복」 으로
+          // 보여 줍니다 (이미 들어간 중복 — 정리 대상. 지우지는 않습니다).
+          if (hit && !isSelf) {
+            review.importStatus = 'duplicate';
+            review.duplicateOf = hit.sourceReviewId
+              ? `이미 저장된 후기 #${hit.sourceReviewId} 와 같은 글 (둘 다 저장돼 있음)`
+              : '이미 저장된 우리 손님 후기와 같은 글 (둘 다 저장돼 있음)';
+          } else if (!seenInBatch.has(key)) {
+            seenInBatch.set(key, review.reviewId);
+          }
+          continue;
+        }
+        if (hit && !isSelf) {
+          review.importStatus = 'duplicate';
+          review.duplicateOf = hit.sourceReviewId
+            ? `이미 저장된 후기 #${hit.sourceReviewId} 와 같은 글`
+            : '이미 저장된 우리 손님 후기와 같은 글';
+          continue;
+        }
+        const earlier = seenInBatch.get(key);
+        if (earlier) {
+          review.importStatus = 'duplicate';
+          review.duplicateOf = `이번 목록의 #${earlier} 와 같은 글`;
+          continue;
+        }
+        seenInBatch.set(key, review.reviewId);
+      }
     }
 
     return NextResponse.json(

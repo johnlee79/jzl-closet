@@ -17,7 +17,7 @@ import SalesInfo from '@/components/SalesInfo';
 import StarRating from '@/components/StarRating';
 import ViewItemTracker from '@/components/ViewItemTracker';
 import { getProductInquiries } from '@/lib/inquiries';
-import { getProductReviews, summarize } from '@/lib/reviews';
+import { getProductReviews, summarize, summarizeOwn } from '@/lib/reviews';
 import { findBrand } from '@/lib/brands';
 import { findCategory, findSubCategory } from '@/lib/categories';
 import { formatPrice, getDiscountRate, isProductSoldOut } from '@/lib/product-utils';
@@ -135,7 +135,10 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   const { related, brandRelated } = neighbours;
 
+  // 손님 화면용 — 우리 후기·외부 후기 구분 없이 합칩니다. (탭 숫자 · 상단 별점 · 후기 영역)
   const reviewSummary = summarize(reviews);
+  // ★ 검색엔진(JSON-LD) 전용 — 우리 손님 후기만. 위 값과 섞어 쓰지 마세요.
+  const seoReviewSummary = summarizeOwn(reviews);
 
   const brand = findBrand(brands, product.brandSlug);
   const brandName = brand?.name ?? store.name; // alt·JSON-LD 용 정식 명칭
@@ -188,19 +191,20 @@ export default async function ProductDetailPage({ params }: PageProps) {
      * 후기가 있으면 검색 결과에 별점이 함께 나옵니다.
      *
      * ★ 구글 Review Snippet 규정 — "다른 사이트의 리뷰를 모아 집계로 넣지 말 것".
-     *   reviewSummary 는 lib/reviews.ts 의 summarize() 결과로, source != null (뉴욕·셀스타
+     *   seoReviewSummary 는 lib/reviews.ts 의 summarizeOwn() 결과로, source != null (뉴욕·셀스타
      *   등 외부 쇼핑몰에서 가져온 후기)을 전부 걸러 **우리 손님 후기만** 담고 있습니다.
      *   그래서 여기 ratingValue · reviewCount 에 외부 후기가 섞이지 않습니다.
+     *   ★ 손님 화면의 reviewSummary(외부 후기 포함) 를 여기 쓰면 안 됩니다. (2026-11-03)
      *
      * ★ 개별 Review JSON-LD 는 일부러 넣지 않습니다. 넣으면 외부 후기까지 색인되기 쉽고,
      *   구글이 "모아온 리뷰" 로 보고 노출을 막습니다. aggregateRating 하나로 끝냅니다.
      */
-    ...(reviewSummary.count > 0
+    ...(seoReviewSummary.count > 0
       ? {
           aggregateRating: {
             '@type': 'AggregateRating',
-            ratingValue: reviewSummary.average,
-            reviewCount: reviewSummary.count,
+            ratingValue: seoReviewSummary.average,
+            reviewCount: seoReviewSummary.count,
             bestRating: 5,
             worstRating: 1,
           },

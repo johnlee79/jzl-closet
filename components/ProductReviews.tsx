@@ -100,37 +100,6 @@ function PlayMark() {
 }
 
 /**
- * 제휴 매장 (뉴욕트렌딕) 후기 표시 — 작은 ◇ 아이콘.
- *
- * ★ 표시광고법 — 외부에서 가져온 후기임을 손님이 알 수 있어야 합니다.
- *   목록 맨 위의 범례와 각 아이콘의 title 두 자리로 안내합니다.
- *   아이콘은 이모지가 아닌 SVG — 사이트 규칙입니다 (브라우저·OS 간 모양 차이 방지).
- */
-const PARTNER_REVIEW_NOTICE =
-  '제휴 매장에서 구매한 고객님의 후기입니다 (뉴욕트렌딕)';
-function PartnerReviewMark() {
-  return (
-    <span
-      className="inline-flex h-4 w-4 items-center justify-center text-muted"
-      title={PARTNER_REVIEW_NOTICE}
-      aria-label={PARTNER_REVIEW_NOTICE}
-    >
-      <svg
-        width="10"
-        height="10"
-        viewBox="0 0 10 10"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        aria-hidden="true"
-      >
-        <path d="M5 0.6 L9.4 5 L5 9.4 L0.6 5 Z" />
-      </svg>
-    </span>
-  );
-}
-
-/**
  * 상품 상세의 리뷰 영역.
  *
  * ★ is_sponsored 인 리뷰에는 반드시 표시 문구를 붙입니다.
@@ -151,15 +120,13 @@ export default function ProductReviews({
 
   /**
    * 사진·영상이 붙은 후기의 미디어만 모읍니다.
-   *
-   * ★ 표시광고법 — 외부에서 가져온 후기(source != null)의 사진은 이 상단 갤러리에
-   *   섞지 않습니다. 섞으면 "우리 손님의 사진" 처럼 보여 기만 광고로 읽힙니다.
-   *   아래 목록에는 그대로 배지와 함께 보여 줍니다. (사장님 지시, 2026-10-05)
+   * ★ 우리 후기·외부 후기 구분 없이 모읍니다. (사장님 지시, 2026-11-03)
+   *   아래 목록의 사진을 눌러 확대할 때도 이 목록에서 위치를 찾으므로,
+   *   여기서 빠지는 후기가 있으면 그 사진은 확대되지 않습니다.
    */
   const gallery = useMemo<Media[]>(() => {
     const list: Media[] = [];
     for (const review of reviews) {
-      if (review.source) continue;
       // 줄바꿈을 공백으로 바꿔 두 줄 안에 깔끔히 들어가게 합니다.
       const excerpt = review.content.replace(/\s+/g, ' ').trim();
       for (const url of review.attachments) {
@@ -287,8 +254,7 @@ export default function ProductReviews({
 
   /**
    * 「사진 있는 후기만 (N)」 의 N — 체크했을 때 실제로 남는 후기 수와 같아야 합니다.
-   * ★ summary.photoCount 는 우리 손님 후기만 세므로 여기 쓰면 숫자와 목록이 어긋납니다.
-   *   필터는 외부 후기까지 포함해 거르므로 같은 기준(reviews 전체)으로 셉니다.
+   * ★ 필터와 같은 기준(reviews 전체)으로 셉니다. 요약 값을 쓰면 요약 기준이 바뀔 때 어긋납니다.
    */
   const photoReviewCount = useMemo(
     () => reviews.filter((review) => review.attachments.length > 0).length,
@@ -313,8 +279,6 @@ export default function ProductReviews({
 
       {/*
         ★ "후기 없음" 은 화면에 보여줄 후기가 정말 하나도 없을 때만.
-          summary.count 는 우리 손님 후기만 세므로 이걸로 판단하면, 외부(뉴욕트렌딕)
-          후기만 있는 상품의 목록이 통째로 사라집니다. (2026-11-03, 26번 상품)
       */}
       {reviews.length === 0 ? (
         <p className="mt-10 border-t border-stone pt-10 text-[17px] leading-relaxed text-ink">
@@ -376,9 +340,7 @@ export default function ProductReviews({
             </div>
           ) : null}
 
-          {/* ── 요약 ─────────────────────────────────────
-           * ★ 표시광고법 — 평균 별점·분포는 우리 손님 후기로만 만듭니다.
-           *   우리 손님 후기가 없으면 외부 후기로 채우지 않고 블록을 통째로 감춥니다. */}
+          {/* ── 요약 ─────────────────────────────────── */}
           {summary.count > 0 ? (
           <div className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-[220px_1fr] md:gap-12">
             <div>
@@ -454,16 +416,6 @@ export default function ProductReviews({
             </div>
           </div>
 
-          {/*
-            ★ 범례 — 제휴 매장 후기가 섞여 있을 때만 띄웁니다. 표시광고법상 손님이
-              이게 뭘 뜻하는지 알 수 있어야 합니다.
-          */}
-          {reviews.some((review) => review.source === 'newyorktrd') ? (
-            <p className="mt-4 flex items-center gap-2 text-[14px] leading-relaxed text-muted">
-              <PartnerReviewMark />
-              <span>표시는 제휴 매장에서 구매한 고객님의 후기입니다</span>
-            </p>
-          ) : null}
 
           {/* ── 목록 ─────────────────────────────────── */}
           {visible.length === 0 ? (
@@ -490,15 +442,6 @@ export default function ProductReviews({
                     <span className="text-[14px] text-muted">
                       {formatDate(review.writtenAt ?? review.createdAt)}
                     </span>
-                    {/*
-                      ★ 표시광고법 — 외부(뉴욕트렌딕)에서 가져온 후기는 작은 ◇ 아이콘으로
-                        구분합니다. 아이콘 자체가 "제휴 매장" 표시이고, 목록 맨 위의 범례와
-                        각 아이콘의 title 로 손님이 뭘 뜻하는지 알 수 있어야 합니다.
-                        (사장님 지시, 2026-10-05 — 큰 배지 대신 아이콘)
-                    */}
-                    {review.source === 'newyorktrd' ? (
-                      <PartnerReviewMark />
-                    ) : null}
                   </div>
 
                   {review.tags.length > 0 ? (

@@ -25,10 +25,12 @@ export type ReviewSaveSummary = {
   imported: number;
   reimported: number;
   skipped: number;
+  /** 같은 작성자·날짜·글이 이미 있어 서버가 건너뜀 (2026-11-03) */
+  duplicates: number;
   failed: number;
   /** 실패한 후기 — 「#번호 — 사유」 */
   failures: string[];
-  /** 건너뛴 후기 — 「#번호 — 사유」 */
+  /** 건너뛴 후기 — 「#번호 — 사유」 (중복 포함) */
   skips: string[];
   /** 사진만 실패 — 「#번호 — 사유」 */
   photoFailures: string[];
@@ -42,7 +44,7 @@ type Outcome =
       photoFailures?: { url: string; reason: string }[];
     }
   | { ok: false; reviewId: string; reason: string }
-  | { skipped: true; reviewId: string; reason: string };
+  | { skipped: true; reviewId: string; reason: string; duplicate?: boolean };
 
 const CHUNK = 5;
 
@@ -56,6 +58,7 @@ export async function saveNewyorktrdReviews(
     imported: 0,
     reimported: 0,
     skipped: 0,
+    duplicates: 0,
     failed: 0,
     failures: [],
     skips: [],
@@ -103,7 +106,8 @@ export async function saveNewyorktrdReviews(
       for (const outcome of outcomes) {
         answered.add(outcome.reviewId);
         if ('skipped' in outcome) {
-          summary.skipped += 1;
+          if (outcome.duplicate) summary.duplicates += 1;
+          else summary.skipped += 1;
           summary.skips.push(`#${outcome.reviewId} — ${outcome.reason}`);
         } else if (outcome.ok) {
           if (outcome.reimported) summary.reimported += 1;
