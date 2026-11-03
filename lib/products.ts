@@ -805,6 +805,50 @@ export async function patchProduct(
  *
  * @returns 이번 호출이 실제로 지웠는지. false 면 이미 없었다는 뜻입니다.
  */
+/**
+ * 이 상품을 담은 주문 줄 수. 주문이 붙은 상품은 지우지 않고 숨김으로 둡니다 (2026-11-03).
+ * ★ 주문 줄에는 상품명이 따로 남지만, 상품을 지우면 주문 상세에서 상품 화면으로 못 갑니다.
+ */
+export async function countOrderLinesForProduct(id: string): Promise<number> {
+  const supabase = getSupabaseAdminFresh();
+  if (!supabase) return 0;
+  const { count, error } = await supabase
+    .from('order_items')
+    .select('id', { count: 'exact', head: true })
+    .eq('product_id', id);
+  if (error) throw new Error(`이 상품의 주문을 세지 못했습니다: ${error.message}`);
+  return count ?? 0;
+}
+
+/** 후기를 옮길 곳 고르기용 — 가볍게 id·이름·slug·출처번호만 */
+export async function listProductsForPicker(): Promise<
+  { id: string; slug: string; name: string; source: string | null; sourceProductNo: number | null }[]
+> {
+  const supabase = getSupabaseAdminFresh();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('id, slug, name, source, source_product_no')
+    .order('created_at', { ascending: false })
+    .limit(2000);
+  if (error || !data) return [];
+  return (
+    data as {
+      id: string;
+      slug: string;
+      name: string;
+      source: string | null;
+      source_product_no: number | null;
+    }[]
+  ).map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    source: row.source,
+    sourceProductNo: row.source_product_no,
+  }));
+}
+
 export async function deleteProduct(id: string): Promise<boolean> {
   const supabase = requireSupabaseAdmin();
   const removed = countWritten(
@@ -946,7 +990,8 @@ export async function getProductBySource(
 ): Promise<Product | null> {
   if (!source || !productNo || productNo <= 0) return null;
 
-  const supabase = getSupabaseAdmin();
+  // ★ 관리자 화면 전용 — 중복 등록 막기에 쓰므로 저장된 답을 쓰지 않습니다 (2026-11-03).
+  const supabase = getSupabaseAdminFresh();
   if (!supabase) return null;
 
   const { data, error } = await supabase

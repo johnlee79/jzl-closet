@@ -1,5 +1,5 @@
 import 'server-only';
-import { assertWritten } from '@/lib/db-write';
+import { assertWritten, countWritten } from '@/lib/db-write';
 
 import { maskName } from '@/lib/mask-name';
 import {
@@ -652,6 +652,56 @@ export async function replyToReview(id: string, reply: string): Promise<void> {
     .eq('id', id)
     .select('id');
   assertWritten(result, '답변을 저장하지 못했습니다');
+}
+
+/**
+ * ============================================================
+ * ** 상품 삭제 때 붙은 후기 처리 (2026-11-03)
+ * ============================================================
+ * reviews.product_id 에는 FK 가 없어 상품을 지워도 후기는 남습니다.
+ * 그렇게 남은 후기는 손님 화면 어디에도 안 보이는데, 중복 방지 인덱스 때문에
+ * 같은 후기를 다시 가져올 수도 없게 됩니다 (뉴욕트렌딕 26번 · 25건 사례).
+ * 그래서 삭제 전에 세고, 「옮기기 / 같이 지우기」 를 고르게 합니다.
+ */
+export async function countReviewsForProduct(
+  productId: string
+): Promise<{ total: number; imported: number; own: number }> {
+  const supabase = getSupabaseAdminFresh();
+  if (!supabase) return { total: 0, imported: 0, own: 0 };
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('id, source')
+    .eq('product_id', productId);
+  if (error) throw new Error(`붙은 후기를 세지 못했습니다: ${error.message}`);
+  const rows = (data ?? []) as { id: string; source: string | null }[];
+  const imported = rows.filter((row) => row.source).length;
+  return { total: rows.length, imported, own: rows.length - imported };
+}
+
+/** 한 상품의 후기를 전부 다른 상품으로 옮깁니다. 옮긴 건수를 돌려줍니다. */
+export async function moveReviewsToProduct(
+  fromProductId: string,
+  toProductId: string,
+  toProductSlug: string
+): Promise<number> {
+  const supabase = requireSupabaseAdmin();
+  return countWritten(
+    await supabase
+      .from(TABLE)
+      .update({ product_id: toProductId, product_slug: toProductSlug })
+      .eq('product_id', fromProductId)
+      .select('id'),
+    '후기를 옮기지 못했습니다'
+  );
+}
+
+/** 한 상품의 후기를 전부 지웁니다. 지운 건수를 돌려줍니다. */
+export async function deleteReviewsForProduct(productId: string): Promise<number> {
+  const supabase = requireSupabaseAdmin();
+  return countWritten(
+    await supabase.from(TABLE).delete().eq('product_id', productId).select('id'),
+    '후기를 지우지 못했습니다'
+  );
 }
 
 export async function deleteReview(id: string): Promise<void> {

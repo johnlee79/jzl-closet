@@ -12,7 +12,14 @@ import {
   getProductBySlug,
   patchProduct,
   updateProduct,
+  countOrderLinesForProduct,
+  listProductsForPicker,
 } from '@/lib/products';
+import {
+  countReviewsForProduct,
+  deleteReviewsForProduct,
+  moveReviewsToProduct,
+} from '@/lib/reviews';
 import type { Product, ProductInput } from '@/lib/types';
 
 /** 액션 결과 — 화면에서 그대로 메시지로 보여 줍니다. */
@@ -72,11 +79,95 @@ export async function patchProductAction(
   }
 }
 
-export async function deleteProductAction(id: string): Promise<ActionResult> {
+/**
+ * 지우기 전에 보여 줄 것 — 붙은 후기·주문, 그리고 후기를 옮길 후보 상품.
+ * ★ 화면은 이걸 보고 「후기를 다른 상품으로 옮기기 / 같이 지우기 / 취소」 를 고르게 합니다.
+ */
+export type ProductDeleteImpact = {
+  reviews: { total: number; imported: number; own: number };
+  orderLines: number;
+  /** 옮길 곳 후보. 같은 출처·상품번호 → 같은 이름 순으로 먼저 놓고 suggested 를 켭니다. */
+  targets: { id: string; slug: string; name: string; suggested: boolean }[];
+};
+
+export async function getProductDeleteImpactAction(
+  id: string
+): Promise<ActionResult<ProductDeleteImpact>> {
+  if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
+  try {
+    const product = await getProductById(id);
+    const [reviews, orderLines] = await Promise.all([
+      countReviewsForProduct(id),
+      countOrderLinesForProduct(id),
+    ]);
+    let targets: ProductDeleteImpact['targets'] = [];
+    if (reviews.total > 0) {
+      const all = (await listProductsForPicker()).filter((p) => p.id !== id);
+      const isSuggested = (p: (typeof all)[number]) =>
+        Boolean(
+          product &&
+            ((product.source &&
+              product.sourceProductNo &&
+              p.source === product.source &&
+              p.sourceProductNo === product.sourceProductNo) ||
+              p.name.trim() === product.name.trim())
+        );
+      targets = all
+        .map((p) => ({ id: p.id, slug: p.slug, name: p.name, suggested: isSuggested(p) }))
+        .sort((a, b) => Number(b.suggested) - Number(a.suggested));
+    }
+    return { ok: true, data: { reviews, orderLines, targets } };
+  } catch (error) {
+    return fail(error, '삭제 전 확인에 실패했습니다.');
+  }
+}
+
+/**
+ * 상품 삭제.
+ * ★ 붙은 후기가 있으면 reviews 로 어떻게 할지 꼭 받아야 지웁니다 (2026-11-03).
+ *   예전엔 그냥 지워서 후기가 「지워진 상품」 에 남았고, 손님 화면 어디에도 안 보이면서
+ *   같은 후기를 다시 가져올 수도 없었습니다 (뉴욕트렌딕 26번 · 25건).
+ * ★ 주문이 붙은 상품은 지우지 않습니다. 숨김으로 돌리라고 돌려보냅니다.
+ */
+export async function deleteProductAction(
+  id: string,
+  options?: { reviews?: 'move' | 'delete'; moveToId?: string }
+): Promise<ActionResult<{ movedReviews: number; deletedReviews: number }>> {
   if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
     const before = await getProductById(id);
+
+    const orderLines = await countOrderLinesForProduct(id);
+    if (orderLines > 0) {
+      return {
+        ok: false,
+        error: `주문 ${orderLines}줄이 붙은 상품이라 지우지 않았습니다. 「노출」 을 꺼서 숨김으로 두세요.`,
+      };
+    }
+
+    const reviews = await countReviewsForProduct(id);
+    let movedReviews = 0;
+    let deletedReviews = 0;
+    let target: Product | null = null;
+    if (reviews.total > 0) {
+      if (options?.reviews === 'move') {
+        if (!options.moveToId || options.moveToId === id) {
+          return { ok: false, error: '후기를 옮길 상품을 골라 주세요.' };
+        }
+        target = await getProductById(options.moveToId);
+        if (!target) return { ok: false, error: '후기를 옮길 상품을 찾지 못했습니다.' };
+        movedReviews = await moveReviewsToProduct(id, target.id, target.slug);
+      } else if (options?.reviews === 'delete') {
+        deletedReviews = await deleteReviewsForProduct(id);
+      } else {
+        return {
+          ok: false,
+          error: `이 상품에 후기 ${reviews.total}건이 붙어 있습니다. 옮길지 같이 지울지 골라 주세요.`,
+        };
+      }
+    }
+
     /*
      * ★ 이미 지워져 있어도 성공입니다. (deleteProduct 가 false 를 돌려줍니다)
      *   원한 결과는 이미 이뤄져 있습니다. 여기서 오류를 내면 사장님이
@@ -85,9 +176,10 @@ export async function deleteProductAction(id: string): Promise<ActionResult> {
      *   치우는 것이 이 상황에서 정말 필요한 일입니다.
      */
     await deleteProduct(id);
-    await revalidateStorefront([before]);
+    await revalidateStorefront([before, target]);
     revalidatePath('/admin/products');
-    return { ok: true, data: undefined };
+    if (movedReviews || deletedReviews) revalidatePath('/admin/reviews');
+    return { ok: true, data: { movedReviews, deletedReviews } };
   } catch (error) {
     return fail(error, '삭제에 실패했습니다.');
   }

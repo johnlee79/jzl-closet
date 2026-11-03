@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { isAdmin } from '@/lib/admin-guard';
-import { createProduct, getProductBySlug } from '@/lib/products';
+import { createProduct, getProductBySlug, getProductBySource } from '@/lib/products';
 import { splitOriginAndManufacturer } from '@/lib/origin';
 import { slugify } from '@/lib/product-utils';
 import {
@@ -27,7 +27,11 @@ export type ActionResult<T = undefined> =
   | { ok: false; error: string };
 
 function fail(error: unknown, fallback: string): { ok: false; error: string } {
-  const message = error instanceof Error ? error.message : fallback;
+  let message = error instanceof Error ? error.message : fallback;
+  // DB 유일 인덱스(products_newyorktrd_source_uniq)에 걸린 경우 — 동시에 두 번 눌렀을 때 등
+  if (message.includes('products_newyorktrd_source_uniq')) {
+    message = '이미 등록된 뉴욕트렌딕 상품이라 새로 만들지 않았습니다. 상품 목록에서 기존 상품을 찾아 고쳐 주세요.';
+  }
   console.error('[admin/import]', message);
   return { ok: false, error: message };
 }
@@ -120,6 +124,26 @@ export async function importProductAction(
   if (!payload.categorySlug) return { ok: false, error: '분류를 선택해 주세요.' };
   if (payload.thumbnails.length === 0) {
     return { ok: false, error: '대표 이미지가 없습니다. 이미지 가져오기를 먼저 끝내 주세요.' };
+  }
+
+  /*
+   * ★ 같은 뉴욕트렌딕 상품은 두 번 등록하지 않습니다 (2026-11-03).
+   *   예전엔 가져오기 화면이 「이미 등록된 상품입니다」 안내만 띄우고 저장은 그대로 됐습니다.
+   *   uniqueSlug 가 slug 뒤에 -2 를 붙여 주니 막히는 곳이 하나도 없었고,
+   *   그렇게 275번이 …hoodie / …hoodie-2 두 개로 생겼습니다.
+   *   화면을 거치지 않고 서버 액션만 불러도 막히도록 여기서 검사합니다.
+   *   (DB 에도 유일 인덱스를 걸 수 있게 supabase/schema-newyorktrd-unique.sql 을 두었습니다)
+   */
+  if (payload.source === 'newyorktrd' && payload.sourceProductNo > 0) {
+    const existing = await getProductBySource('newyorktrd', payload.sourceProductNo);
+    if (existing) {
+      return {
+        ok: false,
+        error:
+          `뉴욕트렌딕 ${payload.sourceProductNo}번은 이미 「${existing.name}」 (${existing.slug}) 으로 등록돼 있어 ` +
+          '새로 만들지 않았습니다. 그 상품의 수정 화면에서 고쳐 주세요.',
+      };
+    }
   }
 
   try {

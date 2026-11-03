@@ -575,8 +575,18 @@ export default function SellstarImporter({
     return { map, errors };
   };
 
+  /** 같은 뉴욕트렌딕 상품이 이미 있으면 등록을 막습니다 (서버도 한 번 더 막습니다). */
+  const blockedAsDuplicate = source === 'newyorktrd' && Boolean(existing);
+
   const register = async () => {
     if (busy) return;
+    if (blockedAsDuplicate) {
+      setMessage({
+        tone: 'error',
+        text: '이미 등록된 뉴욕트렌딕 상품이라 새로 등록하지 않습니다. 기존 상품의 수정 화면에서 고쳐 주세요.',
+      });
+      return;
+    }
 
     const usedGallery = galleryRows.filter((row) => row.kind === 'image' && row.checked);
     const usedRows = rows.filter((row) => row.checked);
@@ -814,8 +824,18 @@ export default function SellstarImporter({
             <Link href={`/admin/products?q=${existing.slug}`} className="underline" prefetch={false}>
               {existing.name}
             </Link>
-            . 그대로 등록하면 같은 상품이 하나 더 생깁니다. 기존 상품을 고치시려면 그쪽
-            편집 화면에서 <strong>셀스타에서 다시 불러오기</strong>를 쓰세요.
+            .{' '}
+            {source === 'newyorktrd' ? (
+              <>
+                같은 뉴욕트렌딕 상품은 두 번 등록할 수 없습니다. 기존 상품의 편집 화면에서
+                고쳐 주세요.
+              </>
+            ) : (
+              <>
+                그대로 등록하면 같은 상품이 하나 더 생깁니다. 기존 상품을 고치시려면 그쪽
+                편집 화면에서 <strong>셀스타에서 다시 불러오기</strong>를 쓰세요.
+              </>
+            )}
           </p>
         ) : null}
 
@@ -1558,10 +1578,14 @@ export default function SellstarImporter({
             <button
               type="button"
               onClick={() => void register()}
-              disabled={busy || pending}
+              disabled={busy || pending || blockedAsDuplicate}
               className="admin-btn-primary mt-4"
             >
-              {busy ? '가져오는 중…' : '이미지 옮기고 임시저장으로 등록'}
+              {blockedAsDuplicate
+                ? '이미 등록된 상품 — 등록 막힘'
+                : busy
+                  ? '가져오는 중…'
+                  : '이미지 옮기고 임시저장으로 등록'}
             </button>
           </section>
         </>

@@ -6,7 +6,9 @@ import { useState, useTransition } from 'react';
 import {
   deleteProductAction,
   duplicateProductAction,
+  getProductDeleteImpactAction,
   patchProductAction,
+  type ProductDeleteImpact,
 } from '@/app/admin/actions';
 import { brandLabel, type Brand } from '@/lib/brands';
 import { findCategory, findSubCategory, type Category } from '@/lib/categories';
@@ -56,6 +58,13 @@ export default function ProductTable({
   const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(
     null
   );
+  /** 후기가 붙은 상품을 지울 때 띄우는 대화창 */
+  const [deleteDialog, setDeleteDialog] = useState<{
+    product: Product;
+    impact: ProductDeleteImpact;
+    choice: 'move' | 'delete';
+    moveToId: string;
+  } | null>(null);
 
   /** 목록에서 바로 저장 — 상세 화면에 들어가지 않아도 됩니다. */
   const patch = (
@@ -93,23 +102,69 @@ export default function ProductTable({
     });
   };
 
-  const handleDelete = (product: Product) => {
-    // 확인 창 필수
-    const confirmed = window.confirm(
-      `"${product.name}" 을(를) 삭제합니다.\n되돌릴 수 없습니다. 계속할까요?`
-    );
-    if (!confirmed) return;
-
+  const runDelete = (
+    product: Product,
+    options?: { reviews?: 'move' | 'delete'; moveToId?: string }
+  ) => {
     setBusyId(product.id);
     startTransition(async () => {
-      const result = await deleteProductAction(product.id);
+      const result = await deleteProductAction(product.id, options);
       setBusyId(null);
       if (result.ok) {
-        setMessage({ tone: 'ok', text: '삭제했습니다.' });
+        const { movedReviews, deletedReviews } = result.data;
+        setDeleteDialog(null);
+        setMessage({
+          tone: 'ok',
+          text:
+            '삭제했습니다.' +
+            (movedReviews ? ` 후기 ${movedReviews}건은 옮겼습니다.` : '') +
+            (deletedReviews ? ` 후기 ${deletedReviews}건도 같이 지웠습니다.` : ''),
+        });
         router.refresh();
       } else {
         setMessage({ tone: 'error', text: result.error });
       }
+    });
+  };
+
+  /**
+   * ★ 지우기 전에 붙은 후기·주문을 먼저 셉니다 (2026-11-03).
+   *   · 주문이 있으면 지우지 않고 숨김을 권합니다.
+   *   · 후기가 있으면 「다른 상품으로 옮기기 / 같이 지우기 / 취소」 대화창을 띄웁니다.
+   *   · 아무것도 없으면 예전처럼 확인 창 하나.
+   */
+  const handleDelete = (product: Product) => {
+    setBusyId(product.id);
+    startTransition(async () => {
+      const check = await getProductDeleteImpactAction(product.id);
+      setBusyId(null);
+      if (!check.ok) {
+        setMessage({ tone: 'error', text: check.error });
+        return;
+      }
+      const impact = check.data;
+      if (impact.orderLines > 0) {
+        const hide = window.confirm(
+          `"${product.name}" 에는 주문 ${impact.orderLines}줄이 붙어 있어 지울 수 없습니다.\n` +
+            '대신 숨김(노출 끄기)으로 둘까요?'
+        );
+        if (hide) patch(product.id, { isVisible: false }, '노출을');
+        return;
+      }
+      if (impact.reviews.total > 0) {
+        const suggested = impact.targets.find((target) => target.suggested);
+        setDeleteDialog({
+          product,
+          impact,
+          choice: 'move',
+          moveToId: suggested?.id ?? '',
+        });
+        return;
+      }
+      const confirmed = window.confirm(
+        `"${product.name}" 을(를) 삭제합니다.\n되돌릴 수 없습니다. 계속할까요?`
+      );
+      if (confirmed) runDelete(product);
     });
   };
 
@@ -362,6 +417,111 @@ export default function ProductTable({
           </tbody>
         </table>
       </div>
+
+      {deleteDialog ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-dialog-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        >
+          <div className="w-full max-w-lg rounded-md bg-white p-5 shadow-xl">
+            <h2 id="delete-dialog-title" className="text-[18px] font-semibold text-slate-900">
+              후기가 붙은 상품입니다
+            </h2>
+            <p className="mt-2 text-[15px] leading-relaxed text-slate-700">
+              「{deleteDialog.product.name}」 에 후기{' '}
+              <strong>{deleteDialog.impact.reviews.total}건</strong>이 붙어 있습니다
+              {deleteDialog.impact.reviews.imported > 0
+                ? ` (외부에서 가져온 것 ${deleteDialog.impact.reviews.imported}건` +
+                  (deleteDialog.impact.reviews.own > 0
+                    ? `, 우리 손님 ${deleteDialog.impact.reviews.own}건)`
+                    : ')')
+                : ''}
+              . 상품만 지우면 후기는 손님 화면 어디에도 안 보이고, 같은 외부 후기를 다시
+              가져올 수도 없게 됩니다.
+            </p>
+
+            <fieldset className="mt-4 flex flex-col gap-3 text-[15px]">
+              <label className="flex items-start gap-2">
+                <input
+                  type="radio"
+                  name="review-choice"
+                  checked={deleteDialog.choice === 'move'}
+                  onChange={() => setDeleteDialog({ ...deleteDialog, choice: 'move' })}
+                  className="mt-1"
+                />
+                <span className="flex-1">
+                  후기를 다른 상품으로 옮기기
+                  <select
+                    value={deleteDialog.moveToId}
+                    onChange={(event) =>
+                      setDeleteDialog({
+                        ...deleteDialog,
+                        choice: 'move',
+                        moveToId: event.target.value,
+                      })
+                    }
+                    className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-[15px]"
+                  >
+                    <option value="">— 옮길 상품 고르기 —</option>
+                    {deleteDialog.impact.targets.map((target) => (
+                      <option key={target.id} value={target.id}>
+                        {target.suggested ? '★ ' : ''}
+                        {target.name} ({target.slug})
+                      </option>
+                    ))}
+                  </select>
+                  {deleteDialog.impact.targets.some((target) => target.suggested) ? (
+                    <span className="mt-1 block text-[13px] text-slate-500">
+                      ★ 는 같은 원본 상품번호 또는 같은 이름인 상품입니다.
+                    </span>
+                  ) : null}
+                </span>
+              </label>
+              <label className="flex items-start gap-2">
+                <input
+                  type="radio"
+                  name="review-choice"
+                  checked={deleteDialog.choice === 'delete'}
+                  onChange={() => setDeleteDialog({ ...deleteDialog, choice: 'delete' })}
+                  className="mt-1"
+                />
+                <span>후기도 같이 지우기 (되돌릴 수 없습니다)</span>
+              </label>
+            </fieldset>
+
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteDialog(null)}
+                disabled={pending}
+                className="admin-btn"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                disabled={pending || (deleteDialog.choice === 'move' && !deleteDialog.moveToId)}
+                onClick={() =>
+                  runDelete(deleteDialog.product, {
+                    reviews: deleteDialog.choice,
+                    moveToId:
+                      deleteDialog.choice === 'move' ? deleteDialog.moveToId : undefined,
+                  })
+                }
+                className="admin-btn-primary"
+              >
+                {pending
+                  ? '처리 중…'
+                  : deleteDialog.choice === 'move'
+                    ? '후기 옮기고 상품 삭제'
+                    : '후기와 함께 상품 삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <p className="mt-3 text-[15px] text-slate-500">
         가격·진열순서는 칸을 고친 뒤 다른 곳을 누르면 바로 저장됩니다. 노출·품절 체크는
