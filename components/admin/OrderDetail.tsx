@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import {
   acceptCancelAction,
   cancelItemAction,
@@ -75,6 +75,66 @@ export default function OrderDetail({
    *   상태만 바뀌고 송장은 저장되지 않은 주문이 생깁니다.
    */
   const hasTracking = Boolean(order.trackingNo.trim());
+
+  /*
+   * ── 송장을 쳐 놓고 저장하지 않은 채 넘어가는 것 막기 (2026-11-03) ──
+   *
+   * ★ 칸에 번호를 치는 것만으로는 아무것도 저장되지 않습니다. [송장 저장] 을 눌러야
+   *   송장이 들어가고 배송중으로 바뀌고 손님 메일이 나갑니다. 쳐 놓고 다른 버튼을
+   *   누르거나 나가면 입력이 그냥 사라지는데, 지금까지는 아무 말이 없었습니다.
+   *   (11-02 직원이 송장을 쳤는데 DB 에는 하나도 안 들어간 일)
+   *
+   * ★ 저장된 값(order.*) 과 칸의 값을 비교합니다. 저장에 성공하면 router.refresh()
+   *   로 order 가 새 값이 되므로 저절로 풀립니다.
+   */
+  const trackingDirty =
+    trackingNo.trim() !== order.trackingNo.trim() ||
+    (Boolean(trackingNo.trim()) && courier !== order.courier);
+  const trackingSectionRef = useRef<HTMLElement | null>(null);
+  const dirtyRef = useRef(false);
+  dirtyRef.current = trackingDirty;
+
+  useEffect(() => {
+    const UNSAVED =
+      '송장을 아직 저장하지 않았습니다.\n\n' +
+      '[확인] 저장하지 않고 계속합니다 (입력한 송장은 사라집니다)\n' +
+      '[취소] 돌아가서 [송장 저장] 을 누릅니다';
+
+    /*
+     * 다른 버튼·링크를 누를 때. 캡처 단계에서 먼저 잡아, 취소하면 그 버튼의 동작
+     * (React onClick · next/link 이동) 이 아예 일어나지 않게 합니다.
+     * 왼쪽 메뉴처럼 이 화면 바깥의 링크도 같이 잡으려고 document 에 겁니다.
+     */
+    const onClick = (event: MouseEvent) => {
+      if (!dirtyRef.current) return;
+      const target = event.target as Element | null;
+      const el = target?.closest?.('button, a[href]');
+      if (!el) return;
+      // 송장 칸 안의 버튼([송장 저장]) 은 그대로 둡니다.
+      if (trackingSectionRef.current?.contains(el)) return;
+      // 새 창으로 여는 링크(배송 조회 등) 는 이 화면을 떠나지 않습니다.
+      if (el instanceof HTMLAnchorElement && el.target === '_blank') return;
+      if ((el as HTMLButtonElement).disabled) return;
+      if (window.confirm(UNSAVED)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      document.getElementById('tracking')?.focus();
+    };
+
+    // 새로고침·창 닫기·주소창 이동. 브라우저가 정해진 문구로 묻습니다.
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!dirtyRef.current) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    document.addEventListener('click', onClick, true);
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => {
+      document.removeEventListener('click', onClick, true);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
+  }, []);
   /** 자동취소 제외 — 공급처에 발송 요청이 나간 주문을 잠급니다. */
   const [autoCancelExcluded, setAutoCancelExcluded] = useState(order.autoCancelExcluded);
   /** 취소 처리 메모 — 대행사 접수번호 등을 남깁니다. (4-A) */
@@ -947,7 +1007,7 @@ export default function OrderDetail({
             ) : null}
           </section>
 
-          <section className="admin-card p-4 md:p-5">
+          <section ref={trackingSectionRef} className="admin-card p-4 md:p-5">
             <h2 className="text-[18px] font-semibold text-slate-900">송장 등록</h2>
             <p className="mt-1 text-[14px] leading-relaxed text-slate-500">
               송장을 저장하면 상태가 자동으로 <strong>배송중</strong>으로 바뀌고, 손님의
@@ -993,6 +1053,11 @@ export default function OrderDetail({
             >
               {pending ? '저장 중…' : '송장 저장'}
             </button>
+            {trackingDirty && !pending ? (
+              <p role="status" className="mt-2 text-[14px] font-semibold text-red-600">
+                송장을 아직 저장하지 않았습니다. [송장 저장] 을 눌러야 들어갑니다.
+              </p>
+            ) : null}
 
             {tracking ? (
               <a
