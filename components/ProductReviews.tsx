@@ -285,6 +285,16 @@ export default function ProductReviews({
     return filtered;
   }, [reviews, sort, photoOnly]);
 
+  /**
+   * 「사진 있는 후기만 (N)」 의 N — 체크했을 때 실제로 남는 후기 수와 같아야 합니다.
+   * ★ summary.photoCount 는 우리 손님 후기만 세므로 여기 쓰면 숫자와 목록이 어긋납니다.
+   *   필터는 외부 후기까지 포함해 거르므로 같은 기준(reviews 전체)으로 셉니다.
+   */
+  const photoReviewCount = useMemo(
+    () => reviews.filter((review) => review.attachments.length > 0).length,
+    [reviews]
+  );
+
   const current = zoom >= 0 && zoom < gallery.length ? gallery[zoom] : null;
   const move = (step: number) => {
     if (gallery.length === 0) return;
@@ -301,7 +311,12 @@ export default function ProductReviews({
         상품 후기
       </h2>
 
-      {summary.count === 0 ? (
+      {/*
+        ★ "후기 없음" 은 화면에 보여줄 후기가 정말 하나도 없을 때만.
+          summary.count 는 우리 손님 후기만 세므로 이걸로 판단하면, 외부(뉴욕트렌딕)
+          후기만 있는 상품의 목록이 통째로 사라집니다. (2026-11-03, 26번 상품)
+      */}
+      {reviews.length === 0 ? (
         <p className="mt-10 border-t border-stone pt-10 text-[17px] leading-relaxed text-ink">
           아직 등록된 후기가 없습니다. 상품을 받아 보신 뒤 첫 후기를 남겨 주세요.
         </p>
@@ -361,7 +376,10 @@ export default function ProductReviews({
             </div>
           ) : null}
 
-          {/* ── 요약 ─────────────────────────────────── */}
+          {/* ── 요약 ─────────────────────────────────────
+           * ★ 표시광고법 — 평균 별점·분포는 우리 손님 후기로만 만듭니다.
+           *   우리 손님 후기가 없으면 외부 후기로 채우지 않고 블록을 통째로 감춥니다. */}
+          {summary.count > 0 ? (
           <div className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-[220px_1fr] md:gap-12">
             <div>
               <p className="text-[44px] font-semibold leading-none tabular-nums text-ink">
@@ -405,6 +423,7 @@ export default function ProductReviews({
               ) : null}
             </div>
           </div>
+          ) : null}
 
           {/* ── 정렬·필터 ────────────────────────────── */}
           <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-b border-stone pb-4">
@@ -415,7 +434,7 @@ export default function ProductReviews({
                 onChange={(event) => setPhotoOnly(event.target.checked)}
                 className="h-4 w-4"
               />
-              사진 있는 후기만 ({summary.photoCount})
+              사진 있는 후기만 ({photoReviewCount})
             </label>
 
             <div className="flex items-center gap-4">
