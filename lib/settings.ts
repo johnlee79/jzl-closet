@@ -112,29 +112,92 @@ function isMissingTable(code: string | undefined): boolean {
  * 읽기
  * ------------------------------------------------------------------ */
 
-async function readSetting(key: string): Promise<unknown> {
+/**
+ * 진짜 읽기 실패 (연결 끊김 · 시간 초과 · 권한 등). 「테이블 없음」 · 「저장된 적 없음」 은 아닙니다.
+ * 캐시 함수 안에서 이 오류를 던져야 unstable_cache 가 빈 값을 저장하지 않습니다 (아래 cachedSetting).
+ */
+class SettingReadError extends Error {
+  constructor(detail: string) {
+    // 관리자 저장 액션이 그대로 화면에 보여 줍니다 (readSettingForUpdate).
+    super(`설정을 읽지 못해 저장하지 않았습니다. 잠시 후 다시 시도해 주세요. (${detail})`);
+  }
+}
+
+/**
+ * 설정 한 줄 읽기 — 실패하면 던집니다.
+ *   · Supabase 연결 정보가 없음 / 테이블이 아직 없음 / 그 키가 저장된 적 없음 → null (정상, 기본값)
+ *   · 그 밖의 오류 → 로그를 남기고 SettingReadError
+ */
+async function readSettingOrThrow(key: string): Promise<unknown> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return null;
 
+  let data: unknown = null;
+  let error: { code?: string; message: string } | null = null;
   try {
-    const { data, error } = await supabase
-      .from(TABLE)
-      .select('value')
-      .eq('key', key)
-      .maybeSingle();
+    ({ data, error } = await supabase.from(TABLE).select('value').eq('key', key).maybeSingle());
+  } catch (thrown) {
+    console.warn(`[settings] '${key}' 를 읽지 못했습니다:`, thrown);
+    throw new SettingReadError(`'${key}' 읽기 실패`);
+  }
 
-    if (error) {
-      // 테이블을 아직 만들지 않았다면 기본값으로 갑니다. (설치 전에도 사이트가 떠야 합니다)
-      if (!isMissingTable(error.code)) {
-        console.warn(`[settings] '${key}' 를 읽지 못했습니다:`, error.message);
-      }
-      return null;
-    }
-    return (data as { value?: unknown } | null)?.value ?? null;
-  } catch (error) {
-    console.warn(`[settings] '${key}' 를 읽지 못했습니다:`, error);
+  if (error) {
+    // 테이블을 아직 만들지 않았다면 기본값으로 갑니다. (설치 전에도 사이트가 떠야 합니다)
+    if (isMissingTable(error.code)) return null;
+    console.warn(`[settings] '${key}' 를 읽지 못했습니다:`, error.message);
+    throw new SettingReadError(`'${key}' 읽기 실패: ${error.message}`);
+  }
+  return (data as { value?: unknown } | null)?.value ?? null;
+}
+
+/**
+ * 관리자 저장용 — 「지금 값 읽고 일부만 바꿔 다시 쓰기」 하는 곳은 이걸 씁니다 (2026-11-05).
+ * ★ 읽기에 실패했는데 기본값으로 이어 가면, 섹션 스위치 하나 저장하다가 배너 목록이
+ *   통째로 빈 값으로 덮입니다. 실패하면 던져서 저장 자체를 멈춥니다.
+ */
+export async function readSettingForUpdate(key: string): Promise<unknown> {
+  return readSettingOrThrow(key);
+}
+
+/** 관리자 화면 · 캐시 없는 곳용 — 실패하면 (로그만 남기고) null → 기본값. 예전 동작 그대로. */
+async function readSetting(key: string): Promise<unknown> {
+  try {
+    return await readSettingOrThrow(key);
+  } catch {
     return null;
   }
+}
+
+/**
+ * 손님 화면용 캐시 설정 (2026-11-05).
+ *
+ * ★ 왜 이렇게 바꿨나
+ *   예전엔 DB 읽기가 한 번 실패하면 readSetting 이 null → 기본값(배너 없음)을 돌려주고,
+ *   unstable_cache 가 그 빈 값을 1시간 동안 저장했습니다. 홈 배너가 사라졌다가
+ *   관리자 [저장](= revalidateTag) 을 눌러야 돌아온 일이 그것입니다.
+ * ★ 지금은 캐시 안에서 실패하면 던집니다. unstable_cache 는 던진 결과를 저장하지 않으므로
+ *   다음 요청이 다시 DB 를 봅니다. 이미 저장된 값이 있으면 그 값이 그대로 남습니다.
+ *   이번 요청만 기본값으로 그립니다 (페이지가 깨지지 않게).
+ */
+function cachedSetting<T>(
+  key: string,
+  cacheKey: string,
+  normalize: (value: unknown) => T
+): () => Promise<T> {
+  const cached = unstable_cache(async () => normalize(await readSettingOrThrow(key)), [cacheKey], {
+    tags: [SETTINGS_TAG],
+    revalidate: 3600,
+  });
+  return async () => {
+    try {
+      return await cached();
+    } catch (error) {
+      if (!(error instanceof SettingReadError)) {
+        console.warn(`[settings] '${key}' 캐시 읽기 실패:`, error);
+      }
+      return normalize(null);
+    }
+  };
 }
 
 function normalizeIcon(value: unknown, fallbackSizes: string): BrandingIcon | null {
@@ -200,10 +263,7 @@ export async function getBranding(): Promise<Branding> {
  * 프론트(루트 레이아웃)용 — 페이지마다 DB 를 두드리지 않도록 캐시합니다.
  * 파비콘을 바꾸면 revalidateTag(SETTINGS_TAG) 로 즉시 갈아 끼웁니다.
  */
-export const getCachedBranding = unstable_cache(getBranding, ['branding'], {
-  tags: [SETTINGS_TAG],
-  revalidate: 3600,
-});
+export const getCachedBranding = cachedSetting(BRANDING_KEY, 'branding', normalizeBranding);
 
 /* ── 메인 히어로 버튼 (3-J) ───────────────────────────────── */
 
@@ -232,10 +292,7 @@ export async function getHeroButtons(): Promise<HeroButtonsSettings> {
 }
 
 /** 고객 화면용 — 메인이 ISR 이라 캐시해 둡니다. 저장하면 태그로 즉시 갈립니다. */
-export const getCachedHeroButtons = unstable_cache(getHeroButtons, ['hero-buttons'], {
-  tags: [SETTINGS_TAG],
-  revalidate: 3600,
-});
+export const getCachedHeroButtons = cachedSetting(HERO_BUTTONS_KEY, 'hero-buttons', normalizeHeroButtons);
 
 /* ── 편집숍 소개 (/about) 대표 이미지 (3-I) ───────────────── */
 
@@ -254,10 +311,7 @@ export async function getAboutPageSettings(): Promise<AboutPageSettings> {
 }
 
 /** 고객 화면용 — /about 이 ISR 이라 캐시해 둡니다. 저장하면 태그로 즉시 갈립니다. */
-export const getCachedAboutPage = unstable_cache(getAboutPageSettings, ['about-page'], {
-  tags: [SETTINGS_TAG],
-  revalidate: 3600,
-});
+export const getCachedAboutPage = cachedSetting(ABOUT_PAGE_KEY, 'about-page', normalizeAboutPage);
 
 /** 사용자 지정 파비콘이 올라와 있는지 (기본값을 쓰는 중이면 false) */
 export function hasCustomFavicon(branding: Branding): boolean {
@@ -374,10 +428,7 @@ export async function getStoreSettings(): Promise<StoreSettings> {
   return normalizeStore(await readSetting(STORE_KEY));
 }
 
-export const getCachedStore = unstable_cache(getStoreSettings, ['store'], {
-  tags: [SETTINGS_TAG],
-  revalidate: 3600,
-});
+export const getCachedStore = cachedSetting(STORE_KEY, 'store', normalizeStore);
 
 /* ── 배송·반품 ────────────────────────────────────────────── */
 
@@ -412,10 +463,7 @@ export async function getShippingSettings(): Promise<ShippingSettings> {
   return normalizeShipping(await readSetting(SHIPPING_KEY));
 }
 
-export const getCachedShipping = unstable_cache(getShippingSettings, ['shipping'], {
-  tags: [SETTINGS_TAG],
-  revalidate: 3600,
-});
+export const getCachedShipping = cachedSetting(SHIPPING_KEY, 'shipping', normalizeShipping);
 
 /* ── 메인 배너 ────────────────────────────────────────────── */
 
@@ -507,10 +555,7 @@ export async function getDesignSettings(): Promise<DesignSettings> {
   return normalizeDesign(await readSetting(DESIGN_KEY));
 }
 
-export const getCachedDesign = unstable_cache(getDesignSettings, ['design'], {
-  tags: [SETTINGS_TAG],
-  revalidate: 3600,
-});
+export const getCachedDesign = cachedSetting(DESIGN_KEY, 'design', normalizeDesign);
 
 /* ── 사이트 문구 ──────────────────────────────────────────── */
 
@@ -552,8 +597,11 @@ export async function getCopySettings(): Promise<CopySettings> {
  *
  * ★ 저장·되돌리기는 반드시 이 함수를 씁니다.
  */
-export async function readStoredCopy(): Promise<Record<string, unknown>> {
-  const raw = await readSetting(COPY_KEY);
+export async function readStoredCopy(
+  options: { forUpdate?: boolean } = {}
+): Promise<Record<string, unknown>> {
+  // forUpdate: 저장 직전 — 읽기 실패면 던집니다 (빈 값으로 덮어쓰지 않게, readSettingForUpdate)
+  const raw = options.forUpdate ? await readSettingOrThrow(COPY_KEY) : await readSetting(COPY_KEY);
   return raw && typeof raw === 'object' && !Array.isArray(raw)
     ? { ...(raw as Record<string, unknown>) }
     : {};
@@ -571,10 +619,7 @@ export async function getStoredCopyKeys(): Promise<CopyKey[]> {
   );
 }
 
-export const getCachedCopy = unstable_cache(getCopySettings, ['copy'], {
-  tags: [SETTINGS_TAG],
-  revalidate: 3600,
-});
+export const getCachedCopy = cachedSetting(COPY_KEY, 'copy', normalizeCopy);
 
 /** 항목 하나만 필요한 페이지용 */
 export async function getCopySection(key: CopyKey): Promise<CopySection> {
@@ -593,10 +638,7 @@ export async function getAnalyticsSettings(): Promise<AnalyticsSettings> {
   return normalizeAnalytics(await readSetting(ANALYTICS_KEY));
 }
 
-export const getCachedAnalytics = unstable_cache(getAnalyticsSettings, ['analytics'], {
-  tags: [SETTINGS_TAG],
-  revalidate: 3600,
-});
+export const getCachedAnalytics = cachedSetting(ANALYTICS_KEY, 'analytics', normalizeAnalytics);
 
 /* ── 결제·주문 (2-A) ──────────────────────────────────────── */
 
@@ -708,10 +750,7 @@ export async function getPaymentSettings(): Promise<PaymentSettings> {
   return normalizePayment(await readSetting(PAYMENT_KEY));
 }
 
-export const getCachedPayment = unstable_cache(getPaymentSettings, ['payment'], {
-  tags: [SETTINGS_TAG],
-  revalidate: 3600,
-});
+export const getCachedPayment = cachedSetting(PAYMENT_KEY, 'payment', normalizePayment);
 
 /* ── 리뷰 (3-A) ───────────────────────────────────────────── */
 
@@ -737,10 +776,7 @@ export async function getReviewSettings(): Promise<ReviewSettings> {
   return normalizeReview(await readSetting(REVIEW_KEY));
 }
 
-export const getCachedReview = unstable_cache(getReviewSettings, ['review'], {
-  tags: [SETTINGS_TAG],
-  revalidate: 3600,
-});
+export const getCachedReview = cachedSetting(REVIEW_KEY, 'review', normalizeReview);
 
 /* ── 포인트 (3-A) ─────────────────────────────────────────── */
 
@@ -787,10 +823,7 @@ export async function getPointSettings(): Promise<PointSettings> {
   return normalizePoints(await readSetting(POINTS_KEY));
 }
 
-export const getCachedPoints = unstable_cache(getPointSettings, ['points'], {
-  tags: [SETTINGS_TAG],
-  revalidate: 3600,
-});
+export const getCachedPoints = cachedSetting(POINTS_KEY, 'points', normalizePoints);
 
 /* ── 판매정보 (3-B) ───────────────────────────────────────── */
 
@@ -827,10 +860,7 @@ export async function getSalesSettings(): Promise<SalesSettings> {
   return normalizeSales(await readSetting(SALES_KEY));
 }
 
-export const getCachedSales = unstable_cache(getSalesSettings, ['sales'], {
-  tags: [SETTINGS_TAG],
-  revalidate: 3600,
-});
+export const getCachedSales = cachedSetting(SALES_KEY, 'sales', normalizeSales);
 
 /* ── 문구 · 이벤트 (3-B) ──────────────────────────────────── */
 
@@ -868,10 +898,7 @@ export async function getEventSettings(): Promise<EventSettings> {
   return normalizeEvent(await readSetting(EVENT_KEY));
 }
 
-export const getCachedEvent = unstable_cache(getEventSettings, ['event'], {
-  tags: [SETTINGS_TAG],
-  revalidate: 3600,
-});
+export const getCachedEvent = cachedSetting(EVENT_KEY, 'event', normalizeEvent);
 
 /* ── 상품 가져오기 (3-D) ──────────────────────────────────── */
 
@@ -940,10 +967,7 @@ export async function getReferralSettings(): Promise<ReferralSettings> {
   return normalizeReferral(await readSetting(REFERRAL_KEY));
 }
 
-export const getCachedReferral = unstable_cache(getReferralSettings, ['referral'], {
-  tags: [SETTINGS_TAG],
-  revalidate: 3600,
-});
+export const getCachedReferral = cachedSetting(REFERRAL_KEY, 'referral', normalizeReferral);
 
 /* ── SNS (3-G) ────────────────────────────────────────────── */
 
@@ -976,10 +1000,7 @@ export async function getSnsSettings(): Promise<SnsSettings> {
   return normalizeSns(await readSetting(SNS_KEY));
 }
 
-export const getCachedSns = unstable_cache(getSnsSettings, ['sns'], {
-  tags: [SETTINGS_TAG],
-  revalidate: 3600,
-});
+export const getCachedSns = cachedSetting(SNS_KEY, 'sns', normalizeSns);
 
 /** 푸터용 — 계좌번호를 뺀 구매안전 서비스 표시 정보만 돌려줍니다. */
 export async function getEscrowNotice(): Promise<{

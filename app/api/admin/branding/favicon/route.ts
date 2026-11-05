@@ -9,11 +9,30 @@ import {
   DEFAULT_BRANDING,
   SETTINGS_TAG,
   deleteSetting,
-  getBranding,
+  readSettingForUpdate,
   normalizeBranding,
   writeSetting,
 } from '@/lib/settings';
 import type { Branding } from '@/lib/types';
+
+/**
+ * 지금 브랜딩 설정 — 읽기 실패면 null (2026-11-05).
+ * ★ 실패했는데 기본값으로 이어 가면 로고가 지워지고, 옛 파일 목록(keys)도 잃습니다.
+ */
+async function readBrandingForUpdate(): Promise<Branding | null> {
+  try {
+    return normalizeBranding(await readSettingForUpdate(BRANDING_KEY));
+  } catch {
+    return null;
+  }
+}
+
+function readFailed() {
+  return NextResponse.json(
+    { error: '지금 설정을 읽지 못해 바꾸지 않았습니다. 잠시 후 다시 시도해 주세요.' },
+    { status: 503 }
+  );
+}
 
 /** sharp 는 Node 런타임에서만 동작합니다. */
 export const runtime = 'nodejs';
@@ -151,7 +170,8 @@ export async function POST(request: Request) {
     apple = null;
   }
 
-  const previous = await getBranding();
+  const previous = await readBrandingForUpdate();
+  if (!previous) return readFailed();
   const uploads: { key: string; body: Buffer; contentType: string }[] = [];
 
   const sourceKey = `branding/source-${stamp}.${extension}`;
@@ -249,7 +269,8 @@ export async function POST(request: Request) {
 export async function DELETE() {
   if (!(await isAdmin())) return unauthorized();
 
-  const previous = await getBranding();
+  const previous = await readBrandingForUpdate();
+  if (!previous) return readFailed();
   // 파비콘만 기본값으로 되돌립니다. 로고는 따로 관리하므로 남겨 둡니다.
   const next: Branding = { ...DEFAULT_BRANDING, logo: previous.logo };
 

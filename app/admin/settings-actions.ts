@@ -19,13 +19,12 @@ import {
   SHIPPING_KEY,
   SNS_KEY,
   STORE_KEY,
-  getBranding,
+  normalizeBranding,
+  readSettingForUpdate,
   readStoredCopy,
-  getDesignSettings,
   normalizeAnalytics,
   normalizeDesign,
   normalizeEvent,
-  getPaymentSettings,
   normalizePayment,
   normalizePoints,
   normalizeReview,
@@ -109,7 +108,8 @@ export async function saveLogoAction(url: string): Promise<ActionResult> {
   if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
-    const branding = await getBranding();
+    // ★ 읽기 실패면 저장하지 않습니다 — 파비콘 등 나머지가 기본값으로 덮이지 않게 (2026-11-05)
+    const branding = normalizeBranding(await readSettingForUpdate(BRANDING_KEY));
     await writeSetting(BRANDING_KEY, {
       ...branding,
       logo: url.trim() ? { url: url.trim() } : null,
@@ -265,7 +265,7 @@ export async function saveFeesAction(input: {
   }
 
   try {
-    const current = await getPaymentSettings();
+    const current = normalizePayment(await readSettingForUpdate(PAYMENT_KEY));
     await writeSetting(
       PAYMENT_KEY,
       normalizePayment({
@@ -457,7 +457,7 @@ export async function saveMainSectionsAction(
   if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
-    const current = await getDesignSettings();
+    const current = normalizeDesign(await readSettingForUpdate(DESIGN_KEY)); // 읽기 실패면 저장 안 함 — 배너가 빈 값으로 덮이지 않게
     await writeSetting(DESIGN_KEY, normalizeDesign({ ...current, sections }));
     revalidateTag(SETTINGS_TAG);
     revalidatePath('/');
@@ -484,7 +484,7 @@ export async function saveOgImageAction(imageUrl: string): Promise<ActionResult>
   if (!(await isAdmin())) return { ok: false, error: '로그인이 필요합니다.' };
 
   try {
-    const current = await getDesignSettings();
+    const current = normalizeDesign(await readSettingForUpdate(DESIGN_KEY)); // 읽기 실패면 저장 안 함 — 배너가 빈 값으로 덮이지 않게
     await writeSetting(
       DESIGN_KEY,
       normalizeDesign({ ...current, ogImageUrl: imageUrl.trim() })
@@ -528,7 +528,7 @@ export async function saveCopyAction(
      *   카드결제를 붙이고도 약관이 "즉시 결제를 제공하지 않습니다" 로
      *   남아 있던 것이 이것 때문입니다.
      */
-    const stored = await readStoredCopy();
+    const stored = await readStoredCopy({ forUpdate: true });
     await writeSetting(COPY_KEY, { ...stored, [key]: cleaned });
 
     revalidateTag(SETTINGS_TAG);
@@ -616,7 +616,7 @@ export async function resetCopyAction(key: CopyKey): Promise<ActionResult<CopySe
 
   try {
     const fallback = defaultCopyFor(key);
-    const stored = await readStoredCopy();
+    const stored = await readStoredCopy({ forUpdate: true });
     delete stored[key];
     await writeSetting(COPY_KEY, stored);
 
