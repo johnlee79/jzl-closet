@@ -825,7 +825,39 @@ export async function fetchNewyorktrdProduct(
   const shop = SHOPS[shopKey];
   if (!id || id <= 0) throw new NewyorktrdError(`${shop.label} 상품번호를 확인해 주세요.`);
   const html = await fetchHtml(cafe24ProductUrl(shopKey, id), shop.label);
-  return normalize(id, html, shop);
+  const product = normalize(id, html, shop);
+  if (shop.gallery === 'slides') await dropUnreachableGallery(product);
+  return product;
+}
+
+/**
+ * 에르스한 — 대표 이미지 슬라이드 두 번째 장은 HTML 엔 /big/ 으로 적혀 있지만 실제로는
+ *   /small/ (목록용 이미지) 에만 있어 /big/ 주소가 403 입니다 (33·12·76 모두, 2026-11-05).
+ *   /small/ 쪽 파일은 대표 이미지와 바이트까지 같은 사본이라 빼도 잃는 사진이 없습니다.
+ *   그대로 두면 등록 때 R2 복사 「실패 1건」 이 매번 뜹니다. 열리지 않는 주소만 뺍니다.
+ */
+async function dropUnreachableGallery(product: NewyorktrdProduct): Promise<void> {
+  const checks = await Promise.all(
+    product.gallery.map(async (image) => {
+      try {
+        const response = await fetch(image.url, {
+          method: 'HEAD',
+          cache: 'no-store',
+          signal: AbortSignal.timeout(10000),
+        });
+        return response.ok;
+      } catch {
+        return true; // 확인 자체가 실패하면 빼지 않습니다 (복사 단계에서 다시 알려 줌)
+      }
+    })
+  );
+  const removed = product.gallery.filter((_, index) => !checks[index]).length;
+  if (removed === 0) return;
+  product.gallery = product.gallery.filter((_, index) => checks[index]);
+  product.mainImage = product.gallery[0] ?? null;
+  if (product.gallery.length === 0) {
+    product.warnings.push('대표 이미지를 가져오지 못했습니다. 직접 올려 주세요.');
+  }
 }
 
 /** 시험용 — 이미 받아 둔 HTML 을 그대로 파싱합니다 (네트워크 없이). */
