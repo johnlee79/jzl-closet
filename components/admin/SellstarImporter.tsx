@@ -33,10 +33,23 @@ import { splitOriginAndManufacturer } from '@/lib/origin';
 import { fillTemplate, type ImportSettings } from '@/lib/site-config';
 import type { Brand } from '@/lib/brands';
 import type { Category } from '@/lib/categories';
-import type { DetailBlock, UploadedImage } from '@/lib/types';
+import type { DetailBlock, ProductSource, UploadedImage } from '@/lib/types';
+
+/** 화면에 쓰는 쇼핑몰 이름 */
+const SOURCE_LABEL: Record<ProductSource, string> = {
+  sellstar: '셀스타',
+  newyorktrd: '뉴욕트렌딕',
+  aershan: '에르스한',
+};
+
+/** 카페24 쇼핑몰(뉴욕트렌딕 · 에르스한) — 배송 안내 없음 · 같은 상품 두 번 등록 막기 */
+const isCafe24Source = (source: ProductSource): boolean =>
+  source === 'newyorktrd' || source === 'aershan';
 
 /**
- * 상품 가져오기 — 셀스타 · 뉴욕트렌딕 공용.
+ * 상품 가져오기 — 셀스타 · 뉴욕트렌딕 · 에르스한 공용.
+ * ★ 에르스한 (2026-11-05) 은 뉴욕트렌딕과 같은 흐름입니다. 다만 후기 미리보기와
+ *   뉴욕트렌딕 단가표(원가) 는 뉴욕트렌딕 상품에만 나옵니다.
  *
  * 흐름
  *   1) 주소·번호를 넣고 불러오기 → 응답을 화면에 채웁니다 (주소로 어느 쪽인지 자동 판단)
@@ -96,7 +109,7 @@ export default function SellstarImporter({
 
   /* ── 불러온 상품 ─────────────────────────────────────── */
   const [loaded, setLoaded] = useState(false);
-  const [source, setSource] = useState<'sellstar' | 'newyorktrd'>('sellstar');
+  const [source, setSource] = useState<ProductSource>('sellstar');
   const [sourceProductNo, setSourceProductNo] = useState(0);
   const [sourceUrl, setSourceUrl] = useState('');
   const [sellstarId, setSellstarId] = useState(0);
@@ -212,7 +225,7 @@ export default function SellstarImporter({
       // 라우트가 돌려주는 공통 모양 — 셀스타·뉴욕트렌딕 둘 다 이 자리에 맞춰 변환되어 옵니다.
       const raw = payload as unknown as {
         product: {
-          source: 'sellstar' | 'newyorktrd';
+          source: ProductSource;
           sourceProductNo: number;
           sourceUrl: string;
           sellstarId: number;
@@ -275,7 +288,7 @@ export default function SellstarImporter({
           // 임의로 새 브랜드를 만들지 않습니다. 안내만 띄우고 비워둡니다.
           chooseBrand('');
           setBrandNotice(
-            `뉴욕트렌딕 쪽 브랜드 "${match.sourceName}" 는 우리 목록에 없습니다. ` +
+            `${SOURCE_LABEL[product.source]} 쪽 브랜드 "${match.sourceName}" 는 우리 목록에 없습니다. ` +
               '취급하지 않는 브랜드일 수 있습니다. 브랜드 칸에서 직접 골라 주시거나, ' +
               '관리자 > 브랜드 관리에서 먼저 등록해 주세요.'
           );
@@ -325,10 +338,12 @@ export default function SellstarImporter({
         : [];
 
       setRows([...head, ...body, ...tail]);
-      if (product.source === 'newyorktrd') {
-        // ★ 뉴욕트렌딕은 배송 안내를 함께 돌려주지 않습니다.
+      if (isCafe24Source(product.source)) {
+        // ★ 뉴욕트렌딕 · 에르스한은 배송 안내를 함께 돌려주지 않습니다.
         //   우리 공통 배송 설정이 적용된다는 사실만 알려주고 무료배송 체크는 꺼 둡니다.
-        setShippingNote('뉴욕트렌딕에서는 배송 안내를 가져오지 않습니다. 공통 배송 설정이 적용됩니다.');
+        setShippingNote(
+          `${SOURCE_LABEL[product.source]}에서는 배송 안내를 가져오지 않습니다. 공통 배송 설정이 적용됩니다.`
+        );
         setFreeShipping(false);
       } else {
         setShippingNote(
@@ -576,15 +591,15 @@ export default function SellstarImporter({
     return { map, errors };
   };
 
-  /** 같은 뉴욕트렌딕 상품이 이미 있으면 등록을 막습니다 (서버도 한 번 더 막습니다). */
-  const blockedAsDuplicate = source === 'newyorktrd' && Boolean(existing);
+  /** 같은 뉴욕트렌딕 · 에르스한 상품이 이미 있으면 등록을 막습니다 (서버도 한 번 더 막습니다). */
+  const blockedAsDuplicate = isCafe24Source(source) && Boolean(existing);
 
   const register = async () => {
     if (busy) return;
     if (blockedAsDuplicate) {
       setMessage({
         tone: 'error',
-        text: '이미 등록된 뉴욕트렌딕 상품이라 새로 등록하지 않습니다. 기존 상품의 수정 화면에서 고쳐 주세요.',
+        text: `이미 등록된 ${SOURCE_LABEL[source]} 상품이라 새로 등록하지 않습니다. 기존 상품의 수정 화면에서 고쳐 주세요.`,
       });
       return;
     }
@@ -773,12 +788,14 @@ export default function SellstarImporter({
       <section className="admin-card p-4 md:p-5">
         <h2 className="text-[18px] font-semibold text-slate-900">상품 주소</h2>
         <p className="mt-1 text-[15px] leading-relaxed text-slate-500">
-          셀스타·뉴욕트렌딕 주소 모두 받습니다. 주소를 보고 자동으로 구분합니다.
+          셀스타·뉴욕트렌딕·에르스한 주소 모두 받습니다. 주소를 보고 자동으로 구분합니다.
           <br />
           <span className="text-slate-400">
             예) https://sellstar.kr/marquenco/product/188 · https://newyorktrd.co.kr/product/detail.html?product_no=26
+            · https://aershan.co.kr/product/detail.html?product_no=33
             · 번호만 쓰면 셀스타입니다. 뉴욕트렌딕 번호만 쓸 때는 <strong>「nyt 26」</strong>
-            또는 <strong>「뉴욕 26」</strong> 처럼 앞에 표시해 주세요.
+            또는 <strong>「뉴욕 26」</strong>, 에르스한은 <strong>「에르스한 33」</strong> 처럼 앞에
+            표시해 주세요.
           </span>
         </p>
 
@@ -826,9 +843,9 @@ export default function SellstarImporter({
               {existing.name}
             </Link>
             .{' '}
-            {source === 'newyorktrd' ? (
+            {isCafe24Source(source) ? (
               <>
-                같은 뉴욕트렌딕 상품은 두 번 등록할 수 없습니다. 기존 상품의 편집 화면에서
+                같은 {SOURCE_LABEL[source]} 상품은 두 번 등록할 수 없습니다. 기존 상품의 편집 화면에서
                 고쳐 주세요.
               </>
             ) : (
@@ -863,7 +880,7 @@ export default function SellstarImporter({
               rel="noreferrer noopener"
               className="underline"
             >
-              {source === 'newyorktrd' ? '뉴욕트렌딕' : '셀스타'} 상품번호 {sourceProductNo}
+              {SOURCE_LABEL[source]} 상품번호 {sourceProductNo}
             </a>
           </p>
         ) : null}
@@ -896,7 +913,7 @@ export default function SellstarImporter({
 
               {/* 원본 가격은 참고용입니다. */}
               <div className="md:col-span-2 rounded-md bg-slate-50 px-3 py-2 text-[15px] text-slate-700">
-                {source === 'newyorktrd' ? '뉴욕트렌딕' : '셀스타'} 정가{' '}
+                {SOURCE_LABEL[source]} 정가{' '}
                 <strong>{formatPrice(sellstarPrice)}원</strong> · 판매가{' '}
                 <strong>{formatPrice(sellstarSalePrice)}원</strong>
                 <span className="ml-2 text-slate-500">(참고용)</span>
@@ -1151,7 +1168,7 @@ export default function SellstarImporter({
           <section className="admin-card p-4 md:p-5">
             <h2 className="text-[18px] font-semibold text-slate-900">배송 · 반품</h2>
             <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-[15px] leading-relaxed text-slate-700">
-              {source === 'newyorktrd' ? '참고' : '셀스타 값'} — {shippingNote}
+              {isCafe24Source(source) ? '참고' : '셀스타 값'} — {shippingNote}
             </p>
 
             <label className="mt-3 flex items-start gap-2 text-[16px] text-slate-800">
@@ -1280,7 +1297,9 @@ export default function SellstarImporter({
                         {index + 1}. {row.kind === 'image' ? '이미지' : '글'}
                         {row.kind === 'image' && row.reseller ? (
                           <span className="admin-badge bg-amber-100 text-amber-800">
-                            {source === 'newyorktrd' ? '뉴욕트렌딕 배너' : '리셀러 브랜드 이미지'}
+                            {isCafe24Source(source)
+                              ? `${SOURCE_LABEL[source]} 배너`
+                              : '리셀러 브랜드 이미지'}
                           </span>
                         ) : null}
                         {row.kind === 'image' && row.local ? (

@@ -12,7 +12,13 @@ import {
 } from '@/lib/sellstar';
 import { IMPORT_KEY, getImportSettings, writeSetting } from '@/lib/settings';
 import { normalizeImport } from '@/lib/settings';
-import type { DetailBlock, OptionCombination, OptionGroup, ProductInput } from '@/lib/types';
+import type {
+  DetailBlock,
+  OptionCombination,
+  OptionGroup,
+  ProductInput,
+  ProductSource,
+} from '@/lib/types';
 import type { ImportSettings } from '@/lib/site-config';
 
 /**
@@ -31,6 +37,10 @@ function fail(error: unknown, fallback: string): { ok: false; error: string } {
   // DB 유일 인덱스(products_newyorktrd_source_uniq)에 걸린 경우 — 동시에 두 번 눌렀을 때 등
   if (message.includes('products_newyorktrd_source_uniq')) {
     message = '이미 등록된 뉴욕트렌딕 상품이라 새로 만들지 않았습니다. 상품 목록에서 기존 상품을 찾아 고쳐 주세요.';
+  }
+  // 에르스한 유일 인덱스 (정리SQL/18) — 같은 사정
+  if (message.includes('products_aershan_source_uniq')) {
+    message = '이미 등록된 에르스한 상품이라 새로 만들지 않았습니다. 상품 목록에서 기존 상품을 찾아 고쳐 주세요.';
   }
   console.error('[admin/import]', message);
   return { ok: false, error: message };
@@ -58,8 +68,9 @@ export type ImportPayload = {
    * 어느 쇼핑몰에서 가져왔는가.
    * ★ 셀스타 호환을 위해 'sellstar' 는 sellstarId 자리도 함께 채웁니다.
    *   뉴욕트렌딕은 sellstarId=0, source='newyorktrd' 로만 저장됩니다.
+   *   에르스한도 같습니다 — sellstarId=0, source='aershan' (2026-11-05).
    */
-  source: 'sellstar' | 'newyorktrd';
+  source: ProductSource;
   sourceProductNo: number;
   sourceUrl: string;
   sellstarId: number;
@@ -134,13 +145,18 @@ export async function importProductAction(
    *   화면을 거치지 않고 서버 액션만 불러도 막히도록 여기서 검사합니다.
    *   (DB 에도 유일 인덱스를 걸 수 있게 supabase/schema-newyorktrd-unique.sql 을 두었습니다)
    */
-  if (payload.source === 'newyorktrd' && payload.sourceProductNo > 0) {
-    const existing = await getProductBySource('newyorktrd', payload.sourceProductNo);
+  //   에르스한도 같은 규칙입니다 (2026-11-05). 출처가 달라 뉴욕 33번과 에르스한 33번은 서로 막지 않습니다.
+  if (
+    (payload.source === 'newyorktrd' || payload.source === 'aershan') &&
+    payload.sourceProductNo > 0
+  ) {
+    const label = payload.source === 'aershan' ? '에르스한' : '뉴욕트렌딕';
+    const existing = await getProductBySource(payload.source, payload.sourceProductNo);
     if (existing) {
       return {
         ok: false,
         error:
-          `뉴욕트렌딕 ${payload.sourceProductNo}번은 이미 「${existing.name}」 (${existing.slug}) 으로 등록돼 있어 ` +
+          `${label} ${payload.sourceProductNo}번은 이미 「${existing.name}」 (${existing.slug}) 으로 등록돼 있어 ` +
           '새로 만들지 않았습니다. 그 상품의 수정 화면에서 고쳐 주세요.',
       };
     }
@@ -202,7 +218,10 @@ export async function importProductAction(
     //   실패해도 상품 등록은 그대로 성공으로 둡니다. 다만 콘솔에만 숨기지 말고
     //   사유를 응답에 담아 화면에서도 노란 안내로 뜨게 합니다 (사장님 지시 2026-10-06).
     let costWarning: string | null = null;
-    if (payload.costSheetEntryId) {
+    // ★ 뉴욕트렌딕 단가표는 뉴욕트렌딕 상품에만 (에르스한 상품 원가와 섞이지 않게, 2026-11-05).
+    if (payload.costSheetEntryId && payload.source === 'aershan') {
+      costWarning = '에르스한 상품에는 뉴욕트렌딕 단가표를 붙이지 않았습니다.';
+    } else if (payload.costSheetEntryId) {
       try {
         const { applyCostSheetEntryToProduct } = await import('@/lib/product-costs');
         await applyCostSheetEntryToProduct(saved.id, payload.costSheetEntryId, 'admin');

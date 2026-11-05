@@ -59,6 +59,13 @@ export type Measurement = {
   value: string;
 };
 
+/**
+ * 상품을 가져온 쇼핑몰 (products.source). 손으로 등록한 상품은 null.
+ * ★ 'aershan' (에르스한, 2026-11-05) — 뉴욕트렌딕과 같은 카페24 파서를 쓰지만 출처는 따로 둡니다.
+ *   중복 등록 막기 · 원가(뉴욕트렌딕 단가표) · 관리자 표시가 섞이지 않게.
+ */
+export type ProductSource = 'sellstar' | 'newyorktrd' | 'aershan';
+
 /** 앱에서 사용하는 상품 형태 */
 export type Product = {
   id: string; // uuid (DB 기본키)
@@ -105,12 +112,12 @@ export type Product = {
   sellstarPrice: number;
   sellstarSalePrice: number;
   /**
-   * 범용 출처 — 'sellstar' · 'newyorktrd' · null.
+   * 범용 출처 — 'sellstar' · 'newyorktrd' · 'aershan' · null.
    * ★ sellstarId 와 중복되는 자리처럼 보이지만, 뉴욕트렌딕이 추가되면서 "어느 쇼핑몰에서
    *   가져왔는가" 를 함께 저장해야 해서 새로 뒀습니다. sellstarId 는 기존 코드가
    *   그대로 쓰고, 뉴욕트렌딕은 source + sourceProductNo 로 저장합니다.
    */
-  source: 'sellstar' | 'newyorktrd' | null;
+  source: ProductSource | null;
   sourceProductNo: number | null;
   sourceUrl: string | null;
   /**

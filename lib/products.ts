@@ -20,6 +20,7 @@ import type {
   ProductFilter,
   ProductInput,
   ProductRow,
+  ProductSource,
   StoredOptions,
   Template,
   TemplateRow,
@@ -192,7 +193,9 @@ export function rowToProduct(row: ProductRow): Product {
     sellstarPrice: row.sellstar_price ?? 0,
     sellstarSalePrice: row.sellstar_sale_price ?? 0,
     source:
-      row.source === 'sellstar' || row.source === 'newyorktrd' ? row.source : null,
+      row.source === 'sellstar' || row.source === 'newyorktrd' || row.source === 'aershan'
+        ? row.source
+        : null,
     sourceProductNo: row.source_product_no ?? null,
     sourceUrl: row.source_url ?? null,
     sku: row.sku ?? null,
@@ -985,7 +988,7 @@ export async function getProductBySellstarId(
  *   그러면 가져오기 화면이 "이미 등록된 상품" 경고를 못 띄울 뿐, 저장 자체는 됩니다.
  */
 export async function getProductBySource(
-  source: 'sellstar' | 'newyorktrd',
+  source: ProductSource,
   productNo: number
 ): Promise<Product | null> {
   if (!source || !productNo || productNo <= 0) return null;

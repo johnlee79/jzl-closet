@@ -108,6 +108,19 @@ export async function upsertProductCost(input: UpsertCostInput): Promise<void> {
   const supabase = requireSupabaseAdmin();
   const source = input.source ?? 'newyorktrd';
 
+  // ★ 뉴욕트렌딕 단가표 원가는 에르스한 상품에 넣지 않습니다 (2026-11-05). 단가표 업로드·
+  //   짝 저장이 모두 이 함수를 지나가므로 여기서 한 번 더 막습니다.
+  if (source === 'newyorktrd') {
+    const { data: productRow } = await supabase
+      .from('products')
+      .select('source')
+      .eq('id', input.productId)
+      .maybeSingle();
+    if ((productRow as { source?: string | null } | null)?.source === 'aershan') {
+      throw new Error('에르스한 상품에는 뉴욕트렌딕 단가표 원가를 넣지 않습니다.');
+    }
+  }
+
   // 이전 값 조회
   const prevResult = await supabase
     .from('product_costs')
@@ -379,6 +392,18 @@ export async function applyCostSheetEntryToProduct(
   uploadedBy: string | null
 ): Promise<{ costPrice: number | null }> {
   const supabase = requireSupabaseAdmin();
+
+  // ★ 뉴욕트렌딕 단가표를 에르스한 상품에 붙이지 않습니다 (2026-11-05).
+  //   이름이 비슷한 같은 브랜드 상품이 많아(스투시 후드티 등) 잘못 짝지으면 원가가 섞입니다.
+  const { data: productRow } = await supabase
+    .from('products')
+    .select('source')
+    .eq('id', productId)
+    .maybeSingle();
+  if ((productRow as { source?: string | null } | null)?.source === 'aershan') {
+    throw new Error('에르스한 상품에는 뉴욕트렌딕 단가표를 붙일 수 없습니다.');
+  }
+
   // entry 조회
   const { data, error } = await supabase
     .from('cost_sheet_entries')

@@ -56,16 +56,25 @@ export default async function EditProductPage({ params }: { params: { id: string
         </div>
       ) : null}
 
-      {/* 단가표에서 원가 찾기 — 짝 바꾸기·짝 풀기 포함 */}
-      <CostSheetPicker
-        productId={product.id}
-        productName={product.name}
-        currentlyMatched={
-          sheetEntry
-            ? { rawName: sheetEntry.rawName, costPrice: sheetEntry.costPrice }
-            : null
-        }
-      />
+      {/*
+        단가표에서 원가 찾기 — 짝 바꾸기·짝 풀기 포함.
+        ★ 에르스한 상품에는 안 띄웁니다. 뉴욕트렌딕 단가표라 원가가 섞입니다 (2026-11-05).
+      */}
+      {product.source === 'aershan' ? (
+        <p className="rounded-md bg-slate-50 px-4 py-3 text-[15px] text-slate-600">
+          에르스한에서 가져온 상품입니다. 뉴욕트렌딕 단가표는 붙이지 않습니다.
+        </p>
+      ) : (
+        <CostSheetPicker
+          productId={product.id}
+          productName={product.name}
+          currentlyMatched={
+            sheetEntry
+              ? { rawName: sheetEntry.rawName, costPrice: sheetEntry.costPrice }
+              : null
+          }
+        />
+      )}
 
       <ProductForm
         product={product}

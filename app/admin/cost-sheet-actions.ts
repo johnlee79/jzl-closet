@@ -91,8 +91,10 @@ export async function previewMatchesAction(
     ]);
 
     // 상품을 brand_slug 로 그루핑해 두면 매칭이 빠릅니다.
+    // ★ 에르스한 상품은 뉴욕트렌딕 단가표 후보에서 뺍니다 — 원가가 섞이지 않게 (2026-11-05).
     const byBrand = new Map<string, typeof products>();
-    for (const product of products) {
+    const pool0 = products.filter((product) => product.source !== 'aershan');
+    for (const product of pool0) {
       const key = product.brandSlug ?? '';
       const list = byBrand.get(key) ?? [];
       list.push(product);
@@ -108,7 +110,7 @@ export async function previewMatchesAction(
       // 같은 브랜드 안에서 상위 3개 후보 — 유사도 ≥ 0.15 (너무 다른 건 제외)
       const pool = brandMatch.brandSlug
         ? byBrand.get(brandMatch.brandSlug) ?? []
-        : products; // 브랜드 알리아스 없으면 전체에서 (너무 많으면 UI 가 알아서 자름)
+        : pool0; // 브랜드 알리아스 없으면 전체에서 (너무 많으면 UI 가 알아서 자름)
 
       const candidates: Candidate[] = pool
         .map<Candidate>((product) => ({
@@ -128,7 +130,7 @@ export async function previewMatchesAction(
 
       // 품번이 일치하는 상품이 있으면 후보 맨 앞에 끼워 넣음 — 사람이 체크하기 쉽게
       if (ex.nameSkus.length > 0) {
-        const skuMatch = products.find(
+        const skuMatch = pool0.find(
           (p) => p.sku && ex.nameSkus.includes(p.sku)
         );
         if (skuMatch && !candidates.find((c) => c.productId === skuMatch.id)) {

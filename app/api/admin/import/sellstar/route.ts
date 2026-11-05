@@ -8,18 +8,22 @@ import {
 } from '@/lib/sellstar';
 import {
   NewyorktrdError,
+  cafe24ShopLabel,
+  detectCafe24Shop,
   fetchNewyorktrdProduct,
-  isNewyorktrdInput,
-  parseNewyorktrdId,
+  parseCafe24ProductNo,
   type NewyorktrdProduct,
 } from '@/lib/newyorktrd';
+import type { ProductSource } from '@/lib/types';
 import type { SellstarProduct } from '@/lib/sellstar';
 
 /**
- * 상품 가져오기 — 셀스타 · 뉴욕트렌딕 공용 라우트.
+ * 상품 가져오기 — 셀스타 · 뉴욕트렌딕 · 에르스한 공용 라우트.
  *
  * ★ 입력 주소로 어느 쪽인지 자동 판단합니다.
  *   · "newyorktrd" 가 들어 있거나, 접두어 (nyt · 뉴욕 · 뉴욕트렌딕) 가 붙으면 → 뉴욕트렌딕
+ *   · "aershan" 이 들어 있거나, 접두어 (에르스한 · ers) 가 붙으면 → 에르스한 (2026-11-05)
+ *     뉴욕트렌딕과 같은 카페24 파서를 씁니다 (lib/newyorktrd.ts 의 SHOPS). 출처만 'aershan'.
  *   · 그 밖은 → 셀스타 (기존 동작 유지)
  *
  * ★ 왜 /sellstar 라우트에 그대로 둡니까
@@ -40,7 +44,7 @@ export const maxDuration = 30;
 
 /** 응답 모양 — 두 소스를 공통된 모양으로 돌려줍니다. 화면이 하나의 코드로 처리합니다. */
 type SharedProductShape = {
-  source: 'sellstar' | 'newyorktrd';
+  source: ProductSource;
   /** 원본 쪽 상품번호 */
   sourceProductNo: number;
   /** 원본 상품 주소 — 저장과 "원본 보기" 링크에 씁니다 */
@@ -99,7 +103,8 @@ function sellstarToShared(product: SellstarProduct): SharedProductShape {
 
 function newyorktrdToShared(product: NewyorktrdProduct): SharedProductShape {
   return {
-    source: 'newyorktrd',
+    // 뉴욕트렌딕 · 에르스한 — 파서가 정한 출처 그대로
+    source: product.source,
     sourceProductNo: product.newyorktrdId,
     sourceUrl: product.sourceUrl,
     sellstarId: 0,
@@ -132,24 +137,27 @@ export async function GET(request: NextRequest) {
   const input = (request.nextUrl.searchParams.get('id') ?? '').trim();
   if (!input) {
     return NextResponse.json(
-      { error: '셀스타·뉴욕트렌딕 상품 주소나 상품번호를 넣어 주세요.' },
+      { error: '셀스타·뉴욕트렌딕·에르스한 상품 주소나 상품번호를 넣어 주세요.' },
       { status: 400 }
     );
   }
 
-  /* ── 뉴욕트렌딕 ───────────────────────────────────────── */
-  if (isNewyorktrdInput(input)) {
-    const id = parseNewyorktrdId(input);
+  /* ── 카페24 쇼핑몰 (뉴욕트렌딕 · 에르스한) ─────────────── */
+  const shop = detectCafe24Shop(input);
+  if (shop) {
+    const label = cafe24ShopLabel(shop);
+    const id = parseCafe24ProductNo(input, shop);
     if (!id) {
       return NextResponse.json(
-        { error: '뉴욕트렌딕 상품 주소나 상품번호를 확인해 주세요.' },
+        { error: `${label} 상품 주소나 상품번호를 확인해 주세요.` },
         { status: 400 }
       );
     }
 
     try {
-      const product = await fetchNewyorktrdProduct(id);
-      const existing = await getProductBySource('newyorktrd', id);
+      const product = await fetchNewyorktrdProduct(id, shop);
+      // ★ 같은 출처 안에서만 찾습니다 — 뉴욕 33번과 에르스한 33번은 다른 상품입니다.
+      const existing = await getProductBySource(shop, id);
 
       return NextResponse.json(
         {
@@ -166,8 +174,8 @@ export async function GET(request: NextRequest) {
           ? error.message
           : error instanceof Error
             ? error.message
-            : '뉴욕트렌딕 상품을 가져오지 못했습니다.';
-      console.error('[import/newyorktrd]', id, message);
+            : `${label} 상품을 가져오지 못했습니다.`;
+      console.error(`[import/${shop}]`, id, message);
       return NextResponse.json({ error: message }, { status: 502 });
     }
   }
