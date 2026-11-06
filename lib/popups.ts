@@ -79,7 +79,7 @@ const KST_OFFSET = 9 * 60 * 60 * 1000;
 /** 'YYYY-MM-DD' → 그날 한국시간 00:00:00 (ISO) */
 function kstDayStart(date: string): string | null {
   const day = date.trim().slice(0, 10);
-  if (!/^d{4}-d{2}-d{2}$/.test(day)) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
   const parsed = new Date(`${day}T00:00:00+09:00`);
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
@@ -87,7 +87,7 @@ function kstDayStart(date: string): string | null {
 /** 'YYYY-MM-DD' → 그날 한국시간 23:59:59.999 (ISO) */
 function kstDayEnd(date: string): string | null {
   const day = date.trim().slice(0, 10);
-  if (!/^d{4}-d{2}-d{2}$/.test(day)) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
   const parsed = new Date(`${day}T23:59:59.999+09:00`);
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
