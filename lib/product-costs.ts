@@ -124,13 +124,15 @@ export async function upsertProductCost(input: UpsertCostInput): Promise<void> {
   // 이전 값 조회
   const prevResult = await supabase
     .from('product_costs')
-    .select('cost_price')
+    .select('id, cost_price')
     .eq('product_id', input.productId)
     .eq('source', source)
     .is('option_combination_key', null)
     .maybeSingle();
+  if (prevResult.error) throw new Error(`원가 조회 실패: ${prevResult.error.message}`);
 
-  const prevCost = prevResult.data ? (prevResult.data as { cost_price: number }).cost_price : null;
+  const prev = prevResult.data as { id: string; cost_price: number } | null;
+  const prevCost = prev ? prev.cost_price : null;
   const changed = prevCost !== input.costPrice;
 
   const row = {
@@ -143,9 +145,26 @@ export async function upsertProductCost(input: UpsertCostInput): Promise<void> {
     updated_at: new Date().toISOString(),
   };
 
-  const { error } = await supabase
-    .from('product_costs')
-    .upsert(row, { onConflict: 'product_id,source,option_combination_key' });
+  /*
+   * ★ upsert(onConflict) 를 쓰지 않습니다 (2026-11-06).
+   *   DB 의 유일 인덱스가 (product_id, source, coalesce(option_combination_key, '')) 라는
+   *   「식 인덱스」라서, ON CONFLICT (product_id, source, option_combination_key) 와 짝이 맞지 않아
+   *   Postgres 가 42P10 오류를 냅니다. 그래서 위에서 읽은 행이 있으면 고치고, 없으면 넣습니다.
+   *   동시에 두 번 넣다가 유일 인덱스에 걸리면(23505) 한 번 더 고치기로 넘어갑니다.
+   */
+  const updateExisting = (id: string) =>
+    supabase.from('product_costs').update(row).eq('id', id);
+  let { error } = prev
+    ? await updateExisting(prev.id)
+    : await supabase.from('product_costs').insert(row);
+  if (error?.code === '23505') {
+    ({ error } = await supabase
+      .from('product_costs')
+      .update(row)
+      .eq('product_id', input.productId)
+      .eq('source', source)
+      .is('option_combination_key', null));
+  }
   if (error) throw new Error(`원가 저장 실패: ${error.message}`);
 
   if (changed) {
