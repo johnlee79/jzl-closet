@@ -129,23 +129,33 @@ export function isWithinPeriod(popup: Popup, now = new Date()): boolean {
 
 /* ── 조회 ─────────────────────────────────────────────────── */
 
+/**
+ * ★ 진짜 읽기 실패는 로그를 남기고 던집니다. 캐시가 「팝업 없음」을 들고 있지 않게 하려는 것입니다.
+ *   (테이블 없음은 예전처럼 빈 목록)
+ */
 async function readVisiblePopups(): Promise<Popup[]> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return [];
 
-  const { data, error } = await supabase
-    .from(TABLE)
-    .select('*')
-    .eq('is_visible', true)
-    .order('display_order', { ascending: true });
-
-  if (error || !data) {
-    if (error && !isMissingTable(error.code)) {
-      console.error('[popups] 목록 조회 실패:', error.message);
-    }
-    return [];
+  let result;
+  try {
+    result = await supabase
+      .from(TABLE)
+      .select('*')
+      .eq('is_visible', true)
+      .order('display_order', { ascending: true });
+  } catch (thrown) {
+    console.error('[popups] 목록 조회 실패:', thrown);
+    throw thrown;
   }
-  return (data as PopupRow[]).map(rowToPopup);
+  const { data, error } = result;
+
+  if (error) {
+    if (isMissingTable(error.code)) return [];
+    console.error('[popups] 목록 조회 실패:', error.message);
+    throw new Error(error.message);
+  }
+  return ((data ?? []) as PopupRow[]).map(rowToPopup);
 }
 
 /**
@@ -153,7 +163,7 @@ async function readVisiblePopups(): Promise<Popup[]> {
  * ★ 기간 판단은 캐시 밖에서 합니다. 캐시된 목록에 기간 조건을 넣으면
  *   기간이 지나도 캐시가 살아 있는 동안 계속 뜰 수 있습니다.
  */
-const getCachedPopups = unstable_cache(readVisiblePopups, ['popups-visible'], {
+const popupsCache = unstable_cache(readVisiblePopups, ['popups-visible'], {
   tags: [POPUP_TAG],
   // ★ 페이지 자체의 ISR(60초)과 맞춥니다.
   //   300초로 두면 팝업을 새로 등록하고도 최대 5분을 기다려야 해서
@@ -161,6 +171,15 @@ const getCachedPopups = unstable_cache(readVisiblePopups, ['popups-visible'], {
   //   저장할 때 revalidateTag(POPUP_TAG) 로 바로 비우지만, 그래도 여유를 줄여 둡니다.
   revalidate: 60,
 });
+
+/** 캐시 밖에서 실패를 받아 이번 요청만 빈 목록으로 (로그는 위에서 남김) */
+async function getCachedPopups(): Promise<Popup[]> {
+  try {
+    return await popupsCache();
+  } catch {
+    return [];
+  }
+}
 
 /**
  * 지금 기간에 든 팝업 전부.

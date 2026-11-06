@@ -613,7 +613,14 @@ export function isGoalRunning(goal: Goal, today = kstToday()): boolean {
   return true;
 }
 
-export async function getGoals(includeInactive = false): Promise<Goal[]> {
+/** 테이블 없음·관계 없음 — 이건 「목표 없음」이 맞는 답입니다. */
+const GOAL_MISSING_CODES = new Set(['42P01', 'PGRST205', 'PGRST202', 'PGRST200']);
+
+/**
+ * 목표 목록. ★ 진짜 읽기 실패(연결 끊김·DB 오류)는 로그를 남기고 던집니다.
+ *   hasRunningGoal 캐시가 「진행 중인 목표 없음」을 5분 들고 있지 않게 하려는 것입니다.
+ */
+async function readGoalsOrThrow(includeInactive: boolean): Promise<Goal[]> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return [];
 
@@ -621,12 +628,32 @@ export async function getGoals(includeInactive = false): Promise<Goal[]> {
   let query = supabase.from(GOALS).select('*, gift:referral_gifts(*)');
   if (!includeInactive) query = query.eq('is_active', true);
 
-  const { data, error } = await query
-    .order('display_order', { ascending: true })
-    .order('created_at', { ascending: true });
+  let result;
+  try {
+    result = await query
+      .order('display_order', { ascending: true })
+      .order('created_at', { ascending: true });
+  } catch (thrown) {
+    console.warn('[referrals] 목표를 읽지 못했습니다:', thrown);
+    throw thrown;
+  }
+  const { data, error } = result;
 
-  if (error || !data) return [];
-  return (data as GoalRow[]).map(toGoal);
+  if (error) {
+    if (error.code && GOAL_MISSING_CODES.has(error.code)) return [];
+    console.warn('[referrals] 목표를 읽지 못했습니다:', error.message);
+    throw new Error(error.message);
+  }
+  return ((data ?? []) as GoalRow[]).map(toGoal);
+}
+
+/** 실패하면 빈 목록 (예전 동작 — 이제 로그는 남습니다) */
+export async function getGoals(includeInactive = false): Promise<Goal[]> {
+  try {
+    return await readGoalsOrThrow(includeInactive);
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -640,16 +667,25 @@ export async function getGoals(includeInactive = false): Promise<Goal[]> {
  *   판단 기준이 "오늘 날짜" 라 무한정 들고 있으면 이벤트 시작·종료일이 지나도
  *   한동안 예전 답이 나갑니다. 목표를 고치면 관리자 액션이 태그로 즉시 비웁니다.
  */
-export const hasRunningGoal = unstable_cache(
+const runningGoalCache = unstable_cache(
   async (): Promise<boolean> => {
     // is_active = true 인 것만 가져오고, 기간은 여기서 한 번 더 봅니다.
-    const goals = await getGoals();
+    // ★ 읽기 실패는 던져서 캐시에 남기지 않습니다.
+    const goals = await readGoalsOrThrow(false);
     const today = kstToday();
     return goals.some((goal) => isGoalRunning(goal, today));
   },
   ['referral-running-goal'],
   { tags: [REFERRAL_GOALS_TAG], revalidate: 300 }
 );
+
+export async function hasRunningGoal(): Promise<boolean> {
+  try {
+    return await runningGoalCache();
+  } catch {
+    return false;
+  }
+}
 
 export type GoalInput = Omit<Goal, 'id' | 'gift'>;
 

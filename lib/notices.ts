@@ -105,7 +105,11 @@ function rowToNotice(row: NoticeRow): Notice {
 
 /* ── 조회 ─────────────────────────────────────────────────── */
 
-/** 노출 중인 것을 종류 구분 없이 전부. 아래 두 함수가 나눠 씁니다. */
+/**
+ * 노출 중인 것을 종류 구분 없이 전부. 아래 두 함수가 나눠 씁니다.
+ * ★ 진짜 읽기 실패는 로그를 남기고 던집니다. 캐시가 빈 목록을 1시간 들고 있지 않게 하려는 것입니다.
+ *   (테이블 없음은 예전처럼 빈 목록)
+ */
 async function readVisibleRows(): Promise<Notice[]> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return [];
@@ -115,26 +119,41 @@ async function readVisibleRows(): Promise<Notice[]> {
    *   칸이 아직 없으면 조회가 통째로 실패해서 공지 화면이 빕니다.
    *   가져온 뒤 코드에서 거릅니다. (맨 위 ★ 주석)
    */
-  const { data, error } = await supabase
-    .from(TABLE)
-    .select('*')
-    .eq('is_visible', true)
-    .order('is_pinned', { ascending: false })
-    .order('created_at', { ascending: false });
-
-  if (error || !data) {
-    if (error && !isMissingTable(error.code)) {
-      console.error('[notices] 목록 조회 실패:', error.message);
-    }
-    return [];
+  let result;
+  try {
+    result = await supabase
+      .from(TABLE)
+      .select('*')
+      .eq('is_visible', true)
+      .order('is_pinned', { ascending: false })
+      .order('created_at', { ascending: false });
+  } catch (thrown) {
+    console.error('[notices] 목록 조회 실패:', thrown);
+    throw thrown;
   }
-  return (data as NoticeRow[]).map(rowToNotice);
+  const { data, error } = result;
+
+  if (error) {
+    if (isMissingTable(error.code)) return [];
+    console.error('[notices] 목록 조회 실패:', error.message);
+    throw new Error(error.message);
+  }
+  return ((data ?? []) as NoticeRow[]).map(rowToNotice);
 }
 
-const getVisibleAll = unstable_cache(readVisibleRows, ['notices-visible'], {
+const visibleAllCache = unstable_cache(readVisibleRows, ['notices-visible'], {
   tags: [NOTICE_TAG],
   revalidate: 3600,
 });
+
+/** 캐시 밖에서 실패를 받아 이번 요청만 빈 목록으로 (로그는 위에서 남김) */
+async function getVisibleAll(): Promise<Notice[]> {
+  try {
+    return await visibleAllCache();
+  } catch {
+    return [];
+  }
+}
 
 /**
  * 손님용 공지 목록 — **자주 묻는 질문은 빠집니다.**

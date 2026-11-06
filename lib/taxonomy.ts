@@ -163,8 +163,13 @@ function rowToBrand(row: BrandRow): Brand {
  * 읽기 — 실패하면 조용히 폴백으로 넘어갑니다.
  * ------------------------------------------------------------------ */
 
-/** DB 에서 분류를 읽습니다. 테이블이 없거나 비어 있으면 null. */
-async function readCategories(): Promise<Category[] | null> {
+/**
+ * DB 에서 분류를 읽습니다. 테이블이 없거나 비어 있으면 null.
+ * ★ 진짜 읽기 실패(연결 끊김·시간 초과·DB 오류)는 로그를 남기고 **던집니다.**
+ *   캐시(getCachedCategories)가 실패한 결과를 1시간 들고 있지 않게 하려는 것입니다.
+ *   (2026-11-05 홈 배너 사라짐과 같은 문제 — lib/settings.ts 참고)
+ */
+async function readCategoriesOrThrow(): Promise<Category[] | null> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return null;
 
@@ -197,15 +202,30 @@ async function readCategories(): Promise<Category[] | null> {
     }
 
     if (error) {
-      if (!isMissingTable(error.code)) {
-        console.warn('[taxonomy] 분류를 읽지 못했습니다:', error.message);
-      }
-      return null;
+      if (isMissingTable(error.code)) return null;
+      throw new TaxonomyReadError(error.message);
     }
     const rows = (data ?? []) as CategoryRow[];
     return rows.length > 0 ? rowsToCategories(rows) : null;
   } catch (error) {
-    console.warn('[taxonomy] 분류를 읽지 못했습니다:', error);
+    if (!(error instanceof TaxonomyReadError)) error = new TaxonomyReadError(error);
+    console.warn('[taxonomy] 분류를 읽지 못했습니다:', (error as TaxonomyReadError).detail);
+    throw error;
+  }
+}
+
+/** 읽기 실패 — 로그는 이미 남긴 상태로 던집니다. */
+class TaxonomyReadError extends Error {
+  constructor(readonly detail: unknown) {
+    super(typeof detail === 'string' ? detail : String(detail));
+  }
+}
+
+/** 실패하면 null (예전 동작) — 관리자 화면용 */
+async function readCategories(): Promise<Category[] | null> {
+  try {
+    return await readCategoriesOrThrow();
+  } catch {
     return null;
   }
 }
@@ -226,7 +246,8 @@ function clampLogoScale(value: number | undefined): number {
 /** 아직 없는 컬럼을 골랐을 때 오는 코드 */
 const MISSING_COLUMN = '42703';
 
-async function readBrands(): Promise<Brand[] | null> {
+/** 브랜드 — readCategoriesOrThrow 와 같은 규칙 (진짜 실패면 로그 남기고 던짐) */
+async function readBrandsOrThrow(): Promise<Brand[] | null> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return null;
 
@@ -275,10 +296,8 @@ async function readBrands(): Promise<Brand[] | null> {
     }
 
     if (error) {
-      if (!isMissingTable(error.code)) {
-        console.warn('[taxonomy] 브랜드를 읽지 못했습니다:', error.message);
-      }
-      return null;
+      if (isMissingTable(error.code)) return null;
+      throw new TaxonomyReadError(error.message);
     }
     // ★ 표가 비어 있으면 "브랜드가 없다" 가 정답입니다.
     //   예전에는 여기서 null 을 돌려주는 바람에, 운영자가 브랜드를 전부 지워도
@@ -286,7 +305,16 @@ async function readBrands(): Promise<Brand[] | null> {
     //   null 은 표가 아예 없거나 읽기에 실패했을 때만 씁니다.
     return (data ?? []).map((row) => rowToBrand(row as BrandRow));
   } catch (error) {
-    console.warn('[taxonomy] 브랜드를 읽지 못했습니다:', error);
+    if (!(error instanceof TaxonomyReadError)) error = new TaxonomyReadError(error);
+    console.warn('[taxonomy] 브랜드를 읽지 못했습니다:', (error as TaxonomyReadError).detail);
+    throw error;
+  }
+}
+
+async function readBrands(): Promise<Brand[] | null> {
+  try {
+    return await readBrandsOrThrow();
+  } catch {
     return null;
   }
 }
@@ -300,16 +328,39 @@ export async function getBrands(): Promise<Brand[]> {
   return (await readBrands()) ?? FALLBACK_BRANDS;
 }
 
-/** 프론트용 — 페이지마다 DB 를 두드리지 않도록 캐시합니다. */
-export const getCachedCategories = unstable_cache(getCategories, ['taxonomy-categories'], {
-  tags: [TAXONOMY_TAG],
-  revalidate: 3600,
-});
+/**
+ * 프론트용 — 페이지마다 DB 를 두드리지 않도록 캐시합니다.
+ * ★ 캐시 안에서는 진짜 실패를 던집니다. Next 의 unstable_cache 는 던진 결과를 저장하지 않으므로
+ *   그 요청 하나만 기본 목록으로 그리고, 다음 요청은 DB 를 다시 봅니다.
+ *   (이미 저장된 값이 있으면 그 값이 남습니다)
+ */
+const categoriesCache = unstable_cache(
+  async () => (await readCategoriesOrThrow()) ?? FALLBACK_CATEGORIES,
+  ['taxonomy-categories'],
+  { tags: [TAXONOMY_TAG], revalidate: 3600 }
+);
 
-export const getCachedBrands = unstable_cache(getBrands, ['taxonomy-brands'], {
-  tags: [TAXONOMY_TAG],
-  revalidate: 3600,
-});
+const brandsCache = unstable_cache(
+  async () => (await readBrandsOrThrow()) ?? FALLBACK_BRANDS,
+  ['taxonomy-brands'],
+  { tags: [TAXONOMY_TAG], revalidate: 3600 }
+);
+
+export async function getCachedCategories(): Promise<Category[]> {
+  try {
+    return await categoriesCache();
+  } catch {
+    return FALLBACK_CATEGORIES;
+  }
+}
+
+export async function getCachedBrands(): Promise<Brand[]> {
+  try {
+    return await brandsCache();
+  } catch {
+    return FALLBACK_BRANDS;
+  }
+}
 
 /** 분류·브랜드를 한 번에 (대부분의 페이지가 둘 다 필요합니다) */
 export async function getTaxonomy(): Promise<{ categories: Category[]; brands: Brand[] }> {
