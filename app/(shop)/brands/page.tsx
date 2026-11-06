@@ -4,7 +4,7 @@ import BrandMark from '@/components/BrandMark';
 import SafeImage from '@/components/SafeImage';
 import SnsLinks from '@/components/SnsLinks';
 import { brandImage, visibleBrands, type Brand } from '@/lib/brands';
-import { getProducts } from '@/lib/products';
+import { getStorefrontProducts } from '@/lib/products';
 import {
   getCachedSns,
   getCachedStore,
@@ -30,7 +30,12 @@ import { getCachedBrands } from '@/lib/taxonomy';
  *   검색엔진이 어느 쪽을 본문으로 볼지 정하지 못합니다.
  */
 
-export const revalidate = 60;
+/**
+ * ★ 요청 때 만듭니다 (2026-11-06). 빌드 때 DB 를 읽지 않게 하려는 것입니다.
+ *   DB 를 매번 두드리지는 않습니다 — 설정·분류·상품은 데이터 캐시(unstable_cache)에서 읽고,
+ *   읽기가 실패하면 직전 값이 그대로 남습니다.
+ */
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
   const store = await getCachedStore();
@@ -56,7 +61,7 @@ function originLine(brand: Brand): string {
 
 export default async function BrandsPage() {
   const [allProducts, allBrands, store, sns] = await Promise.all([
-    getProducts(),
+    getStorefrontProducts(),
     getCachedBrands(),
     getCachedStore(),
     getCachedSns(),

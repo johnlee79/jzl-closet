@@ -5,6 +5,11 @@ import SignupForm from '@/components/SignupForm';
 import { isAuthConfigured } from '@/lib/supabase/auth-server';
 
 /** ★ 개인정보를 입력하는 화면이라 검색에 잡히면 안 됩니다. */
+/**
+ * ★ 요청 때 만듭니다 (2026-11-06). 빌드 때 DB 를 읽지 않게 하려는 것입니다 — 레이아웃이 설정·분류를 읽습니다.
+ */
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: '회원가입',
   robots: { index: false, follow: false },

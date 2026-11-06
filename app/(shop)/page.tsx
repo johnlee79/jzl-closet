@@ -10,7 +10,7 @@ import SafeImage from '@/components/SafeImage';
 import { visibleBrands } from '@/lib/brands';
 import { hasVisibleChildren, visibleCategories, visibleSubCategories } from '@/lib/categories';
 import { resolveCopy } from '@/lib/copy';
-import { getProducts } from '@/lib/products';
+import { getStorefrontProducts } from '@/lib/products';
 import {
   getCachedCopy,
   getCachedDesign,
@@ -23,8 +23,12 @@ import { getTaxonomy } from '@/lib/taxonomy';
 /** NEW ARRIVAL 제목 「Just Arrived」 전용 필기체 (2026-11-06 사장님 지시). 다른 제목은 그대로. */
 const justArrivedFont = Pinyon_Script({ weight: '400', subsets: ['latin'], display: 'swap' });
 
-/** ISR — 60초마다 다시 굽고, 관리자가 저장하면 revalidatePath 로 즉시 갱신됩니다. */
-export const revalidate = 60;
+/**
+ * ★ 요청 때 만듭니다 (2026-11-06). 빌드 때 DB 를 읽지 않게 하려는 것입니다.
+ *   DB 를 매번 두드리지는 않습니다 — 설정·분류·상품은 데이터 캐시(unstable_cache)에서 읽고,
+ *   읽기가 실패하면 직전 값이 그대로 남습니다.
+ */
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
   const store = await getCachedStore();
@@ -45,7 +49,7 @@ export default async function HomePage() {
   // ★ 분류와 브랜드는 getTaxonomy 가 한 번에 돌려줍니다. 브랜드를 따로 읽지 않습니다.
   const [allProducts, { categories, brands }, store, copy, design, heroButtons] =
     await Promise.all([
-      getProducts(),
+      getStorefrontProducts(),
       getTaxonomy(),
       getCachedStore(),
       getCachedCopy(),

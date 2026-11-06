@@ -22,9 +22,8 @@ import { findBrand } from '@/lib/brands';
 import { findCategory, findSubCategory } from '@/lib/categories';
 import { formatPrice, getDiscountRate, isProductSoldOut } from '@/lib/product-utils';
 import {
-  getAllProductSlugs,
-  getProductBySlug,
   getProductNeighbours,
+  getStorefrontProductBySlug,
 } from '@/lib/products';
 import {
   getCachedEvent,
@@ -56,9 +55,12 @@ export const revalidate = 30;
 /** 빌드 이후에 등록된 상품도 첫 요청 때 서버에서 구워 내보냅니다. */
 export const dynamicParams = true;
 
+/**
+ * ★ 빌드 때는 하나도 굽지 않습니다 (2026-11-06). 첫 요청 때 구워서 ISR 로 저장합니다.
+ *   빌드 중 DB 응답이 늦으면 60초 제한에 걸려 배포가 통째로 실패했기 때문입니다 (104d072).
+ */
 export async function generateStaticParams(): Promise<{ id: string }[]> {
-  const slugs = await getAllProductSlugs();
-  return slugs.map((slug) => ({ id: slug }));
+  return [];
 }
 
 /** 상대 경로는 사이트 주소를 붙이고, R2 같은 절대 URL 은 그대로 둡니다. */
@@ -68,7 +70,7 @@ function toAbsolute(src: string): string {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const [product, brands, store] = await Promise.all([
-    getProductBySlug(params.id),
+    getStorefrontProductBySlug(params.id),
     getCachedBrands(),
     getCachedStore(),
   ]);
@@ -101,7 +103,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ProductDetailPage({ params }: PageProps) {
-  const product = await getProductBySlug(params.id);
+  const product = await getStorefrontProductBySlug(params.id);
   if (!product || !product.isVisible) {
     notFound();
   }

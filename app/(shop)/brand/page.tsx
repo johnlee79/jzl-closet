@@ -11,6 +11,11 @@ import { permanentRedirect } from 'next/navigation';
  * ★ /brand/{slug} 상세는 그대로입니다. 주소를 바꾸지 않았습니다.
  *   이미 색인된 브랜드 페이지 주소를 바꾸면 그동안 쌓인 순위를 버리게 됩니다.
  */
+/**
+ * ★ 요청 때 만듭니다 (2026-11-06). 빌드 때 DB 를 읽지 않게 하려는 것입니다 — 레이아웃이 설정·분류를 읽습니다.
+ */
+export const dynamic = 'force-dynamic';
+
 export default function BrandListRedirect(): never {
   permanentRedirect('/brands');
 }

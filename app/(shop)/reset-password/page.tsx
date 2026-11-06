@@ -3,6 +3,11 @@ import Link from 'next/link';
 import AuthCard from '@/components/AuthCard';
 import { RequestResetForm } from '@/components/ResetPasswordForm';
 
+/**
+ * ★ 요청 때 만듭니다 (2026-11-06). 빌드 때 DB 를 읽지 않게 하려는 것입니다 — 레이아웃이 설정·분류를 읽습니다.
+ */
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: '비밀번호 찾기',
   robots: { index: false, follow: false },

@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { isAdmin } from '@/lib/admin-guard';
 import {
   createProduct,
@@ -14,6 +14,7 @@ import {
   updateProduct,
   countOrderLinesForProduct,
   listProductsForPicker,
+  PRODUCTS_TAG,
 } from '@/lib/products';
 import {
   countReviewsForProduct,
@@ -38,6 +39,8 @@ function fail(error: unknown, fallback: string): { ok: false; error: string } {
  * 상품이 옮겨 다녔을 수 있으므로 이전/이후 경로를 모두 넘겨 주세요.
  */
 async function revalidateStorefront(products: (Product | null)[]): Promise<void> {
+  // 손님 화면 상품 캐시(lib/products.ts getStorefrontProducts)도 함께 비웁니다.
+  revalidateTag(PRODUCTS_TAG);
   revalidatePath('/');
   revalidatePath('/products');
   // 브랜드 목록은 상품 수를 함께 보여 주므로 상품이 바뀌면 같이 다시 굽습니다.

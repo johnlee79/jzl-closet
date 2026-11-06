@@ -1,4 +1,5 @@
 import 'server-only';
+import { unstable_cache } from 'next/cache';
 import { assertWritten, countWritten } from '@/lib/db-write';
 
 import { findCategory } from '@/lib/categories';
@@ -390,7 +391,9 @@ function applyFilter<T>(query: T, filter: ProductFilter, searchOr: string): T {
 async function readProducts(
   filter: ProductFilter,
   columns: string,
-  searchOr?: string
+  searchOr?: string,
+  /** true 면 진짜 읽기 실패를 빈 목록 대신 던집니다 (손님 화면 캐시용). 로그는 똑같이 남습니다. */
+  strict = false
 ): Promise<Product[]> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return [];
@@ -420,9 +423,10 @@ async function readProducts(
      */
     if (error.code === MISSING_COLUMN && columns !== '*') {
       console.error('[products] 컬럼 목록이 스키마와 다릅니다:', error.message);
-      return readProducts(filter, '*', or);
+      return readProducts(filter, '*', or, strict);
     }
     console.error('[products] 목록 조회 실패:', error.message);
+    if (strict) throw new ProductReadError(error.message);
     return [];
   }
   return (data as unknown as ProductRow[]).map(rowToProduct);
@@ -469,6 +473,62 @@ export async function getProductsWithCount(
     total: count ?? products.length,
     totalAll: allCount ?? count ?? products.length,
   };
+}
+
+/* ------------------------------------------------------------------
+ * 손님 화면용 — 데이터 캐시 (2026-11-06)
+ * ------------------------------------------------------------------
+ * ★ 23시쯤 DB 가 느려졌을 때 홈 상품·분류 개수가 통째로 비어 보였습니다.
+ *   읽기 실패가 빈 목록으로 바뀌어 그대로 화면(ISR)에 저장됐기 때문입니다.
+ * ★ 이제 손님 화면은 아래 함수로 읽습니다.
+ *   - 진짜 읽기 실패는 캐시 안에서 던집니다. Next 의 unstable_cache 는 던진 결과를 저장하지 않고,
+ *     이미 저장된 값이 있으면 그 값을 돌려준 채 뒤에서 다시 읽습니다. → 직전 화면이 유지됩니다.
+ *   - 저장된 값이 하나도 없을 때(첫 요청·관리자 저장 직후)만 오류가 페이지까지 올라갑니다.
+ *     ISR 페이지(상품·분류·브랜드)는 이때 예전 화면을 그대로 두고, 요청 때 만드는 페이지는
+ *     「잠시 후 다시」 화면이 한 번 뜹니다. 빈 목록이 저장되는 일은 없습니다.
+ * ★ 60초마다 다시 읽습니다(상품 상세는 30초). 예전 ISR 주기와 같습니다.
+ *   관리자 저장·주문의 revalidatePath 는 그 주소에서 읽은 캐시도 함께 비웁니다(Next 의 암묵 태그).
+ *   상품 저장은 revalidateTag(PRODUCTS_TAG) 로 한 번 더 비웁니다.
+ * ★ 관리자·주문·결제 쪽은 이 캐시를 쓰지 않습니다. 재고·가격은 늘 DB 에서 직접 읽습니다.
+ */
+export const PRODUCTS_TAG = 'products';
+
+class ProductReadError extends Error {}
+
+const storefrontProductsCache = unstable_cache(
+  async (filter: ProductFilter) =>
+    readProducts(filter, filter.light ? LIST_COLUMNS : '*', undefined, true),
+  ['storefront-products'],
+  { tags: [PRODUCTS_TAG], revalidate: 60 }
+);
+
+/** 손님 화면용 상품 목록 (노출 중인 것). 읽기 실패면 던집니다 — 위 설명. */
+export async function getStorefrontProducts(filter: ProductFilter = {}): Promise<Product[]> {
+  if (!getSupabaseAdmin()) return [];
+  return storefrontProductsCache(filter);
+}
+
+const storefrontProductBySlugCache = unstable_cache(
+  async (slug: string): Promise<Product | null> => {
+    const supabase = requireSupabaseAdmin();
+    const { data, error } = await supabase.from(TABLE).select('*').eq('slug', slug).maybeSingle();
+    if (error) {
+      console.error('[products] 상품 조회 실패:', slug, error.message);
+      throw new ProductReadError(error.message);
+    }
+    return data ? rowToProduct(data as ProductRow) : null;
+  },
+  ['storefront-product-by-slug'],
+  { tags: [PRODUCTS_TAG], revalidate: 30 }
+);
+
+/**
+ * 손님 화면용 상품 상세. null 은 「정말 없는 상품」일 때만입니다.
+ * ★ 예전 getProductBySlug 는 읽기 실패도 null 이라 상품 페이지가 404 로 저장될 수 있었습니다.
+ */
+export async function getStorefrontProductBySlug(slug: string): Promise<Product | null> {
+  if (!getSupabaseAdmin()) return null;
+  return storefrontProductBySlugCache(slug);
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
@@ -522,21 +582,21 @@ export async function getProductsByCategory(
   if (!category) return [];
 
   if (category.matchType === 'all') {
-    return getProducts(subCategorySlug ? { subCategorySlug } : {});
+    return getStorefrontProducts(subCategorySlug ? { subCategorySlug } : {});
   }
   if (category.matchType === 'flag') {
-    return getProducts({ onlySale: true });
+    return getStorefrontProducts({ onlySale: true });
   }
-  return getProducts({ categorySlug, subCategorySlug });
+  return getStorefrontProducts({ categorySlug, subCategorySlug });
 }
 
 export async function getProductsByBrand(brandSlug: string): Promise<Product[]> {
-  return getProducts({ brandSlug });
+  return getStorefrontProducts({ brandSlug });
 }
 
 /** 신상품 우선 정렬로 count 개 */
 export async function getNewProducts(count = 4): Promise<Product[]> {
-  const products = await getProducts();
+  const products = await getStorefrontProducts();
   const news = products.filter((product) => product.isNew);
   const rest = products.filter((product) => !product.isNew);
   return [...news, ...rest].slice(0, count);
@@ -577,7 +637,7 @@ export async function getProductNeighbours(
   const brandCount = options.brand ?? 4;
 
   // ── 여기 한 번이 전부입니다 ─────────────────────────────
-  const pool = (await getProducts({ light: true })).filter(
+  const pool = (await getStorefrontProducts({ light: true })).filter(
     (item) => item.id !== product.id
   );
 

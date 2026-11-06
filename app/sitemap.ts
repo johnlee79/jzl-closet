@@ -11,7 +11,12 @@ import { getCachedBrands, getCachedCategories } from '@/lib/taxonomy';
  * 분류·브랜드는 DB(관리자에서 고친 값), 상품은 products 테이블에서 읽습니다.
  * 노출을 끈 분류·브랜드와 숨김 상품은 자동으로 빠집니다.
  */
-export const revalidate = 60;
+/**
+ * ★ 요청 때 만듭니다 (2026-11-06). 빌드 때 DB 를 읽지 않게 하려는 것입니다.
+ *   DB 를 매번 두드리지는 않습니다 — 설정·분류·상품은 데이터 캐시(unstable_cache)에서 읽고,
+ *   읽기가 실패하면 직전 값이 그대로 남습니다.
+ */
+export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const lastModified = new Date();

@@ -21,10 +21,12 @@ export const revalidate = 60;
 /** 관리자에서 분류를 새로 만들면 첫 요청 때 서버에서 구워 내보냅니다. */
 export const dynamicParams = true;
 
-/** 노출 중인 대분류만 정적 생성합니다. isVisible:false 는 라우트 자체가 만들어지지 않습니다. */
+/**
+ * ★ 빌드 때는 하나도 굽지 않습니다 (2026-11-06). 첫 요청 때 구워서 ISR 로 저장합니다.
+ *   빌드 중 DB 응답이 늦으면 60초 제한에 걸려 배포가 통째로 실패했기 때문입니다 (104d072).
+ */
 export async function generateStaticParams(): Promise<{ slug: string }[]> {
-  const categories = await getCachedCategories();
-  return visibleCategories(categories).map((category) => ({ slug: category.slug }));
+  return [];
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

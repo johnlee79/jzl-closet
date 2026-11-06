@@ -22,15 +22,12 @@ type PageProps = { params: { slug: string; sub: string } };
 export const revalidate = 60;
 export const dynamicParams = true;
 
-/** 노출 중인 대분류의 노출 중인 children 을 모두 정적 생성합니다. */
+/**
+ * ★ 빌드 때는 하나도 굽지 않습니다 (2026-11-06). 첫 요청 때 구워서 ISR 로 저장합니다.
+ *   빌드 중 DB 응답이 늦으면 60초 제한에 걸려 배포가 통째로 실패했기 때문입니다 (104d072).
+ */
 export async function generateStaticParams(): Promise<{ slug: string; sub: string }[]> {
-  const categories = await getCachedCategories();
-  return visibleCategories(categories).flatMap((category) =>
-    visibleSubCategories(categories, category.slug).map((child) => ({
-      slug: category.slug,
-      sub: child.slug,
-    }))
-  );
+  return [];
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

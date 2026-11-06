@@ -179,6 +179,30 @@ async function readSetting(key: string): Promise<unknown> {
  *   다음 요청이 다시 DB 를 봅니다. 이미 저장된 값이 있으면 그 값이 그대로 남습니다.
  *   이번 요청만 기본값으로 그립니다 (페이지가 깨지지 않게).
  */
+/**
+ * ★ 빌드 중에는 설정 읽기를 8초까지만 기다립니다 (2026-11-06).
+ *   손님 화면은 이제 빌드 때 굽지 않지만, 404 화면(/_not-found)과 관리자 로그인 화면은
+ *   Next 가 빌드 때 꼭 굽고, 맨 바깥 레이아웃이 로고·상호·분석 설정을 읽습니다.
+ *   DB 가 느릴 때 이 몇 장 때문에 배포가 60초 제한에 걸려 실패하지 않도록,
+ *   8초가 넘으면 기본값으로 굽고 로그를 남깁니다. (DB 가 정상이면 평소처럼 실제 값으로 굽습니다)
+ */
+const IS_BUILD = process.env.NEXT_PHASE === 'phase-production-build';
+const BUILD_READ_TIMEOUT_MS = 8000;
+
+function withBuildTimeout<T>(promise: Promise<T>, key: string): Promise<T> {
+  if (!IS_BUILD) return promise;
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      console.warn(`[settings] '${key}' 를 빌드 중 ${BUILD_READ_TIMEOUT_MS / 1000}초 안에 읽지 못해 기본값으로 굽습니다.`);
+      reject(new SettingReadError('build timeout'));
+    }, BUILD_READ_TIMEOUT_MS);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (error) => { clearTimeout(timer); reject(error); }
+    );
+  });
+}
+
 function cachedSetting<T>(
   key: string,
   cacheKey: string,
@@ -190,7 +214,7 @@ function cachedSetting<T>(
   });
   return async () => {
     try {
-      return await cached();
+      return await withBuildTimeout(cached(), key);
     } catch (error) {
       if (!(error instanceof SettingReadError)) {
         console.warn(`[settings] '${key}' 캐시 읽기 실패:`, error);

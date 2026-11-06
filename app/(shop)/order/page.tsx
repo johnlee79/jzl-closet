@@ -11,7 +11,12 @@ import {
   getOgImage,
 } from '@/lib/settings';
 
-export const revalidate = 60;
+/**
+ * ★ 요청 때 만듭니다 (2026-11-06). 빌드 때 DB 를 읽지 않게 하려는 것입니다.
+ *   DB 를 매번 두드리지는 않습니다 — 설정·분류·상품은 데이터 캐시(unstable_cache)에서 읽고,
+ *   읽기가 실패하면 직전 값이 그대로 남습니다.
+ */
+export const dynamic = 'force-dynamic';
 
 /** 문구 첫 블록을 평문으로. 메타데이터에는 태그가 들어가면 안 됩니다. */
 function plain(html: string): string {

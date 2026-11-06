@@ -14,9 +14,12 @@ type PageProps = { params: { id: string } };
 export const revalidate = 60;
 export const dynamicParams = true;
 
+/**
+ * ★ 빌드 때는 하나도 굽지 않습니다 (2026-11-06). 첫 요청 때 구워서 ISR 로 저장합니다.
+ *   빌드 중 DB 응답이 늦으면 60초 제한에 걸려 배포가 통째로 실패했기 때문입니다 (104d072).
+ */
 export async function generateStaticParams(): Promise<{ id: string }[]> {
-  const notices = await getVisibleNotices();
-  return notices.map((notice) => ({ id: notice.id }));
+  return [];
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
