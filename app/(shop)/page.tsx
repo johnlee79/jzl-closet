@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { Pinyon_Script } from 'next/font/google';
 import Link from 'next/link';
 import BrandStrip from '@/components/BrandStrip';
 import CategoryList from '@/components/CategoryList';
@@ -19,9 +18,6 @@ import {
   getOgImage,
 } from '@/lib/settings';
 import { getTaxonomy } from '@/lib/taxonomy';
-
-/** NEW ARRIVAL 제목 「Just Arrived」 전용 필기체 (2026-11-06 사장님 지시). 다른 제목은 그대로. */
-const justArrivedFont = Pinyon_Script({ weight: '400', subsets: ['latin'], display: 'swap' });
 
 /**
  * ★ 요청 때 만듭니다 (2026-11-06). 빌드 때 DB 를 읽지 않게 하려는 것입니다.
@@ -167,17 +163,15 @@ export default async function HomePage() {
       {sections.newArrival ? (
       <section aria-labelledby="new-title" className="section border-t border-stone">
         <div className="shell">
-          <div className="flex items-end justify-between gap-6">
-            <div>
-              <p className="label-xs">NEW ARRIVAL</p>
-              {/* ★ 필기체는 글자 몸통이 작아 보여서 다른 제목(26/32px)보다 크게 둡니다. */}
-              <h2
-                id="new-title"
-                className={`${justArrivedFont.className} mt-2 text-[40px] font-normal leading-[1.15] text-ink md:text-[52px]`}
-              >
-                Just Arrived
-              </h2>
-            </div>
+          <div className="flex items-baseline justify-between gap-6">
+            {/*
+              ★ 「NEW ARRIVAL」 한 줄이 제목(h2)입니다 (2026-11-07 사장님 지시).
+                글꼴·대문자·글자 간격은 작은 라벨(label-xs) 그대로, 크기만 40/52px.
+                「전체 보기」는 items-baseline 으로 이 줄의 글자 밑선에 맞춥니다.
+            */}
+            <h2 id="new-title" className="label-xs text-[40px] leading-[1.1] md:text-[52px]">
+              NEW ARRIVAL
+            </h2>
             <Link
               href="/products"
               className="shrink-0 text-[14px] tracking-[0.14em] text-muted underline underline-offset-4"
