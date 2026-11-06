@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Pinyon_Script } from 'next/font/google';
 import Link from 'next/link';
 import BrandStrip from '@/components/BrandStrip';
 import CategoryList from '@/components/CategoryList';
@@ -18,6 +19,9 @@ import {
   getOgImage,
 } from '@/lib/settings';
 import { getTaxonomy } from '@/lib/taxonomy';
+
+/** NEW ARRIVAL 제목 「Just Arrived」 전용 필기체 (2026-11-06 사장님 지시). 다른 제목은 그대로. */
+const justArrivedFont = Pinyon_Script({ weight: '400', subsets: ['latin'], display: 'swap' });
 
 /** ISR — 60초마다 다시 굽고, 관리자가 저장하면 revalidatePath 로 즉시 갱신됩니다. */
 export const revalidate = 60;
@@ -162,11 +166,12 @@ export default async function HomePage() {
           <div className="flex items-end justify-between gap-6">
             <div>
               <p className="label-xs">NEW ARRIVAL</p>
+              {/* ★ 필기체는 글자 몸통이 작아 보여서 다른 제목(26/32px)보다 크게 둡니다. */}
               <h2
                 id="new-title"
-                className="mt-3 font-serif text-[26px] leading-snug text-ink md:text-[32px]"
+                className={`${justArrivedFont.className} mt-2 text-[40px] font-normal leading-[1.15] text-ink md:text-[52px]`}
               >
-                이번에 새로 들어온 것
+                Just Arrived
               </h2>
             </div>
             <Link
