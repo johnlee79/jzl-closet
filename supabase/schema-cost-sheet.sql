@@ -39,8 +39,7 @@ alter table public.products
   add column if not exists sku text;
 
 comment on column public.products.sku
-  is '상품 품번 (SKU). 뉴욕트렌딕 단가표에서 품번으로 매칭할 때 열쇠입니다. ' ||
-     '같은 상품을 두 번 등록하면 사람 눈으로 알아보기도 쉽습니다.';
+  is '상품 품번 (SKU). 뉴욕트렌딕 단가표에서 품번으로 매칭할 때 열쇠입니다. 같은 상품을 두 번 등록하면 사람 눈으로 알아보기도 쉽습니다.';
 
 create index if not exists products_sku_idx on public.products (sku)
   where sku is not null and sku <> '';
