@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "policy_version": "H1",
+  "project": "JZL_CLOSET",
+  "repository": "johnlee79/jzl-closet",
+  "branch": "main",
+  "engine_sha256": "e9f1253c25ad15b5f355261c9767bc7a6fbfb515c5ffb3ae9ae9000b1655a324",
+  "entrypoints": [
+    {
+      "path": "00_START_HERE.md",
+      "max_chars": 2600
+    },
+    {
+      "path": "README.md",
+      "max_chars": 2600
+    },
+    {
+      "path": "AGENTS.md",
+      "max_chars": 2600
+    },
+    {
+      "path": "CLAUDE.md",
+      "max_chars": 2600
+    }
+  ],
+  "entry_budget_chars": 8000,
+  "current": {
+    "kind": "unassigned",
+    "repository": "johnlee79/jzl-closet",
+    "max_chars": 6000
+  },
+  "archive_checks": [
+    {
+      "path": "docs/handoff-history/2026-11-18/README.md",
+      "sha256": "40ab0b2cf1905152d43957791a4821ec8ac269b32b36361d6393bf6ccfbc0619"
+    }
+  ]
+}
