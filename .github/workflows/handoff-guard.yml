@@ -1,0 +1,67 @@
+name: H1 handoff guard
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  issues:
+    types: [opened, edited, deleted, reopened, closed]
+  issue_comment:
+    types: [created, edited, deleted]
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Validate identity, budgets and preserved history
+        run: python3 tools/check_handoff.py --root . --static
+      - name: Read bounded CURRENT evidence for the selected source
+        if: github.event_name != 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+
+          profile = json.loads(Path('.handoff/profile.json').read_text(encoding='utf-8'))
+          current = profile['current']
+          kind = current['kind']
+          if kind not in ('issue', 'file'):
+              print('CURRENT NOT VERIFIED: external needs an authorized snapshot; unassigned means UNKNOWN.')
+              sys.exit(0)
+          repository = profile['repository']
+          if os.environ.get('GITHUB_REPOSITORY') != repository:
+              print('CURRENT NOT VERIFIED: workflow repository does not match the profile.')
+              sys.exit(1)
+          if os.environ.get('GITHUB_REF') != 'refs/heads/' + profile['branch']:
+              print('CURRENT NOT VERIFIED: live checks run from the configured main branch only.')
+              sys.exit(0)
+          event_name = os.environ.get('GITHUB_EVENT_NAME')
+          eligible = event_name in ('push', 'workflow_dispatch')
+          if event_name in ('issues', 'issue_comment'):
+              event = json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text(encoding='utf-8'))
+              issue = event.get('issue', {})
+              selected_issue = current.get('number') if kind == 'issue' else current.get('evidence_issue_number')
+              actions = ('opened', 'edited', 'deleted', 'reopened', 'closed') if event_name == 'issues' else ('created', 'edited', 'deleted')
+              eligible = (type(selected_issue) is int and selected_issue > 0 and event.get('action') in actions
+                          and event.get('repository', {}).get('full_name') == repository
+                          and isinstance(issue, dict) and 'pull_request' not in issue
+                          and type(issue.get('number')) is int and issue['number'] == selected_issue)
+          if not eligible:
+              print('CURRENT NOT VERIFIED: this event does not select the canonical CURRENT source.')
+              sys.exit(0)
+          sys.exit(subprocess.call([sys.executable, 'tools/check_handoff.py', '--root', '.', '--live']))
+          PY
